@@ -32,7 +32,7 @@ const Dashboard = () => {
         throw new Error("Vous devez être connecté pour voir les statistiques d'événements.");
       }
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/events/stats`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/events/stats`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -70,7 +70,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/events/process-completed-events`,
+        `${process.env.REACT_APP_API_URL}/events/process-completed-events`,
         {},
         {
           headers: {

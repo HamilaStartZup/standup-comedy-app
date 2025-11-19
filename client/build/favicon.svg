@@ -1,0 +1,21 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fond sombre avec bordure arrondie -->
+  <rect width="64" height="64" fill="#2a1458" rx="8"/>
+  
+  <!-- Microphone centré et plus grand -->
+  <g transform="translate(16, 8)">
+    <!-- Corps du microphone -->
+    <ellipse cx="16" cy="20" rx="12" ry="16" fill="#ff4081"/>
+    
+    <!-- Grille du microphone -->
+    <rect x="8" y="12" width="16" height="3" rx="1.5" fill="#2a1458"/>
+    <rect x="8" y="18" width="16" height="3" rx="1.5" fill="#2a1458"/>
+    <rect x="8" y="24" width="16" height="3" rx="1.5" fill="#2a1458"/>
+    <rect x="8" y="30" width="16" height="3" rx="1.5" fill="#2a1458"/>
+    
+    <!-- Support du microphone -->
+    <path d="M 4 36 Q 4 42 10 42 L 22 42 Q 28 42 28 36" stroke="#ff4081" stroke-width="3" fill="none"/>
+    <line x1="16" y1="42" x2="16" y2="50" stroke="#ff4081" stroke-width="3"/>
+    <line x1="8" y1="50" x2="24" y2="50" stroke="#ff4081" stroke-width="3"/>
+  </g>
+</svg> 

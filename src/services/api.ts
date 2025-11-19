@@ -4,8 +4,8 @@ import axios from 'axios';
 // Note: les routes appelées utilisent déjà le préfixe '/api/...'
 // Donc ici, baseURL doit être l'URL racine du backend SANS '/api'
 const apiBaseUrl = import.meta.env.PROD
-  ? (import.meta.env.VITE_API_URL || 'https://standup-comedy-app.onrender.com')
-  : 'http://localhost:3001';
+  ? (process.env.REACT_APP_API_URL || 'https://standup-comedy-app.onrender.com')
+  : 'https://standup-comedy-app.onrender.com';
 
 const apiClient = axios.create({
   baseURL: apiBaseUrl,
