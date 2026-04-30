@@ -9,6 +9,7 @@ export type PricingType =
 
 export interface BookingAmountResult {
   amount: number;
+  baseAmount: number;
   requiresPayment: boolean;
   needsSlot: boolean;
 }
@@ -19,36 +20,55 @@ function toMin(t: string): number {
 }
 
 export function computeBookingAmount(
-  venue: { pricePerEvent: number; pricingType?: PricingType },
+  venue: {
+    pricePerEvent: number;
+    pricingType?: PricingType;
+    deposit?: number;
+    extraFees?: { description: string; amount: number }[];
+  },
   booking: { startTime?: string; endTime?: string }
 ): BookingAmountResult {
   const { pricePerEvent, pricingType } = venue;
+  const depositAmount = venue.deposit ?? 0;
+  const extraFeesTotal = (venue.extraFees ?? []).reduce((sum, f) => sum + (f.amount || 0), 0);
 
   switch (pricingType) {
     case 'heure': {
       const start = booking.startTime ?? '00:00';
       const end = booking.endTime ?? '01:00';
       const hours = Math.ceil(Math.max(1, (toMin(end) - toMin(start)) / 60));
-      return { amount: hours * pricePerEvent, requiresPayment: true, needsSlot: true };
+      const baseAmount = hours * pricePerEvent;
+      return { amount: baseAmount + depositAmount + extraFeesTotal, baseAmount, requiresPayment: true, needsSlot: true };
     }
-    case 'demi_journee':
-      return { amount: pricePerEvent, requiresPayment: true, needsSlot: true };
-    case 'journee':
-      return { amount: pricePerEvent, requiresPayment: true, needsSlot: false };
-    case 'soiree':
-      return { amount: pricePerEvent, requiresPayment: true, needsSlot: false };
-    case 'forfait':
-      return { amount: pricePerEvent, requiresPayment: true, needsSlot: false };
+    case 'demi_journee': {
+      const baseAmount = pricePerEvent;
+      return { amount: baseAmount + depositAmount + extraFeesTotal, baseAmount, requiresPayment: true, needsSlot: true };
+    }
+    case 'journee': {
+      const baseAmount = pricePerEvent;
+      return { amount: baseAmount + depositAmount + extraFeesTotal, baseAmount, requiresPayment: true, needsSlot: false };
+    }
+    case 'soiree': {
+      const baseAmount = pricePerEvent;
+      return { amount: baseAmount + depositAmount + extraFeesTotal, baseAmount, requiresPayment: true, needsSlot: false };
+    }
+    case 'forfait': {
+      const baseAmount = pricePerEvent;
+      return { amount: baseAmount + depositAmount + extraFeesTotal, baseAmount, requiresPayment: true, needsSlot: false };
+    }
     case 'gratuit':
-      return { amount: 0, requiresPayment: false, needsSlot: false };
+      return { amount: 0, baseAmount: 0, requiresPayment: false, needsSlot: false };
     case 'pourcentage_billetterie':
-      return { amount: 0, requiresPayment: false, needsSlot: false };
-    default:
-      // Fallback : pricingType absent
+      return { amount: 0, baseAmount: 0, requiresPayment: false, needsSlot: false };
+    default: {
+      const baseAmount = pricePerEvent;
+      const total = baseAmount + depositAmount + extraFeesTotal;
       return {
-        amount: pricePerEvent,
+        amount: total,
+        baseAmount,
         requiresPayment: pricePerEvent > 0,
         needsSlot: true,
       };
+    }
   }
 }

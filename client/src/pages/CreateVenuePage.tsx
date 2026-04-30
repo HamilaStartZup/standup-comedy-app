@@ -43,7 +43,9 @@ const CreateVenuePage: React.FC = () => {
         pricingType: (data.pricingType || undefined) as IVenue['pricingType'],
         currency: data.currency || 'EUR',
         deposit: data.deposit !== '' ? parseFloat(data.deposit as string) : undefined,
-        extraFees: data.extraFees || undefined,
+        extraFees: data.extraFees?.length
+          ? data.extraFees.map(f => ({ description: f.description, amount: parseFloat(f.amount as string) || 0 }))
+          : undefined,
         bookingMode: (data.bookingMode || 'manual') as IVenue['bookingMode'],
         minBookingDelay: data.minBookingDelay !== '' ? parseInt(data.minBookingDelay as string) : undefined,
         minDuration: data.minDuration !== '' ? parseFloat(data.minDuration as string) : undefined,

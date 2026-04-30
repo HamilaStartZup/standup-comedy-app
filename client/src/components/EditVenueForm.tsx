@@ -43,7 +43,7 @@ const EditVenueForm: React.FC<EditVenueFormProps> = ({ venue, onUpdated }) => {
     pricingType: venue.pricingType ?? '',
     currency: venue.currency ?? 'EUR',
     deposit: venue.deposit ?? '',
-    extraFees: venue.extraFees ?? '',
+    extraFees: venue.extraFees ?? [],
     bookingMode: venue.bookingMode ?? 'manual',
     minBookingDelay: venue.minBookingDelay ?? '',
     minDuration: venue.minDuration ?? '',

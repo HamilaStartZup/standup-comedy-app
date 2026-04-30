@@ -99,6 +99,11 @@ export const ACCEPTED_EVENT_TYPES = [
   'Stand-up', 'One-man-show', 'Théâtre', 'Projection film', 'Répétition', 'Tournage', 'Événement privé',
 ] as const;
 
+export interface IExtraFee {
+  description: string;
+  amount: number;
+}
+
 export interface IVenueTimeRestrictions {
   openTime?: string;
   closeTime?: string;
@@ -152,7 +157,7 @@ export interface IVenue {
   currency?: string;
   pricingType?: 'heure' | 'demi_journee' | 'journee' | 'soiree' | 'forfait' | 'pourcentage_billetterie' | 'gratuit';
   deposit?: number;
-  extraFees?: string;
+  extraFees?: IExtraFee[];
   bookingMode?: 'manual' | 'automatic';
   minBookingDelay?: number;
   minDuration?: number;

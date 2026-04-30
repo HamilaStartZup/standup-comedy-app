@@ -5,7 +5,7 @@
   "scripts": {
     "build": "npm install && tsc",
     "start": "node --max-old-space-size=400 dist/index.js",
-    "dev": "nodemon --exec ts-node src/index.ts",
+    "dev": "nodemon",
     "seed:super-admin": "ts-node scripts/seedSuperAdmin.ts",
     "generate-secret": "node scripts/generate-secret.js"
   },

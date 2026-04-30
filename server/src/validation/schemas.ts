@@ -579,7 +579,7 @@ export const createVenueSchema = z.object({
   currency: z.string().optional(),
   pricingType: z.enum(['heure', 'demi_journee', 'journee', 'soiree', 'forfait', 'pourcentage_billetterie', 'gratuit']).optional(),
   deposit: z.number().min(0).optional(),
-  extraFees: z.string().optional(),
+  extraFees: z.array(z.object({ description: z.string(), amount: z.number().min(0) })).optional(),
   bookingMode: z.enum(['manual', 'automatic']).optional(),
   minBookingDelay: z.number().int().min(0).optional(),
   minDuration: z.number().min(0).optional(),

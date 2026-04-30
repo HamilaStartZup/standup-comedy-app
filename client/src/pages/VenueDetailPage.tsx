@@ -637,7 +637,7 @@ const VenueDetailPage: React.FC = () => {
                   )}
 
                   {/* Conditions de réservation */}
-                  {(venue.bookingMode || venue.minBookingDelay || venue.minDuration || venue.maxDuration || venue.deposit || venue.extraFees || venue.acceptedEventTypes?.length) && (
+                  {(venue.bookingMode || venue.minBookingDelay || venue.minDuration || venue.maxDuration || venue.deposit || venue.extraFees?.length || venue.acceptedEventTypes?.length) && (
                     <div style={{ marginBottom: 24, padding: '20px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16 }}>
                       <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>Conditions de réservation</h3>
                       <div style={{ display: 'grid', gap: 10 }}>
@@ -671,10 +671,21 @@ const VenueDetailPage: React.FC = () => {
                             <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{venue.deposit} €</span>
                           </div>
                         )}
-                        {venue.extraFees && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <span style={{ fontSize: 13, color: '#888' }}>Frais supplémentaires</span>
-                            <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{venue.extraFees}</span>
+                        {venue.extraFees && venue.extraFees.length > 0 && (
+                          <div style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            <span style={{ fontSize: 13, color: '#888', display: 'block', marginBottom: 6 }}>Frais supplémentaires</span>
+                            {venue.extraFees.map((fee, i) => (
+                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
+                                <span style={{ fontSize: 13, color: '#ccc' }}>{fee.description}</span>
+                                <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{fee.amount.toFixed(2)} {venue.currency || 'EUR'}</span>
+                              </div>
+                            ))}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                              <span style={{ fontSize: 12, color: '#888' }}>Total</span>
+                              <span style={{ fontSize: 13, color: '#ff416c', fontWeight: 700 }}>
+                                {venue.extraFees.reduce((sum, f) => sum + f.amount, 0).toFixed(2)} {venue.currency || 'EUR'}
+                              </span>
+                            </div>
                           </div>
                         )}
                         {(venue.acceptedEventTypes?.length ?? 0) > 0 && (
@@ -779,6 +790,9 @@ const VenueDetailPage: React.FC = () => {
                   onBookingCreated={() => {}}
                   pricingType={venue.pricingType}
                   pricePerEvent={venue.pricePerEvent}
+                  deposit={venue.deposit}
+                  extraFees={venue.extraFees}
+                  currency={venue.currency}
                   minBookingDelay={venue.minBookingDelay}
                   minDuration={venue.minDuration}
                   maxDuration={venue.maxDuration}

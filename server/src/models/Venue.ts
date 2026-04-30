@@ -41,7 +41,7 @@ export interface VenueDocument extends Document {
   currency?: string;
   pricingType?: 'heure' | 'demi_journee' | 'journee' | 'soiree' | 'forfait' | 'pourcentage_billetterie' | 'gratuit';
   deposit?: number;
-  extraFees?: string;
+  extraFees?: { description: string; amount: number }[];
   bookingMode?: 'manual' | 'automatic';
   minBookingDelay?: number;
   minDuration?: number;
@@ -117,7 +117,7 @@ const venueSchema = new Schema<VenueDocument>(
     currency: { type: String, default: 'EUR' },
     pricingType: { type: String, enum: ['heure', 'demi_journee', 'journee', 'soiree', 'forfait', 'pourcentage_billetterie', 'gratuit'] },
     deposit: { type: Number },
-    extraFees: { type: String },
+    extraFees: [{ description: { type: String }, amount: { type: Number } }],
     bookingMode: { type: String, enum: ['manual', 'automatic'] },
     minBookingDelay: { type: Number },
     minDuration: { type: Number },
