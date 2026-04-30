@@ -11,7 +11,7 @@ import {
   blockDateSchema,
 } from '../validation/schemas';
 import { createVenue, listVenues, listMyVenues, getVenue, updateVenue, deleteVenue } from '../controllers/venue';
-import { createBooking, listVenueBookings, myBookings, updateBookingStatus, cancelBooking, cancelBookingByOwner, blockDate, listBlockedDates, unblockDate, takenSlots, checkPaymentTimeouts, getRefundEstimate } from '../controllers/venueBooking';
+import { createBooking, listVenueBookings, myBookings, updateBookingStatus, cancelBooking, cancelBookingByOwner, blockDate, listBlockedDates, unblockDate, takenSlots, checkPaymentTimeouts, getRefundEstimate, getMyVenueBookings } from '../controllers/venueBooking';
 
 const router = express.Router();
 
@@ -44,6 +44,7 @@ router.put('/:venueId', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), val
 router.delete('/:venueId', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateVenueId, asyncHandler(deleteVenue));
 
 // ── Bookings ─────────────────────────────────────────────────────────────────
+router.get('/:venueId/my-bookings', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateVenueId, asyncHandler(getMyVenueBookings));
 router.post('/:venueId/bookings', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateVenueId, validate(createBookingSchema), asyncHandler(createBooking));
 router.get('/:venueId/bookings', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateVenueId, asyncHandler(listVenueBookings));
 router.patch('/bookings/:bookingId', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateBookingId, validate(updateBookingStatusSchema), asyncHandler(updateBookingStatus));

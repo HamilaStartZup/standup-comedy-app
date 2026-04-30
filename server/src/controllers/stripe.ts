@@ -431,7 +431,7 @@ export const createVenueBookingCheckoutSession = async (req: AuthRequest, res: R
     }
 
     const booking = await VenueBookingModel.findById(bookingId).populate<{
-      venue: { _id: mongoose.Types.ObjectId; name: string; pricePerEvent: number; pricingType?: string; owner: mongoose.Types.ObjectId; deposit?: number; extraFees?: { description: string; amount: number }[] };
+      venue: { _id: mongoose.Types.ObjectId; name: string; pricePerEvent: number; pricingType?: string; owner: mongoose.Types.ObjectId; deposit?: number; extraFees?: { description: string; amount?: number }[] };
     }>('venue', 'name pricePerEvent pricingType owner deposit extraFees');
 
     if (!booking) {
@@ -494,7 +494,7 @@ export const createVenueBookingCheckoutSession = async (req: AuthRequest, res: R
         pricingType: venue.pricingType ?? 'unknown',
         computedAmount: amount.toString(),
         deposit: (venue.deposit ?? 0).toString(),
-        extraFeesTotal: ((venue.extraFees ?? []).reduce((s, f) => s + f.amount, 0)).toString(),
+        extraFeesTotal: ((venue.extraFees ?? []).reduce((s, f) => s + (f.amount ?? 0), 0)).toString(),
       },
     });
 

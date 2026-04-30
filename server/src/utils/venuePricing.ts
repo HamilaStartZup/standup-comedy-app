@@ -24,7 +24,7 @@ export function computeBookingAmount(
     pricePerEvent: number;
     pricingType?: PricingType;
     deposit?: number;
-    extraFees?: { description: string; amount: number }[];
+    extraFees?: { description: string; amount?: number }[];
   },
   booking: { startTime?: string; endTime?: string }
 ): BookingAmountResult {

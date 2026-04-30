@@ -113,7 +113,7 @@ const PriceBreakdown: React.FC<{ breakdown: PriceBreakdownData; currency: string
       {extraFeesList.map((fee, i) => (
         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, color: '#ccc' }}>
           <span>{fee.description || 'Frais supplémentaire'}</span>
-          <span style={{ fontWeight: 600 }}>{fee.amount.toLocaleString('fr-FR')} {currency}</span>
+          <span style={{ fontWeight: 600 }}>{(fee.amount ?? 0).toLocaleString('fr-FR')} {currency}</span>
         </div>
       ))}
       <div style={{
@@ -308,8 +308,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
     if (pricingType === 'gratuit' || pricingType === 'pourcentage_billetterie') return null;
 
     const depositAmount = deposit ?? 0;
-    const extraFeesList = (extraFees ?? []).filter(f => f.amount > 0);
-    const extraFeesTotal = extraFeesList.reduce((sum, f) => sum + f.amount, 0);
+    const extraFeesList = (extraFees ?? []).filter(f => (f.amount ?? 0) > 0);
+    const extraFeesTotal = extraFeesList.reduce((sum, f) => sum + (f.amount ?? 0), 0);
 
     if (pricingType === 'heure' || !pricingType) {
       if (!formData.startTime || !formData.endTime) return null;

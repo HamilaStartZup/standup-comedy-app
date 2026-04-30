@@ -8,7 +8,7 @@ interface BookingStatusBadgeProps {
   perspective?: 'requester' | 'owner';
 }
 
-const STATUS_CONFIG: Record<VenueBookingStatus, { label: string; color: string; bg: string }> = {
+export const STATUS_CONFIG: Record<VenueBookingStatus, { label: string; color: string; bg: string }> = {
   PENDING: { label: 'En attente', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
   ACCEPTED: { label: 'Acceptée — paiement requis', color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
   REFUSED: { label: 'Refusée', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },

@@ -458,6 +458,11 @@ export const myBookings = async (): Promise<IVenueBooking[]> => {
   return response.data.bookings;
 };
 
+export const getMyVenueBookings = async (venueId: string): Promise<IVenueBooking[]> => {
+  const response = await api.get<{ bookings: IVenueBooking[] }>(`/venues/${venueId}/my-bookings`);
+  return response.data.bookings;
+};
+
 export const updateBookingStatus = async (bookingId: string, status: 'ACCEPTED' | 'REFUSED', ownerResponse?: string): Promise<{ booking: IVenueBooking }> => {
   const response = await api.patch<{ booking: IVenueBooking }>(`/venues/bookings/${bookingId}`, { status, ownerResponse });
   return response.data;

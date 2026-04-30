@@ -43,7 +43,7 @@ const EditVenueForm: React.FC<EditVenueFormProps> = ({ venue, onUpdated }) => {
     pricingType: venue.pricingType ?? '',
     currency: venue.currency ?? 'EUR',
     deposit: venue.deposit ?? '',
-    extraFees: venue.extraFees ?? [],
+    extraFees: (venue.extraFees ?? []).map(f => ({ description: f.description, amount: f.amount ?? '' })),
     bookingMode: venue.bookingMode ?? 'manual',
     minBookingDelay: venue.minBookingDelay ?? '',
     minDuration: venue.minDuration ?? '',
@@ -79,6 +79,9 @@ const EditVenueForm: React.FC<EditVenueFormProps> = ({ venue, onUpdated }) => {
         minBookingDelay: data.minBookingDelay !== '' ? parseInt(data.minBookingDelay as string) : undefined,
         minDuration: data.minDuration !== '' ? parseFloat(data.minDuration as string) : undefined,
         maxDuration: data.maxDuration !== '' ? parseFloat(data.maxDuration as string) : undefined,
+        extraFees: (data.extraFees ?? [])
+          .filter(f => f.description && String(f.description).trim() !== '')
+          .map(f => ({ description: String(f.description), amount: parseFloat(f.amount as string) || 0 })),
         venueType: data.venueType as IVenue['venueType'],
         configurationType: (data.configurationType || undefined) as IVenue['configurationType'],
         pricingType: (data.pricingType || undefined) as IVenue['pricingType'],

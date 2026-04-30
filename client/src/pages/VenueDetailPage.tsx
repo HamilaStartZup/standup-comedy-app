@@ -8,6 +8,8 @@ import { useVenueDetail } from '../hooks/useVenueDetail';
 import VenueDetailSkeleton from '../components/skeletons/VenueDetailSkeleton';
 import { useAuth } from '../hooks/useAuth';
 import VenueBookingForm from '../components/VenueBookingForm';
+import VenueBookingHistory from '../components/VenueBookingHistory';
+import { useMyVenueBookings } from '../hooks/useMyVenueBookings';
 import BlockedDatesManager from '../components/BlockedDatesManager';
 import EditVenueForm from '../components/EditVenueForm';
 import VenueMap from '../components/VenueMap';
@@ -41,6 +43,10 @@ const VenueDetailPage: React.FC = () => {
   const { venue, isVenueLoading, isVenueError, blockedDates: rawBlockedDates, isBlockedDatesError } = useVenueDetail(venueId);
 
   const isOwner = venue && user && (venue.owner?._id === user._id || venue.owner?.id === user._id || (venue.owner as any) === user._id);
+
+  const { data: myVenueBookings } = useMyVenueBookings(venueId!, !isOwner);
+  const hasActiveBookings = (myVenueBookings?.length ?? 0) > 0;
+  const [visitorTab, setVisitorTab] = useState<'history' | 'form'>('history');
 
   const photos = venue?.photos ?? [];
 
@@ -677,13 +683,13 @@ const VenueDetailPage: React.FC = () => {
                             {venue.extraFees.map((fee, i) => (
                               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
                                 <span style={{ fontSize: 13, color: '#ccc' }}>{fee.description}</span>
-                                <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{fee.amount.toFixed(2)} {venue.currency || 'EUR'}</span>
+                                <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{(fee.amount ?? 0).toFixed(2)} {venue.currency || 'EUR'}</span>
                               </div>
                             ))}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                               <span style={{ fontSize: 12, color: '#888' }}>Total</span>
                               <span style={{ fontSize: 13, color: '#ff416c', fontWeight: 700 }}>
-                                {venue.extraFees.reduce((sum, f) => sum + f.amount, 0).toFixed(2)} {venue.currency || 'EUR'}
+                                {venue.extraFees.reduce((sum, f) => sum + (f.amount ?? 0), 0).toFixed(2)} {venue.currency || 'EUR'}
                               </span>
                             </div>
                           </div>
@@ -783,21 +789,48 @@ const VenueDetailPage: React.FC = () => {
                     Impossible de charger les dates indisponibles. Certains créneaux peuvent être déjà pris.
                   </p>
                 )}
-                <VenueBookingForm
-                  venueId={venue._id}
-                  venueName={venue.name}
-                  blockedDates={rawBlockedDates}
-                  onBookingCreated={() => {}}
-                  pricingType={venue.pricingType}
-                  pricePerEvent={venue.pricePerEvent}
-                  deposit={venue.deposit}
-                  extraFees={venue.extraFees}
-                  currency={venue.currency}
-                  minBookingDelay={venue.minBookingDelay}
-                  minDuration={venue.minDuration}
-                  maxDuration={venue.maxDuration}
-                  timeRestrictions={venue.timeRestrictions}
-                />
+
+                {hasActiveBookings && (
+                  <div style={{ display: 'flex', borderBottom: '1px solid #2a2a4a', marginBottom: 16 }}>
+                    {(['history', 'form'] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setVisitorTab(tab)}
+                        style={{
+                          flex: 1, padding: '10px 0', background: 'none', border: 'none',
+                          cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                          color: visitorTab === tab ? '#e05c5c' : '#666',
+                          borderBottom: visitorTab === tab ? '2px solid #e05c5c' : '2px solid transparent',
+                        }}
+                      >
+                        {tab === 'history' ? 'Mes réservations' : 'Nouvelle réservation'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {hasActiveBookings && visitorTab === 'history' ? (
+                  <VenueBookingHistory bookings={myVenueBookings!} />
+                ) : (
+                  <VenueBookingForm
+                    venueId={venue._id}
+                    venueName={venue.name}
+                    blockedDates={rawBlockedDates}
+                    onBookingCreated={() => {
+                      queryClient.invalidateQueries({ queryKey: ['my-venue-bookings', venueId] });
+                      setVisitorTab('history');
+                    }}
+                    pricingType={venue.pricingType}
+                    pricePerEvent={venue.pricePerEvent}
+                    deposit={venue.deposit}
+                    extraFees={venue.extraFees}
+                    currency={venue.currency}
+                    minBookingDelay={venue.minBookingDelay}
+                    minDuration={venue.minDuration}
+                    maxDuration={venue.maxDuration}
+                    timeRestrictions={venue.timeRestrictions}
+                  />
+                )}
               </div>
             )}
           </div>

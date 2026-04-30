@@ -101,7 +101,7 @@ export const ACCEPTED_EVENT_TYPES = [
 
 export interface IExtraFee {
   description: string;
-  amount: number;
+  amount?: number;
 }
 
 export interface IVenueTimeRestrictions {

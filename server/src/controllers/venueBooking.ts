@@ -410,6 +410,37 @@ export const myBookings = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
+// ─── Réservations actives d'un visiteur sur une salle ────────────────────────
+
+export const getMyVenueBookings = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const requesterId = req.user?.id;
+    const { venueId } = req.params;
+
+    if (!requesterId) {
+      res.status(401).json({ message: 'Non authentifié' });
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const bookings = await VenueBookingModel.find({
+      venue: venueId,
+      requester: requesterId,
+      status: { $in: ['PENDING', 'ACCEPTED', 'CONFIRMED'] },
+      requestedDate: { $gte: today },
+    })
+      .select('requestedDate startTime endTime status')
+      .sort({ requestedDate: 1 });
+
+    res.status(200).json({ bookings });
+  } catch (error) {
+    console.error('Erreur getMyVenueBookings:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+};
+
 // ─── Accepter / Refuser une réservation (propriétaire) ───────────────────────
 
 export const updateBookingStatus = async (req: AuthRequest, res: Response): Promise<void> => {
