@@ -169,11 +169,11 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  background: 'rgba(0,0,0,0.4)',
-  border: '1px solid rgba(255,255,255,0.12)',
+  background: '#ffffff',
+  border: '1px solid #d1d5db',
   borderRadius: 10,
   padding: '12px 16px',
-  color: '#fff',
+  color: '#1a1a1a',
   fontSize: 14,
   outline: 'none',
   boxSizing: 'border-box',
@@ -389,7 +389,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
         <div>
           <label style={labelStyle}>Type de lieu *</label>
           <select value={formData.venueType} onChange={(e) => set('venueType', e.target.value)} style={inputStyle}>
-            {VENUE_TYPES.map((t) => <option key={t.value} value={t.value} style={{ background: '#1a1a2e' }}>{t.label}</option>)}
+            {VENUE_TYPES.map((t) => <option key={t.value} value={t.value} style={{ background: '#ffffff' }}>{t.label}</option>)}
           </select>
           {errors.venueType && <p style={errorStyle}>{errors.venueType}</p>}
         </div>
@@ -491,8 +491,8 @@ const VenueForm: React.FC<VenueFormProps> = ({
         <div>
           <label style={labelStyle}>Type de configuration *</label>
           <select value={formData.configurationType} onChange={(e) => set('configurationType', e.target.value)} style={inputStyle}>
-            <option value="" style={{ background: '#1a1a2e' }}>Choisir...</option>
-            {CONFIGURATION_TYPES.map((t) => <option key={t.value} value={t.value} style={{ background: '#1a1a2e' }}>{t.label}</option>)}
+            <option value="" style={{ background: '#ffffff' }}>Choisir...</option>
+            {CONFIGURATION_TYPES.map((t) => <option key={t.value} value={t.value} style={{ background: '#ffffff' }}>{t.label}</option>)}
           </select>
           {errors.configurationType && <p style={errorStyle}>{errors.configurationType}</p>}
         </div>
@@ -572,10 +572,10 @@ const VenueForm: React.FC<VenueFormProps> = ({
           <div>
             <label style={labelStyle}>Devise</label>
             <select value={formData.currency} onChange={(e) => set('currency', e.target.value)} style={inputStyle}>
-              <option value="EUR" style={{ background: '#1a1a2e' }}>EUR</option>
-              <option value="USD" style={{ background: '#1a1a2e' }}>USD</option>
-              <option value="GBP" style={{ background: '#1a1a2e' }}>GBP</option>
-              <option value="CHF" style={{ background: '#1a1a2e' }}>CHF</option>
+              <option value="EUR" style={{ background: '#ffffff' }}>EUR</option>
+              <option value="USD" style={{ background: '#ffffff' }}>USD</option>
+              <option value="GBP" style={{ background: '#ffffff' }}>GBP</option>
+              <option value="CHF" style={{ background: '#ffffff' }}>CHF</option>
             </select>
           </div>
           <div>
@@ -592,8 +592,8 @@ const VenueForm: React.FC<VenueFormProps> = ({
               }}
               style={inputStyle}
             >
-              <option value="" style={{ background: '#1a1a2e' }}>Choisir...</option>
-              {PRICING_TYPES.map((t) => <option key={t.value} value={t.value} style={{ background: '#1a1a2e' }}>{t.label}</option>)}
+              <option value="" style={{ background: '#ffffff' }}>Choisir...</option>
+              {PRICING_TYPES.map((t) => <option key={t.value} value={t.value} style={{ background: '#ffffff' }}>{t.label}</option>)}
             </select>
           </div>
         </div>
@@ -605,7 +605,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
           <div>
             <label style={labelStyle}>Mode de réservation</label>
             <select value={formData.bookingMode} onChange={(e) => set('bookingMode', e.target.value)} style={inputStyle}>
-              {BOOKING_MODES.map((m) => <option key={m.value} value={m.value} style={{ background: '#1a1a2e' }}>{m.label}</option>)}
+              {BOOKING_MODES.map((m) => <option key={m.value} value={m.value} style={{ background: '#ffffff' }}>{m.label}</option>)}
             </select>
           </div>
         </div>
@@ -709,8 +709,8 @@ const VenueForm: React.FC<VenueFormProps> = ({
                   onChange={(e) => { setTR('openTime', e.target.value); setTR('closeTime', ''); }}
                   style={{ ...inputStyle, cursor: 'pointer' }}
                 >
-                  <option value="" style={{ background: '#1a1a2e' }}>--</option>
-                  {HOUR_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ background: '#1a1a2e' }}>{o.label}</option>)}
+                  <option value="" style={{ background: '#ffffff' }}>--</option>
+                  {HOUR_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
                 </select>
               </div>
               <div>
@@ -720,10 +720,10 @@ const VenueForm: React.FC<VenueFormProps> = ({
                   onChange={(e) => setTR('closeTime', e.target.value)}
                   style={{ ...inputStyle, cursor: 'pointer' }}
                 >
-                  <option value="" style={{ background: '#1a1a2e' }}>--</option>
-                  {HOUR_OPTIONS.filter(o => !formData.timeRestrictions.openTime || o.value > formData.timeRestrictions.openTime).map(o => <option key={o.value} value={o.value} style={{ background: '#1a1a2e' }}>{o.label}</option>)}
+                  <option value="" style={{ background: '#ffffff' }}>--</option>
+                  {HOUR_OPTIONS.filter(o => !formData.timeRestrictions.openTime || o.value > formData.timeRestrictions.openTime).map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
                   {(!formData.timeRestrictions.openTime || '23:59' > formData.timeRestrictions.openTime) && (
-                    <option value="23:59" style={{ background: '#1a1a2e' }}>Minuit (23h59)</option>
+                    <option value="23:59" style={{ background: '#ffffff' }}>Minuit (23h59)</option>
                   )}
                 </select>
               </div>
@@ -744,8 +744,8 @@ const VenueForm: React.FC<VenueFormProps> = ({
                   <div>
                     <label style={labelStyle}>Début matin</label>
                     <select value={formData.timeRestrictions.matinStart} onChange={(e) => { setTR('matinStart', e.target.value); setTR('matinEnd', ''); }} style={{ ...inputStyle, cursor: 'pointer' }}>
-                      <option value="" style={{ background: '#1a1a2e' }}>--</option>
-                      {TIME_OPTIONS_15.filter(o => o.value !== '23:59').map(o => <option key={o.value} value={o.value} style={{ background: '#1a1a2e' }}>{o.label}</option>)}
+                      <option value="" style={{ background: '#ffffff' }}>--</option>
+                      {TIME_OPTIONS_15.filter(o => o.value !== '23:59').map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
                     </select>
                   </div>
                   <div>
@@ -761,8 +761,8 @@ const VenueForm: React.FC<VenueFormProps> = ({
                       }}
                       style={{ ...inputStyle, cursor: 'pointer' }}
                     >
-                      <option value="" style={{ background: '#1a1a2e' }}>--</option>
-                      {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.matinStart || o.value > formData.timeRestrictions.matinStart).map(o => <option key={o.value} value={o.value} style={{ background: '#1a1a2e' }}>{o.label}</option>)}
+                      <option value="" style={{ background: '#ffffff' }}>--</option>
+                      {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.matinStart || o.value > formData.timeRestrictions.matinStart).map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
                     </select>
                   </div>
                 </div>
@@ -782,18 +782,18 @@ const VenueForm: React.FC<VenueFormProps> = ({
                       onChange={(e) => { setTR('apremStart', e.target.value); setTR('apremEnd', ''); }}
                       style={{ ...inputStyle, cursor: 'pointer' }}
                     >
-                      <option value="" style={{ background: '#1a1a2e' }}>--</option>
+                      <option value="" style={{ background: '#ffffff' }}>--</option>
                       {TIME_OPTIONS_15.filter(o =>
                         o.value !== '23:59' &&
                         (!formData.timeRestrictions.matinEnabled || !formData.timeRestrictions.matinEnd || o.value > formData.timeRestrictions.matinEnd)
-                      ).map(o => <option key={o.value} value={o.value} style={{ background: '#1a1a2e' }}>{o.label}</option>)}
+                      ).map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
                     </select>
                   </div>
                   <div>
                     <label style={labelStyle}>Fin après-midi</label>
                     <select value={formData.timeRestrictions.apremEnd} onChange={(e) => setTR('apremEnd', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                      <option value="" style={{ background: '#1a1a2e' }}>--</option>
-                      {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.apremStart || o.value > formData.timeRestrictions.apremStart).map(o => <option key={o.value} value={o.value} style={{ background: '#1a1a2e' }}>{o.label}</option>)}
+                      <option value="" style={{ background: '#ffffff' }}>--</option>
+                      {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.apremStart || o.value > formData.timeRestrictions.apremStart).map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
                     </select>
                   </div>
                 </div>
@@ -809,15 +809,15 @@ const VenueForm: React.FC<VenueFormProps> = ({
               <div>
                 <label style={labelStyle}>Début de soirée</label>
                 <select value={formData.timeRestrictions.soireeStart} onChange={(e) => { setTR('soireeStart', e.target.value); setTR('soireeEnd', ''); }} style={{ ...inputStyle, cursor: 'pointer' }}>
-                  <option value="" style={{ background: '#1a1a2e' }}>--</option>
-                  {TIME_OPTIONS_15.filter(o => o.value !== '23:59').map(o => <option key={o.value} value={o.value} style={{ background: '#1a1a2e' }}>{o.label}</option>)}
+                  <option value="" style={{ background: '#ffffff' }}>--</option>
+                  {TIME_OPTIONS_15.filter(o => o.value !== '23:59').map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
                 </select>
               </div>
               <div>
                 <label style={labelStyle}>Fin de soirée</label>
                 <select value={formData.timeRestrictions.soireeEnd} onChange={(e) => setTR('soireeEnd', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                  <option value="" style={{ background: '#1a1a2e' }}>--</option>
-                  {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.soireeStart || o.value > formData.timeRestrictions.soireeStart).map(o => <option key={o.value} value={o.value} style={{ background: '#1a1a2e' }}>{o.label}</option>)}
+                  <option value="" style={{ background: '#ffffff' }}>--</option>
+                  {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.soireeStart || o.value > formData.timeRestrictions.soireeStart).map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
                 </select>
               </div>
             </div>
@@ -836,15 +836,15 @@ const VenueForm: React.FC<VenueFormProps> = ({
               <div>
                 <label style={labelStyle}>{formData.pricingType === 'journee' ? "Heure d'arrivée" : "Heure d'ouverture"}</label>
                 <select value={formData.timeRestrictions.openTime} onChange={(e) => { setTR('openTime', e.target.value); setTR('closeTime', ''); }} style={{ ...inputStyle, cursor: 'pointer' }}>
-                  <option value="" style={{ background: '#1a1a2e' }}>--</option>
-                  {TIME_OPTIONS_15.filter(o => o.value !== '23:59').map(o => <option key={o.value} value={o.value} style={{ background: '#1a1a2e' }}>{o.label}</option>)}
+                  <option value="" style={{ background: '#ffffff' }}>--</option>
+                  {TIME_OPTIONS_15.filter(o => o.value !== '23:59').map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
                 </select>
               </div>
               <div>
                 <label style={labelStyle}>{formData.pricingType === 'journee' ? 'Heure de départ' : 'Heure de fermeture'}</label>
                 <select value={formData.timeRestrictions.closeTime} onChange={(e) => setTR('closeTime', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                  <option value="" style={{ background: '#1a1a2e' }}>--</option>
-                  {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.openTime || o.value > formData.timeRestrictions.openTime).map(o => <option key={o.value} value={o.value} style={{ background: '#1a1a2e' }}>{o.label}</option>)}
+                  <option value="" style={{ background: '#ffffff' }}>--</option>
+                  {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.openTime || o.value > formData.timeRestrictions.openTime).map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
                 </select>
               </div>
             </div>
@@ -871,7 +871,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Politique d'annulation</label>
           <select value={formData.cancellationPolicy} onChange={(e) => set('cancellationPolicy', e.target.value as IVenue['cancellationPolicy'])} style={inputStyle}>
-            {CANCELLATION_POLICIES.map((p) => <option key={p.value} value={p.value} style={{ background: '#1a1a2e' }}>{p.label}</option>)}
+            {CANCELLATION_POLICIES.map((p) => <option key={p.value} value={p.value} style={{ background: '#ffffff' }}>{p.label}</option>)}
           </select>
           <p style={{ margin: '8px 0 0', fontSize: 13, color: '#ccc' }}>{CANCELLATION_POLICY_DESCRIPTIONS[formData.cancellationPolicy]}</p>
         </div>

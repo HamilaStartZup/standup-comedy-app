@@ -306,216 +306,155 @@ const MesSallesPage: React.FC = () => {
                     Aucune réservation ne correspond à ces filtres.
                   </div>
                 ) : (
-                  filteredBookings.map((booking) => (
-                  <div
-                    key={booking._id}
-                    style={{
-                      background: '#1a1a2e',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: 16,
-                      padding: 24,
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                      <div>
-                        <h3 style={{ margin: '0 0 4px 0', fontSize: 18, fontWeight: 700, color: '#fff' }}>
-                          {booking.venue?.name || 'Salle'}
-                        </h3>
-                        <p style={{ margin: 0, fontSize: 13, color: '#888' }}>
-                          📍 {booking.venue?.city} · {booking.venue?.address}
-                        </p>
-                      </div>
-                      <span style={{
-                        padding: '6px 12px',
-                        borderRadius: 8,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        background: booking.status === 'PENDING' ? 'rgba(245,158,11,0.15)' :
-                          booking.status === 'ACCEPTED' ? 'rgba(59,130,246,0.15)' :
-                          booking.status === 'CONFIRMED' ? 'rgba(16,185,129,0.15)' :
-                          booking.status === 'REFUSED' ? 'rgba(239,68,68,0.15)' : 'rgba(107,114,128,0.15)',
-                        color: booking.status === 'PENDING' ? '#f59e0b' :
-                          booking.status === 'ACCEPTED' ? '#3b82f6' :
-                          booking.status === 'CONFIRMED' ? '#10b981' :
-                          booking.status === 'REFUSED' ? '#ef4444' : '#9ca3af',
-                      }}>
-                        {booking.status === 'PENDING' ? 'En attente' :
-                         booking.status === 'ACCEPTED' ? 'Acceptée' :
-                         booking.status === 'REFUSED' ? 'Refusée' :
-                         booking.status === 'EXPIRED' ? 'Expirée' :
-                         booking.status === 'CONFIRMED' ? 'Confirmée' :
-                         booking.status === 'CANCELLED_BY_REQUESTER' ? 'Annulée par le demandeur' :
-                         booking.status === 'CANCELLED_BY_OWNER' ? 'Annulée par vous' : booking.status}
-                      </span>
-                    </div>
+                  filteredBookings.map((booking) => {
+                    const statusColor =
+                      booking.status === 'PENDING' ? { color: '#d97706', bg: '#fef3c7', border: '#fde68a' } :
+                      booking.status === 'ACCEPTED' ? { color: '#2563eb', bg: '#dbeafe', border: '#bfdbfe' } :
+                      booking.status === 'CONFIRMED' ? { color: '#059669', bg: '#d1fae5', border: '#a7f3d0' } :
+                      booking.status === 'REFUSED' ? { color: '#dc2626', bg: '#fee2e2', border: '#fecaca' } :
+                      { color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb' };
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 16, padding: '14px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
-                      <div>
-                        <p style={{ margin: '0 0 2px', fontSize: 11, color: '#666', textTransform: 'uppercase' }}>Date</p>
-                        <p style={{ margin: 0, fontSize: 14, color: '#ccc', fontWeight: 600 }}>
-                          {new Date(booking.requestedDate).toLocaleDateString('fr-FR')}
-                        </p>
-                      </div>
-                      <div>
-                        <p style={{ margin: '0 0 2px', fontSize: 11, color: '#666', textTransform: 'uppercase' }}>Horaire</p>
-                        <p style={{ margin: 0, fontSize: 14, color: '#ccc', fontWeight: 600 }}>
-                          {booking.startTime} – {booking.endTime}
-                        </p>
-                      </div>
-                      <div>
-                        <p style={{ margin: '0 0 2px', fontSize: 11, color: '#666', textTransform: 'uppercase' }}>Demandeur</p>
-                        <p style={{ margin: 0, fontSize: 14, color: '#ccc' }}>
-                          {booking.requester?.firstName} {booking.requester?.lastName}
-                        </p>
-                      </div>
-                    </div>
+                    const statusLabel =
+                      booking.status === 'PENDING' ? 'En attente' :
+                      booking.status === 'ACCEPTED' ? 'Acceptée' :
+                      booking.status === 'REFUSED' ? 'Refusée' :
+                      booking.status === 'EXPIRED' ? 'Expirée' :
+                      booking.status === 'CONFIRMED' ? 'Confirmée' :
+                      booking.status === 'CANCELLED_BY_REQUESTER' ? 'Annulée par le demandeur' :
+                      booking.status === 'CANCELLED_BY_OWNER' ? 'Annulée par vous' : booking.status;
 
-                    <button
-                      type="button"
-                      onClick={() => setExpandedRequesterId(expandedRequesterId === booking._id ? null : booking._id)}
+                    return (
+                    <div
+                      key={booking._id}
                       style={{
-                        marginTop: 10,
-                        padding: 0,
-                        background: 'none',
-                        border: 'none',
-                        color: '#ff8fa3',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: 'pointer',
+                        backgroundColor: '#ffffff',
+                        borderRadius: 20,
+                        padding: 20,
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        marginBottom: 15,
                       }}
                     >
-                      {expandedRequesterId === booking._id ? 'Masquer les infos du demandeur' : 'Voir les infos du demandeur'}
-                    </button>
-
-                    {expandedRequesterId === booking._id && (
-                      <div
-                        style={{
-                          marginTop: 10,
-                          padding: '12px 14px',
-                          background: 'rgba(255,255,255,0.03)',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          borderRadius: 10,
-                          display: 'grid',
-                          gap: 6,
-                          fontSize: 13,
-                          color: '#bbb',
-                        }}
-                      >
-                        <div>
-                          ✉ {booking.requester?.email || 'Non renseigné'}
+                      {/* Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h3 style={{ margin: '0 0 4px 0', fontSize: 18, fontWeight: 700, color: '#1a1a1a' }}>
+                            {booking.venue?.name || 'Salle'}
+                          </h3>
+                          <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>
+                            📍 {booking.venue?.city} · {booking.venue?.address}
+                          </p>
                         </div>
-                        <div>
-                          ☎ {booking.requester?.phone || booking.requester?.organizerProfile?.phone || 'Non renseigné'}
-                        </div>
-                        <div>
-                          Rôle : {booking.requester?.role || 'Non renseigné'}
-                        </div>
-                        {booking.requester?.organizerProfile?.companyName && (
-                          <div>
-                            Société : {booking.requester.organizerProfile.companyName}
-                          </div>
-                        )}
+                        <span style={{
+                          padding: '6px 14px',
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: statusColor.color,
+                          backgroundColor: statusColor.bg,
+                          border: `1px solid ${statusColor.border}`,
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          marginLeft: 12,
+                        }}>
+                          {statusLabel}
+                        </span>
                       </div>
-                    )}
 
-                    {booking.message && (
-                      <p style={{ margin: '12px 0 0', fontSize: 13, color: '#bbb', fontStyle: 'italic' }}>
-                        Message: "{booking.message}"
-                      </p>
-                    )}
+                      {/* Meta grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, padding: '14px 16px', background: 'rgba(0,0,0,0.03)', borderRadius: 12, marginBottom: 14 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <span style={{ fontSize: '0.72em', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</span>
+                          <span style={{ fontSize: '0.95em', color: '#1a1a1a', fontWeight: 600 }}>
+                            {new Date(booking.requestedDate).toLocaleDateString('fr-FR')}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <span style={{ fontSize: '0.72em', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horaire</span>
+                          <span style={{ fontSize: '0.95em', color: '#1a1a1a', fontWeight: 600 }}>
+                            {booking.startTime} – {booking.endTime}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <span style={{ fontSize: '0.72em', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Demandeur</span>
+                          <span style={{ fontSize: '0.95em', color: '#1a1a1a', fontWeight: 500 }}>
+                            {booking.requester?.firstName} {booking.requester?.lastName}
+                          </span>
+                        </div>
+                      </div>
 
-                    {booking.ownerResponse && (
-                      <p style={{ margin: '8px 0 0', fontSize: 13, color: '#10b981' }}>
-                        Votre réponse : {booking.ownerResponse}
-                      </p>
-                    )}
-
-                    {/* Informations de paiement */}
-                    {booking.status === 'ACCEPTED' && (
-                      <p style={{ margin: '8px 0 0', fontSize: 13, color: '#f59e0b', fontStyle: 'italic' }}>
-                        En attente de paiement par le demandeur
-                      </p>
-                    )}
-
-                    {booking.status === 'CONFIRMED' && booking.paidAt && (
-                      <p
-                        style={{
-                          margin: '10px 0 0',
-                          padding: '8px 12px',
-                          fontSize: 13,
-                          color: '#10b981',
-                          background: 'rgba(16,185,129,0.12)',
-                          borderRadius: 8,
-                          borderLeft: '3px solid rgba(16,185,129,0.8)',
-                        }}
+                      {/* Toggle infos demandeur */}
+                      <button
+                        type="button"
+                        onClick={() => setExpandedRequesterId(expandedRequesterId === booking._id ? null : booking._id)}
+                        style={{ padding: 0, background: 'none', border: 'none', color: '#e85d75', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
                       >
-                        Paiement de {booking.paidAmount != null ? `${booking.paidAmount.toLocaleString('fr-FR')} €` : 'montant non renseigné'} reçu le{' '}
-                        {new Date(booking.paidAt).toLocaleDateString('fr-FR')}
-                      </p>
-                    )}
+                        {expandedRequesterId === booking._id ? 'Masquer les infos du demandeur' : 'Voir les infos du demandeur'}
+                      </button>
 
-                    {(booking.paymentStatus === 'refund_pending' || booking.paymentStatus === 'refunded') && (
-                      <p
-                        style={{
-                          margin: '10px 0 0',
-                          padding: '8px 12px',
-                          fontSize: 13,
-                          color: booking.paymentStatus === 'refunded' ? '#10b981' : '#f59e0b',
-                          background: booking.paymentStatus === 'refunded' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)',
-                          borderRadius: 8,
-                          borderLeft: booking.paymentStatus === 'refunded'
-                            ? '3px solid rgba(16,185,129,0.8)'
-                            : '3px solid rgba(245,158,11,0.8)',
-                        }}
-                      >
-                        {booking.paymentStatus === 'refunded'
-                          ? `Remboursement effectué${booking.refundedAmount != null ? ` (${booking.refundedAmount.toLocaleString('fr-FR')} €)` : ''}`
-                          : 'Remboursement en attente'}
-                      </p>
-                    )}
+                      {expandedRequesterId === booking._id && (
+                        <div style={{ marginTop: 10, padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, display: 'grid', gap: 6, fontSize: 13, color: '#374151' }}>
+                          <div>✉ {booking.requester?.email || 'Non renseigné'}</div>
+                          <div>☎ {booking.requester?.phone || booking.requester?.organizerProfile?.phone || 'Non renseigné'}</div>
+                          <div>Rôle : {booking.requester?.role || 'Non renseigné'}</div>
+                          {booking.requester?.organizerProfile?.companyName && (
+                            <div>Société : {booking.requester.organizerProfile.companyName}</div>
+                          )}
+                        </div>
+                      )}
 
-                    <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                      {booking.message && (
+                        <p style={{ margin: '12px 0 0', fontSize: 13, color: '#6b7280', fontStyle: 'italic' }}>
+                          Message : "{booking.message}"
+                        </p>
+                      )}
+                      {booking.ownerResponse && (
+                        <p style={{ margin: '8px 0 0', fontSize: 13, color: '#059669', fontWeight: 500 }}>
+                          Votre réponse : {booking.ownerResponse}
+                        </p>
+                      )}
+
+                      {/* Infos paiement */}
+                      {booking.status === 'ACCEPTED' && (
+                        <p style={{ margin: '10px 0 0', padding: '8px 12px', fontSize: 13, color: '#d97706', background: '#fef3c7', borderRadius: 8, borderLeft: '3px solid #fbbf24' }}>
+                          En attente de paiement par le demandeur
+                        </p>
+                      )}
+                      {booking.status === 'CONFIRMED' && booking.paidAt && (
+                        <p style={{ margin: '10px 0 0', padding: '8px 12px', fontSize: 13, color: '#059669', background: '#d1fae5', borderRadius: 8, borderLeft: '3px solid #34d399' }}>
+                          Paiement de {booking.paidAmount != null ? `${booking.paidAmount.toLocaleString('fr-FR')} €` : 'montant non renseigné'} reçu le {new Date(booking.paidAt).toLocaleDateString('fr-FR')}
+                        </p>
+                      )}
+                      {(booking.paymentStatus === 'refund_pending' || booking.paymentStatus === 'refunded') && (
+                        <p style={{ margin: '10px 0 0', padding: '8px 12px', fontSize: 13, color: booking.paymentStatus === 'refunded' ? '#059669' : '#d97706', background: booking.paymentStatus === 'refunded' ? '#d1fae5' : '#fef3c7', borderRadius: 8, borderLeft: `3px solid ${booking.paymentStatus === 'refunded' ? '#34d399' : '#fbbf24'}` }}>
+                          {booking.paymentStatus === 'refunded'
+                            ? `Remboursement effectué${booking.refundedAmount != null ? ` (${booking.refundedAmount.toLocaleString('fr-FR')} €)` : ''}`
+                            : 'Remboursement en attente'}
+                        </p>
+                      )}
+
+                      {/* Boutons action */}
                       {booking.status === 'PENDING' && (
-                        <>
+                        <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
                           <button
                             onClick={() => handleBookingStatusAction(booking._id, 'ACCEPTED')}
                             disabled={actionLoadingId === booking._id}
-                            style={{
-                              padding: '8px 18px',
-                              background: 'rgba(16,185,129,0.2)',
-                              color: '#10b981',
-                              border: '1px solid rgba(16,185,129,0.4)',
-                              borderRadius: 8,
-                              cursor: 'pointer',
-                              fontSize: 13,
-                              fontWeight: 700,
-                              opacity: actionLoadingId === booking._id ? 0.6 : 1,
-                            }}
+                            style={{ padding: '9px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: actionLoadingId === booking._id ? 0.6 : 1 }}
                           >
                             ✓ Accepter
                           </button>
                           <button
                             onClick={() => handleBookingStatusAction(booking._id, 'REFUSED')}
                             disabled={actionLoadingId === booking._id}
-                            style={{
-                              padding: '8px 18px',
-                              background: 'rgba(239,68,68,0.2)',
-                              color: '#ef4444',
-                              border: '1px solid rgba(239,68,68,0.4)',
-                              borderRadius: 8,
-                              cursor: 'pointer',
-                              fontSize: 13,
-                              fontWeight: 700,
-                              opacity: actionLoadingId === booking._id ? 0.6 : 1,
-                            }}
+                            style={{ padding: '9px 20px', background: '#fff', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: actionLoadingId === booking._id ? 0.6 : 1 }}
                           >
                             ✕ Refuser
                           </button>
-                        </>
+                        </div>
                       )}
                     </div>
-                  </div>
-                )))}
+                    );
+                  }))}
               </div>
             )}
           </div>

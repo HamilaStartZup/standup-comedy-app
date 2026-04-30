@@ -296,10 +296,10 @@ const MyBookingsPage: React.FC = () => {
                     flex: 1,
                     minWidth: 200,
                     padding: '10px 14px',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: '#fff',
+                    border: '1px solid #e2e8f0',
                     borderRadius: 10,
-                    color: '#fff',
+                    color: '#1a1a1a',
                     fontSize: 14,
                     outline: 'none',
                   }}
@@ -309,24 +309,24 @@ const MyBookingsPage: React.FC = () => {
                   onChange={(e) => { setSortBy(e.target.value as typeof sortBy); setPage(1); }}
                   style={{
                     padding: '10px 14px',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: '#fff',
+                    border: '1px solid #e2e8f0',
                     borderRadius: 10,
-                    color: '#fff',
+                    color: '#1a1a1a',
                     fontSize: 14,
                     cursor: 'pointer',
                     outline: 'none',
                   }}
                 >
-                  <option value="status" style={{ background: '#1a1a2e' }}>Trier par statut</option>
-                  <option value="date-desc" style={{ background: '#1a1a2e' }}>Date ↓ (récente)</option>
-                  <option value="date-asc" style={{ background: '#1a1a2e' }}>Date ↑ (ancienne)</option>
-                  <option value="created-desc" style={{ background: '#1a1a2e' }}>Demande récente</option>
+                  <option value="status">Trier par statut</option>
+                  <option value="date-desc">Date ↓ (récente)</option>
+                  <option value="date-asc">Date ↑ (ancienne)</option>
+                  <option value="created-desc">Demande récente</option>
                 </select>
               </div>
 
               {filtered.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 24px', color: '#888' }}>
+                <div style={{ textAlign: 'center', padding: '40px 24px', color: '#64748b' }}>
                   Aucune réservation ne correspond à votre recherche.
                 </div>
               ) : (
@@ -356,13 +356,14 @@ const MyBookingsPage: React.FC = () => {
               <div
                 key={booking._id}
                 style={{
-                  background: '#1a1a2e',
-                  border: `1px solid ${venueDeleted ? 'rgba(156,163,175,0.2)' : isUrgent ? 'rgba(249,115,22,0.4)' : 'rgba(255,255,255,0.1)'}`,
-                  borderRadius: 16,
+                  backgroundColor: '#ffffff',
+                  border: `1px solid ${isUrgent ? '#f97316' : 'rgba(0,0,0,0.08)'}`,
+                  borderRadius: 20,
                   padding: 24,
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
                   transition: 'border-color 0.2s',
-                  opacity: venueDeleted || archived ? 0.55 : 1,
-                  filter: venueDeleted ? 'grayscale(0.5)' : undefined,
+                  opacity: venueDeleted || archived ? 0.6 : 1,
+                  filter: venueDeleted ? 'grayscale(0.4)' : undefined,
                 }}
               >
                 <div
@@ -386,8 +387,8 @@ const MyBookingsPage: React.FC = () => {
                           fontSize: 11,
                           fontWeight: 700,
                           color: '#6b7280',
-                          background: 'rgba(107,114,128,0.15)',
-                          border: '1px solid rgba(107,114,128,0.3)',
+                          background: '#f3f4f6',
+                          border: '1px solid #e5e7eb',
                           borderRadius: 6,
                           padding: '2px 8px',
                           textTransform: 'uppercase',
@@ -412,7 +413,7 @@ const MyBookingsPage: React.FC = () => {
                             margin: '0 0 4px 0',
                             fontSize: 18,
                             fontWeight: 700,
-                            color: '#fff',
+                            color: '#1a1a1a',
                             textDecoration: 'none',
                           }}
                         >
@@ -420,7 +421,7 @@ const MyBookingsPage: React.FC = () => {
                         </h3>
                       </button>
                     )}
-                    <p style={{ margin: 0, fontSize: 13, color: '#888' }}>
+                    <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>
                       📍 {booking.venue?.city} · {booking.venue?.address}
                     </p>
                   </div>
@@ -439,15 +440,15 @@ const MyBookingsPage: React.FC = () => {
                     gap: 16,
                     marginBottom: 16,
                     padding: '14px 16px',
-                    background: 'rgba(255,255,255,0.03)',
+                    background: 'rgba(0,0,0,0.03)',
                     borderRadius: 10,
                   }}
                 >
                   <div>
-                    <p style={{ margin: '0 0 2px', fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <p style={{ margin: '0 0 2px', fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Date
                     </p>
-                    <p style={{ margin: 0, fontSize: 14, color: '#ccc', fontWeight: 600 }}>
+                    <p style={{ margin: 0, fontSize: 14, color: '#1a1a1a', fontWeight: 600 }}>
                       {new Date(booking.requestedDate).toLocaleDateString('fr-FR', {
                         weekday: 'long',
                         year: 'numeric',
@@ -457,18 +458,18 @@ const MyBookingsPage: React.FC = () => {
                     </p>
                   </div>
                   <div>
-                    <p style={{ margin: '0 0 2px', fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <p style={{ margin: '0 0 2px', fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Horaires
                     </p>
-                    <p style={{ margin: 0, fontSize: 14, color: '#ccc', fontWeight: 600 }}>
+                    <p style={{ margin: 0, fontSize: 14, color: '#1a1a1a', fontWeight: 600 }}>
                       {booking.startTime} – {booking.endTime}
                     </p>
                   </div>
                   <div>
-                    <p style={{ margin: '0 0 2px', fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <p style={{ margin: '0 0 2px', fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Demande envoyée
                     </p>
-                    <p style={{ margin: 0, fontSize: 14, color: '#ccc' }}>
+                    <p style={{ margin: 0, fontSize: 14, color: '#1a1a1a' }}>
                       {new Date(booking.createdAt).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
@@ -479,11 +480,11 @@ const MyBookingsPage: React.FC = () => {
                     style={{
                       margin: '0 0 14px 0',
                       fontSize: 13,
-                      color: '#bbb',
-                      background: 'rgba(255,255,255,0.04)',
+                      color: '#475569',
+                      background: '#fdf2f8',
                       padding: '10px 14px',
                       borderRadius: 8,
-                      borderLeft: '3px solid rgba(255,65,108,0.4)',
+                      borderLeft: '3px solid #ff416c',
                       fontStyle: 'italic',
                     }}
                   >
@@ -496,11 +497,11 @@ const MyBookingsPage: React.FC = () => {
                     style={{
                       margin: '0 0 14px 0',
                       fontSize: 13,
-                      color: '#10b981',
-                      background: 'rgba(16,185,129,0.06)',
+                      color: '#065f46',
+                      background: '#d1fae5',
                       padding: '10px 14px',
                       borderRadius: 8,
-                      borderLeft: '3px solid rgba(16,185,129,0.4)',
+                      borderLeft: '3px solid #10b981',
                     }}
                   >
                     Réponse du propriétaire : "{booking.ownerResponse}"
@@ -514,10 +515,10 @@ const MyBookingsPage: React.FC = () => {
                       margin: '0 0 14px 0',
                       padding: '10px 14px',
                       borderRadius: 8,
-                      background: isUrgent ? 'rgba(249,115,22,0.08)' : 'rgba(16,185,129,0.06)',
+                      background: isUrgent ? '#fff7ed' : '#d1fae5',
                       borderLeft: `3px solid ${isUrgent ? '#f97316' : '#10b981'}`,
                       fontSize: 13,
-                      color: isUrgent ? '#f97316' : '#10b981',
+                      color: isUrgent ? '#c2410c' : '#065f46',
                     }}
                   >
                     Paiement requis avant le{' '}
@@ -539,10 +540,10 @@ const MyBookingsPage: React.FC = () => {
                       margin: '0 0 14px 0',
                       padding: '10px 14px',
                       borderRadius: 8,
-                      background: 'rgba(107,114,128,0.08)',
-                      borderLeft: '3px solid #6b7280',
+                      background: '#f3f4f6',
+                      borderLeft: '3px solid #9ca3af',
                       fontSize: 13,
-                      color: '#9ca3af',
+                      color: '#4b5563',
                     }}
                   >
                     Le délai de paiement de 72h a expiré.{' '}
@@ -561,10 +562,10 @@ const MyBookingsPage: React.FC = () => {
                         margin: '0 0 14px 0',
                         padding: '10px 14px',
                         borderRadius: 8,
-                        background: 'rgba(245,158,11,0.06)',
+                        background: '#fef3c7',
                         borderLeft: '3px solid #f59e0b',
                         fontSize: 13,
-                        color: '#f59e0b',
+                        color: '#92400e',
                       }}
                     >
                       Pas de réponse depuis {daysSince} jours. Vous pouvez annuler et essayer une autre salle.
@@ -578,10 +579,10 @@ const MyBookingsPage: React.FC = () => {
                       margin: '0 0 14px 0',
                       padding: '10px 14px',
                       borderRadius: 8,
-                      background: 'rgba(59,130,246,0.06)',
+                      background: '#dbeafe',
                       borderLeft: '3px solid #3b82f6',
                       fontSize: 13,
-                      color: '#93c5fd',
+                      color: '#1e40af',
                     }}
                   >
                     Paiement de <strong>{booking.paidAmount.toLocaleString('fr-FR')} €</strong> reçu
@@ -598,9 +599,9 @@ const MyBookingsPage: React.FC = () => {
                       onClick={() => navigate(`/venues/${booking.venue?._id}`)}
                       style={{
                         padding: '8px 18px',
-                        background: 'rgba(255,255,255,0.06)',
-                        color: '#ccc',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        background: '#fff',
+                        color: '#64748b',
+                        border: '1px solid #e2e8f0',
                         borderRadius: 8,
                         cursor: 'pointer',
                         fontSize: 13,
@@ -626,7 +627,7 @@ const MyBookingsPage: React.FC = () => {
                         fontSize: 14,
                         fontWeight: 700,
                         opacity: payingId === booking._id ? 0.6 : 1,
-                        boxShadow: isUrgent ? '0 0 12px rgba(249,115,22,0.4)' : 'none',
+                        boxShadow: isUrgent ? '0 4px 14px rgba(249,115,22,0.4)' : '0 4px 14px rgba(16,185,129,0.3)',
                       }}
                     >
                       {payingId === booking._id
@@ -639,11 +640,11 @@ const MyBookingsPage: React.FC = () => {
                       display: 'inline-flex',
                       alignItems: 'center',
                       padding: '8px 14px',
-                      background: 'rgba(59,130,246,0.12)',
-                      border: '1px solid rgba(59,130,246,0.3)',
+                      background: '#dbeafe',
+                      border: '1px solid #93c5fd',
                       borderRadius: 8,
                       fontSize: 13,
-                      color: '#93c5fd',
+                      color: '#1e40af',
                       fontWeight: 600,
                     }}>
                       Paiement billetterie
@@ -654,11 +655,11 @@ const MyBookingsPage: React.FC = () => {
                       display: 'inline-flex',
                       alignItems: 'center',
                       padding: '8px 14px',
-                      background: 'rgba(16,185,129,0.1)',
-                      border: '1px solid rgba(16,185,129,0.3)',
+                      background: '#d1fae5',
+                      border: '1px solid #6ee7b7',
                       borderRadius: 8,
                       fontSize: 13,
-                      color: '#6ee7b7',
+                      color: '#065f46',
                       fontWeight: 600,
                     }}>
                       Confirmation en cours
@@ -669,9 +670,9 @@ const MyBookingsPage: React.FC = () => {
                       onClick={() => navigate(`/venues/${booking.venue?._id}`)}
                       style={{
                         padding: '8px 18px',
-                        background: 'rgba(255,255,255,0.06)',
-                        color: '#ccc',
-                        border: '1px solid rgba(255,255,255,0.15)',
+                        background: '#fff',
+                        color: '#64748b',
+                        border: '1px solid #e2e8f0',
                         borderRadius: 8,
                         cursor: 'pointer',
                         fontSize: 13,
@@ -687,9 +688,9 @@ const MyBookingsPage: React.FC = () => {
                       disabled={cancellingId === booking._id}
                       style={{
                         padding: '8px 18px',
-                        background: 'rgba(239,68,68,0.1)',
+                        background: '#fff',
                         color: '#ef4444',
-                        border: '1px solid rgba(239,68,68,0.25)',
+                        border: '1px solid #fca5a5',
                         borderRadius: 8,
                         cursor: cancellingId === booking._id ? 'not-allowed' : 'pointer',
                         fontSize: 13,
@@ -706,9 +707,9 @@ const MyBookingsPage: React.FC = () => {
                       disabled={cancellingId === booking._id}
                       style={{
                         padding: '8px 18px',
-                        background: 'rgba(239,68,68,0.08)',
+                        background: '#fff',
                         color: '#ef4444',
-                        border: '1px solid rgba(239,68,68,0.2)',
+                        border: '1px solid #fca5a5',
                         borderRadius: 8,
                         cursor: cancellingId === booking._id ? 'not-allowed' : 'pointer',
                         fontSize: 13,
@@ -733,9 +734,9 @@ const MyBookingsPage: React.FC = () => {
                         disabled={page === 1}
                         style={{
                           padding: '8px 16px',
-                          background: page === 1 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.08)',
-                          color: page === 1 ? '#555' : '#ccc',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: '#fff',
+                          color: page === 1 ? '#cbd5e1' : '#64748b',
+                          border: '1px solid #e2e8f0',
                           borderRadius: 8,
                           cursor: page === 1 ? 'default' : 'pointer',
                           fontSize: 14,
@@ -744,9 +745,9 @@ const MyBookingsPage: React.FC = () => {
                         ← Précédent
                       </button>
 
-                      <span style={{ color: '#888', fontSize: 13, padding: '0 8px' }}>
+                      <span style={{ color: '#64748b', fontSize: 13, padding: '0 8px' }}>
                         Page {page} / {totalPages}
-                        <span style={{ color: '#555', marginLeft: 8 }}>({filtered.length} résultats)</span>
+                        <span style={{ color: '#94a3b8', marginLeft: 8 }}>({filtered.length} résultats)</span>
                       </span>
 
                       <button
@@ -754,9 +755,9 @@ const MyBookingsPage: React.FC = () => {
                         disabled={page === totalPages}
                         style={{
                           padding: '8px 16px',
-                          background: page === totalPages ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.08)',
-                          color: page === totalPages ? '#555' : '#ccc',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: '#fff',
+                          color: page === totalPages ? '#cbd5e1' : '#64748b',
+                          border: '1px solid #e2e8f0',
                           borderRadius: 8,
                           cursor: page === totalPages ? 'default' : 'pointer',
                           fontSize: 14,

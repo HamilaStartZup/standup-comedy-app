@@ -9,6 +9,7 @@ import DeleteAccountSection from '../components/DeleteAccountSection';
 import ExportDataSection from '../components/ExportDataSection';
 import { switchToLieu } from '../services/api';
 import { useAlert } from '../hooks/useAlert';
+import Modal from '../components/Modal';
 
 const ACCENT = '#e85d75';
 const ACCENT_GRADIENT = 'linear-gradient(135deg, #e85d75, #c13057)';
@@ -28,6 +29,7 @@ function OrganizerProfilePage() {
   const [activeTab, setActiveTab] = useState<'info' | 'profil'>('info');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isSwitchingToLieu, setIsSwitchingToLieu] = useState(false);
+  const [isSwitchConfirmOpen, setIsSwitchConfirmOpen] = useState(false);
 
   useEffect(() => {
     setUser(authUser);
@@ -45,7 +47,7 @@ function OrganizerProfilePage() {
   };
 
   const handleSwitchToLieu = async () => {
-    if (!window.confirm('Revenir au compte Lieu ?')) return;
+    setIsSwitchConfirmOpen(false);
     setIsSwitchingToLieu(true);
     try {
       await switchToLieu();
@@ -278,7 +280,7 @@ function OrganizerProfilePage() {
             {user?.canSwitchToLieu && (
               <button
                 type="button"
-                onClick={handleSwitchToLieu}
+                onClick={() => setIsSwitchConfirmOpen(true)}
                 disabled={isSwitchingToLieu}
                 style={{
                   ...modifierButtonStyle,
@@ -498,6 +500,49 @@ function OrganizerProfilePage() {
           </>
         )}
       </div>
+
+      <Modal isOpen={isSwitchConfirmOpen} onClose={() => setIsSwitchConfirmOpen(false)}>
+        <h3 style={{ margin: '0 0 8px', color: '#fff', fontSize: '20px' }}>
+          Revenir en compte Lieu
+        </h3>
+        <p style={{ margin: '0 0 20px', color: '#8b8fa8', fontSize: '14px', lineHeight: 1.5 }}>
+          Voulez-vous basculer vers votre compte Lieu maintenant ?
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={() => setIsSwitchConfirmOpen(false)}
+            disabled={isSwitchingToLieu}
+            style={{
+              padding: '10px 18px',
+              borderRadius: '8px',
+              border: `1px solid ${BORDER}`,
+              background: 'transparent',
+              color: '#8b8fa8',
+              cursor: isSwitchingToLieu ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={handleSwitchToLieu}
+            disabled={isSwitchingToLieu}
+            style={{
+              padding: '10px 18px',
+              borderRadius: '8px',
+              border: 'none',
+              background: ACCENT,
+              color: '#fff',
+              fontWeight: 600,
+              cursor: isSwitchingToLieu ? 'not-allowed' : 'pointer',
+              opacity: isSwitchingToLieu ? 0.7 : 1,
+            }}
+          >
+            {isSwitchingToLieu ? 'Changement...' : 'Confirmer'}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
