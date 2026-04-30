@@ -29,6 +29,7 @@ const MyBookingsPage: React.FC = () => {
   const [payingId, setPayingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'status' | 'date-asc' | 'date-desc' | 'created-desc'>('status');
+  const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDING' | 'ACCEPTED' | 'CONFIRMED' | 'REFUSED' | 'EXPIRED' | 'CANCELLED_BY_OWNER' | 'CANCELLED_BY_REQUESTER'>('ALL');
   const [page, setPage] = useState(1);
 
   const PAGE_SIZE = 10;
@@ -137,8 +138,10 @@ const MyBookingsPage: React.FC = () => {
     return 0;
   };
 
-  const activeBookings = (data ?? []).filter((b) => !isArchived(b) && matchesSearch(b)).sort(sortFn);
-  const archivedBookings = (data ?? []).filter((b) => isArchived(b) && matchesSearch(b))
+  const matchesStatus = (b: IVenueBooking) => filterStatus === 'ALL' || b.status === filterStatus;
+
+  const activeBookings = (data ?? []).filter((b) => !isArchived(b) && matchesSearch(b) && matchesStatus(b)).sort(sortFn);
+  const archivedBookings = (data ?? []).filter((b) => isArchived(b) && matchesSearch(b) && matchesStatus(b))
     .sort((a, b) => new Date(b.requestedDate).getTime() - new Date(a.requestedDate).getTime());
 
   const filtered = [...activeBookings, ...archivedBookings];
@@ -285,7 +288,7 @@ const MyBookingsPage: React.FC = () => {
           </div>
         ) : (
             <div>
-              {/* Barre de recherche + tri */}
+              {/* Barre de recherche + filtre + tri */}
               <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
                 <input
                   type="text"
@@ -304,6 +307,30 @@ const MyBookingsPage: React.FC = () => {
                     outline: 'none',
                   }}
                 />
+                <select
+                  value={filterStatus}
+                  onChange={(e) => { setFilterStatus(e.target.value as typeof filterStatus); setPage(1); }}
+                  style={{
+                    padding: '10px 14px',
+                    background: '#fff',
+                    border: `1px solid ${filterStatus !== 'ALL' ? '#ff416c' : '#e2e8f0'}`,
+                    borderRadius: 10,
+                    color: filterStatus !== 'ALL' ? '#ff416c' : '#1a1a1a',
+                    fontSize: 14,
+                    cursor: 'pointer',
+                    outline: 'none',
+                    fontWeight: filterStatus !== 'ALL' ? 600 : 400,
+                  }}
+                >
+                  <option value="ALL">Tous les statuts</option>
+                  <option value="PENDING">En attente</option>
+                  <option value="ACCEPTED">Acceptée</option>
+                  <option value="CONFIRMED">Confirmée</option>
+                  <option value="REFUSED">Refusée</option>
+                  <option value="EXPIRED">Expirée</option>
+                  <option value="CANCELLED_BY_OWNER">Annulée par la salle</option>
+                  <option value="CANCELLED_BY_REQUESTER">Annulée par moi</option>
+                </select>
                 <select
                   value={sortBy}
                   onChange={(e) => { setSortBy(e.target.value as typeof sortBy); setPage(1); }}
@@ -515,10 +542,10 @@ const MyBookingsPage: React.FC = () => {
                       margin: '0 0 14px 0',
                       padding: '10px 14px',
                       borderRadius: 8,
-                      background: isUrgent ? '#fff7ed' : '#d1fae5',
-                      borderLeft: `3px solid ${isUrgent ? '#f97316' : '#10b981'}`,
+                      background: isUrgent ? '#fff7ed' : '#dbeafe',
+                      borderLeft: `3px solid ${isUrgent ? '#f97316' : '#3b82f6'}`,
                       fontSize: 13,
-                      color: isUrgent ? '#c2410c' : '#065f46',
+                      color: isUrgent ? '#c2410c' : '#1e40af',
                     }}
                   >
                     Paiement requis avant le{' '}
@@ -579,10 +606,10 @@ const MyBookingsPage: React.FC = () => {
                       margin: '0 0 14px 0',
                       padding: '10px 14px',
                       borderRadius: 8,
-                      background: '#dbeafe',
-                      borderLeft: '3px solid #3b82f6',
+                      background: '#d1fae5',
+                      borderLeft: '3px solid #10b981',
                       fontSize: 13,
-                      color: '#1e40af',
+                      color: '#065f46',
                     }}
                   >
                     Paiement de <strong>{booking.paidAmount.toLocaleString('fr-FR')} €</strong> reçu
