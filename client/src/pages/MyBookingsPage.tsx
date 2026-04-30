@@ -343,10 +343,14 @@ const MyBookingsPage: React.FC = () => {
                       const venueDeleted = booking.venue?.isDeleted === true;
                       const pt = (booking.venue as any)?.pricingType;
                       const venuePricePerEvent: number = (booking.venue as any)?.pricePerEvent ?? 0;
+                      const venueDeposit: number = (booking.venue as any)?.deposit ?? 0;
+                      const venueExtraFees: { amount: number }[] = (booking.venue as any)?.extraFees ?? [];
+                      const venueExtraFeesTotal = venueExtraFees.reduce((s, f) => s + (f.amount || 0), 0);
                       const toMinLocal = (t: string) => { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + m; };
-                      const displayAmount = (!pt || pt === 'heure')
+                      const baseAmount = (!pt || pt === 'heure')
                         ? Math.ceil(Math.max(1, (toMinLocal(booking.endTime) - toMinLocal(booking.startTime)) / 60)) * venuePricePerEvent
                         : venuePricePerEvent;
+                      const displayAmount = baseAmount + venueDeposit + venueExtraFeesTotal;
 
                       return (
               <div

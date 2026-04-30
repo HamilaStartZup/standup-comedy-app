@@ -431,8 +431,8 @@ export const createVenueBookingCheckoutSession = async (req: AuthRequest, res: R
     }
 
     const booking = await VenueBookingModel.findById(bookingId).populate<{
-      venue: { _id: mongoose.Types.ObjectId; name: string; pricePerEvent: number; pricingType?: string; owner: mongoose.Types.ObjectId };
-    }>('venue', 'name pricePerEvent pricingType owner');
+      venue: { _id: mongoose.Types.ObjectId; name: string; pricePerEvent: number; pricingType?: string; owner: mongoose.Types.ObjectId; deposit?: number; extraFees?: { description: string; amount: number }[] };
+    }>('venue', 'name pricePerEvent pricingType owner deposit extraFees');
 
     if (!booking) {
       res.status(404).json({ message: 'Réservation introuvable' });
@@ -456,7 +456,7 @@ export const createVenueBookingCheckoutSession = async (req: AuthRequest, res: R
 
     const venue = booking.venue;
     const { amount, requiresPayment } = computeBookingAmount(
-      { pricePerEvent: venue.pricePerEvent, pricingType: venue.pricingType as any },
+      { pricePerEvent: venue.pricePerEvent, pricingType: venue.pricingType as any, deposit: venue.deposit, extraFees: venue.extraFees },
       { startTime: booking.startTime, endTime: booking.endTime }
     );
     if (!venue || !requiresPayment) {
@@ -493,6 +493,8 @@ export const createVenueBookingCheckoutSession = async (req: AuthRequest, res: R
         venueId: venue._id.toString(),
         pricingType: venue.pricingType ?? 'unknown',
         computedAmount: amount.toString(),
+        deposit: (venue.deposit ?? 0).toString(),
+        extraFeesTotal: ((venue.extraFees ?? []).reduce((s, f) => s + f.amount, 0)).toString(),
       },
     });
 

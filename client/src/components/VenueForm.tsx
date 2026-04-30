@@ -46,7 +46,7 @@ export interface VenueFormData {
   pricingType: string;
   currency: string;
   deposit: string | number;
-  extraFees: string;
+  extraFees: { description: string; amount: string | number }[];
   bookingMode: string;
   minBookingDelay: string | number;
   minDuration: string | number;
@@ -124,7 +124,7 @@ const defaultData: VenueFormData = {
   pricingType: '',
   currency: 'EUR',
   deposit: '',
-  extraFees: '',
+  extraFees: [],
   bookingMode: 'manual',
   minBookingDelay: '',
   minDuration: '',
@@ -599,7 +599,74 @@ const VenueForm: React.FC<VenueFormProps> = ({
         </div>
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Frais supplémentaires</label>
-          <input value={formData.extraFees} onChange={(e) => set('extraFees', e.target.value)} placeholder="Nettoyage 50€, sécurité sur devis..." style={inputStyle} />
+          {formData.extraFees.map((fee, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+              <input
+                value={fee.description}
+                onChange={(e) => {
+                  const updated = [...formData.extraFees];
+                  updated[idx] = { ...updated[idx], description: e.target.value };
+                  set('extraFees', updated);
+                }}
+                placeholder="Description (ex: Nettoyage)"
+                style={{ ...inputStyle, flex: 2 }}
+              />
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                value={fee.amount}
+                onChange={(e) => {
+                  const updated = [...formData.extraFees];
+                  updated[idx] = { ...updated[idx], amount: e.target.value };
+                  set('extraFees', updated);
+                }}
+                placeholder="Montant (€)"
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <button
+                type="button"
+                onClick={() => set('extraFees', formData.extraFees.filter((_, i) => i !== idx))}
+                style={{
+                  background: 'rgba(255,65,108,0.15)',
+                  border: '1px solid rgba(255,65,108,0.3)',
+                  color: '#ff416c',
+                  borderRadius: 8,
+                  width: 36,
+                  height: 46,
+                  cursor: 'pointer',
+                  fontSize: 18,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >×</button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => set('extraFees', [...formData.extraFees, { description: '', amount: '' }])}
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px dashed rgba(255,255,255,0.2)',
+              color: '#aaa',
+              borderRadius: 8,
+              padding: '10px 16px',
+              cursor: 'pointer',
+              fontSize: 13,
+              width: '100%',
+              marginTop: 4,
+            }}
+          >+ Ajouter un frais</button>
+          {formData.extraFees.length > 0 && (
+            <div style={{ marginTop: 10, padding: '10px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: '#aaa' }}>Total frais supplémentaires</span>
+              <span style={{ fontSize: 13, color: '#fff', fontWeight: 700 }}>
+                {formData.extraFees.reduce((sum, fee) => sum + (parseFloat(fee.amount as string) || 0), 0).toFixed(2)} {formData.currency || 'EUR'}
+              </span>
+            </div>
+          )}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
           <div>

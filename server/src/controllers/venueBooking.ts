@@ -239,7 +239,7 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     const { amount, requiresPayment } = computeBookingAmount(
-      { pricePerEvent: venue.pricePerEvent, pricingType: pricingType as any },
+      { pricePerEvent: venue.pricePerEvent, pricingType: pricingType as any, deposit: venue.deposit, extraFees: venue.extraFees },
       { startTime, endTime }
     );
 
@@ -399,7 +399,7 @@ export const myBookings = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     const bookings = await VenueBookingModel.find(findFilter)
-      .populate('venue', 'name city address venueType pricePerEvent cancellationPolicy isDeleted pricingType')
+      .populate('venue', 'name city address venueType pricePerEvent cancellationPolicy isDeleted pricingType deposit extraFees currency')
       .populate('requester', requesterFields)
       .sort({ createdAt: -1 });
 
@@ -477,7 +477,7 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
     if (status === 'ACCEPTED') {
       const venueDoc = await VenueModel.findById(booking.venue._id);
       const { requiresPayment } = computeBookingAmount(
-        { pricePerEvent: venueDoc?.pricePerEvent ?? 0, pricingType: venueDoc?.pricingType as any },
+        { pricePerEvent: venueDoc?.pricePerEvent ?? 0, pricingType: venueDoc?.pricingType as any, deposit: venueDoc?.deposit, extraFees: venueDoc?.extraFees },
         { startTime: booking.startTime, endTime: booking.endTime }
       );
       if (!requiresPayment) {
