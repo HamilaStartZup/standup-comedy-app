@@ -60,7 +60,7 @@ const LANDING_CSS = `
   .landing-dark .section-badge { display: inline-block; padding: 10px 20px; background: rgba(255,255,255,0.08); border: 1.5px solid var(--border); border-radius: 100px; font-size: 18px; font-weight: 700; margin-bottom: 20px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--primary); }
   .landing-dark .section-title { font-size: clamp(2rem, 4vw, 52px); font-weight: 800; margin-bottom: 20px; letter-spacing: -0.02em; color: var(--text-primary); line-height: 1.1; font-family: 'Sora', sans-serif; }
   .landing-dark .section-description { font-size: 20px; color: var(--text-secondary); line-height: 1.7; }
-  .landing-dark .role-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 60px; }
+  .landing-dark .role-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 60px; }
   .landing-dark .role-card { background: white; border: 2px solid var(--border); border-radius: 24px; padding: 40px; cursor: pointer; transition: all 0.4s; position: relative; overflow: hidden; color: #1a1a1a; }
   .landing-dark .role-card:hover { transform: translateY(-12px); box-shadow: var(--shadow-2xl); border-color: var(--primary); }
   .landing-dark .role-icon { width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary-light), #FFE8EC); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 24px; }
@@ -247,7 +247,6 @@ function LandingPage() {
               <a href="#roles" className="nav-link">Pour qui</a>
               <a href="#avantages" className="nav-link">Avantages </a>
               <Link to="/a-propos" className="nav-link">À propos</Link>
-               <a href="#avantages" className="nav-link">test deploy16</a>
             </nav>
             <div className="header-buttons">
               <button type="button" className="btn btn-secondary" onClick={goLogin}>Se connecter</button>
