@@ -327,7 +327,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                 </div>
               )}
             </div>
-            <BookingStatusBadge status={booking.status} />
+            <BookingStatusBadge status={booking.status} perspective="owner" />
           </div>
 
           {booking.message && (

@@ -343,7 +343,9 @@ const MesSallesPage: React.FC = () => {
                          booking.status === 'ACCEPTED' ? 'Acceptée' :
                          booking.status === 'REFUSED' ? 'Refusée' :
                          booking.status === 'EXPIRED' ? 'Expirée' :
-                         booking.status === 'CONFIRMED' ? 'Confirmée' : booking.status}
+                         booking.status === 'CONFIRMED' ? 'Confirmée' :
+                         booking.status === 'CANCELLED_BY_REQUESTER' ? 'Annulée par le demandeur' :
+                         booking.status === 'CANCELLED_BY_OWNER' ? 'Annulée par vous' : booking.status}
                       </span>
                     </div>
 

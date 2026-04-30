@@ -5,6 +5,7 @@ interface BookingStatusBadgeProps {
   status: VenueBookingStatus;
   isPast?: boolean;
   paymentDeadlineAt?: string;
+  perspective?: 'requester' | 'owner';
 }
 
 const STATUS_CONFIG: Record<VenueBookingStatus, { label: string; color: string; bg: string }> = {
@@ -45,7 +46,12 @@ function getUrgencyColor(ms: number): { color: string; bg: string } {
   return { color: '#10b981', bg: 'rgba(16,185,129,0.15)' };                              // > 24h → vert
 }
 
-const BookingStatusBadge: React.FC<BookingStatusBadgeProps> = ({ status, isPast, paymentDeadlineAt }) => {
+const OWNER_LABEL_OVERRIDES: Partial<Record<VenueBookingStatus, string>> = {
+  CANCELLED_BY_REQUESTER: 'Annulée par le demandeur',
+  CANCELLED_BY_OWNER: 'Annulée par vous',
+};
+
+const BookingStatusBadge: React.FC<BookingStatusBadgeProps> = ({ status, isPast, paymentDeadlineAt, perspective = 'requester' }) => {
   const [remainingMs, setRemainingMs] = useState<number | null>(
     paymentDeadlineAt && status === 'ACCEPTED' ? getRemainingMs(paymentDeadlineAt) : null
   );
@@ -63,7 +69,11 @@ const BookingStatusBadge: React.FC<BookingStatusBadgeProps> = ({ status, isPast,
     return () => clearInterval(interval);
   }, [paymentDeadlineAt, status]);
 
-  const baseConfig = (isPast && DATE_PAST_OVERRIDES[status]) || STATUS_CONFIG[status];
+  const ownerLabel = perspective === 'owner' ? OWNER_LABEL_OVERRIDES[status] : undefined;
+  const baseConfig = (isPast && DATE_PAST_OVERRIDES[status]) || {
+    ...STATUS_CONFIG[status],
+    ...(ownerLabel ? { label: ownerLabel } : {}),
+  };
 
   // Countdown actif uniquement pour ACCEPTED avec deadline future
   const showCountdown = status === 'ACCEPTED' && !isPast && remainingMs !== null && remainingMs > 0;
