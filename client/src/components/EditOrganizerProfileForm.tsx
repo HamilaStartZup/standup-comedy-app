@@ -250,7 +250,10 @@ if (id.startsWith('organizerProfile.location.')) {
           companyName: formData.organizerProfile.companyName,
           description: formData.organizerProfile.description,
           website: formData.organizerProfile.website,
-          venueTypes: formData.organizerProfile.venueTypes.split(', ').map(type => type.trim()),
+          venueTypes: formData.organizerProfile.venueTypes
+            .split(',')
+            .map((type) => type.trim())
+            .filter(Boolean),
           eventFrequency: formData.organizerProfile.eventFrequency,
           phone: formData.organizerProfile.phone,
 
@@ -275,8 +278,13 @@ if (id.startsWith('organizerProfile.location.')) {
       onSaveSuccess();
       onClose();
     } catch (error: any) {
-      console.error('Erreur lors de la mise à jour du profil:', error.response?.status);
-      showError(getErrorMessage(error, ErrorMessages.PROFILE_UPDATE_FAILED));
+      console.error('Erreur lors de la mise à jour du profil:', error.response?.status, error.response?.data);
+      const detail = typeof error?.response?.data?.error === 'string' ? error.response.data.error : '';
+      showError(
+        detail
+          ? `${ErrorMessages.PROFILE_UPDATE_FAILED} (${detail})`
+          : getErrorMessage(error, ErrorMessages.PROFILE_UPDATE_FAILED)
+      );
     }
   };
 

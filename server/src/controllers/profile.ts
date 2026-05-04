@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { Buffer } from 'buffer';
+import mongoose from 'mongoose';
 import { UserModel } from '../models/User';
 import { ApplicationModel } from '../models/Application';
 import { EventModel } from '../models/Event';
@@ -15,6 +16,50 @@ const buildAvatarDataUrl = (user: any): string | undefined => {
     return `data:${contentType};base64,${base64}`;
   }
   return user?.avatarUrl || undefined;
+};
+
+/** Données legacy / hors enum qui font échouer la validation Mongoose à chaque save */
+const sanitizeOrganizerProfile = (org: any) => {
+  if (!org) return;
+  const allowedFreq = ['weekly', 'monthly', 'occasional'];
+  if (
+    org.eventFrequency != null &&
+    org.eventFrequency !== '' &&
+    !allowedFreq.includes(org.eventFrequency)
+  ) {
+    console.warn('⚠️ [sanitizeOrganizerProfile] eventFrequency invalide en base, normalisation → monthly:', org.eventFrequency);
+    org.eventFrequency = 'monthly';
+  }
+  if (org.venueTypes != null && !Array.isArray(org.venueTypes)) {
+    org.venueTypes = [];
+  }
+};
+
+const VALID_NUMBER_OF_SCENES = new Set(['0-50', '50-200', '200+']);
+
+/**
+ * Profil humoriste (`profile`) parfois présent sur d'autres rôles (ex. Lieu→Orga) avec
+ * d'anciennes valeurs (`0`, `"0"`) : l'enum Mongoose exige '0-50' | '50-200' | '200+'.
+ */
+const sanitizeProfileNumberOfScenes = (user: any) => {
+  if (!user?.profile) return;
+  const p = user.profile as any;
+  if (p.numberOfScenes === undefined || p.numberOfScenes === null) return;
+
+  const raw = p.numberOfScenes;
+  if (typeof raw === 'number') {
+    const n = raw;
+    if (n <= 50) p.numberOfScenes = '0-50';
+    else if (n <= 200) p.numberOfScenes = '50-200';
+    else p.numberOfScenes = '200+';
+    return;
+  }
+
+  const s = String(raw).trim();
+  if (VALID_NUMBER_OF_SCENES.has(s)) return;
+
+  console.warn('⚠️ [sanitizeProfile] numberOfScenes hors enum → 0-50:', raw);
+  p.numberOfScenes = '0-50';
 };
 
 /**
@@ -96,7 +141,7 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
       avatarUrlLength: updateData.avatarUrl?.length || 0
     });
 
-    if (req.user?.id !== userId) {
+    if (String(req.user?.id) !== String(userId)) {
       res.status(403).json({ message: 'Non autorisé à modifier ce profil' });
       return;
     }
@@ -121,7 +166,9 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
     if (updateData.city) user.city = updateData.city;
     if (updateData.phone) user.phone = updateData.phone;
     if (updateData.address) user.address = updateData.address;
-    if (updateData.gender !== undefined) user.gender = updateData.gender;
+    if (updateData.gender !== undefined && updateData.gender !== '') {
+      user.gender = updateData.gender;
+    }
     if (updateData.birthDate !== undefined) {
       (user as any).birthDate = updateData.birthDate ? new Date(updateData.birthDate) : undefined;
     }
@@ -218,43 +265,76 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
       }
     }
 
-    // Handle organizerProfile updates
-    if (user.role === 'ORGANIZER') {
+    // Handle organizerProfile updates (mutation sur le sous-document — évite les erreurs Mongoose
+    // liées au remplacement par un objet plain + _id imbriqués)
+    if (user.role === 'ORGANIZER' && updateData.organizerProfile) {
+      const incoming = updateData.organizerProfile;
       if (!user.organizerProfile) {
-        user.organizerProfile = { location: { city: '', postalCode: '' }, venueTypes: [] };
-      }
-      if (updateData.organizerProfile) {
-        user.organizerProfile = {
-          ...user.organizerProfile,
-          ...updateData.organizerProfile,
+        const newProfile: Record<string, unknown> = {
+          companyName: incoming.companyName ?? '',
+          venueTypes: Array.isArray(incoming.venueTypes) ? incoming.venueTypes : [],
           location: {
-            ...user.organizerProfile.location,
-            ...updateData.organizerProfile.location,
+            city: incoming.location?.city ?? '',
+            postalCode: incoming.location?.postalCode ?? '',
+            ...(incoming.location?.address !== undefined && { address: incoming.location.address }),
           },
-          averageBudget: {
-            ...user.organizerProfile.averageBudget,
-            ...updateData.organizerProfile.averageBudget,
-          }
         };
-      }
-      // Handle phone in organizerProfile if provided
-      if (updateData.organizerProfile?.phone !== undefined && user.organizerProfile) {
-        user.organizerProfile.phone = updateData.organizerProfile.phone;
+        if (incoming.description !== undefined) newProfile.description = incoming.description;
+        if (incoming.website !== undefined) newProfile.website = incoming.website;
+        if (incoming.eventFrequency !== undefined) newProfile.eventFrequency = incoming.eventFrequency;
+        if (incoming.phone !== undefined) newProfile.phone = incoming.phone;
+        if (incoming.averageBudget != null) newProfile.averageBudget = incoming.averageBudget;
+        user.set('organizerProfile', newProfile);
+      } else {
+        const org = user.organizerProfile as any;
+        if (incoming.companyName !== undefined) org.companyName = incoming.companyName;
+        if (incoming.description !== undefined) org.description = incoming.description;
+        if (incoming.website !== undefined) org.website = incoming.website;
+        if (incoming.venueTypes !== undefined) org.venueTypes = incoming.venueTypes;
+        if (incoming.eventFrequency !== undefined) org.eventFrequency = incoming.eventFrequency;
+        if (incoming.phone !== undefined) org.phone = incoming.phone;
+        if (incoming.location) {
+          if (!org.location) {
+            org.location = { city: '', postalCode: '' };
+          }
+          if (incoming.location.city !== undefined) org.location.city = incoming.location.city;
+          if (incoming.location.postalCode !== undefined) org.location.postalCode = incoming.location.postalCode;
+          if (incoming.location.address !== undefined) org.location.address = incoming.location.address;
+        }
+        if (incoming.averageBudget !== undefined && incoming.averageBudget !== null) {
+          const cur =
+            org.averageBudget && typeof org.averageBudget.toObject === 'function'
+              ? org.averageBudget.toObject()
+              : org.averageBudget || {};
+          org.averageBudget = { ...cur, ...incoming.averageBudget };
+        }
+        user.markModified('organizerProfile');
       }
     }
+
+    if (user.role === 'ORGANIZER') {
+      sanitizeOrganizerProfile(user.organizerProfile as any);
+    }
+
+    const g = user.gender as string | undefined;
+    if (g !== undefined && g !== '' && !['femme', 'homme'].includes(g)) {
+      (user as any).gender = undefined;
+    }
+
+    sanitizeProfileNumberOfScenes(user);
 
     console.log('💾 Tentative de sauvegarde...');
     await user.save();
     console.log('✅ Utilisateur sauvegardé avec succès');
 
-    // Émettre un évènement SSE pour notifier tous les clients
-    emitProfileUpdated(userId);
+    try {
+      emitProfileUpdated(String(userId));
+    } catch (sseErr: any) {
+      console.error('⚠️ emitProfileUpdated (non bloquant):', sseErr?.message);
+    }
 
-    // Retrieve updated user with profiles populated
-    const updatedUser = await UserModel.findById(userId)
-      .select('-password')
-      .populate('profile')
-      .populate('organizerProfile');
+    // profile / organizerProfile sont des sous-documents embarqués, pas des refs : pas de populate
+    const updatedUser = await UserModel.findById(userId).select('-password');
 
     if (!updatedUser) {
       return res.status(404).json({ message: 'Utilisateur non trouvé après mise à jour' });
@@ -262,14 +342,15 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
 
     // Transform the response to include 'id' for consistency
     const userObj = updatedUser.toObject ? updatedUser.toObject() : updatedUser;
+    const avatarUrl = buildAvatarDataUrl(userObj);
+    if (userObj && typeof userObj === 'object' && 'avatar' in userObj) {
+      delete (userObj as any).avatar;
+    }
     const responseData = {
       ...userObj,
       id: updatedUser._id,
-      avatarUrl: buildAvatarDataUrl(userObj),
+      avatarUrl,
     };
-    if ('avatar' in responseData) {
-      delete (responseData as any).avatar;
-    }
 
     return res.json(responseData);
   } catch (error: any) {
@@ -282,6 +363,31 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
         value: error.errors[key].value
       })) : null
     });
+
+    if (error instanceof mongoose.Error.ValidationError) {
+      return res.status(400).json({
+        message: 'Validation du profil impossible',
+        error: error.message,
+        errors: Object.keys(error.errors || {}).map((key) => ({
+          field: key,
+          message: error.errors[key].message,
+        })),
+      });
+    }
+    if (error instanceof mongoose.Error.CastError) {
+      return res.status(400).json({
+        message: 'Donnée invalide',
+        error: error.message,
+        path: error.path,
+      });
+    }
+    if (error?.code === 11000) {
+      return res.status(409).json({
+        message: 'Cette adresse e-mail est déjà utilisée.',
+        error: error.message,
+      });
+    }
+
     return res.status(500).json({
       message: 'Erreur lors de la mise à jour du profil',
       error: error.message,
