@@ -1,8 +1,9 @@
-import { type CSSProperties, useEffect, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
+import { useUserEvents } from '../hooks/useUserEvents';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { getErrorMessage, WarningMessages } from '../services/systemMessages';
@@ -25,6 +26,13 @@ const Dashboard = () => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const navigate = useNavigate();
   const isSuperAdmin = (user as any)?.role === 'SUPER_ADMIN';
+
+  // Préchauffe le cache des événements du mois courant + futurs pour un affichage instantané sur /calendar
+  const startOfMonth = useMemo(
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
+    []
+  );
+  useUserEvents({ dateFrom: startOfMonth });
 
   // Récupérer les statistiques avec React Query
   const { data: eventStats, isLoading: loading, error: statsError, refetch: refetchStats } = useQuery({

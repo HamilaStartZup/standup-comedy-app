@@ -629,6 +629,7 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     const myRegistrations = req.query.myRegistrations === 'true';
     const nearMe = req.query.nearMe === 'true';
     const radiusKmParam = req.query.radiusKm as string; // 5, 10, 20, 50
+    const dateFrom = req.query.dateFrom as string | undefined;
     const userRole = req.user?.role;
     const userId = req.user?.id;
 
@@ -672,6 +673,13 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     // Filtre par type de lieu
     if (venueType && ['theatre', 'salle_polyvalente', 'cafe', 'restaurant', 'autre'].includes(venueType.trim())) {
       query['location.venueType'] = venueType.trim();
+    }
+
+    if (dateFrom) {
+      const parsed = new Date(dateFrom);
+      if (!isNaN(parsed.getTime())) {
+        query.date = { ...(query.date ?? {}), $gte: parsed };
+      }
     }
 
     let events = await EventModel.find(query).select('+withdrawnComedians').populate('participants').populate('organizer', 'firstName lastName email').populate('spectatorRegistrations', 'firstName lastName');

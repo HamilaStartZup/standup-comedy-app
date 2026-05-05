@@ -1,4 +1,4 @@
-import { type CSSProperties, useState, useEffect } from 'react';
+import { type CSSProperties, useState, useEffect, useMemo } from 'react';
 import Navbar from '../components/Navbar';
 import EventCalendar from '../components/EventCalendar';
 import AbsenceModal from '../components/AbsenceModal';
@@ -7,6 +7,7 @@ import api, { markAbsence, cancelAbsence } from '../services/api';
 import type { IEvent } from '../types/event';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
+import { useUserEvents } from '../hooks/useUserEvents';
 import { ErrorMessages, SuccessMessages } from '../services/systemMessages';
 
 const CalendarPage = () => {
@@ -47,32 +48,19 @@ const CalendarPage = () => {
     return desktop;
   };
 
-  const isQueryEnabled = !!user?._id;
+  const startOfMonth = useMemo(
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
+    []
+  );
 
-  const { data: fetchedEvents = [], isLoading, isError } = useQuery<IEvent[], Error>({
-    queryKey: ['events', user?._id],
-    queryFn: async () => {
-      if (!user?._id) throw new Error('Authentification manquante');
-      const apiUrl = user?.role === 'ORGANIZER' ? `/events?organizerId=${user._id}` : `/events`;
-      const res = await api.get(apiUrl);
+  // Cache hit instantané depuis le Dashboard (événements du mois courant + futurs)
+  const upcomingQuery = useUserEvents({ dateFrom: startOfMonth });
+  // Fetch complet en arrière-plan pour permettre la navigation vers les mois passés
+  const fullQuery = useUserEvents();
 
-      // Forcer un tableau sécurisé
-      let list: IEvent[] = [];
-      const data = res.data;
-      if (Array.isArray(data)) list = data;
-      else if (Array.isArray(data?.events)) list = data.events;
-      else if (typeof data === 'string') {
-        try {
-          const parsed = JSON.parse(data);
-          list = Array.isArray(parsed) ? parsed : [];
-        } catch (err) {
-          console.error("Impossible de parser la réponse :", data);
-        }
-      }
-      return list;
-    },
-    enabled: isQueryEnabled,
-  });
+  const fetchedEvents = fullQuery.data ?? upcomingQuery.data ?? [];
+  const isLoading = !fullQuery.data && !upcomingQuery.data && (fullQuery.isLoading || upcomingQuery.isLoading);
+  const isError = fullQuery.isError && upcomingQuery.isError;
 
   // Séparer les événements et éviter doublons pour les annulés
   const now = new Date();
