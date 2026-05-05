@@ -22,6 +22,17 @@ function timesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string
   return toMinutes(aStart) < toMinutes(bEnd) && toMinutes(bStart) < toMinutes(aEnd);
 }
 
+function hasBookingEnded(requestedDate: Date, endTime: string): boolean {
+  const [endHour, endMinute] = endTime.split(':').map(Number);
+  const bookingEnd = new Date(requestedDate);
+  if (!Number.isNaN(endHour) && !Number.isNaN(endMinute)) {
+    bookingEnd.setHours(endHour, endMinute, 0, 0);
+  } else {
+    bookingEnd.setHours(23, 59, 59, 999);
+  }
+  return bookingEnd.getTime() < Date.now();
+}
+
 // ─── Calcul du montant remboursé selon la politique d'annulation ─────────────
 
 interface RefundCalculation {
@@ -393,6 +404,23 @@ export const myBookings = async (req: AuthRequest, res: Response): Promise<void>
       const venueIds = ownedVenues.map(v => v._id);
       findFilter = { venue: { $in: venueIds } };
       requesterFields = 'firstName lastName email phone avatarUrl role organizerProfile.companyName organizerProfile.phone';
+
+      // Les demandes en attente dont la date/heure est passée ne doivent plus être traitables.
+      const pendingBookings = await VenueBookingModel.find({
+        venue: { $in: venueIds },
+        status: 'PENDING',
+      }).select('_id requestedDate endTime');
+
+      const expiredPendingIds = pendingBookings
+        .filter((booking) => hasBookingEnded(booking.requestedDate, booking.endTime))
+        .map((booking) => booking._id);
+
+      if (expiredPendingIds.length > 0) {
+        await VenueBookingModel.updateMany(
+          { _id: { $in: expiredPendingIds }, status: 'PENDING' },
+          { $set: { status: 'EXPIRED' } }
+        );
+      }
     } else {
       findFilter = { requester: requesterId };
       requesterFields = 'firstName lastName email organizerProfile.companyName';
@@ -472,6 +500,13 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
 
     if (booking.status !== 'PENDING') {
       res.status(400).json({ message: 'Cette réservation a déjà été traitée' });
+      return;
+    }
+
+    if (hasBookingEnded(booking.requestedDate, booking.endTime)) {
+      booking.status = 'EXPIRED';
+      await booking.save();
+      res.status(400).json({ message: 'Cette réservation est expirée car la date est passée' });
       return;
     }
 

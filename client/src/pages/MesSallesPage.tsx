@@ -84,6 +84,17 @@ const MesSallesPage: React.FC = () => {
     [bookings, selectedVenueId, selectedStatus]
   );
 
+  const hasBookingEnded = (requestedDate: string | Date, endTime: string) => {
+    const [h, m] = endTime.split(':').map(Number);
+    const bookingEnd = new Date(requestedDate);
+    if (!Number.isNaN(h) && !Number.isNaN(m)) {
+      bookingEnd.setHours(h, m, 0, 0);
+    } else {
+      bookingEnd.setHours(23, 59, 59, 999);
+    }
+    return bookingEnd.getTime() < Date.now();
+  };
+
   const handleBookingStatusAction = async (bookingId: string, status: 'ACCEPTED' | 'REFUSED') => {
     setActionLoadingId(bookingId);
     try {
@@ -307,21 +318,23 @@ const MesSallesPage: React.FC = () => {
                   </div>
                 ) : (
                   filteredBookings.map((booking) => {
+                    const isExpiredByDate = hasBookingEnded(booking.requestedDate, booking.endTime);
+                    const normalizedStatus = booking.status === 'PENDING' && isExpiredByDate ? 'EXPIRED' : booking.status;
                     const statusColor =
-                      booking.status === 'PENDING' ? { color: '#d97706', bg: '#fef3c7', border: '#fde68a' } :
-                      booking.status === 'ACCEPTED' ? { color: '#2563eb', bg: '#dbeafe', border: '#bfdbfe' } :
-                      booking.status === 'CONFIRMED' ? { color: '#059669', bg: '#d1fae5', border: '#a7f3d0' } :
-                      booking.status === 'REFUSED' ? { color: '#dc2626', bg: '#fee2e2', border: '#fecaca' } :
+                      normalizedStatus === 'PENDING' ? { color: '#d97706', bg: '#fef3c7', border: '#fde68a' } :
+                      normalizedStatus === 'ACCEPTED' ? { color: '#2563eb', bg: '#dbeafe', border: '#bfdbfe' } :
+                      normalizedStatus === 'CONFIRMED' ? { color: '#059669', bg: '#d1fae5', border: '#a7f3d0' } :
+                      normalizedStatus === 'REFUSED' ? { color: '#dc2626', bg: '#fee2e2', border: '#fecaca' } :
                       { color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb' };
 
                     const statusLabel =
-                      booking.status === 'PENDING' ? 'En attente' :
-                      booking.status === 'ACCEPTED' ? 'Acceptée' :
-                      booking.status === 'REFUSED' ? 'Refusée' :
-                      booking.status === 'EXPIRED' ? 'Expirée' :
-                      booking.status === 'CONFIRMED' ? 'Confirmée' :
-                      booking.status === 'CANCELLED_BY_REQUESTER' ? 'Annulée par le demandeur' :
-                      booking.status === 'CANCELLED_BY_OWNER' ? 'Annulée par vous' : booking.status;
+                      normalizedStatus === 'PENDING' ? 'En attente' :
+                      normalizedStatus === 'ACCEPTED' ? 'Acceptée' :
+                      normalizedStatus === 'REFUSED' ? 'Refusée' :
+                      normalizedStatus === 'EXPIRED' ? 'Expirée' :
+                      normalizedStatus === 'CONFIRMED' ? 'Confirmée' :
+                      normalizedStatus === 'CANCELLED_BY_REQUESTER' ? 'Annulée par le demandeur' :
+                      normalizedStatus === 'CANCELLED_BY_OWNER' ? 'Annulée par vous' : normalizedStatus;
 
                     return (
                     <div
@@ -434,7 +447,7 @@ const MesSallesPage: React.FC = () => {
                       )}
 
                       {/* Boutons action */}
-                      {booking.status === 'PENDING' && (
+                      {normalizedStatus === 'PENDING' && (
                         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
                           <button
                             onClick={() => handleBookingStatusAction(booking._id, 'ACCEPTED')}

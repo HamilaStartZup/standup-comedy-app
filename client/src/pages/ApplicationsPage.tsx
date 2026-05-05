@@ -1306,8 +1306,8 @@ function ApplicationsPage() {
               >
                 <option value="dateDesc">Trier: Date (plus récent)</option>
                 <option value="dateAsc">Trier: Date (plus ancien)</option>
-                <option value="statusAsc">Trier: Statut (PENDING→ACCEPTED→REJECTED)</option>
-                <option value="statusDesc">Trier: Statut (REJECTED→ACCEPTED→PENDING)</option>
+                <option value="statusAsc">Trier: Statut (En attente→Acceptée→Refusée)</option>
+                <option value="statusDesc">Trier: Statut (Refusée→Acceptée→En attente)</option>
               </select>
             </>
           )}
