@@ -1,7 +1,7 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import api from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import type { IUserData } from '../types/user';
 import axios from 'axios';
 import {
@@ -20,7 +20,7 @@ interface AuthContextType {
   setUser: (user: IUserData | null) => void;
   loginMutation: ReturnType<typeof useMutation>;
   registerMutation: ReturnType<typeof useMutation>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   isLoading: boolean;
   loginWithKeycloak: (provider?: string) => Promise<void>;
@@ -34,24 +34,53 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
+// Pages protégées qui doivent rediriger vers /login quand la session expire
+const isProtectedPath = (path: string) => {
+  const publicPrefixes = [
+    '/', '/login', '/organisateur', '/register', '/forgot-password', '/reset-password',
+    '/auth/callback', '/mentions-legales', '/politique-confidentialite', '/cgu', '/a-propos',
+  ];
+  // Exact match for "/" but prefix match for others
+  if (path === '/') return false;
+  return !publicPrefixes.some(p => p !== '/' && path.startsWith(p));
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const navigate = useNavigate();
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const location = useLocation();
+  // token is kept in memory only — derived from the HttpOnly cookie via /profile/me
+  const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<IUserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOAuthEnabled, setIsOAuthEnabled] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+  // Track si l'utilisateur était connecté (pour détecter la perte de session)
+  const wasAuthenticated = useRef(false);
+
+  const redirectByRole = useCallback((role: string) => {
+    if (role === 'ORGANIZER') navigate('/dashboard');
+    else if (role === 'COMEDIAN') navigate('/profile/comedian');
+    else if (role === 'SUPER_ADMIN') navigate('/dashboard');
+    else if (role === 'SPECTATOR') navigate('/spectateur');
+    else if (role === 'LIEU') navigate('/my-venues-management');
+    else navigate('/');
+  }, [navigate]);
 
   const logout = useCallback(async () => {
-    // Get Keycloak tokens before clearing
     const { id_token } = getStoredOAuthTokens();
 
-    // Clear all tokens
     clearOAuthTokens();
     setToken(null);
     setUser(null);
 
-    // Logout from Keycloak if we had a Keycloak session
+    // Always clear the HttpOnly cookie via the generic logout endpoint
+    try {
+      await api.post('/auth/logout');
+    } catch (_) {
+      // Non-blocking
+    }
+
+    // If OAuth session, also logout from Keycloak
     if (id_token) {
       try {
         await logoutFromKeycloak(id_token, false);
@@ -63,188 +92,105 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     navigate('/');
   }, [navigate]);
 
-  // Login with Keycloak OAuth
   const loginWithKeycloak = useCallback(async (provider?: string) => {
     setIsOAuthLoading(true);
     try {
       const tokens = await oauthLogin(provider);
-
-      // Store tokens
       storeOAuthTokens(tokens);
-      setToken(tokens.token);
 
-      // Fetch user data
-      const response = await api.get<IUserData>('/profile/me', {
-        headers: {
-          Authorization: `Bearer ${tokens.token}`,
-        },
-      });
-
-      localStorage.setItem('user', JSON.stringify(response.data));
+      // Cookie is set by the server — just fetch the user profile
+      const response = await api.get<IUserData>('/profile/me');
       setUser(response.data);
-
-      // Redirect based on role
-      if (response.data.role === 'ORGANIZER') {
-        navigate('/dashboard');
-      } else if (response.data.role === 'COMEDIAN') {
-        navigate('/profile/comedian');
-      } else if (response.data.role === 'SUPER_ADMIN') {
-        navigate('/dashboard');
-      } else {
-        navigate('/');
-      }
+      redirectByRole(response.data.role);
     } catch (error: any) {
       console.error('Keycloak login error:', error);
       throw error;
     } finally {
       setIsOAuthLoading(false);
     }
-  }, [navigate]);
+  }, [redirectByRole]);
 
   const refreshUser = useCallback(async () => {
-    console.log("refreshUser: Tentative de rafraîchissement des données utilisateur...");
-    if (token) {
-      try {
-        setIsLoading(true);
-        const response = await api.get<IUserData>('/profile/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        console.log("refreshUser: Données utilisateur reçues de l'API:", response.data);
-        localStorage.setItem('user', JSON.stringify(response.data));
-        console.log("refreshUser: Utilisateur stocké dans localStorage:", response.data);
-        setUser(response.data);
-        console.log("refreshUser: État de l'utilisateur mis à jour:", response.data);
-      } catch (err: any) {
-        console.error("refreshUser: Erreur lors du rafraîchissement des données utilisateur depuis l'API", err);
-        if (axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403)) {
-          console.log("refreshUser: Erreur d'authentification détectée. Déconnexion.");
-          logout();
-        }
-      } finally {
-        setIsLoading(false);
+    try {
+      setIsLoading(true);
+      const response = await api.get<IUserData>('/profile/me');
+      setUser(response.data);
+    } catch (err: any) {
+      if (axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403)) {
+        await logout();
       }
-    } else {
-      console.log("refreshUser: Pas de token, ne peut pas rafraîchir l'utilisateur.");
-      setUser(null);
+    } finally {
       setIsLoading(false);
     }
-  }, [token, logout]);
+  }, [logout]);
 
   useEffect(() => {
     let isMounted = true;
 
     const initializeAuth = async () => {
-      if (!isMounted) return;
-
       setIsLoading(true);
-      const userString = localStorage.getItem('user');
-      const storedToken = localStorage.getItem('token');
 
-      if (userString && storedToken) {
-        try {
-          const parsedUser = JSON.parse(userString) as IUserData;
-          if (isMounted) setUser(parsedUser);
-
-          // Rafraîchir les données utilisateur une seule fois au montage
-          try {
-            const response = await api.get<IUserData>('/profile/me', {
-              headers: {
-                Authorization: `Bearer ${storedToken}`,
-              },
-            });
-            if (isMounted) {
-              localStorage.setItem('user', JSON.stringify(response.data));
-              setUser(response.data);
-            }
-          } catch (err: any) {
-            console.error("Erreur lors du rafraîchissement des données utilisateur", err);
-            if (isMounted && axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403)) {
-              logout();
-            }
-          }
-        } catch (e) {
-          console.error("Erreur lors du parse de l'utilisateur depuis le localStorage", e);
-          if (isMounted) setUser(null);
+      // Validate session via HttpOnly cookie — if cookie is missing/expired, /profile/me returns 401
+      // User data is kept in memory only (React state) — no sessionStorage to avoid XSS exposure
+      try {
+        const response = await api.get<IUserData>('/profile/me');
+        if (isMounted) {
+          setUser(response.data);
         }
-      } else {
-        if (isMounted) setUser(null);
+      } catch (err: any) {
+        if (isMounted && axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403)) {
+          setUser(null);
+        }
       }
+
       if (isMounted) setIsLoading(false);
     };
 
     initializeAuth();
 
-    // Check OAuth status
     checkOAuthStatus().then((status) => {
-      if (isMounted) {
-        setIsOAuthEnabled(status.enabled);
-      }
+      if (isMounted) setIsOAuthEnabled(status.enabled);
     });
 
     return () => {
       isMounted = false;
     };
-  }, [logout]);
+  }, []);
+
+  // Redirection centralisée : quand un utilisateur connecté perd sa session → /login
+  useEffect(() => {
+    if (user) {
+      wasAuthenticated.current = true;
+    } else if (!isLoading && wasAuthenticated.current) {
+      // L'utilisateur était connecté mais ne l'est plus (session expirée / 401)
+      wasAuthenticated.current = false;
+      if (isProtectedPath(location.pathname)) {
+        navigate('/login', { replace: true });
+      }
+    }
+  }, [user, isLoading, location.pathname, navigate]);
 
   const registerMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await api.post('/auth/register', data);
       return response.data;
     },
-    onSuccess: (data) => {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setToken(data.token);
-      setUser(data.user);
-      if (data.user.role === "ORGANIZER") {
-        navigate("/dashboard");
-      } else if (data.user.role === "COMEDIAN") {
-        navigate("/profile/comedian");
-      } else if (data.user.role === "SUPER_ADMIN") {
-        console.log("🔥 SUPER_ADMIN connecté, redirection vers dashboard");
-        navigate("/dashboard");
-      } else if (data.user.role === "SPECTATOR") {
-        navigate("/spectateur");
-      } else {
-        navigate("/");
-      }
+    onSuccess: async (data) => {
+      await refreshUser();
+      redirectByRole(data.user.role);
     }
   });
 
   const loginMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log("🔄 Tentative de connexion avec:", data.email);
       const response = await api.post('/auth/login', data);
-      console.log("✅ Réponse de l'API de connexion:", response.data);
       return response.data;
     },
-    onSuccess: (data) => {
-      console.log("🎉 Connexion réussie pour:", data.user.email, "avec le rôle:", data.user.role);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setToken(data.token);
-      setUser(data.user);
-      if (data.user.role === "ORGANIZER") {
-        console.log("📍 Redirection ORGANIZER vers /dashboard");
-        navigate("/dashboard");
-      } else if (data.user.role === "COMEDIAN") {
-        console.log("📍 Redirection COMEDIAN vers /profile/comedian");
-        navigate("/profile/comedian");
-      } else if (data.user.role === "SUPER_ADMIN") {
-        console.log("🔥 SUPER_ADMIN connecté, redirection vers dashboard");
-        navigate("/dashboard");
-      } else if (data.user.role === "SPECTATOR") {
-        navigate("/spectateur");
-      } else {
-        console.log("📍 Redirection par défaut vers /");
-        navigate("/");
-      }
+    onSuccess: async (data) => {
+      await refreshUser();
+      redirectByRole(data.user.role);
     }
-    // Pas de onError ici - laisse les composants gérer leurs propres erreurs
   });
-
 
   const contextValue = {
     token,

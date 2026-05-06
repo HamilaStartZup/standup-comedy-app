@@ -166,6 +166,28 @@ export const handleSSEEvent = (queryClient: QueryClient, event: SSEEvent): void 
       }
       break;
 
+    // === RÉSERVATIONS DE SALLES ===
+    case 'VENUE_BOOKING_STATUS_CHANGED':
+      console.log('🏢 [SSE] Statut de réservation salle modifié:', event.data.id, event.data.status);
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'], exact: false });
+      if (event.data.venueId) {
+        queryClient.invalidateQueries({ queryKey: ['venue-bookings', event.data.venueId], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['venue', event.data.venueId], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['blocked-dates', event.data.venueId], exact: false });
+      }
+      queryClient.invalidateQueries({ queryKey: ['notifications'], exact: false });
+      break;
+
+    case 'VENUE_BOOKING_PAYMENT_UPDATED':
+      console.log('💳 [SSE] Paiement réservation salle mis à jour:', event.data.id, event.data.paymentStatus);
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'], exact: false });
+      if (event.data.venueId) {
+        queryClient.invalidateQueries({ queryKey: ['venue-bookings', event.data.venueId], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['venue', event.data.venueId], exact: false });
+      }
+      queryClient.invalidateQueries({ queryKey: ['notifications'], exact: false });
+      break;
+
     // === ÉVÈNEMENT DE CONNEXION ===
     case 'CONNECTED':
       console.log('🔌 [SSE] Connexion SSE établie');

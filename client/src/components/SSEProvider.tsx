@@ -20,7 +20,7 @@ export const SSEProvider: React.FC<SSEProviderProps> = ({
   children,
   showConnectionStatus = false
 }) => {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   // Créer le handler d'évènements avec le queryClient
@@ -32,10 +32,11 @@ export const SSEProvider: React.FC<SSEProviderProps> = ({
   // Désactiver SSE sur les pages publiques (login, register, forgot-password, etc.)
   const currentPath = window.location.pathname;
   const isPublicPage = ['/login', '/register', '/register/spectateur', '/organisateur', '/forgot-password', '/reset-password', '/'].includes(currentPath);
-  const shouldEnableSSE = !!token && !isPublicPage;
+  const shouldEnableSSE = !!user && !isPublicPage;
 
   // Établir la connexion SSE uniquement si nécessaire
-  const status = useSSE(token, eventHandler, shouldEnableSSE);
+  // Le cookie HttpOnly auth_token est envoyé automatiquement par le navigateur
+  const status = useSSE(eventHandler, shouldEnableSSE);
 
   return (
     <>

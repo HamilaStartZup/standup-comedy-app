@@ -11,7 +11,8 @@ import {
   sendApplicationNotificationToOrganizer,
   sendApplicationStatusToComedian,
   sendLateCancellationToOrganizer,
-  sendLateCancellationToComedian
+  sendLateCancellationToComedian,
+  sendWithdrawalNotificationToOrganizer
 } from '../services/emailService';
 import { createLateCancellationAlert } from '../services/lateCancellationAlertService';
 import { notifyComediansOfLateCancellationAsync } from '../services/mobilityNotificationService';
@@ -31,6 +32,15 @@ const buildAvatarDataUrl = (user: any): string | undefined => {
   }
   return user?.avatarUrl || undefined;
 };
+
+/** Retourne true si l'événement commence dans moins d'1 h ou est déjà passé (humoriste ne peut plus postuler ni se désinscrire). */
+function isEventWithinOneHour(event: { date: Date | string; startTime?: string }): boolean {
+  const dateStr = typeof event.date === 'string' ? event.date.split('T')[0] : new Date(event.date).toISOString().split('T')[0];
+  const startTime = (event.startTime || '00:00').trim();
+  const eventStart = new Date(dateStr + 'T' + startTime + ':00');
+  const oneHourFromNow = Date.now() + 60 * 60 * 1000;
+  return eventStart.getTime() <= oneHourFromNow;
+}
 
 export const createApplication = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -55,6 +65,15 @@ export const createApplication = async (req: AuthRequest, res: Response): Promis
     const eventObjectId = new Types.ObjectId(eventId);
     const comedianObjectId = new Types.ObjectId(comedianId);
 
+    // Vérifier si l'humoriste est restreint (signalement en cours)
+    const comedian = await UserModel.findById(comedianId).select('isRestricted isActive');
+    if (comedian?.isRestricted) {
+      res.status(403).json({
+        message: 'Votre compte est restreint en attendant l\'examen d\'un signalement. Vous ne pouvez pas postuler à de nouveaux événements.'
+      });
+      return;
+    }
+
     // Vérifier si l'évènement existe
     const event = await EventModel.findById(eventObjectId);
     if (!event) {
@@ -66,15 +85,23 @@ export const createApplication = async (req: AuthRequest, res: Response): Promis
 
     // Vérifier le statut de l'évènement
     if (event.status === 'cancelled') {
-      res.status(400).json({
+      res.status(422).json({
         message: 'Impossible de postuler à un évènement annulé'
       });
       return;
     }
 
     if (event.status === 'completed') {
-      res.status(400).json({
+      res.status(422).json({
         message: 'Impossible de postuler à un évènement terminé'
+      });
+      return;
+    }
+
+    // À partir d'1 h avant le début, l'humoriste ne peut plus postuler
+    if (isEventWithinOneHour(event)) {
+      res.status(422).json({
+        message: 'Impossible de postuler : l\'événement commence dans moins d\'une heure ou a déjà commencé.'
       });
       return;
     }
@@ -101,6 +128,37 @@ export const createApplication = async (req: AuthRequest, res: Response): Promis
         message: 'Vous ne pouvez pas postuler à nouveau après vous être retiré de cet évènement'
       });
       return;
+    }
+
+    // Vérifier si l'humoriste est déjà accepté à un évènement simultané
+    const targetDateStr = event.date ? new Date(event.date).toISOString().split('T')[0] : '';
+    const targetStart = (event.startTime ?? '00:00').trim();
+    const targetEnd = (event.endTime ?? '23:59').trim();
+
+    if (targetDateStr) {
+      const acceptedApplications = await ApplicationModel.find({
+        comedian: comedianObjectId,
+        event: { $ne: eventObjectId },
+        status: 'ACCEPTED'
+      }).populate<{ event: EventDocument }>('event');
+
+      const hasConflict = acceptedApplications.some(app => {
+        const ev = app.event as EventDocument | null;
+        if (!ev || !ev.date) return false;
+        const otherDateStr = new Date(ev.date).toISOString().split('T')[0];
+        if (otherDateStr !== targetDateStr) return false;
+        const otherStart = (ev.startTime ?? '00:00').trim();
+        const otherEnd = (ev.endTime ?? '23:59').trim();
+        // Overlap si les plages horaires se chevauchent
+        return targetStart < otherEnd && otherStart < targetEnd;
+      });
+
+      if (hasConflict) {
+        res.status(409).json({
+          message: 'Vous êtes déjà accepté à un autre événement qui se déroule au même moment.'
+        });
+        return;
+      }
     }
 
     // Créer l'application
@@ -350,6 +408,46 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response): 
           lateCancellationAt: null
         });
       }
+
+      // Annulation par la plateforme des autres candidatures au même créneau (même date + même heure)
+      // sans impacter les statistiques de l'humoriste
+      const acceptedEventIdStr = (event?._id || eventId).toString();
+      const acceptedDateStr = event?.date ? new Date(event.date).toISOString().split('T')[0] : '';
+      const acceptedStartTime = (event?.startTime ?? '00:00').trim();
+
+      if (acceptedDateStr && acceptedStartTime) {
+        const otherApplications = await ApplicationModel.find({
+          comedian: comedianId,
+          _id: { $ne: applicationId },
+          status: { $in: ['PENDING', 'ACCEPTED'] }
+        }).populate<{ event: EventDocument }>('event');
+
+        const overlapping = otherApplications.filter(app => {
+          const ev = app.event as EventDocument | null;
+          if (!ev || !ev.date) return false;
+          const otherId = (ev._id || ev).toString();
+          if (otherId === acceptedEventIdStr) return false;
+          const otherDateStr = new Date(ev.date).toISOString().split('T')[0];
+          const otherStartTime = (ev.startTime || '00:00').trim();
+          return otherDateStr === acceptedDateStr && otherStartTime === acceptedStartTime;
+        });
+
+        for (const app of overlapping) {
+          const wasAccepted = app.status === 'ACCEPTED';
+          const otherEventId = (app.event as any)._id || app.event;
+          await ApplicationModel.findByIdAndUpdate(app._id, { status: 'CANCELLED_BY_PLATFORM' });
+          if (wasAccepted) {
+            await EventModel.findByIdAndUpdate(
+              otherEventId,
+              { $pull: { participants: comedianId } }
+            );
+          }
+          emitApplicationStatusChanged(app._id.toString(), 'CANCELLED_BY_PLATFORM', otherEventId?.toString() || '');
+        }
+        if (overlapping.length > 0) {
+          console.log(`🔄 [PLATFORM] ${overlapping.length} candidature(s) au même créneau annulée(s) pour le comédien`);
+        }
+      }
     }
 
     // Retrait du participant si le statut passe de ACCEPTED à autre chose
@@ -569,7 +667,7 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
       })
       .populate({
         path: 'comedian',
-        select: 'firstName lastName email phone avatarUrl profile'
+        select: 'firstName lastName email phone avatarUrl profile avatar'
       });
 
     // Récupérer les informations de l'utilisateur pour vérifier son rôle
@@ -740,6 +838,14 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
+    // Pour l'humoriste : à partir d'1 h avant le début, plus de désinscription possible
+    if (isComedian && application.event && isEventWithinOneHour(application.event as any)) {
+      res.status(400).json({
+        message: 'Impossible de vous désinscrire : l\'événement commence dans moins d\'une heure ou a déjà commencé.'
+      });
+      return;
+    }
+
     // Si la candidature était ACCEPTED, retirer le comédien des participants de l'évènement
     // ET ajouter le comédien aux withdrawnComedians pour empêcher une nouvelle candidature
     try {
@@ -898,6 +1004,15 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
           }
 
           console.log(`✅ Gestion de l'annulation tardive terminée pour ${comedian.firstName} ${comedian.lastName}`);
+      } else if (oldStatus === 'ACCEPTED') {
+        // Désistement « normal » (participant qui se désinscrit, hors cas tardif) → notifier l'organisateur par email
+        const event = application.event as IPopulatedEvent;
+        const organizer = await UserModel.findById(event.organizer._id || event.organizer)
+          .select('firstName lastName email')
+          .lean();
+        if (organizer) {
+          await sendWithdrawalNotificationToOrganizer(event, comedian, organizer);
+        }
       }
     }
 
@@ -908,7 +1023,7 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
     const eventId = (application.event as any)?._id?.toString() || application.event?.toString() || '';
     emitApplicationWithdrawn(applicationId, eventId);
 
-    res.json({ message: 'Candidature retirée avec succès' });
+    res.status(204).send();
   } catch (error) {
     console.error('Erreur lors du retrait de la candidature:', error);
     res.status(500).json({ message: 'Erreur lors du retrait de la candidature' });

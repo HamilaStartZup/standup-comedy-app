@@ -16,13 +16,14 @@ export type SSEEventHandler = (event: SSEEvent) => void;
 /**
  * Hook personnalisé pour gérer la connexion Server-Sent Events
  *
- * @param token - Le token JWT pour l'authentification
+ * L'authentification se fait via le cookie HttpOnly auth_token
+ * envoyé automatiquement par le navigateur (même origine).
+ *
  * @param onEvent - Callback appelé lors de la réception d'un évènement
  * @param enabled - Active/désactive la connexion SSE (par défaut: true)
  * @returns Le statut de la connexion
  */
 export const useSSE = (
-  token: string | null,
   onEvent?: SSEEventHandler,
   enabled: boolean = true
 ): SSEConnectionStatus => {
@@ -68,9 +69,9 @@ export const useSSE = (
    * Connecte au flux SSE
    */
   const connect = useCallback(() => {
-    // Ne pas se connecter si pas de token ou si désactivé
-    if (!token || !enabled) {
-      console.log('⏸️ [SSE] Connexion désactivée (token ou enabled manquant)');
+    // Ne pas se connecter si désactivé
+    if (!enabled) {
+      console.log('⏸️ [SSE] Connexion désactivée');
       setStatus('disconnected');
       return;
     }
@@ -98,10 +99,10 @@ export const useSSE = (
       ? 'https://test.connectcomedyclub.com/api'
       : 'http://localhost:3001/api');
 
-    const url = `${baseUrl}/sse/stream?token=${encodeURIComponent(token)}`;
+    const url = `${baseUrl}/sse/stream`;
 
     try {
-      const eventSource = new EventSource(url);
+      const eventSource = new EventSource(url, { withCredentials: true });
       eventSourceRef.current = eventSource;
 
       // Évènement de connexion établie
@@ -131,7 +132,8 @@ export const useSSE = (
         'ABSENCE_MARKED', 'ABSENCE_CANCELLED',
         'FAVORITE_COMEDIAN_ADDED', 'FAVORITE_COMEDIAN_REMOVED',
         'EVENT_FAVORITE_ADDED', 'EVENT_FAVORITE_REMOVED',
-        'PROFILE_UPDATED', 'USER_REGISTERED', 'PASSWORD_RESET'
+        'PROFILE_UPDATED', 'USER_REGISTERED', 'PASSWORD_RESET',
+        'VENUE_BOOKING_STATUS_CHANGED', 'VENUE_BOOKING_PAYMENT_UPDATED'
       ];
 
       eventTypes.forEach(eventType => {
@@ -177,13 +179,13 @@ export const useSSE = (
       console.error('❌ [SSE] Erreur lors de la création de EventSource:', error);
       setStatus('error');
     }
-  }, [token, enabled, onEvent, getReconnectDelay]);
+  }, [enabled, onEvent, getReconnectDelay]);
 
   // Effet principal : gérer la connexion
   useEffect(() => {
     isUnmountingRef.current = false;
 
-    if (token && enabled) {
+    if (enabled) {
       connect();
     } else {
       cleanup();
@@ -196,7 +198,7 @@ export const useSSE = (
       cleanup();
       setStatus('disconnected');
     };
-  }, [token, enabled, connect, cleanup]);
+  }, [enabled, connect, cleanup]);
 
   // Reconnecter lors du retour en ligne
   useEffect(() => {

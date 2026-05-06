@@ -123,6 +123,14 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
               {translateEventStatus(selectedEvent.status)}
             </div>
           </div>
+          <div>
+            <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: '6px' }}>
+              Tarif
+            </div>
+            <div style={{ color: '#fff', fontSize: '1em', fontWeight: 500 }}>
+              1€ la place
+            </div>
+          </div>
         </div>
 
         {/* Description */}

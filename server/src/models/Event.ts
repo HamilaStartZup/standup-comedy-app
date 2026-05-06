@@ -16,6 +16,8 @@ export interface EventDocument extends Document {
   withdrawnSpectators?: Types.ObjectId[]; // Spectateurs qui se sont désinscrits (réinscription interdite)
   startTime?: string;
   endTime?: string;
+  /** Date de fin (quand l'événement se termine après minuit, ex. début 22h → fin 1h le lendemain) */
+  endDate?: Date;
   venue?: string;
   budget?: {
     min: number;
@@ -41,6 +43,8 @@ export interface EventDocument extends Document {
   recurrenceGroupId?: Types.ObjectId;
   /** Nombre max de places pour spectateurs (optionnel) */
   maxSpectators?: number;
+  /** URL de l'image de l'événement (affichée sur les cartes spectateur) */
+  imageUrl?: string;
   // Annulation tardive : boost recommandations
   hasLateCancellation?: boolean;
   lateCancellationAt?: Date;
@@ -140,6 +144,10 @@ const eventSchema = new Schema<EventDocument>({
     type: String,
     required: false
   },
+  endDate: {
+    type: Date,
+    required: false
+  },
   venue: {
     type: String,
     required: false
@@ -166,6 +174,7 @@ const eventSchema = new Schema<EventDocument>({
     j1Sent: { type: Boolean, default: false }
   },
   maxSpectators: { type: Number, required: false },
+  imageUrl: { type: String, required: false },
   // Schéma pour le tracking des relances humoristes par mobilité (événements incomplets)
   mobilityReminders: {
     j2: {

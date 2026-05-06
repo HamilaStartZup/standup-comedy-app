@@ -35,6 +35,7 @@ export const config = {
     presenceAlertSchedule: process.env.CRON_PRESENCE_ALERT_SCHEDULE || '0 9 * * *', // Tous les jours à 9h du matin
     accountCleanupSchedule: process.env.CRON_ACCOUNT_CLEANUP_SCHEDULE || '0 3 * * *', // Tous les jours à 3h du matin
     dailySpectatorRecapSchedule: process.env.CRON_DAILY_SPECTATOR_RECAP_SCHEDULE || '0 8 * * *', // Tous les jours à 8h
+    paymentTimeoutSchedule: process.env.CRON_PAYMENT_TIMEOUT_SCHEDULE || '0 * * * *', // Toutes les heures
   },
 
   frontend: {
@@ -51,7 +52,22 @@ export const config = {
     clientId: process.env.KEYCLOAK_CLIENT_ID || 'standup-app',
     clientSecret: process.env.KEYCLOAK_CLIENT_SECRET || '',
     enabled: process.env.KEYCLOAK_ENABLED === 'true',
-  }
+    get issuer() {
+      return `${this.url}/realms/${this.realm}`;
+    },
+  },
+
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+  },
+
+  twilio: {
+    accountSid: process.env.TWILIO_ACCOUNT_SID || '',
+    authToken: process.env.TWILIO_AUTH_TOKEN || '',
+    messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID || '',
+    verifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID || '',
+  },
 };
 
 // Validation de la configuration
@@ -75,12 +91,20 @@ export const validateConfig = (): void => {
     errors.push('UNSUBSCRIBE_SECRET must be at least 32 characters long');
   }
 
+  if (config.nodeEnv === 'production' && !config.stripe.secretKey) {
+    errors.push('STRIPE_SECRET_KEY is required in production');
+  }
+
+  if (config.nodeEnv === 'production' && !config.stripe.webhookSecret) {
+    errors.push('STRIPE_WEBHOOK_SECRET is required in production');
+  }
+
   if (errors.length > 0) {
     console.error('❌ Configuration errors:');
     errors.forEach(error => console.error(`  - ${error}`));
     throw new Error('Configuration validation failed');
   }
-  
+
   console.log('✅ Configuration validée avec succès');
 };
 

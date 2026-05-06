@@ -179,6 +179,17 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
       }
     }
 
+    // Handle consent update
+    if (updateData.consent) {
+      const existingConsent = (user as any).consent || {};
+      (user as any).consent = {
+        ...existingConsent,
+        ...(updateData.consent.termsAccepted !== undefined && { termsAccepted: updateData.consent.termsAccepted }),
+        ...(updateData.consent.privacyAccepted !== undefined && { privacyAccepted: updateData.consent.privacyAccepted }),
+        ...(updateData.consent.isAdult !== undefined && { isAdult: updateData.consent.isAdult }),
+      };
+    }
+
     // Handle spectatorPreferences updates
     if (user.role === 'SPECTATOR') {
       if (!(user as any).spectatorPreferences) {

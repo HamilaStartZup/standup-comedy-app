@@ -90,6 +90,125 @@ export const calculatePresenceScore = async (comedianId: string): Promise<{
 };
 
 /**
+ * Récupère le titre de l'événement correspondant à la plus récente absence d'un humoriste
+ */
+const getMostRecentAbsenceEventTitle = async (comedianId: string): Promise<string | null> => {
+  const absence = await AbsenceModel.findOne({ comedian: comedianId })
+    .sort({ markedAt: -1 })
+    .populate('event', 'title')
+    .lean();
+  const event = absence?.event as { title?: string } | null;
+  return event?.title ?? null;
+};
+
+/**
+ * Envoie l'email d'alerte à l'humoriste lorsque son taux de présence est inférieur à 75%
+ */
+const sendPresenceAlertEmailToComedian = async (
+  comedian: { _id: any; firstName: string; lastName: string; email: string },
+  eventTitle: string | null
+): Promise<void> => {
+  try {
+    if (!comedian?.email) {
+      console.warn('⚠️ Humoriste sans email, envoi alerte présence ignoré');
+      return;
+    }
+
+    if (process.env.NODE_ENV === 'production' && process.env.DISABLE_EMAILS === 'true') {
+      console.log('⚠️ 📧 Emails désactivés (DISABLE_EMAILS)');
+      return;
+    }
+
+    if (!config.email.smtpUser || !config.email.smtpPass) {
+      console.error('❌ Configuration email manquante');
+      return;
+    }
+
+    const prenom = (comedian.firstName ?? '').trim() || 'Humoriste';
+    const eventName = eventTitle?.trim() || 'certains événements';
+
+    const subject = 'Alerte : taux de présence - Connect Comedy Club';
+
+    const textContent = `Bonjour ${prenom},
+
+Nous avons constaté votre absence à l'événement « ${eventName} », pour lequel vous aviez confirmé votre participation.
+
+Nous comprenons que des imprévus peuvent survenir. Toutefois, nous vous rappelons que la fiabilité est essentielle au bon fonctionnement de la plateforme et à la confiance des organisateurs.
+
+Nous vous informons que si votre taux d'absence atteint 75 %, votre compte sera automatiquement restreint. Cette restriction pourra inclure :
+
+* Une limitation temporaire de candidature aux événements
+* Une mise en visibilité réduite de votre profil
+* Une suspension temporaire du compte
+
+Nous vous invitons à rester vigilant(e) lors de vos prochaines candidatures et à nous prévenir au plus tôt en cas d'empêchement.
+
+Si vous estimez qu'il s'agit d'une erreur ou souhaitez nous apporter des précisions, vous pouvez répondre directement à ce mail.
+
+Merci pour votre compréhension et votre professionnalisme.
+
+L'équipe Connect Comedy Club.`;
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alerte taux de présence</title>
+  <style>
+    body { margin: 0; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; text-align: center; }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+    .content { padding: 28px; }
+    .content p { margin: 0 0 16px 0; }
+    .event-name { font-weight: bold; color: #764ba2; }
+    ul { margin: 16px 0; padding-left: 24px; }
+    .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Connect Comedy Club – Alerte présence</h1>
+    </div>
+    <div class="content">
+      <p>Bonjour ${prenom},</p>
+      <p>Nous avons constaté votre absence à l'événement <strong class="event-name">${eventName}</strong>, pour lequel vous aviez confirmé votre participation.</p>
+      <p>Nous comprenons que des imprévus peuvent survenir. Toutefois, nous vous rappelons que la fiabilité est essentielle au bon fonctionnement de la plateforme et à la confiance des organisateurs.</p>
+      <p>Nous vous informons que si votre taux d'absence atteint 75 %, votre compte sera automatiquement restreint. Cette restriction pourra inclure :</p>
+      <ul>
+        <li>Une limitation temporaire de candidature aux événements</li>
+        <li>Une mise en visibilité réduite de votre profil</li>
+        <li>Une suspension temporaire du compte</li>
+      </ul>
+      <p>Nous vous invitons à rester vigilant(e) lors de vos prochaines candidatures et à nous prévenir au plus tôt en cas d'empêchement.</p>
+      <p>Si vous estimez qu'il s'agit d'une erreur ou souhaitez nous apporter des précisions, vous pouvez répondre directement à ce mail.</p>
+      <p>Merci pour votre compréhension et votre professionnalisme.</p>
+    </div>
+    <div class="footer">
+      <p><strong>L'équipe Connect Comedy Club</strong></p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    await sgMail.send({
+      from: { email: config.email.smtpUser, name: 'Connect Comedy Club' },
+      to: comedian.email,
+      subject,
+      html: htmlContent,
+      text: textContent,
+      categories: ['alerte', 'presence', 'comedian']
+    });
+    console.log(`✅ Email d'alerte présence envoyé à l'humoriste ${comedian.email}`);
+  } catch (error) {
+    console.error(`❌ Erreur envoi email alerte présence à ${comedian?.email}:`, error);
+  }
+};
+
+/**
  * Vérifie tous les humoristes et crée des alertes pour ceux avec un score < 75%
  * @returns Nombre d'alertes créées
  */
@@ -143,6 +262,10 @@ export const checkAndCreatePresenceAlerts = async (): Promise<number> => {
             totalEvents,
             absences
           });
+
+          // Envoyer l'email d'alerte à l'humoriste (taux de présence < 75%)
+          const eventTitle = await getMostRecentAbsenceEventTitle(comedian._id.toString());
+          await sendPresenceAlertEmailToComedian(comedian, eventTitle);
 
           alertsCreated++;
         } else {

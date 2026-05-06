@@ -15,6 +15,78 @@ import { extractPostalCode, getDepartmentFromPostalCode } from '../utils/cityMap
 import { getCityCoordinates } from '../utils/cityMapping';
 import { notifySpectatorsInRadius } from '../services/spectatorNotificationService';
 
+/** Retourne la liste des modifications entre l'ancien et le nouvel évènement (pour l'email aux candidats) */
+function getEventChanges(oldEvent: any, newEvent: any): string[] {
+  const changes: string[] = [];
+  const old = (oldEvent && typeof oldEvent.toObject === 'function' ? oldEvent.toObject() : oldEvent) || {};
+  const neu = (newEvent && typeof newEvent.toObject === 'function' ? newEvent.toObject() : newEvent) || {};
+  const fmtDate = (d: Date | string | undefined) => (d ? new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) : '');
+  const oldLoc = old.location || {};
+  const newLoc = neu.location || {};
+  const oldReq = old.requirements || {};
+  const newReq = neu.requirements || {};
+
+  const oldTitle = String(old.title ?? '').trim();
+  const newTitle = String(neu.title ?? '').trim();
+  if (oldTitle !== newTitle && newTitle) {
+    changes.push(`Titre : « ${oldTitle || '—' } » → « ${newTitle} »`);
+  }
+  if (fmtDate(old.date) !== fmtDate(neu.date) && neu.date) {
+    changes.push(`Date : ${fmtDate(old.date) || '—'} → ${fmtDate(neu.date)}`);
+  }
+  if (String(old.startTime ?? '') !== String(neu.startTime ?? '')) {
+    changes.push(`Heure de début : ${old.startTime || '—'} → ${neu.startTime || '—'}`);
+  }
+  if (String(old.endTime ?? '') !== String(neu.endTime ?? '')) {
+    changes.push(`Heure de fin : ${old.endTime || '—'} → ${neu.endTime || '—'}`);
+  }
+  const oldAddr = [oldLoc.address, oldLoc.city].filter(Boolean).join(', ') || '—';
+  const newAddr = [newLoc.address, newLoc.city].filter(Boolean).join(', ') || '—';
+  if (oldAddr !== newAddr) {
+    changes.push(`Lieu : ${oldAddr} → ${newAddr}`);
+  }
+  if (String(oldLoc.venue ?? '') !== String(newLoc.venue ?? '')) {
+    changes.push(`Salle / lieu : ${oldLoc.venue || '—'} → ${newLoc.venue || '—'}`);
+  }
+  if (String(old.description ?? '') !== String(neu.description ?? '') && neu.description != null) {
+    changes.push('Description : modifiée');
+  }
+  if (Number(oldReq?.duration) !== Number(newReq?.duration) && newReq?.duration != null) {
+    changes.push(`Durée : ${oldReq?.duration ?? '—'} min → ${newReq.duration} min`);
+  }
+  if (Number(oldReq?.maxPerformers) !== Number(newReq?.maxPerformers) && newReq?.maxPerformers != null) {
+    changes.push(`Nombre max de performeurs : ${oldReq?.maxPerformers ?? '—'} → ${newReq.maxPerformers}`);
+  }
+  if (Number(oldReq?.minExperience) !== Number(newReq?.minExperience) && newReq?.minExperience != null) {
+    changes.push(`Expérience min : ${oldReq?.minExperience ?? '—'} an(s) → ${newReq.minExperience} an(s)`);
+  }
+  return changes;
+}
+
+/**
+ * Vérifie si l'organisateur a déjà un événement avec le même titre, la même date (jour) et la même heure de début.
+ * Les événements annulés sont exclus (on peut recréer après annulation).
+ */
+async function hasDuplicateEvent(
+  organizerId: string,
+  title: string,
+  dateStr: string,
+  startTime: string
+): Promise<boolean> {
+  const trimmedTitle = String(title ?? '').trim();
+  if (!trimmedTitle || !dateStr || !startTime) return false;
+  const startDay = new Date(dateStr + 'T00:00:00.000Z');
+  const endDay = new Date(startDay.getTime() + 86400000);
+  const existing = await EventModel.findOne({
+    organizer: organizerId,
+    startTime: String(startTime).trim(),
+    date: { $gte: startDay, $lt: endDay },
+    status: { $in: ['draft', 'published', 'completed'] },
+  }).lean();
+  if (!existing) return false;
+  return (existing.title ?? '').trim() === trimmedTitle;
+}
+
 // ============================================================================
 // CREATE EVENT
 // ============================================================================
@@ -29,7 +101,7 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    const { title, description, date, dates, location, requirements, startTime, endTime, budget, maxPerformers, maxSpectators, isRecurring, dateTimes } = req.body;
+    const { title, description, date, dates, location, requirements, startTime, endTime, endDate, budget, maxPerformers, maxSpectators, isRecurring, dateTimes, imageUrl } = req.body;
 
     // Si c'est un événement récurrent avec plusieurs dates
     if (isRecurring && dates && Array.isArray(dates) && dates.length > 0) {
@@ -51,6 +123,16 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
     // Sinon, création d'un événement unique (comportement existant)
     console.log('📅 Date reçue:', date, 'Type:', typeof date);
     console.log('📅 Date parsée:', new Date(date));
+
+    // Vérifier qu'il n'existe pas déjà un événement identique (même titre, date, heure de début)
+    const dateStr = typeof date === 'string' ? date.split('T')[0] : new Date(date).toISOString().split('T')[0];
+    const isDuplicate = await hasDuplicateEvent(organizerId, title, dateStr, startTime ?? '');
+    if (isDuplicate) {
+      res.status(409).json({
+        message: 'Un événement avec le même titre, la même date et la même heure de début existe déjà. Modifiez le titre, la date ou l\'heure pour créer un nouvel événement.',
+      });
+      return;
+    }
 
     // Extraire le code postal de l'adresse et calculer le département
     let enhancedLocation = { ...location };
@@ -77,10 +159,12 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
       applications: [],
       startTime,
       endTime,
+      endDate: endDate || undefined,
       venue: location.venue,
       budget,
       maxPerformers,
       maxSpectators: maxSpectators != null ? Number(maxSpectators) : undefined,
+      imageUrl: imageUrl && typeof imageUrl === 'string' && imageUrl.trim() ? imageUrl.trim() : undefined,
     });
 
     await event.save();
@@ -198,6 +282,7 @@ const createRecurringEvents = async (
     budget?: any;
     maxPerformers?: number;
     maxSpectators?: number;
+    imageUrl?: string;
     /** Heures par date (optionnel). Si fourni, utilise startTime/endTime par date au lieu des valeurs globales. */
     dateTimes?: Array<{ date: string; startTime: string; endTime: string }>;
   }
@@ -226,7 +311,7 @@ const createRecurringEvents = async (
       if (eventDate < today) {
         await session.abortTransaction();
         session.endSession();
-        res.status(400).json({ message: `La date ${dateStr} est dans le passé` });
+        res.status(422).json({ message: `La date ${dateStr} est dans le passé` });
         return;
       }
     }
@@ -296,6 +381,23 @@ const createRecurringEvents = async (
       }
     }
 
+    // Vérifier les doublons (même titre + date + heure) pour chaque date avant de créer
+    for (const dateStr of eventData.dates) {
+      const override = dateTimesMap.get(dateStr);
+      const startTime = override?.startTime ?? eventData.startTime;
+      if (startTime) {
+        const isDup = await hasDuplicateEvent(organizerId, eventData.title, dateStr, startTime);
+        if (isDup) {
+          await session.abortTransaction();
+          session.endSession();
+          res.status(409).json({
+            message: `Un événement identique (même titre, date et heure) existe déjà pour le ${new Date(dateStr).toLocaleDateString('fr-FR')}. Modifiez le titre, les dates ou les heures pour créer ces événements.`,
+          });
+          return;
+        }
+      }
+    }
+
     // Extraire le code postal et le département de l'adresse (une seule fois pour tous les événements)
     let enhancedLocation = { ...eventData.location };
     if (eventData.location?.address) {
@@ -338,7 +440,8 @@ const createRecurringEvents = async (
           budget: eventData.budget,
           maxPerformers: eventData.maxPerformers,
           maxSpectators: eventData.maxSpectators != null ? Number(eventData.maxSpectators) : undefined,
-          recurrenceGroupId: recurrenceGroupId
+          recurrenceGroupId: recurrenceGroupId,
+          imageUrl: eventData.imageUrl && typeof eventData.imageUrl === 'string' && eventData.imageUrl.trim() ? eventData.imageUrl.trim() : undefined,
         });
 
         console.log(`🔄 [RECURRENCE] Événement modèle créé, validation...`);
@@ -526,6 +629,7 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     const myRegistrations = req.query.myRegistrations === 'true';
     const nearMe = req.query.nearMe === 'true';
     const radiusKmParam = req.query.radiusKm as string; // 5, 10, 20, 50
+    const dateFrom = req.query.dateFrom as string | undefined;
     const userRole = req.user?.role;
     const userId = req.user?.id;
 
@@ -569,6 +673,13 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     // Filtre par type de lieu
     if (venueType && ['theatre', 'salle_polyvalente', 'cafe', 'restaurant', 'autre'].includes(venueType.trim())) {
       query['location.venueType'] = venueType.trim();
+    }
+
+    if (dateFrom) {
+      const parsed = new Date(dateFrom);
+      if (!isNaN(parsed.getTime())) {
+        query.date = { ...(query.date ?? {}), $gte: parsed };
+      }
     }
 
     let events = await EventModel.find(query).select('+withdrawnComedians').populate('participants').populate('organizer', 'firstName lastName email').populate('spectatorRegistrations', 'firstName lastName');
@@ -791,7 +902,7 @@ export const unregisterSpectator = async (req: AuthRequest, res: Response): Prom
       $addToSet: { withdrawnSpectators: new mongoose.Types.ObjectId(userId) },
     });
 
-    res.status(200).json({ message: 'Désinscription enregistrée' });
+    res.status(204).send();
   } catch (error) {
     console.error('Unregister spectator error:', error);
     res.status(500).json({ message: 'Erreur lors de la désinscription' });
@@ -903,9 +1014,15 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
     // Émettre un évènement SSE pour notifier tous les clients
     emitEventUpdated(updatedEvent._id.toString());
 
-    // Notifier les humoristes ayant postulé si l'évènement est futur
-    if (updatedEvent && new Date(updatedEvent.date) >= new Date()) {
-      console.log('📧 [DEBUG] Mise à jour évènement futur, préparation envoi emails de mise à jour...');
+    // Notifier les humoristes ayant postulé si l'évènement est aujourd'hui ou futur (comparaison à minuit pour inclure "aujourd'hui")
+    const eventDateAtMidnight = new Date(updatedEvent.date);
+    eventDateAtMidnight.setHours(0, 0, 0, 0);
+    const todayAtMidnight = new Date();
+    todayAtMidnight.setHours(0, 0, 0, 0);
+    const isEventTodayOrFuture = updatedEvent && eventDateAtMidnight >= todayAtMidnight;
+
+    if (isEventTodayOrFuture) {
+      console.log('📧 [DEBUG] Mise à jour évènement (aujourd\'hui ou futur), préparation envoi emails de mise à jour...');
       const applications = await ApplicationModel.find({ event: updatedEvent._id, status: { $in: ['PENDING', 'ACCEPTED'] } })
         .populate('comedian', 'email firstName lastName');
 
@@ -973,14 +1090,15 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
             }
           }
         } else {
-          // Sinon, envoyer une notification de mise à jour classique
+          // Sinon, envoyer une notification de mise à jour classique (avec détail des champs modifiés)
           try {
+            const changes = getEventChanges(event, updatedEvent);
             await sendEventUpdatedNotificationToApplicants(applications as any, updatedEvent, {
               firstName: organizer.firstName,
               lastName: organizer.lastName,
               email: organizer.email,
-            });
-            console.log(`✅ [DEBUG] Emails de mise à jour envoyés à ${applications.length} humoriste(s)`);
+            }, changes);
+            console.log(`✅ [DEBUG] Emails de mise à jour envoyés à ${applications.length} humoriste(s)${changes.length ? ` (${changes.length} modification(s))` : ''}`);
             // Créer des notifications in-app pour les humoristes concernés
             try {
               const { createNotification } = await import('./notification');
@@ -1166,7 +1284,7 @@ export const deleteEvent = async (req: AuthRequest, res: Response): Promise<void
       // Ne pas faire échouer la suppression si les stats échouent
     }
 
-    res.json({ message: 'Évènement supprimé avec succès' });
+    res.status(204).send();
   } catch (error: any) {
     console.error('❌ Delete event error:', error);
     console.error('❌ Détails de l\'erreur:', {
@@ -1651,60 +1769,62 @@ export const processCompletedEvents = async (req: AuthRequest, res: Response): P
 
     const now = new Date();
 
-    // Trouver tous les évènements passés qui ont des participants acceptés
+    // Trouver tous les évènements passés qui ont des participants acceptés (sans populate pour garder des ObjectIds)
     const pastEvents = await EventModel.find({
       date: { $lt: now },
       status: { $in: ['published', 'completed'] }
-    }).populate('participants');
+    });
 
     let totalProcessed = 0;
     let participationsAdded = 0;
 
     for (const event of pastEvents) {
-      // Pour chaque participant de l'évènement
-      for (const participantId of event.participants) {
-        const participant = await UserModel.findById(participantId);
+      const participants = Array.isArray(event.participants) ? event.participants : [];
+      for (const participantIdRef of participants) {
+        if (participantIdRef == null) continue;
+        const participantId = participantIdRef instanceof mongoose.Types.ObjectId
+          ? participantIdRef
+          : (participantIdRef as any)?._id ?? participantIdRef;
+        if (!participantId) continue;
 
-        if (participant && participant.role === 'COMEDIAN') {
-          // Initialiser les stats si nécessaire
-          if (!participant.stats) {
-            participant.stats = {};
-          }
-          if (!participant.stats.processedEvents) {
-            participant.stats.processedEvents = [];
-          }
+        // Ne charger que role, stats et nom pour éviter de déclencher la validation du profil (ex. numberOfScenes invalide)
+        const participant = await UserModel.findById(participantId)
+          .select('role stats firstName lastName')
+          .lean();
 
-          // Vérifier si cet évènement a déjà été traité pour ce participant
-          const eventIdStr = (event._id as mongoose.Types.ObjectId).toString();
-          const alreadyProcessed = participant.stats.processedEvents.includes(eventIdStr);
+        if (!participant || participant.role !== 'COMEDIAN') continue;
 
-          if (!alreadyProcessed) {
-            // Vérifier si ce humoriste a été marqué absent pour cet évènement
-            const absence = await AbsenceModel.findOne({
-              event: event._id,
-              comedian: participantId
-            });
+        const stats = participant.stats || {};
+        const processedEvents = Array.isArray(stats.processedEvents) ? stats.processedEvents : [];
+        const eventIdStr = (event._id && (event._id as any).toString) ? (event._id as any).toString() : String(event._id);
+        const alreadyProcessed = processedEvents.some((id: any) => (id && id.toString ? id.toString() : String(id)) === eventIdStr);
 
-            // Si pas d'absence trouvée, incrémenter totalEvents (participation)
-            if (!absence) {
-              const currentTotalEvents = participant.stats.totalEvents || 0;
-              participant.stats.totalEvents = currentTotalEvents + 1;
-              participant.stats.processedEvents.push(eventIdStr);
-              participant.markModified('stats');
-              await participant.save();
+        if (alreadyProcessed) {
+          console.log(`ℹ️ Évènement "${event.title}" déjà traité pour ${participant.firstName} ${participant.lastName}`);
+          continue;
+        }
 
-              participationsAdded++;
-              console.log(`✅ Participation ajoutée pour ${participant.firstName} ${participant.lastName} à l'évènement "${event.title}"`);
-            } else {
-              // Marquer comme traité même si absent pour éviter de le retraiter
-              participant.stats.processedEvents.push(eventIdStr);
-              participant.markModified('stats');
-              await participant.save();
-              console.log(`⚠️ ${participant.firstName} ${participant.lastName} était absent à l'évènement "${event.title}" - pas de participation ajoutée`);
-            }
-          } else {
-            console.log(`ℹ️ Évènement "${event.title}" déjà traité pour ${participant.firstName} ${participant.lastName}`);
-          }
+        const absence = await AbsenceModel.findOne({
+          event: event._id,
+          comedian: participantId
+        });
+
+        // Mise à jour ciblée des stats uniquement (pas de save() du document → pas de validation profile.numberOfScenes)
+        if (!absence) {
+          await UserModel.updateOne(
+            { _id: participantId },
+            { $inc: { 'stats.totalEvents': 1 }, $push: { 'stats.processedEvents': eventIdStr } },
+            { runValidators: false }
+          );
+          participationsAdded++;
+          console.log(`✅ Participation ajoutée pour ${participant.firstName} ${participant.lastName} à l'évènement "${event.title}"`);
+        } else {
+          await UserModel.updateOne(
+            { _id: participantId },
+            { $push: { 'stats.processedEvents': eventIdStr } },
+            { runValidators: false }
+          );
+          console.log(`⚠️ ${participant.firstName} ${participant.lastName} était absent à l'évènement "${event.title}" - pas de participation ajoutée`);
         }
       }
       totalProcessed++;
@@ -1715,9 +1835,15 @@ export const processCompletedEvents = async (req: AuthRequest, res: Response): P
       eventsProcessed: totalProcessed,
       participationsAdded: participationsAdded
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erreur lors du traitement des évènements terminés:', error);
-    res.status(500).json({ message: 'Erreur lors du traitement des évènements terminés' });
+    const message = error?.message || 'Erreur lors du traitement des évènements terminés';
+    const detail = error?.stack || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+    res.status(500).json({
+      message: 'Erreur lors du traitement des évènements terminés',
+      error: message,
+      ...(process.env.NODE_ENV !== 'production' && { detail })
+    });
   }
 };
 
@@ -1869,5 +1995,39 @@ export const markEventsAsCompletedCron = async (req: Request, res: Response): Pr
       message: 'Erreur lors du marquage des évènements comme completed',
       error: error instanceof Error ? error.message : 'Erreur inconnue'
     });
+  }
+};
+
+// ============================================================================
+// UPLOAD PHOTO ÉVÉNEMENT (organisateur)
+// ============================================================================
+const ALLOWED_EVENT_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+const MAX_EVENT_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+
+export const uploadEventImage = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.role !== 'ORGANIZER') {
+      res.status(403).json({ message: 'Réservé aux organisateurs' });
+      return;
+    }
+    const file = (req as any).file;
+    if (!file) {
+      res.status(400).json({ message: 'Aucun fichier reçu. Formats acceptés: JPG, PNG, GIF (max 5MB).' });
+      return;
+    }
+    if (!ALLOWED_EVENT_IMAGE_TYPES.includes(file.mimetype)) {
+      res.status(400).json({ message: 'Format non accepté. Utilisez JPG, PNG ou GIF.' });
+      return;
+    }
+    if (file.size > MAX_EVENT_IMAGE_SIZE) {
+      res.status(400).json({ message: 'Fichier trop volumineux (max 5MB).' });
+      return;
+    }
+    const baseUrl = config.api.url.replace(/\/$/, '');
+    const imageUrl = `${baseUrl}/uploads/events/${file.filename}`;
+    res.status(200).json({ imageUrl });
+  } catch (error: any) {
+    console.error('Upload event image error:', error);
+    res.status(500).json({ message: error?.message || 'Erreur lors de l\'upload.' });
   }
 };

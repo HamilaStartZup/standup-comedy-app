@@ -1,9 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { NotificationModel, NotificationDocument } from '../models/Notification';
-import { UserModel } from '../models/User';
-import { EventModel } from '../models/Event';
-import { ApplicationModel } from '../models/Application';
 import { Types } from 'mongoose';
 
 /**
@@ -31,8 +28,9 @@ export const getNotifications = async (req: AuthRequest, res: Response): Promise
       .populate('relatedEvent', 'title date')
       .populate('relatedApplication', 'status')
       .populate('relatedUser', 'firstName lastName')
+      .populate('relatedVenue', 'name')
       .sort({ createdAt: -1 })
-      .limit(limit ? parseInt(limit as string) : 50);
+      .limit(limit ? (isNaN(parseInt(limit as string, 10)) ? 50 : Math.max(1, parseInt(limit as string, 10))) : 50);
 
     const unreadCount = await NotificationModel.countDocuments({ user: userId, read: false });
 
@@ -145,9 +143,7 @@ export const deleteNotification = async (req: AuthRequest, res: Response): Promi
 
     await notification.deleteOne();
 
-    res.status(200).json({
-      message: 'Notification supprimée'
-    });
+    res.status(204).send();
   } catch (error) {
     console.error('Erreur lors de la suppression de la notification:', error);
     res.status(500).json({ message: 'Erreur lors de la suppression de la notification' });
@@ -164,7 +160,8 @@ export const createNotification = async (
   message: string,
   relatedEventId?: string,
   relatedApplicationId?: string,
-  relatedUserId?: string
+  relatedUserId?: string,
+  relatedVenueId?: string
 ): Promise<void> => {
   try {
     await NotificationModel.create({
@@ -175,10 +172,11 @@ export const createNotification = async (
       relatedEvent: relatedEventId ? new Types.ObjectId(relatedEventId) : undefined,
       relatedApplication: relatedApplicationId ? new Types.ObjectId(relatedApplicationId) : undefined,
       relatedUser: relatedUserId ? new Types.ObjectId(relatedUserId) : undefined,
+      relatedVenue: relatedVenueId ? new Types.ObjectId(relatedVenueId) : undefined,
       read: false
     });
   } catch (error) {
-    console.error('Erreur lors de la création de la notification:', error);
+    console.error('Erreur lors de la création de la notification:', { userId, type }, error);
     // Ne pas faire échouer l'opération principale si la notification échoue
   }
 };

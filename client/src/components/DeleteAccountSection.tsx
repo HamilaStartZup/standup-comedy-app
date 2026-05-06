@@ -52,47 +52,48 @@ const DeleteAccountSection: React.FC = () => {
   };
 
   const cardStyle: CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: '8px',
-    padding: '18px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
-    borderLeft: '3px solid #dc3545',
+    backgroundColor: '#1a1d27',
+    borderRadius: '16px',
+    padding: '24px',
+    border: '1px solid #2a2d3a',
+    borderLeft: '4px solid #dc3545',
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: '1.3em',
-    color: '#dc3545',
-    marginBottom: '15px',
+    fontSize: '1.2em',
+    color: '#fff',
+    marginBottom: '16px',
     display: 'flex',
     alignItems: 'center',
+    fontWeight: 600,
   };
 
   const warningBoxStyle: CSSProperties = {
-    padding: '12px 15px',
-    borderRadius: '6px',
-    background: 'rgba(255, 255, 255, 0.05)',
+    padding: '14px 16px',
+    borderRadius: '8px',
+    background: 'rgba(255, 255, 255, 0.04)',
     borderLeft: '3px solid #dc3545',
-    marginBottom: '15px',
+    marginBottom: '16px',
   };
 
   const infoBoxStyle: CSSProperties = {
-    padding: '12px 15px',
-    borderRadius: '6px',
-    background: 'rgba(255, 255, 255, 0.05)',
+    padding: '14px 16px',
+    borderRadius: '8px',
+    background: 'rgba(255, 255, 255, 0.04)',
     borderLeft: '3px solid #ffc107',
-    marginBottom: '15px',
+    marginBottom: '16px',
   };
 
   const successBoxStyle: CSSProperties = {
-    padding: '12px 15px',
-    borderRadius: '6px',
-    background: 'rgba(255, 255, 255, 0.05)',
+    padding: '14px 16px',
+    borderRadius: '8px',
+    background: 'rgba(255, 255, 255, 0.04)',
     borderLeft: '3px solid #28a745',
-    marginBottom: '15px',
+    marginBottom: '16px',
   };
 
   const buttonStyle: CSSProperties = {
-    padding: '10px 20px',
+    padding: '12px 22px',
     borderRadius: '8px',
     border: 'none',
     fontWeight: 'bold',
@@ -157,7 +158,7 @@ const DeleteAccountSection: React.FC = () => {
           onClick={handleLogoutAndRedirect}
           style={{
             ...buttonStyle,
-            background: 'linear-gradient(to right, #ff416c, #ff4b2b)',
+            background: 'linear-gradient(135deg, #e85d75, #c13057)',
             color: '#fff',
           }}
         >

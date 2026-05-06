@@ -149,17 +149,17 @@ function LegalMentionsPage() {
           <strong>RCS :</strong> Trappes
         </p>
         <p style={textStyle}>
-          <strong>Responsable publication :</strong> START IA – contact.standupconnect@gmail.com<br />
+          <strong>Responsable publication :</strong> START IA – contact@connectcomedyclub.com<br />
           Le responsable publication est une personne physique.
         </p>
         <p style={textStyle}>
-          <strong>Webmaster :</strong> START IA – contact.standupconnect@gmail.com
+          <strong>Webmaster :</strong> START IA – contact@connectcomedyclub.com
         </p>
         <p style={textStyle}>
           <strong>Hébergeur :</strong> OVHcloud – 2 rue Kellermann, 59100 Roubaix – Téléphone : 1007
         </p>
         <p style={textStyle}>
-          <strong>Délégué à la protection des données :</strong> START IA – contact.standupconnect@gmail.com
+          <strong>Délégué à la protection des données :</strong> START IA – contact@connectcomedyclub.com
         </p>
 
         {/* 2. Conditions générales d'utilisation */}

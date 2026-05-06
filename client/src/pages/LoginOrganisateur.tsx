@@ -1,6 +1,7 @@
 import { useState, useEffect, type CSSProperties } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Link } from 'react-router-dom';
+import { translateOAuthError } from '../services/oauth';
 
 function LoginOrganisateur() {
   const { loginMutation, loginWithKeycloak, isOAuthEnabled, isOAuthLoading } = useAuth();
@@ -79,7 +80,7 @@ function LoginOrganisateur() {
     try {
       await loginWithKeycloak(provider);
     } catch (error: any) {
-      setOAuthError(error.message || 'Erreur lors de la connexion');
+      setOAuthError(translateOAuthError(error.message));
     }
   };
 
@@ -266,7 +267,7 @@ function LoginOrganisateur() {
         )}
 
         {/* Social Login Buttons (via Keycloak Identity Providers) */}
-         {/*  {isOAuthEnabled && (
+        {isOAuthEnabled && (
           <>
             <div style={{
               display: 'flex',
@@ -278,9 +279,9 @@ function LoginOrganisateur() {
               <span style={{ color: '#aaa', fontSize: '0.85em', whiteSpace: 'nowrap' }}>ou continuer avec</span>
               <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, #555)' }} />
             </div>
-   
-           {/* Boutons principaux - Google & Facebook */}
-              {/* <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px' }}>
+
+            {/* Bouton principal - Google */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px' }}>
               <button
                 type="button"
                 onClick={() => handleKeycloakLogin('google')}
@@ -323,168 +324,11 @@ function LoginOrganisateur() {
                 Continuer avec Google
               </button>
 
-              <button
-                type="button"
-                onClick={() => handleKeycloakLogin('facebook')}
-                disabled={isOAuthLoading}
-                style={{
-                  width: '100%',
-                  padding: '14px 20px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #1877f2 0%, #0c5dc7 100%)',
-                  color: '#ffffff',
-                  fontSize: '0.95em',
-                  fontWeight: '600',
-                  cursor: isOAuthLoading ? 'not-allowed' : 'pointer',
-                  opacity: isOAuthLoading ? 0.7 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '12px',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 8px rgba(24, 119, 242, 0.3)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isOAuthLoading) {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(24, 119, 242, 0.4)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(24, 119, 242, 0.3)';
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-                Continuer avec Facebook
-              </button>
-            </div>*/}
+            </div>
 
-            {/* Boutons secondaires - GitHub, Microsoft, Apple */}
-               {/*<div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button
-                type="button"
-                onClick={() => handleKeycloakLogin('github')}
-                disabled={isOAuthLoading}
-                title="GitHub"
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '12px',
-                  border: '1px solid #3d3d5c',
-                  backgroundColor: '#24292e',
-                  color: '#ffffff',
-                  cursor: isOAuthLoading ? 'not-allowed' : 'pointer',
-                  opacity: isOAuthLoading ? 0.7 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isOAuthLoading) {
-                    e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-                    e.currentTarget.style.backgroundColor = '#2f363d';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                  e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.2)';
-                  e.currentTarget.style.backgroundColor = '#24292e';
-                }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="#ffffff">
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleKeycloakLogin('microsoft')}
-                disabled={isOAuthLoading}
-                title="Microsoft"
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '12px',
-                  border: '1px solid #3d3d5c',
-                  backgroundColor: '#2f2f2f',
-                  color: '#ffffff',
-                  cursor: isOAuthLoading ? 'not-allowed' : 'pointer',
-                  opacity: isOAuthLoading ? 0.7 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isOAuthLoading) {
-                    e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-                    e.currentTarget.style.backgroundColor = '#404040';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                  e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.2)';
-                  e.currentTarget.style.backgroundColor = '#2f2f2f';
-                }}
-              >
-                <svg width="22" height="22" viewBox="0 0 23 23">
-                  <rect x="1" y="1" width="10" height="10" fill="#f25022"/>
-                  <rect x="12" y="1" width="10" height="10" fill="#7fba00"/>
-                  <rect x="1" y="12" width="10" height="10" fill="#00a4ef"/>
-                  <rect x="12" y="12" width="10" height="10" fill="#ffb900"/>
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleKeycloakLogin('apple')}
-                disabled={isOAuthLoading}
-                title="Apple"
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '12px',
-                  border: '1px solid #3d3d5c',
-                  backgroundColor: '#000000',
-                  color: '#ffffff',
-                  cursor: isOAuthLoading ? 'not-allowed' : 'pointer',
-                  opacity: isOAuthLoading ? 0.7 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isOAuthLoading) {
-                    e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-                    e.currentTarget.style.backgroundColor = '#1a1a1a';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                  e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.2)';
-                  e.currentTarget.style.backgroundColor = '#000000';
-                }}
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="#ffffff">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                </svg>
-              </button>
-            </div> 
           </>
         )}
-*/}
+
         <p style={{ marginTop: '15px', marginBottom: '10px' }}>
           <Link
             to="/forgot-password"

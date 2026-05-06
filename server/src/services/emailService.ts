@@ -972,12 +972,27 @@ L'équipe Connect Comedy Club
 export const sendEventUpdatedNotificationToApplicants = async (
   applications: Array<{ _id: string; comedian: any }>,
   event: any,
-  organizer: { firstName: string; lastName: string; email: string }
+  organizer: { firstName: string; lastName: string; email: string },
+  changes: string[] = []
 ) => {
   if (!applications || applications.length === 0) return;
 
   const subject = `✏️ Mise à jour de l'évènement "${event.title}"`;
   const frontendBase = config.frontend.url;
+
+  const changesHtml = changes.length > 0
+    ? `
+        <div style="margin: 16px 0; padding: 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px;">
+          <strong style="display: block; margin-bottom: 8px;">📋 Informations modifiées :</strong>
+          <ul style="margin: 0; padding-left: 20px;">
+            ${changes.map(c => `<li style="margin-bottom: 4px;">${c}</li>`).join('')}
+          </ul>
+        </div>`
+    : '';
+
+  const changesText = changes.length > 0
+    ? `\nInformations modifiées :\n${changes.map(c => `  • ${c}`).join('\n')}\n`
+    : '';
 
   const sendAll = applications.map(async (app: any) => {
     const comedian = app.comedian;
@@ -999,7 +1014,9 @@ export const sendEventUpdatedNotificationToApplicants = async (
         <h2 style="margin-top:0">✏️ L'organisateur a modifié un évènement</h2>
         <p>Bonjour ${comedian.firstName || ''},</p>
         <p>L'évènement auquel vous avez postulé a été mis à jour par <b>${organizer.firstName} ${organizer.lastName}</b>.</p>
+        ${changesHtml}
         <div style="margin: 16px 0; padding: 16px; background:#e3f2fd; border-left: 4px solid #2196f3; border-radius: 8px;">
+          <strong style="display: block; margin-bottom: 8px;">État actuel de l'évènement</strong>
           <div><b>📛 Titre:</b> ${event.title}</div>
           <div><b>📅 Date:</b> ${new Date(event.date).toLocaleDateString('fr-FR')}</div>
           <div><b>📍 Lieu:</b> ${event.location?.address || ''} ${event.location?.city ? `- ${event.location.city}` : ''}</div>
@@ -1030,7 +1047,9 @@ export const sendEventUpdatedNotificationToApplicants = async (
 Bonjour ${comedian.firstName || ''},
 
 L'évènement auquel vous avez postulé a été mis à jour par ${organizer.firstName} ${organizer.lastName}.
+${changesText}
 
+État actuel de l'évènement:
 Évènement: ${event.title}
 Date: ${new Date(event.date).toLocaleDateString('fr-FR')}
 Lieu: ${event.location?.address || ''} ${event.location?.city ? `- ${event.location.city}` : ''}
@@ -1168,6 +1187,181 @@ L'équipe Connect Comedy Club
       'X-Entity-Ref-ID': `rappel-${type}-${Date.now()}`
     },
     categories: ['rappel', 'evenement'],
+  });
+};
+
+/**
+ * Envoie un email d'avertissement quand le compte est restreint (signalement en cours)
+ */
+export const sendComedianReportAccountRestrictedEmail = async (
+  comedian: { email: string; _id?: string; id?: string; firstName?: string; lastName?: string }
+) => {
+  const comedianId = comedian._id || comedian.id;
+  if (comedianId && !(await checkUserEmailSubscription(comedianId))) {
+    console.log(`⏭️ Comédien ${comedian.email} est désabonné - email non envoyé`);
+    return;
+  }
+  if (process.env.NODE_ENV === 'production' && process.env.DISABLE_EMAILS === 'true') return;
+  if (!config.email.smtpUser || !config.email.smtpPass) return;
+
+  const subject = 'Votre compte est restreint';
+  const textContent = `Votre compte est restreint
+
+Bonjour,
+
+Nous vous informons que votre compte a fait l'objet d'un signalement et qu'il est temporairement restreint dans l'attente de l'examen par notre équipe.
+
+Pendant cette période, vous ne pouvez pas postuler à de nouveaux événements. Vous serez informé par email une fois l'examen terminé.
+
+Pour toute question, vous pouvez nous contacter à : contact@connectcomedyclub.com
+
+Cordialement,
+L'équipe Connect Comedy Club`;
+
+  const htmlContent = `
+  <div style="font-family: Arial, sans-serif; background: #f8f9fa; padding: 24px;">
+    <div style="max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); padding: 32px;">
+      <h2 style="color: #ffc107; margin-top: 0;">Votre compte est restreint</h2>
+      <p>Bonjour,</p>
+      <p>Nous vous informons que votre compte a fait l'objet d'un signalement et qu'il est temporairement restreint dans l'attente de l'examen par notre équipe.</p>
+      <p>Pendant cette période, vous ne pouvez pas postuler à de nouveaux événements. Vous serez informé par email une fois l'examen terminé.</p>
+      <p>Pour toute question, vous pouvez nous contacter à : <a href="mailto:contact@connectcomedyclub.com">contact@connectcomedyclub.com</a></p>
+      <p>Cordialement,<br/>L'équipe Connect Comedy Club</p>
+    </div>
+  </div>`;
+
+  const unsubscribeUrl = comedianId
+    ? generateUnsubscribeUrl(comedianId.toString(), comedian.email)
+    : `${config.frontend.url}/unsubscribe`;
+
+  await sgMail.send({
+    from: { email: config.email.smtpUser, name: 'Connect Comedy Club' },
+    to: comedian.email,
+    subject,
+    html: htmlContent,
+    text: textContent,
+    mailSettings: { sandboxMode: { enable: false } },
+    headers: {
+      'List-Unsubscribe': `<${unsubscribeUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      'X-Entity-Ref-ID': `report-restricted-${Date.now()}`
+    },
+    categories: ['signalement', 'restriction'],
+  });
+};
+
+/**
+ * Envoie un email au compte signalé quand le signalement est validé (compte désactivé)
+ */
+export const sendComedianReportAccountDeactivatedEmail = async (
+  comedian: { email: string; _id?: string; id?: string; firstName?: string; lastName?: string }
+) => {
+  const comedianId = comedian._id || comedian.id;
+  if (comedianId && !(await checkUserEmailSubscription(comedianId))) {
+    console.log(`⏭️ Comédien ${comedian.email} est désabonné - email non envoyé`);
+    return;
+  }
+  if (process.env.NODE_ENV === 'production' && process.env.DISABLE_EMAILS === 'true') return;
+  if (!config.email.smtpUser || !config.email.smtpPass) return;
+
+  const subject = 'Votre compte a été désactivé';
+  const textContent = `Votre compte a été désactivé
+
+Bonjour,
+
+Suite à l'examen de votre compte, nous sommes au regret de vous informer qu'il a été désactivé et n'est plus accessible. Cette décision est définitive et votre compte est désormais inactif.
+
+Pour toute question, vous pouvez nous contacter à l'adresse suivante : contact@connectcomedyclub.com
+
+Cordialement,
+L'équipe Connect Comedy Club`;
+
+  const htmlContent = `
+  <div style="font-family: Arial, sans-serif; background: #f8f9fa; padding: 24px;">
+    <div style="max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); padding: 32px;">
+      <h2 style="color: #dc3545; margin-top: 0;">Votre compte a été désactivé</h2>
+      <p>Bonjour,</p>
+      <p>Suite à l'examen de votre compte, nous sommes au regret de vous informer qu'il a été désactivé et n'est plus accessible. Cette décision est définitive et votre compte est désormais inactif.</p>
+      <p>Pour toute question, vous pouvez nous contacter à l'adresse suivante : <a href="mailto:contact@connectcomedyclub.com">contact@connectcomedyclub.com</a></p>
+      <p>Cordialement,<br/>L'équipe Connect Comedy Club</p>
+    </div>
+  </div>`;
+
+  const unsubscribeUrl = comedianId
+    ? generateUnsubscribeUrl(comedianId.toString(), comedian.email)
+    : `${config.frontend.url}/unsubscribe`;
+
+  await sgMail.send({
+    from: { email: config.email.smtpUser, name: 'Connect Comedy Club' },
+    to: comedian.email,
+    subject,
+    html: htmlContent,
+    text: textContent,
+    mailSettings: { sandboxMode: { enable: false } },
+    headers: {
+      'List-Unsubscribe': `<${unsubscribeUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      'X-Entity-Ref-ID': `report-deactivated-${Date.now()}`
+    },
+    categories: ['signalement', 'desactivation'],
+  });
+};
+
+/**
+ * Envoie un email au compte signalé quand le signalement est rejeté (compte validé)
+ */
+export const sendComedianReportAccountValidatedEmail = async (
+  comedian: { email: string; _id?: string; id?: string; firstName?: string; lastName?: string }
+) => {
+  const comedianId = comedian._id || comedian.id;
+  if (comedianId && !(await checkUserEmailSubscription(comedianId))) {
+    console.log(`⏭️ Comédien ${comedian.email} est désabonné - email non envoyé`);
+    return;
+  }
+  if (process.env.NODE_ENV === 'production' && process.env.DISABLE_EMAILS === 'true') return;
+  if (!config.email.smtpUser || !config.email.smtpPass) return;
+
+  const subject = 'Votre compte a été validé avec succès';
+  const loginUrl = 'https://www.connectcomedyclub.com/';
+  const textContent = `Votre compte a été validé avec succès
+
+Nous vous informons que votre compte a été examiné et validé par notre équipe. Il est désormais actif et vous pouvez accéder à l'ensemble des fonctionnalités de notre plateforme.
+
+Pour vous connecter, rendez-vous sur ${loginUrl}.
+
+N'hésitez pas à nous contacter si vous avez la moindre question.
+
+Cordialement,
+L'équipe Connect Comedy Club`;
+
+  const htmlContent = `
+  <div style="font-family: Arial, sans-serif; background: #f8f9fa; padding: 24px;">
+    <div style="max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); padding: 32px;">
+      <h2 style="color: #28a745; margin-top: 0;">Votre compte a été validé avec succès</h2>
+      <p>Nous vous informons que votre compte a été examiné et validé par notre équipe. Il est désormais actif et vous pouvez accéder à l'ensemble des fonctionnalités de notre plateforme.</p>
+      <p>Pour vous connecter, rendez-vous sur <a href="${loginUrl}">${loginUrl}</a>.</p>
+      <p>N'hésitez pas à nous contacter si vous avez la moindre question.</p>
+      <p>Cordialement,<br/>L'équipe Connect Comedy Club</p>
+    </div>
+  </div>`;
+
+  const unsubscribeUrl = comedianId
+    ? generateUnsubscribeUrl(comedianId.toString(), comedian.email)
+    : `${config.frontend.url}/unsubscribe`;
+
+  await sgMail.send({
+    from: { email: config.email.smtpUser, name: 'Connect Comedy Club' },
+    to: comedian.email,
+    subject,
+    html: htmlContent,
+    text: textContent,
+    mailSettings: { sandboxMode: { enable: false } },
+    headers: {
+      'List-Unsubscribe': `<${unsubscribeUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      'X-Entity-Ref-ID': `report-validated-${Date.now()}`
+    },
+    categories: ['signalement', 'validation'],
   });
 };
 
@@ -1976,7 +2170,7 @@ Se désabonner: ${unsubscribeUrl}
 L'équipe Connect Comedy Club
     `.trim();
 
-    await sgMail.send({
+    const [response] = await sgMail.send({
       from: {
         email: config.email.smtpUser,
         name: 'Connect Comedy Club'
@@ -2005,7 +2199,7 @@ L'équipe Connect Comedy Club
       }
     });
 
-    console.log(`✅ Email mobilité envoyé à ${comedian.email} pour l'événement "${event.title}" à ${event.location?.city}`);
+    console.log(`✅ Email mobilité envoyé à ${comedian.email} pour l'événement "${event.title}" à ${event.location?.city} [SendGrid status: ${response?.statusCode ?? 'N/A'}]`);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -2613,6 +2807,113 @@ L'équipe Connect Comedy Club
       code: errorCode
     });
     throw error;
+  }
+};
+
+/**
+ * Envoie un email à l'organisateur pour l'informer qu'un humoriste s'est désinscrit de son événement
+ * (désistement « normal », hors cas tardif < 72h)
+ */
+export const sendWithdrawalNotificationToOrganizer = async (
+  eventData: any,
+  comedianData: any,
+  organizerData: any
+): Promise<void> => {
+  try {
+    console.log('📬 Service Email: Notification désistement à l\'organisateur...');
+
+    const organizerId = organizerData._id || organizerData.id;
+    if (organizerId && !(await checkUserEmailSubscription(organizerId))) {
+      console.log(`⏭️ Organisateur ${organizerData.email} est désabonné - email non envoyé`);
+      return;
+    }
+
+    if (process.env.NODE_ENV === 'production' && process.env.DISABLE_EMAILS === 'true') {
+      console.log('⚠️ 📧 Emails désactivés');
+      return;
+    }
+
+    if (!config.email.smtpUser || !config.email.smtpPass) {
+      console.error('❌ Configuration email manquante');
+      return;
+    }
+
+    const comedianName = [comedianData.firstName, comedianData.lastName].filter(Boolean).join(' ') || 'Un humoriste';
+    const eventDate = eventData.date
+      ? new Date(eventData.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+      : '';
+    const eventTime = eventData.startTime ? eventData.startTime : '';
+
+    const subject = `Désistement pour "${eventData.title}" - Connect Comedy Club`;
+    const unsubscribeUrl = organizerId
+      ? generateUnsubscribeUrl(organizerId.toString(), organizerData.email)
+      : `${config.frontend.url}/unsubscribe`;
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Désistement</title>
+  <style>
+    body { margin: 0; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background: #f5f5f5; }
+    .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; text-align: center; }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+    .content { padding: 28px; }
+    .card { background: #f8f9fa; border-radius: 12px; padding: 16px; margin: 16px 0; border-left: 4px solid #667eea; }
+    .footer { padding: 20px; text-align: center; color: #666; font-size: 13px; background: #f8f9fa; }
+    a.btn { display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Désistement d'un participant</h1>
+    </div>
+    <div class="content">
+      <p>Bonjour ${organizerData.firstName || 'Organisateur'},</p>
+      <p><strong>${comedianName}</strong> s'est désinscrit de votre événement.</p>
+      <div class="card">
+        <p style="margin: 0 0 8px 0;"><strong>${eventData.title || 'Événement'}</strong></p>
+        ${eventDate ? `<p style="margin: 0; color: #555;">📅 ${eventDate}${eventTime ? ` à ${eventTime}` : ''}</p>` : ''}
+      </div>
+      <p>Une place est à nouveau disponible. Vous pouvez consulter les candidatures en attente ou les recommandations sur la plateforme.</p>
+      <a href="${config.frontend.url}/my-events" class="btn">Voir mes événements</a>
+    </div>
+    <div class="footer">
+      <p>L'équipe Connect Comedy Club</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const textContent = `Bonjour ${organizerData.firstName || 'Organisateur'},
+
+${comedianName} s'est désinscrit de votre événement "${eventData.title || 'Événement'}".
+${eventDate ? `Date : ${eventDate}${eventTime ? ` à ${eventTime}` : ''}` : ''}
+
+Une place est à nouveau disponible. Connectez-vous pour gérer vos candidatures : ${config.frontend.url}/my-events
+
+L'équipe Connect Comedy Club`;
+
+    await sgMail.send({
+      to: organizerData.email,
+      from: { email: config.email.smtpUser, name: 'Connect Comedy Club' },
+      subject,
+      html: htmlContent,
+      text: textContent,
+      headers: {
+        'List-Unsubscribe': `<${unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+      },
+      categories: ['withdrawal', 'organizer']
+    });
+
+    console.log(`✅ Email de désistement envoyé à l'organisateur ${organizerData.email}`);
+  } catch (error) {
+    console.error('❌ Erreur envoi email désistement à l\'organisateur:', error);
   }
 };
 

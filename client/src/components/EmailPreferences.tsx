@@ -44,18 +44,20 @@ const EmailPreferences: React.FC = () => {
   };
 
   const cardStyle: CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: '8px',
-    padding: '18px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
+    backgroundColor: '#1a1d27',
+    borderRadius: '16px',
+    padding: '24px',
+    border: '1px solid #2a2d3a',
+    borderLeft: '4px solid #e85d75',
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: '1.3em',
-    color: '#ff4b2b',
-    marginBottom: '15px',
+    fontSize: '1.2em',
+    color: '#fff',
+    marginBottom: '16px',
     display: 'flex',
     alignItems: 'center',
+    fontWeight: 600,
   };
 
   const rowStyle: CSSProperties = {
@@ -63,17 +65,17 @@ const EmailPreferences: React.FC = () => {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '12px 0',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    borderBottom: '1px solid #22253a',
   };
 
   const statusBoxStyle: CSSProperties = {
-    padding: '12px 15px',
-    borderRadius: '6px',
-    marginTop: '15px',
+    padding: '14px 16px',
+    borderRadius: '8px',
+    marginTop: '16px',
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    background: 'rgba(255, 255, 255, 0.05)',
+    background: 'rgba(255, 255, 255, 0.04)',
   };
 
   const buttonStyle: CSSProperties = {
@@ -157,7 +159,7 @@ const EmailPreferences: React.FC = () => {
             disabled={isUpdating}
             style={{
               ...buttonStyle,
-              background: 'linear-gradient(to right, #ff416c, #ff4b2b)',
+              background: 'linear-gradient(135deg, #e85d75, #c13057)',
               color: '#fff',
             }}
           >

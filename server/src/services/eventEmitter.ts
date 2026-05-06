@@ -36,6 +36,10 @@ export enum SSEEventType {
   PROFILE_UPDATED = 'PROFILE_UPDATED',
   USER_REGISTERED = 'USER_REGISTERED',
   PASSWORD_RESET = 'PASSWORD_RESET',
+
+  // Réservations de salles
+  VENUE_BOOKING_STATUS_CHANGED = 'VENUE_BOOKING_STATUS_CHANGED',
+  VENUE_BOOKING_PAYMENT_UPDATED = 'VENUE_BOOKING_PAYMENT_UPDATED',
 }
 
 // Interface pour le payload des évènements SSE
@@ -170,4 +174,32 @@ export const emitUserRegistered = (userId: string) => {
 
 export const emitPasswordReset = (userId: string) => {
   appEventEmitter.emitSSEEvent(SSEEventType.PASSWORD_RESET, { userId });
+};
+
+export const emitVenueBookingStatusChanged = (
+  id: string,
+  venueId: string,
+  status: string,
+  paymentStatus: string
+) => {
+  appEventEmitter.emitSSEEvent(SSEEventType.VENUE_BOOKING_STATUS_CHANGED, {
+    id,
+    venueId,
+    status,
+    paymentStatus,
+  });
+};
+
+export const emitVenueBookingPaymentUpdated = (
+  id: string,
+  venueId: string,
+  status: string,
+  paymentStatus: string
+) => {
+  appEventEmitter.emitSSEEvent(SSEEventType.VENUE_BOOKING_PAYMENT_UPDATED, {
+    id,
+    venueId,
+    status,
+    paymentStatus,
+  });
 };

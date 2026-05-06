@@ -1,9 +1,8 @@
 import React, { type CSSProperties, useState, useEffect, useRef } from 'react';
-import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { usePostalCodeValidation } from '../hooks/usePostalCodeValidation';
 import type { IEvent } from '../types/event';
-import api from '../services/api';
+import api, { uploadEventImage } from '../services/api';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages } from '../services/systemMessages';
 
 interface EditEventFormProps {
@@ -13,7 +12,6 @@ interface EditEventFormProps {
 }
 
 function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormProps) {
-  const { token } = useAuth();
   const { showSuccess, showError, showWarning } = useAlert();
   const [formData, setFormData] = useState({
     title: '',
@@ -24,16 +22,20 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
     country: '',
     date: '',
     venue: '',
+    venueType: '',
+    maxSpectators: '',
     startTime: '',
     endTime: '',
     minExperience: '',
     maxPerformers: '',
     requiredExperienceLevel: 'all' as 'all' | '0-50' | '50-200' | '200+',
     status: 'published',
+    imageUrl: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [uploadingEventImage, setUploadingEventImage] = useState(false);
 
   // États pour l'auto-complétion
   const isAutoFillingRef = useRef(false);
@@ -72,12 +74,15 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
         country: eventToEdit.location.country,
         date: formattedDate,
         venue: eventToEdit.location.venue || '',
+        venueType: eventToEdit.location.venueType || '',
+        maxSpectators: eventToEdit.maxSpectators != null ? String(eventToEdit.maxSpectators) : '',
         startTime: eventToEdit.startTime || '',
         endTime: eventToEdit.endTime || '',
         minExperience: eventToEdit.requirements.minExperience.toString(),
         maxPerformers: eventToEdit.requirements.maxPerformers?.toString() || '',
         requiredExperienceLevel: eventToEdit.requirements.requiredExperienceLevel || 'all',
         status: eventToEdit.status,
+        imageUrl: eventToEdit.imageUrl || '',
       });
     }
   }, [eventToEdit]);
@@ -165,6 +170,33 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
     setTimeout(() => {
       isAutoFillingRef.current = false;
     }, 100);
+  };
+
+  const ALLOWED_EVENT_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+  const handleEventImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showWarning('Fichier trop volumineux. Formats acceptés: JPG, PNG, GIF (max 5MB).');
+      return;
+    }
+    if (!ALLOWED_EVENT_IMAGE_TYPES.includes(file.type)) {
+      showWarning('Formats acceptés: JPG, PNG, GIF (max 5MB).');
+      return;
+    }
+    setUploadingEventImage(true);
+    try {
+      const { imageUrl } = await uploadEventImage(file);
+      setFormData(prev => ({ ...prev, imageUrl }));
+    } catch (err: any) {
+      showWarning(err?.response?.data?.message || 'Erreur lors de l\'upload.');
+    } finally {
+      setUploadingEventImage(false);
+      e.target.value = '';
+    }
+  };
+  const handleRemoveEventImage = () => {
+    setFormData(prev => ({ ...prev, imageUrl: '' }));
   };
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -381,11 +413,6 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!token) {
-      showWarning(WarningMessages.AUTH_REQUIRED_EDIT_EVENT);
-      return;
-    }
-
     const isValid = await validateForm();
     if (!isValid) {
       return;
@@ -401,7 +428,6 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
     console.log('🔍 [EditEventForm] Validation avant envoi', {
       eventId: eventToEdit._id,
       eventTitle: eventToEdit.title,
-      hasToken: !!token,
       eventOrganizer: eventToEdit.organizer,
     });
 
@@ -459,12 +485,14 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
         date: eventDate.toISOString(),
         location: {
           venue: formData.venue,
+          venueType: formData.venueType || undefined,
           address: formData.address,
           city: formData.city,
           postalCode: postalCode || undefined,
           department: department,
           country: formData.country,
         },
+        maxSpectators: formData.maxSpectators?.trim() ? parseInt(formData.maxSpectators, 10) : undefined,
         requirements: {
           minExperience: Number(formData.minExperience),
           maxPerformers: Number(formData.maxPerformers),
@@ -472,14 +500,8 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
           requiredExperienceLevel: formData.requiredExperienceLevel,
         },
         startTime: formData.startTime,
+        imageUrl: formData.imageUrl?.trim() || undefined,
         endTime: formData.endTime,
-      };
-
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
       };
 
       console.log('🛠️ [EditEventForm] Envoi de la mise à jour évènement', {
@@ -488,10 +510,9 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
         eventIdLength: eventToEdit._id?.length,
         url: `/events/${eventToEdit._id}`,
         payload: eventData,
-        hasToken: !!token,
       });
-      
-      const response = await api.put(`/events/${eventToEdit._id}`, eventData, config);
+
+      const response = await api.put(`/events/${eventToEdit._id}`, eventData);
       console.log('✅ [EditEventForm] Réponse serveur:', response.data);
       showSuccess(SuccessMessages.EVENT_UPDATED);
       onEventUpdated();
@@ -636,7 +657,55 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
             </p>
           )}
         </div>
-        
+
+        <div style={inputGroupStyle}>
+          <label style={labelStyle}>Photo de l'événement</label>
+          {formData.imageUrl && (
+            <div style={{ marginBottom: '10px' }}>
+              <img
+                src={formData.imageUrl}
+                alt="Aperçu"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: 160,
+                  objectFit: 'cover',
+                  borderRadius: 8,
+                  border: '1px solid #555',
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleRemoveEventImage}
+                style={{
+                  marginTop: '8px',
+                  padding: '8px 12px',
+                  borderRadius: 6,
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(220, 53, 69, 0.15)',
+                  color: '#ffb3b3',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                }}
+              >
+                Supprimer la photo
+              </button>
+            </div>
+          )}
+          <input
+            type="file"
+            accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif"
+            onChange={handleEventImageChange}
+            disabled={uploadingEventImage}
+            style={{
+              ...inputStyle,
+              cursor: uploadingEventImage ? 'wait' : 'pointer',
+            }}
+          />
+          <p style={{ color: '#888', fontSize: '12px', margin: '4px 0 0' }}>
+            Formats acceptés: JPG, PNG, GIF (max 5MB)
+          </p>
+        </div>
+
         <div style={twoColumnLayout}>
           <div style={{ ...inputGroupStyle, position: 'relative' }}>
             <label htmlFor="city" style={labelStyle}>Ville *</label>
@@ -800,6 +869,41 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
                 {errors.venue}
               </p>
+            )}
+          </div>
+          <div style={inputGroupStyle}>
+            <label htmlFor="venueType" style={labelStyle}>Type de lieu</label>
+            <select
+              id="venueType"
+              style={{ ...inputStyle, borderColor: errors.venueType ? '#ef4444' : '#555' }}
+              value={formData.venueType}
+              onChange={handleChange}
+            >
+              <option value="">-- Sélectionnez --</option>
+              <option value="theatre">Théâtre</option>
+              <option value="salle_polyvalente">Salle polyvalente</option>
+              <option value="cafe">Café</option>
+              <option value="restaurant">Restaurant</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+          <div style={inputGroupStyle}>
+            <label htmlFor="maxSpectators" style={labelStyle}>Nombre de places pour spectateur</label>
+            <input
+              type="number"
+              id="maxSpectators"
+              min={1}
+              max={10000}
+              placeholder="Optionnel"
+              style={{
+                ...inputStyle,
+                borderColor: errors.maxSpectators ? '#ef4444' : '#555'
+              }}
+              value={formData.maxSpectators}
+              onChange={handleChange}
+            />
+            {errors.maxSpectators && (
+              <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>{errors.maxSpectators}</p>
             )}
           </div>
         </div>

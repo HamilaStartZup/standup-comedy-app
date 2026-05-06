@@ -92,6 +92,15 @@ function Navbar() {
         badgeText: 'Spectateur',
         avatarGradient: 'rgba(128, 128, 128, 0.6)',
       };
+    } else if (user?.role === 'LIEU') {
+      return {
+        navbarBg: 'rgba(0, 0, 0, 0.4)',
+        badgeBg: 'transparent',
+        badgeColor: '#ffffff',
+        badgeIcon: '🏛️',
+        badgeText: 'Lieu',
+        avatarGradient: 'rgba(128, 128, 128, 0.6)',
+      };
     }
     return {
       navbarBg: 'rgba(0, 0, 0, 0.4)',
@@ -107,11 +116,19 @@ function Navbar() {
 
   // Navigation items pour le menu mobile
   const getNavigationItems = () => {
+    // LIEU : Mes Salles, Profil
+    if (user?.role === 'LIEU') {
+      return [
+        { to: '/my-venues-management', label: 'Mes Salles', icon: '🏠', show: true },
+        { to: '/profile/lieu', label: 'Profil', icon: '👤', show: true },
+      ];
+    }
+
     // Spectateur : uniquement Accueil et Évènements
     if (user?.role === 'SPECTATOR') {
       return [
         { to: '/spectateur', label: 'Accueil', icon: '🏠', show: true },
-        { to: '/spectateur/events', label: 'Évènements', icon: '📅', show: true },
+        { to: '/spectateur/events', label: 'Mes évènements', icon: '📅', show: true },
         { to: '/spectateur/profile', label: 'Profil', icon: '👤', show: true },
       ];
     }
@@ -155,6 +172,13 @@ function Navbar() {
       });
     }
 
+    items.push({
+      to: "/venues",
+      label: "Salles",
+      icon: "🏛️",
+      show: user?.role === 'ORGANIZER' || (user?.role as string) === 'LIEU'
+    });
+
     if (user?.role === 'ORGANIZER') {
       items.push({
         to: "/profile/organizer",
@@ -197,12 +221,17 @@ function Navbar() {
         {/* Menu Desktop - Masqué sur mobile */}
         <div style={{ display: 'flex', alignItems: 'center' }} id="desktop-nav">
           <h2 style={{ margin: '0', color: '#ff4b2b' }}>Connect Comedy Club</h2>
-          <div style={{ marginLeft: '30px' }}>
+<div style={{ marginLeft: '30px' }}>
             {user?.role === 'SPECTATOR' ? (
               <>
                 <Link to="/spectateur" style={{ ...navLinkBaseStyle, ...(location.pathname === '/spectateur' ? activeLinkStyle : {}) }}>Accueil</Link>
-                <Link to="/spectateur/events" style={{ ...navLinkBaseStyle, ...(location.pathname === '/spectateur/events' ? activeLinkStyle : {}) }}>Évènements</Link>
+                <Link to="/spectateur/events" style={{ ...navLinkBaseStyle, ...(location.pathname === '/spectateur/events' ? activeLinkStyle : {}) }}>Mes'événements</Link>
                 <Link to="/spectateur/profile" style={{ ...navLinkBaseStyle, ...(location.pathname === '/spectateur/profile' ? activeLinkStyle : {}) }}>Profil</Link>
+              </>
+            ) : user?.role === 'LIEU' ? (
+              <>
+                <Link to="/my-venues-management" style={{ ...navLinkBaseStyle, ...(location.pathname === '/my-venues-management' ? activeLinkStyle : {}) }}>Mes Salles</Link>
+                <Link to="/profile/lieu" style={{ ...navLinkBaseStyle, ...(location.pathname === '/profile/lieu' ? activeLinkStyle : {}) }}>Profil</Link>
               </>
             ) : (
               <>
@@ -218,6 +247,9 @@ function Navbar() {
             )}
             {user?.role === 'SUPER_ADMIN' && (
               <Link to="/directory" style={{ ...navLinkBaseStyle, ...(location.pathname === '/directory' ? activeLinkStyle : {}) }}>Répertoire</Link>
+            )}
+            {user?.role === 'ORGANIZER' && (
+              <Link to="/venues" style={{ ...navLinkBaseStyle, ...(location.pathname.startsWith('/venues') || location.pathname === '/my-venues' || location.pathname === '/my-bookings' ? activeLinkStyle : {}) }}>Salles</Link>
             )}
             {user?.role === 'ORGANIZER' && (
               <Link to="/profile/organizer" style={{ ...navLinkBaseStyle, ...(location.pathname === '/profile/organizer' ? activeLinkStyle : {}) }}>Profil</Link>
@@ -287,7 +319,7 @@ function Navbar() {
           {/* Ligne avec cloche et déconnexion */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {/* Badge de notifications pour les organisateurs et humoristes */}
-            {(user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || user?.role === 'SPECTATOR') && <NotificationDropdown />}
+            {(user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || user?.role === 'SPECTATOR' || user?.role === 'LIEU') && <NotificationDropdown />}
             {!user && <span style={userNameStyle}>Invité</span>}
             <button onClick={logout} style={rightLinkStyle}>Déconnexion</button>
           </div>
@@ -464,7 +496,7 @@ function Navbar() {
               })}
               
               {/* Badge de notifications pour les organisateurs, humoristes et spectateurs dans le menu mobile */}
-              {(user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || user?.role === 'SPECTATOR') && (
+              {(user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || user?.role === 'SPECTATOR' || user?.role === 'LIEU') && (
                 <div style={{
                   padding: '16px 20px',
                   borderTop: '1px solid #e0e0e0',

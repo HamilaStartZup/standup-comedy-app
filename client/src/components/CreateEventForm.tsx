@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { usePostalCodeValidation } from '../hooks/usePostalCodeValidation';
 import { X, ChevronDown, MapPin, Calendar, Users } from 'lucide-react';
-import api from '../services/api';
+import api, { uploadEventImage } from '../services/api';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages } from '../services/systemMessages';
 
 interface CreateEventFormProps {
@@ -25,11 +25,12 @@ interface CreateEventFormProps {
       minExperience?: number;
       maxComedians?: number;
       requiredExperienceLevel?: 'all' | '0-50' | '50-200' | '200+';
+      imageUrl?: string;
     };
 }
 
 function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFormProps) {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const { showSuccess, showError, showWarning } = useAlert();
   const [isMobile, setIsMobile] = useState(false);
 
@@ -48,7 +49,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
   const timeSlots = generateTimeSlots();
 
-  // Options de durée en minutes (affichées après sélection de l'heure de début)
+  // Durée pour événement unique (en minutes) — options affichées dans le select
   const DURATION_OPTIONS = [
     { value: 30, label: '30 min' },
     { value: 60, label: '1 h' },
@@ -56,17 +57,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     { value: 120, label: '2 h' },
     { value: 150, label: '2 h 30' },
     { value: 180, label: '3 h' },
+    { value: 210, label: '3 h 30' },
     { value: 240, label: '4 h' },
   ];
-
-  const computeEndTimeFromDuration = (startTime: string, durationMinutes: number): string => {
-    if (!startTime || !durationMinutes) return '';
-    const [h, m] = startTime.split(':').map(Number);
-    const totalMinutes = h * 60 + m + durationMinutes;
-    const endH = Math.floor(totalMinutes / 60) % 24;
-    const endM = totalMinutes % 60;
-    return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-  };
   
   React.useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -104,6 +97,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     maxComedians: initialData?.maxComedians?.toString() || '',
     requiredExperienceLevel: initialData?.requiredExperienceLevel || 'all',
     status: 'PUBLISHED',
+    imageUrl: initialData?.imageUrl || '',
   });
 
   // Type d'événement : unique ou récurrent
@@ -116,10 +110,33 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   const [recurringDates, setRecurringDates] = useState<string[]>([]);
   // Heures personnalisées par date (clé = date YYYY-MM-DD, valeur = { startTime, endTime })
   const [dateTimeOverrides, setDateTimeOverrides] = useState<Record<string, { startTime: string; endTime: string }>>({});
+  /** Durée en minutes pour événement unique (0 = non sélectionné). Remplace "Heure de fin" en mode unique. */
+  const [eventDurationMinutes, setEventDurationMinutes] = useState<number>(120);
+  const [uploadingEventImage, setUploadingEventImage] = useState(false);
 
   // Formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC qui affichait le jour précédent)
   const toLocalDateString = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  /** Calcule l'heure et la date de fin à partir de la date de début, l'heure de début et la durée (événement unique). */
+  const computeEndFromDuration = (
+    dateStr: string,
+    startTimeStr: string,
+    durationMinutes: number
+  ): { endTime: string; endDate?: string } => {
+    if (!dateStr || !startTimeStr || durationMinutes <= 0) {
+      return { endTime: '' };
+    }
+    const start = new Date(dateStr + 'T' + startTimeStr + ':00');
+    const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+    const endTime = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+    const endDateStr = toLocalDateString(end);
+    const startDateStr = toLocalDateString(start);
+    if (endDateStr !== startDateStr) {
+      return { endTime, endDate: endDateStr };
+    }
+    return { endTime };
+  };
 
   // Recalculer les dates récurrentes quand les options changent
   useEffect(() => {
@@ -186,6 +203,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         maxComedians: initialData.maxComedians?.toString() || '',
         requiredExperienceLevel: initialData?.requiredExperienceLevel || 'all',
         status: 'PUBLISHED',
+        imageUrl: initialData.imageUrl || '',
       });
     } else {
       // Réinitialiser à vide si pas de données initiales
@@ -207,6 +225,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         maxComedians: '',
         requiredExperienceLevel: 'all',
         status: 'PUBLISHED',
+        imageUrl: '',
       });
     }
   }, [initialData]);
@@ -559,17 +578,43 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           }));
         }
       }
+    } else {
+      setOpenEndTimeDropdown(false);
+      // Clear error pour l'heure de fin
+      if (errors[field]) {
+        setErrors(prev => ({
+          ...prev,
+          [field]: ''
+        }));
+      }
     }
   };
 
-  const handleDurationSelect = (durationMinutes: number) => {
-    setFormData(prev => ({
-      ...prev,
-      durationMinutes,
-      endTime: computeEndTimeFromDuration(prev.startTime, durationMinutes),
-    }));
-    setOpenDurationDropdown(false);
-    setErrors(prev => ({ ...prev, durationMinutes: '' }));
+  const ALLOWED_EVENT_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+  const handleEventImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showWarning('Fichier trop volumineux. Formats acceptés: JPG, PNG, GIF (max 5MB).');
+      return;
+    }
+    if (!ALLOWED_EVENT_IMAGE_TYPES.includes(file.type)) {
+      showWarning('Formats acceptés: JPG, PNG, GIF (max 5MB).');
+      return;
+    }
+    setUploadingEventImage(true);
+    try {
+      const { imageUrl } = await uploadEventImage(file);
+      setFormData(prev => ({ ...prev, imageUrl }));
+    } catch (err: any) {
+      showWarning(err?.response?.data?.message || 'Erreur lors de l\'upload.');
+    } finally {
+      setUploadingEventImage(false);
+      e.target.value = '';
+    }
+  };
+  const handleRemoveEventImage = () => {
+    setFormData(prev => ({ ...prev, imageUrl: '' }));
   };
 
   // Fonction pour obtenir les créneaux horaires disponibles pour l'heure de début
@@ -721,9 +766,26 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
       }
     }
     
-    // Validation de la durée (après heure de début)
-    if (formData.startTime && !formData.durationMinutes) {
-      newErrors.durationMinutes = 'La durée est requise';
+    // Validation heure de fin / durée
+    if (eventType === 'unique') {
+      if (!eventDurationMinutes || eventDurationMinutes <= 0) {
+        newErrors.duration = 'La durée est requise';
+      }
+    } else {
+      if (!formData.endTime) {
+        newErrors.endTime = 'L\'heure de fin est requise';
+      } else {
+        const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(formData.endTime)) {
+          newErrors.endTime = 'Format d\'heure invalide (HH:MM)';
+        } else if (formData.startTime && formData.endTime) {
+          const startTime = new Date(`2000-01-01T${formData.startTime}`);
+          const endTime = new Date(`2000-01-01T${formData.endTime}`);
+          if (endTime <= startTime) {
+            newErrors.endTime = 'L\'heure de fin doit être après l\'heure de début';
+          }
+        }
+      }
     }
     
     // Validation de l'expérience minimale
@@ -785,7 +847,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     e.preventDefault();
     console.log('🔍 [CreateEventForm] handleSubmit appelé', { initialData, formData, eventType, recurringDates });
 
-    if (!user || !token) {
+    if (!user) {
       showWarning(WarningMessages.AUTH_REQUIRED_CREATE_EVENT);
       return;
     }
@@ -825,23 +887,29 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     setIsSubmitting(true);
 
     try {
+      // Durée en minutes pour l'API (requirements.duration)
       const parseTime = (timeStr: string) => {
         if (!timeStr) return 0;
         const [hours, minutes] = timeStr.split(':').map(Number);
         return hours * 60 + minutes;
       };
-
-      // Recalculer l'heure de fin à partir de la durée (peut dépasser minuit → lendemain)
-      const endTimeToSend = formData.startTime && formData.durationMinutes > 0
-        ? computeEndTimeFromDuration(formData.startTime, formData.durationMinutes)
-        : formData.endTime;
-      const startMinutes = parseTime(formData.startTime);
-      const endMinutes = parseTime(endTimeToSend);
-      let durationInMinutes = 0;
-      if (endMinutes >= startMinutes) {
-        durationInMinutes = endMinutes - startMinutes;
-      } else if (startMinutes > 0 || endMinutes > 0) {
-        durationInMinutes = (24 * 60 - startMinutes) + endMinutes;
+      let durationInMinutes: number;
+      let effectiveEndTime: string;
+      let effectiveEndDate: string | undefined;
+      if (eventType === 'unique') {
+        durationInMinutes = eventDurationMinutes;
+        const computed = computeEndFromDuration(formData.date, formData.startTime, eventDurationMinutes);
+        effectiveEndTime = computed.endTime;
+        effectiveEndDate = computed.endDate;
+      } else {
+        const startMinutes = parseTime(formData.startTime);
+        const endMinutes = parseTime(formData.endTime);
+        if (endMinutes >= startMinutes) {
+          durationInMinutes = endMinutes - startMinutes;
+        } else {
+          durationInMinutes = (24 * 60 - startMinutes) + endMinutes;
+        }
+        effectiveEndTime = formData.endTime;
       }
 
       // Extraire le code postal depuis l'adresse s'il n'est pas déjà présent
@@ -891,14 +959,14 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         },
         status: formData.status,
         startTime: formData.startTime,
-        endTime: endTimeToSend || formData.endTime,
+        endTime: effectiveEndTime,
         maxSpectators: formData.maxSpectators && formData.maxSpectators.trim() ? parseInt(formData.maxSpectators, 10) : undefined,
+        imageUrl: formData.imageUrl && formData.imageUrl.trim() ? formData.imageUrl.trim() : undefined,
       };
 
       const config = {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
       };
 
@@ -918,15 +986,16 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           dates: recurringDates,
           dateTimes: dateTimes.length > 0 ? dateTimes : undefined,
         };
-        response = await api.post('/events', eventData, config);
+        response = await api.post('/events', eventData);
         console.log('✅ Réponse serveur (récurrent):', response.data);
         showSuccess(`${response.data.count || recurringDates.length} événements récurrents créés avec succès !`);
       } else {
         const eventData = {
           ...baseEventData,
           date: eventType === 'unique' ? formData.date : formData.date,
+          ...(eventType === 'unique' && effectiveEndDate && { endDate: effectiveEndDate }),
         };
-        response = await api.post('/events', eventData, config);
+        response = await api.post('/events', eventData);
         console.log('✅ Réponse serveur:', response.data);
         showSuccess(SuccessMessages.EVENT_CREATED);
       }
@@ -935,7 +1004,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
       onClose();
     } catch (error: any) {
       console.error('Erreur lors de la création de l\'évènement:', error.response?.status);
-      showError(getErrorMessage(error, ErrorMessages.EVENT_CREATE_FAILED));
+      const status = error?.response?.status;
+      const message = status === 409
+        ? ErrorMessages.EVENT_DUPLICATE
+        : getErrorMessage(error, ErrorMessages.EVENT_CREATE_FAILED);
+      showError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -947,8 +1020,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
-    backdropFilter: 'blur(4px)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -958,7 +1032,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   };
 
   const formStyle: CSSProperties = {
-    background: 'linear-gradient(to bottom, #1a1a2e 0%, #16213e 40%, #331f41 100%)',
+    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
     borderRadius: '16px',
     width: '100%',
     maxWidth: isMobile ? '100%' : '800px',
@@ -985,17 +1059,19 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
   const contentStyle: CSSProperties = {
     padding: isMobile ? '16px' : '24px',
-    color: '#fff'
+    color: '#fff',
+    background: 'linear-gradient(to bottom, #1a1a2e 0%, #16213e 40%, #331f41 100%)',
+    boxShadow: '0px 4px 12px 0px rgba(0, 0, 0, 0.15), 0px 4px 12px 0px rgba(0, 0, 0, 0.15)',
   };
 
   const inputStyle: CSSProperties = {
     width: '100%',
     padding: isMobile ? '14px 16px' : '12px 16px',
     fontSize: isMobile ? '16px' : '14px', // 16px prevents zoom on iOS
-    border: '1px solid #ccc',
+    border: '1px solid #ddd',
     borderRadius: '8px',
-    background: '#ffffff',
-    color: '#000000',
+    background: 'rgba(255, 255, 255, 1)',
+    color: '#1a1a1a',
     marginBottom: '4px'
   };
 
@@ -1005,7 +1081,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     appearance: 'none', // Supprime le style par défaut du navigateur
     WebkitAppearance: 'none', // Pour Safari/Chrome
     MozAppearance: 'none', // Pour Firefox
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000000' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231a1a1a' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 12px center',
     backgroundSize: '12px',
@@ -1157,6 +1233,62 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     {errors.description}
                   </p>
                 )}
+              </div>
+
+              {/* Photo de l'événement */}
+              <div style={{ marginTop: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  Photo de l'événement
+                </label>
+                {formData.imageUrl && (
+                  <div style={{ marginBottom: '10px' }}>
+                    <img
+                      src={formData.imageUrl}
+                      alt="Aperçu"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: 160,
+                        objectFit: 'cover',
+                        borderRadius: 8,
+                        border: '1px solid #444',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveEventImage}
+                      style={{
+                        marginTop: '8px',
+                        padding: '8px 12px',
+                        borderRadius: 6,
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        background: 'rgba(220, 53, 69, 0.15)',
+                        color: '#ffb3b3',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                      }}
+                    >
+                      Supprimer la photo
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif"
+                  onChange={handleEventImageChange}
+                  disabled={uploadingEventImage}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    borderRadius: 5,
+                    border: '1px solid #444',
+                    backgroundColor: '#333',
+                    color: '#fff',
+                    cursor: uploadingEventImage ? 'wait' : 'pointer',
+                  }}
+                />
+                <p style={{ fontSize: '0.85em', color: '#aaa', marginTop: '5px' }}>
+                  Formats acceptés: JPG, PNG, GIF (max 5MB)
+                </p>
               </div>
             </div>
 
@@ -1603,9 +1735,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       cursor: 'pointer'
                     }}
                   >
-<span style={{ color: formData.startTime ? '#000' : '#999' }}>
-                      {formData.startTime
-                        ? timeSlots.find(slot => slot.value === formData.startTime)?.label
+                    <span style={{ color: formData.startTime ? 'rgba(0, 0, 0, 1)' : '#999' }}>
+                      {formData.startTime 
+                        ? timeSlots.find(slot => slot.value === formData.startTime)?.label 
                         : 'Sélectionnez une heure'}
                     </span>
                     <ChevronDown 
@@ -1667,105 +1799,128 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                   )}
                 </div>
 
-                {/* Durée - Dropdown (affiché après sélection de l'heure de début) */}
-                <div ref={durationRef} style={{ position: 'relative', zIndex: 99 }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
-                    Durée *
-                  </label>
-                  <div
-                    onClick={() => {
-                      if (!formData.startTime) return;
-                      setOpenDurationDropdown(!openDurationDropdown);
-                      setOpenStartTimeDropdown(false);
-                    }}
-                    style={{
-                      ...selectStyle,
-                      borderColor: errors.durationMinutes ? '#ef4444' : '#ccc',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      cursor: formData.startTime ? 'pointer' : 'not-allowed',
-                      opacity: formData.startTime ? 1 : 0.7,
-                    }}
-                  >
-                    <span style={{ color: formData.durationMinutes ? '#000' : '#999' }}>
-                      {formData.durationMinutes
-                        ? DURATION_OPTIONS.find(o => o.value === formData.durationMinutes)?.label
-                        : formData.startTime
-                          ? 'Sélectionnez une durée'
-                          : 'Sélectionnez d\'abord l\'heure de début'}
-                    </span>
-                    <ChevronDown
-                      size={18}
+                {/* Événement unique : Durée — Récurrent : Heure de fin */}
+                {eventType === 'unique' ? (
+                  <div style={{ position: 'relative', zIndex: 99 }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                      Durée *
+                    </label>
+                    <select
+                      value={eventDurationMinutes}
+                      onChange={(e) => setEventDurationMinutes(Number(e.target.value))}
                       style={{
-                        color: '#666',
-                        transform: openDurationDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s ease',
+                        ...selectStyle,
+                        borderColor: errors.duration ? '#ef4444' : '#444',
+                        cursor: 'pointer',
                       }}
-                    />
-                  </div>
-                  {openDurationDropdown && formData.startTime && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      marginTop: '4px',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #ccc',
-                      borderRadius: '8px',
-                      maxHeight: '200px',
-                      overflowY: 'auto',
-                      zIndex: 1000,
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                    }}>
+                    >
                       {DURATION_OPTIONS.map((opt) => (
-                        <div
-                          key={opt.value}
-                          onClick={() => handleDurationSelect(opt.value)}
-                          style={{
-                            padding: '12px 16px',
-                            cursor: 'pointer',
-                            color: formData.durationMinutes === opt.value ? '#000' : '#333',
-                            backgroundColor: formData.durationMinutes === opt.value ? 'rgba(255, 65, 108, 0.15)' : 'transparent',
-                            borderBottom: '1px solid rgba(0,0,0,0.06)',
-                            transition: 'background-color 0.2s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            if (formData.durationMinutes !== opt.value) {
-                              e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (formData.durationMinutes !== opt.value) {
-                              e.currentTarget.style.backgroundColor = 'transparent';
-                            }
-                          }}
-                        >
+                        <option key={opt.value} value={opt.value}>
                           {opt.label}
-                        </div>
+                        </option>
                       ))}
+                    </select>
+                    {formData.date && formData.startTime && eventDurationMinutes > 0 && (() => {
+                      const { endTime, endDate } = computeEndFromDuration(formData.date, formData.startTime, eventDurationMinutes);
+                      const endDateObj = endDate ? new Date(endDate + 'T' + endTime + ':00') : new Date(formData.date + 'T' + endTime + ':00');
+                      const label = endDate
+                        ? endDateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' à ' + endTime.replace(':', 'h')
+                        : 'à ' + endTime.replace(':', 'h');
+                      return (
+                        <p style={{ fontSize: '12px', color: '#aaa', marginTop: '6px' }}>
+                          Fin : {label}
+                        </p>
+                      );
+                    })()}
+                    {errors.duration && (
+                      <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                        {errors.duration}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div ref={endTimeRef} style={{ position: 'relative', zIndex: 99 }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                      Heure de fin *
+                    </label>
+                    <div
+                      onClick={() => {
+                        setOpenEndTimeDropdown(!openEndTimeDropdown);
+                        setOpenStartTimeDropdown(false);
+                      }}
+                      style={{
+                        ...selectStyle,
+                        borderColor: errors.endTime ? '#ef4444' : '#444',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <span style={{ color: formData.endTime ? 'rgba(0, 0, 0, 1)' : '#999' }}>
+                        {formData.endTime 
+                          ? timeSlots.find(slot => slot.value === formData.endTime)?.label 
+                          : 'Sélectionnez une heure'}
+                      </span>
+                      <ChevronDown 
+                        size={18} 
+                        style={{ 
+                          color: '#fff', 
+                          transform: openEndTimeDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s ease'
+                        }} 
+                      />
                     </div>
-                  )}
-                  {formData.startTime && formData.durationMinutes > 0 && (
-                    <p style={{ color: '#64748B', fontSize: '13px', margin: '8px 0 0' }}>
-                      Heure de fin : {(() => {
-                        const end = computeEndTimeFromDuration(formData.startTime, formData.durationMinutes);
-                        const [h, m] = end.split(':').map(Number);
-                        const [startH, startM] = formData.startTime.split(':').map(Number);
-                        const endMin = h * 60 + m;
-                        const startMin = startH * 60 + startM;
-                        const isNextDay = endMin <= startMin;
-                        return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}${isNextDay ? ' (lendemain)' : ''}`;
-                      })()}
-                    </p>
-                  )}
-                  {errors.durationMinutes && (
-                    <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
-                      {errors.durationMinutes}
-                    </p>
-                  )}
-                </div>
+                    {openEndTimeDropdown && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: '4px',
+                        backgroundColor: '#1a1a2e',
+                        border: '1px solid #444',
+                        borderRadius: '8px',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        zIndex: 1000,
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
+                      }}>
+                        {timeSlots.map((slot) => (
+                          <div
+                            key={slot.value}
+                            onClick={() => handleTimeSelect(slot.value, 'endTime')}
+                            style={{
+                              padding: '12px 16px',
+                              cursor: 'pointer',
+                              color: '#fff',
+                              backgroundColor: formData.endTime === slot.value ? 'rgba(255, 65, 108, 0.3)' : 'transparent',
+                              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                              transition: 'background-color 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (formData.endTime !== slot.value) {
+                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (formData.endTime !== slot.value) {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                              }
+                            }}
+                          >
+                            {slot.label}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {errors.endTime && (
+                      <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                        {errors.endTime}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Type de lieu */}
                 <div>

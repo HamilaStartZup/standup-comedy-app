@@ -1,4 +1,6 @@
 import * as client from 'openid-client';
+import axios from 'axios';
+import { createPublicKey, createVerify } from 'crypto';
 import { config } from './env';
 
 let keycloakConfig: client.Configuration | null = null;
@@ -9,13 +11,6 @@ let discoveryPromise: Promise<client.Configuration> | null = null;
  */
 export const getKeycloakIssuer = (): string => {
   return `${config.keycloak.url}/realms/${config.keycloak.realm}`;
-};
-
-/**
- * Get the OIDC discovery URL
- */
-export const getDiscoveryUrl = (): string => {
-  return `${getKeycloakIssuer()}/.well-known/openid-configuration`;
 };
 
 /**
@@ -99,9 +94,6 @@ export const buildAuthorizationUrl = async (
     state,
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
-    // Force account selection to allow users to choose a different account
-    // even if they have an active session with the provider
-    prompt: 'select_account',
   };
 
   // If a specific Identity Provider is requested (google, facebook, github, etc.)
@@ -117,24 +109,31 @@ export const buildAuthorizationUrl = async (
 /**
  * Exchange authorization code for tokens
  */
-export const exchangeCodeForTokens = async (
-  currentUrl: URL,
-  codeVerifier: string,
-  expectedState: string
-): Promise<client.TokenEndpointResponse> => {
-  const keycloakCfg = await getKeycloakConfig();
-
-  const tokens = await client.authorizationCodeGrant(
-    keycloakCfg,
-    currentUrl,
+export async function exchangeCodeForTokens(
+  code: string,
+  redirectUri: string,
+  codeVerifier: string
+) {
+  const response = await axios.post(
+    `${config.keycloak.issuer}/protocol/openid-connect/token`,
+    new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: config.keycloak.clientId,
+      client_secret: config.keycloak.clientSecret,
+      code,
+      redirect_uri: redirectUri,
+      code_verifier: codeVerifier,
+    }),
     {
-      pkceCodeVerifier: codeVerifier,
-      expectedState,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      timeout: 10000, // Timeout de 10 secondes
     }
   );
 
-  return tokens;
-};
+  return response.data;
+}
 
 /**
  * Refresh access token using refresh token
@@ -146,28 +145,6 @@ export const refreshAccessToken = async (
 
   const tokens = await client.refreshTokenGrant(keycloakCfg, refreshToken);
   return tokens;
-};
-
-/**
- * Validate and decode an access token
- */
-export const validateToken = async (
-  accessToken: string
-): Promise<client.IntrospectionResponse | null> => {
-  try {
-    const keycloakCfg = await getKeycloakConfig();
-
-    const result = await client.tokenIntrospection(keycloakCfg, accessToken);
-
-    if (!result.active) {
-      return null;
-    }
-
-    return result;
-  } catch (error) {
-    console.error('Token validation error:', error);
-    return null;
-  }
 };
 
 /**
@@ -213,6 +190,152 @@ export const buildLogoutUrl = async (
   }
 
   return logoutUrl.href;
+};
+
+/**
+ * Revoke Keycloak tokens to terminate the session when login is rejected by the application.
+ * Should be called whenever we exchange tokens successfully but then refuse the login
+ * (e.g. user not found in MongoDB, Keycloak ID mismatch).
+ * Non-blocking: errors are logged but not re-thrown.
+ */
+export const revokeKeycloakTokens = async (
+  accessToken: string,
+  refreshToken?: string
+): Promise<void> => {
+  const revokeUrl = `${config.keycloak.issuer}/protocol/openid-connect/revoke`;
+
+  const revokeOne = async (token: string, hint: string) => {
+    await axios.post(
+      revokeUrl,
+      new URLSearchParams({
+        token,
+        token_type_hint: hint,
+        client_id: config.keycloak.clientId,
+        client_secret: config.keycloak.clientSecret,
+      }),
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 5000,
+      }
+    );
+  };
+
+  try {
+    // Revoke refresh token first — this also invalidates the associated access token
+    if (refreshToken) {
+      await revokeOne(refreshToken, 'refresh_token');
+    }
+    await revokeOne(accessToken, 'access_token');
+    console.log('🔒 [OAuth] Keycloak tokens revoked after application login rejection');
+  } catch (error) {
+    console.error('⚠️ [OAuth] Failed to revoke Keycloak tokens:', error);
+    // Non-blocking — the application login rejection still proceeds
+  }
+};
+
+/**
+ * Delete a Keycloak user via the Admin API.
+ * Must be called when our application rejects a login that already created a Keycloak user
+ * (account_not_found, account_mismatch) to avoid leaving orphaned users in Keycloak.
+ * Requires the client's service account to have the "manage-users" role in realm-management.
+ * Non-blocking: errors are logged but not re-thrown.
+ */
+export const deleteKeycloakUser = async (keycloakUserId: string): Promise<void> => {
+  try {
+    const tokenResponse = await axios.post(
+      `${config.keycloak.issuer}/protocol/openid-connect/token`,
+      new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: config.keycloak.clientId,
+        client_secret: config.keycloak.clientSecret,
+      }),
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 5000,
+      }
+    );
+
+    const adminToken: string = tokenResponse.data.access_token;
+
+    await axios.delete(
+      `${config.keycloak.url}/admin/realms/${config.keycloak.realm}/users/${keycloakUserId}`,
+      {
+        headers: { Authorization: `Bearer ${adminToken}` },
+        timeout: 5000,
+      }
+    );
+
+    console.log(`🗑️ [OAuth] Keycloak user ${keycloakUserId} deleted after login rejection`);
+  } catch (error: any) {
+    console.error('⚠️ [OAuth] Failed to delete Keycloak user:', error?.response?.data || error?.message);
+  }
+};
+
+/**
+ * Verify an ID token signature via Keycloak JWKS endpoint
+ * Returns the decoded payload if valid, throws if invalid
+ */
+export const verifyIdToken = async (idToken: string, nonce?: string): Promise<Record<string, unknown>> => {
+  const keycloakCfg = await getKeycloakConfig();
+
+  const jwksUri = keycloakCfg.serverMetadata().jwks_uri;
+  if (!jwksUri) {
+    throw new Error('JWKS URI not found in Keycloak metadata');
+  }
+
+  const jwksResponse = await axios.get(jwksUri, { timeout: 5000 });
+  const jwks = jwksResponse.data;
+
+  const parts = idToken.split('.');
+  if (parts.length !== 3) {
+    throw new Error('Invalid ID token format');
+  }
+  const [headerPart, payloadPart, signaturePart] = parts;
+
+  const header = JSON.parse(Buffer.from(headerPart, 'base64url').toString('utf-8'));
+  const payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf-8'));
+
+  const jwk = jwks.keys.find((k: any) => k.kid === header.kid);
+  if (!jwk) {
+    throw new Error(`No matching JWK found for kid: ${header.kid}`);
+  }
+
+  const publicKey = createPublicKey({ key: jwk, format: 'jwk' });
+
+  const signingInput = `${headerPart}.${payloadPart}`;
+  const signature = Buffer.from(signaturePart, 'base64url');
+
+  const alg: string = header.alg || 'RS256';
+  const hashAlg = alg.startsWith('RS') ? `SHA${alg.slice(2)}` : alg;
+
+  const verifier = createVerify(hashAlg);
+  verifier.update(signingInput);
+  const isValid = verifier.verify(publicKey, signature);
+
+  if (!isValid) {
+    throw new Error('ID token signature verification failed');
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp && payload.exp < now) {
+    throw new Error('ID token has expired');
+  }
+
+  const issuer = getKeycloakIssuer();
+  if (payload.iss !== issuer) {
+    throw new Error(`ID token issuer mismatch: expected ${issuer}, got ${payload.iss}`);
+  }
+
+  if (payload.aud !== config.keycloak.clientId &&
+      !(Array.isArray(payload.aud) && (payload.aud as string[]).includes(config.keycloak.clientId))) {
+    throw new Error('ID token audience mismatch');
+  }
+
+  if (nonce && payload.nonce !== nonce) {
+    throw new Error('ID token nonce mismatch — possible replay attack');
+  }
+
+  return payload as Record<string, unknown>;
 };
 
 /**

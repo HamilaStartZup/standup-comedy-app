@@ -46,8 +46,94 @@ type OrganizerTab = 'upcoming' | 'full' | 'archived' | 'cancelled' | 'calendar' 
 type EventsSubTab = 'upcoming' | 'full' | 'archived' | 'cancelled' | 'recurringEvents';
 type SuperAdminTab = 'full' | 'upcoming' | 'archived' | 'cancelled';
 
+interface RatingsSummaryData {
+  eventTitle: string;
+  averageEventRating: number | null;
+  totalRatings: number;
+  comedianRatings: Array<{
+    comedianId: string;
+    firstName: string;
+    lastName: string;
+    averageRating: number | null;
+    ratingCount: number;
+  }>;
+}
+
+function RatingsSummaryModal({ event, onClose }: { event: IEvent | null; onClose: () => void }) {
+  const { data, isLoading, error } = useQuery<RatingsSummaryData>({
+    queryKey: ['event-ratings-summary', event?._id],
+    queryFn: async () => {
+      const res = await api.get(`/events/${event!._id}/ratings-summary`);
+      return res.data;
+    },
+    enabled: !!event?._id,
+  });
+
+  if (!event) return null;
+
+  return (
+    <Modal isOpen onClose={onClose}>
+      <div>
+        <h2 style={{ margin: '0 0 16px 0', fontSize: '1.25em', color: '#fff' }}>
+          Notes — {event.title}
+        </h2>
+        {isLoading && <p style={{ color: '#aaa' }}>Chargement des notes…</p>}
+        {error && <p style={{ color: '#dc3545' }}>Impossible de charger les notes.</p>}
+        {data && !isLoading && (
+          <>
+            <div style={{ marginBottom: 20, padding: '16px', background: 'rgba(255,255,255,0.06)', borderRadius: 8 }}>
+              <div style={{ marginBottom: 12, color: '#fff', fontSize: '0.95em' }}>
+                <span style={{ color: '#888' }}>Moyenne par événement</span>
+                <div style={{ color: '#FFD700', fontWeight: 600, fontSize: '1.2em', marginTop: 4 }}>
+                  {data.averageEventRating != null ? `${data.averageEventRating}/5` : '—'}
+                </div>
+              </div>
+              <div style={{ marginBottom: 12, color: '#fff', fontSize: '0.95em' }}>
+                <span style={{ color: '#888' }}>Nombre total d&apos;avis</span>
+                <div style={{ color: '#fff', fontWeight: 600, fontSize: '1.2em', marginTop: 4 }}>
+                  {data.totalRatings}
+                </div>
+              </div>
+            </div>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '1em', color: '#ddd' }}>Moyenne par humoriste</h3>
+            {data.comedianRatings.length > 0 ? (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 260, overflowY: 'auto' }}>
+                {data.comedianRatings.map((cr) => (
+                  <li
+                    key={cr.comedianId}
+                    style={{
+                      padding: '10px 0',
+                      borderBottom: '1px solid rgba(255,255,255,0.08)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 12,
+                    }}
+                  >
+                    <span style={{ color: '#fff' }}>
+                      {cr.firstName} {cr.lastName}
+                    </span>
+                    <span style={{ color: '#FFD700', fontWeight: 600 }}>
+                      {cr.averageRating != null ? `${cr.averageRating}/5` : '—'} ({cr.ratingCount} avis)
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p style={{ color: '#888', margin: 0 }}>Aucun humoriste à afficher.</p>
+            )}
+            {data.totalRatings === 0 && (
+              <p style={{ color: '#888', marginTop: 12 }}>Aucune notation pour cet événement.</p>
+            )}
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function MyEventsPage() {
-  const { token, user, refreshUser, isLoading: authIsLoading } = useAuth();
+  const { user, refreshUser, isLoading: authIsLoading } = useAuth();
   const { showSuccess, showError, showWarning, showInfo } = useAlert();
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -80,21 +166,16 @@ function MyEventsPage() {
     }
   }, [user?.role]);
 
-  // Calculer isQueryEnabled avant son utilisation
-  const isQueryEnabled = !authIsLoading && !!token && !!user?._id;
+  // Calculer isQueryEnabled avant son utilisation (auth par cookie : user suffit, token peut être null)
+  const isQueryEnabled = !authIsLoading && !!user?._id;
 
   // Charger les favoris depuis l'API
   const { data: eventFavoritesData, refetch: refetchEventFavorites } = useQuery<{ favorites: IEvent[] }, Error>({
-    queryKey: ['eventFavorites', user?._id, token],
+    queryKey: ['eventFavorites', user?._id],
     queryFn: async () => {
-      if (!token || !user?._id || user?.role !== 'COMEDIAN') {
+      if (!user?._id || user?.role !== 'COMEDIAN') {
         throw new Error("Informations d'authentification manquantes.");
       }
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
       const response = await getEventFavorites();
       return response;
     },
@@ -115,9 +196,9 @@ function MyEventsPage() {
 
   // Charger les humoristes favoris (pour les organisateurs) avec React Query
   const { data: favoriteComediansData, refetch: refetchFavoriteComedians } = useQuery<{ favorites: any[] }, Error>({
-    queryKey: ['organizerFavoriteComedians', user?._id, token],
+    queryKey: ['organizerFavoriteComedians', user?._id],
     queryFn: async () => {
-      if (!token || !user?._id || user?.role !== 'ORGANIZER') {
+      if (!user?._id || user?.role !== 'ORGANIZER') {
         throw new Error("Informations d'authentification manquantes.");
       }
       const response = await getFavorites();
@@ -167,6 +248,7 @@ function MyEventsPage() {
   const [expandedUpcomingGroupId, setExpandedUpcomingGroupId] = useState<string | null>(null);
   const [openActionsEventId, setOpenActionsEventId] = useState<string | null>(null);
   const [spectatorsModalEvent, setSpectatorsModalEvent] = useState<IEvent | null>(null);
+  const [ratingsModalEvent, setRatingsModalEvent] = useState<IEvent | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [locationSearch, setLocationSearch] = useState(''); // Recherche par lieu pour les humoristes
@@ -281,42 +363,20 @@ useEffect(() => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [openActionsEventId]);
 
-  console.log("MyEventsPage: Initial token", token);
-  console.log("MyEventsPage: Initial user", user);
-  console.log("MyEventsPage: Auth is loading?", authIsLoading);
-  console.log("MyEventsPage: useQuery enabled status", isQueryEnabled, { authIsLoading, token, userId: user?._id, userRole: user?.role });
-
-  // Debug supplémentaire pour diagnostiquer le problème
-  console.log("🔧 DEBUG ACTIVATION QUERY:", {
-    authIsLoading,
-    hasToken: !!token,
-    hasUserId: !!user?._id,
-    userRole: user?.role,
-    finalEnabled: isQueryEnabled
-  });
-
   const { data: fetchedEvents, isLoading: eventsLoading, isError: eventsError, error: eventsErrorMessage, refetch } = useQuery<IEvent[], Error>({
-    queryKey: ['events', user?._id, user?.role, token, location.search],
+    queryKey: ['events', user?._id, user?.role, location.search],
     queryFn: async () => {
-      console.log("🚀 MyEventsPage: useQuery queryFn called. Token:", !!token, "User ID:", user?._id, "Role:", user?.role);
-      if (!token || !user?._id) {
-        console.log("❌ Authentification manquante, arrêt de la requête");
+      if (!user?._id) {
         throw new Error("Informations d'authentification manquantes.");
       }
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
       // Pour les humoristes, récupérer TOUS les évènements
       // Pour les organisateurs, récupérer seulement leurs évènements
       const apiUrl = user?.role === 'ORGANIZER'
         ? `/events?organizerId=${user._id}`
         : `/events`; // Pas de filtre organizerId pour les humoristes
       
-      console.log(`🔗 Requête API: ${apiUrl} (Role: ${user?.role})`);
       try {
-        const res = await api.get<IEvent[]>(apiUrl, config);
+        const res = await api.get<IEvent[]>(apiUrl);
         const list = Array.isArray(res.data) ? res.data : (Array.isArray((res.data as any)?.events) ? (res.data as any).events : []);
         console.log("MyEventsPage: Données d'évènements reçues par useQuery:", list);
         console.log("MyEventsPage: User role:", user?.role);
@@ -341,17 +401,12 @@ useEffect(() => {
 
   // New useQuery for comedian's applications
   const { data: comedianApplications, isLoading: comedianApplicationsLoading, isError: comedianApplicationsError, error: comedianApplicationsErrorMessage } = useQuery<IApplication[], Error>({
-    queryKey: ['comedianApplications', user?._id, token],
+    queryKey: ['comedianApplications', user?._id],
     queryFn: async () => {
-      if (!token || !user?._id) {
+      if (!user?._id) {
         throw new Error("Informations d'authentification manquantes pour les candidatures.");
       }
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-      const res = await api.get<IApplication[]>(`/applications?comedianId=${user._id}`, config);
+      const res = await api.get<IApplication[]>(`/applications?comedianId=${user._id}`);
       const list = Array.isArray(res.data) ? res.data : (Array.isArray((res.data as any)?.applications) ? (res.data as any).applications : []);
       return list as IApplication[];
     },
@@ -369,9 +424,9 @@ useEffect(() => {
       matchReasons?: string[];
     }>
   }, Error>({
-    queryKey: ['recommendations', user?._id, token],
+    queryKey: ['recommendations', user?._id],
     queryFn: async () => {
-      if (!token || !user?._id || user?.role !== 'COMEDIAN') {
+      if (!user?._id || user?.role !== 'COMEDIAN') {
         throw new Error("Informations d'authentification manquantes.");
       }
       const response = await getRecommendations({ limit: 200 }); // Charger suffisamment d'événements
@@ -384,9 +439,9 @@ useEffect(() => {
 
   // Charger les recommandations intelligentes (basées sur l'historique)
   const { data: smartRecommendationsData, isLoading: smartRecommendationsLoading } = useQuery<SmartRecommendationsResponse, Error>({
-    queryKey: ['smartRecommendations', user?._id, token],
+    queryKey: ['smartRecommendations', user?._id],
     queryFn: async () => {
-      if (!token || !user?._id || user?.role !== 'COMEDIAN') {
+      if (!user?._id || user?.role !== 'COMEDIAN') {
         throw new Error("Informations d'authentification manquantes.");
       }
       const response = await getSmartRecommendations({ limit: 100 });
@@ -482,7 +537,7 @@ useEffect(() => {
   const favoriteIdsSet = useMemo(() => new Set(favoriteEventIds), [favoriteEventIds]);
 
   const toggleFavoriteEvent = async (eventId: string) => {
-    if (!isComedianView || !token) return;
+    if (!isComedianView || !user?._id) return;
 
     const isCurrentlyFavorite = favoriteIdsSet.has(eventId);
 
@@ -523,7 +578,7 @@ useEffect(() => {
 
   // Toggle favori pour un humoriste (organisateurs)
   const toggleFavoriteComedian = async (comedianId: string) => {
-    if (!isOrganizerView || !token) return;
+    if (!isOrganizerView || !user?._id) return;
 
     const isCurrentlyFavorite = favoriteComedianIds.includes(comedianId);
 
@@ -568,24 +623,27 @@ useEffect(() => {
     return map;
   }, [comedianApplications]);
 
-  // Fonction utilitaire pour comparer les dates : l'événement est-il terminé ?
-  // Si endTime < startTime (ex. 01:00 après 23:00), la fin est le lendemain.
-  const isEventPast = (eventDateString: string, endTime?: string, startTime?: string): boolean => {
+  /** true si l'événement commence dans moins d'1 h ou a déjà commencé → plus de postuler ni désinscrire */
+  const isEventWithinOneHour = (event: { date: string; startTime?: string }): boolean => {
+    if (!event?.date) return false;
+    const dateStr = typeof event.date === 'string' ? event.date.split('T')[0] : new Date(event.date).toISOString().split('T')[0];
+    const startTime = (event.startTime || '00:00').trim();
+    const eventStart = new Date(dateStr + 'T' + startTime + ':00');
+    const oneHourFromNow = Date.now() + 60 * 60 * 1000;
+    return eventStart.getTime() <= oneHourFromNow;
+  };
+
+  // Fonction utilitaire pour comparer les dates (ignorer l'heure)
+  const isEventPast = (eventDateString: string, endTime?: string): boolean => {
+    // Si endTime n'est pas fourni, on considère la fin de la journée
     const eventDate = new Date(eventDateString);
     let eventEndDateTime: Date;
     if (endTime) {
-      const [endH, endM] = endTime.split(":").map(Number);
-      const endMinutes = endH * 60 + endM;
-      let endDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-      if (startTime) {
-        const [startH, startM] = startTime.split(":").map(Number);
-        const startMinutes = startH * 60 + startM;
-        if (endMinutes <= startMinutes) {
-          endDate.setDate(endDate.getDate() + 1);
-        }
-      }
-      eventEndDateTime = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), endH, endM);
+      // On suppose que endTime est au format "HH:mm" (ex: "23:30")
+      const [hours, minutes] = endTime.split(":").map(Number);
+      eventEndDateTime = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), hours, minutes);
     } else {
+      // Fin de la journée si pas d'heure de fin
       eventEndDateTime = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), 23, 59, 59, 999);
     }
     const now = new Date();
@@ -745,7 +803,7 @@ useEffect(() => {
           return;
         }
         // Utilise la nouvelle logique avec endTime
-        const eventIsPast = isEventPast(event.date, event.endTime, event.startTime);
+        const eventIsPast = isEventPast(event.date, event.endTime);
         const eventDate = new Date(event.date);
         
         // Debug logging détaillé pour tracer TOUS les évènements
@@ -1403,19 +1461,34 @@ useEffect(() => {
             onClick={(e) => e.stopPropagation()}
           >
             {context === 'archived' ? (
-              <button
-                type="button"
-                style={{ ...menuItemStyle }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenActionsEventId(null);
-                  handleCardClick(event, true);
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-              >
-                Gérer absences
-              </button>
+              <>
+                <button
+                  type="button"
+                  style={{ ...menuItemStyle, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenActionsEventId(null);
+                    handleCardClick(event, true);
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                  Gérer absences
+                </button>
+                <button
+                  type="button"
+                  style={{ ...menuItemStyle }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenActionsEventId(null);
+                    setRatingsModalEvent(event);
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                  Voir les notes
+                </button>
+              </>
             ) : (
               <>
                 <button
@@ -1623,7 +1696,7 @@ useEffect(() => {
   };
 
   const confirmWithdrawApplication = async () => {
-    if (!token || !user?._id || !eventToWithdraw) return;
+    if (!user?._id || !eventToWithdraw) return;
     try {
       console.log('🔄 Début de la désinscription depuis MyEventsPage pour event:', eventToWithdraw._id);
       const app = comedianApplications?.find(a => a.event && a.event._id === eventToWithdraw._id);
@@ -1631,11 +1704,7 @@ useEffect(() => {
         console.log('❌ Application non trouvée pour cet événement');
         return;
       }
-      const config = {
-        headers: { Authorization: `Bearer ${token}` },
-      };
-      console.log('📡 Appel API de suppression:', `/applications/${app._id}`);
-      await api.delete(`/applications/${app._id}`, config);
+      await api.delete(`/applications/${app._id}`);
       console.log('✅ API call réussi, affichage de l\'alerte de succès');
       showSuccess(SuccessMessages.APPLICATION_UNSUBSCRIBED);
       refetch();
@@ -1717,12 +1786,7 @@ useEffect(() => {
           isDangerous: true,
           onConfirm: async () => {
             try {
-              const config = {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              } as const;
-              await api.delete(`/events/${event._id}`, config);
+              await api.delete(`/events/${event._id}`);
               showSuccess(SuccessMessages.EVENT_DELETED);
               refetch();
               refreshUser();
@@ -1773,12 +1837,6 @@ useEffect(() => {
       return;
     }
 
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-
     try {
       let cancelledCount = 0;
       let skippedCount = 0;
@@ -1787,7 +1845,7 @@ useEffect(() => {
         const eventMidnight = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
         const diffDays = Math.ceil((eventMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
         if (diffDays < 10) {
-          await api.put(`/events/${ev._id}`, { status: 'cancelled', cancellationReason: cancelReason }, config);
+          await api.put(`/events/${ev._id}`, { status: 'cancelled', cancellationReason: cancelReason });
           cancelledCount += 1;
         } else {
           skippedCount += 1;
@@ -1819,7 +1877,7 @@ useEffect(() => {
   };
 
   const handleNotifyHumorists = async (event: IEvent) => {
-    if (!token) {
+    if (!user?._id) {
       showWarning(WarningMessages.AUTH_REQUIRED_SEND_NOTIFICATIONS);
       return;
     }
@@ -1831,12 +1889,7 @@ useEffect(() => {
       onConfirm: async () => {
         setNotifyingEventId(event._id);
         try {
-          const config = {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          };
-          await api.post(`/events/${event._id}/notify`, {}, config);
+          await api.post(`/events/${event._id}/notify`, {});
           showSuccess(SuccessMessages.NOTIFICATIONS_SENT);
           setConfirmDialog({ ...confirmDialog, isOpen: false });
         } catch (error: any) {
@@ -1857,7 +1910,7 @@ useEffect(() => {
   };
 
   const handleInviteComedian = async () => {
-    if (!comedianToInvite || !selectedEventForInvite || !token) {
+    if (!comedianToInvite || !selectedEventForInvite || !user?._id) {
       showWarning(WarningMessages.SELECT_EVENT_REQUIRED);
       return;
     }
@@ -2901,7 +2954,11 @@ useEffect(() => {
                     return null;
                   })()}
                   <div style={cardActionStackStyle}>
-                    {!appliedEventIds.has(event._id) ? (
+                    {isEventWithinOneHour(event) ? (
+                      <span style={{ fontSize: '12px', color: '#888' }}>
+                        Plus de modification possible (événement dans moins d'1 h)
+                      </span>
+                    ) : !appliedEventIds.has(event._id) ? (
                       <button
                         onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleApplyClick(event); }}
                         style={
@@ -4015,7 +4072,7 @@ useEffect(() => {
         participantsSectionRef={participantsSectionRef}
       />
 
-      <Modal isOpen={showEditEventForm} onClose={() => setShowEditEventForm(false)} title="Modifier l'évènement">
+      <Modal isOpen={showEditEventForm} onClose={() => setShowEditEventForm(false)} title="Modifier l'évènement" closeOnOverlayClick={false}>
         {eventToEdit && (
           <EditEventForm
             eventToEdit={eventToEdit}
@@ -4025,7 +4082,7 @@ useEffect(() => {
         )}
       </Modal>
 
-      <Modal isOpen={showCreateEventForm && user?.role === 'ORGANIZER'} onClose={() => { setShowCreateEventForm(false); setEventToDuplicate(null); }} title={eventToDuplicate ? "Dupliquer l'évènement" : "Créer un évènement"} closeOnBackdropClick={false}>
+      <Modal isOpen={showCreateEventForm && user?.role === 'ORGANIZER'} onClose={() => { setShowCreateEventForm(false); setEventToDuplicate(null); }} title={eventToDuplicate ? "Dupliquer l'évènement" : "Créer un évènement"} closeOnOverlayClick={false} transparentOverlay>
         {showCreateEventForm && user?.role === 'ORGANIZER' && (
           <CreateEventForm 
             onClose={() => { setShowCreateEventForm(false); setEventToDuplicate(null); }} 
@@ -4045,6 +4102,7 @@ useEffect(() => {
               endTime: eventToDuplicate.endTime || '',
               minExperience: eventToDuplicate.requirements?.minExperience,
               maxComedians: eventToDuplicate.requirements?.maxPerformers,
+              imageUrl: eventToDuplicate.imageUrl || '',
             } : undefined}
           />
         )}
@@ -4467,6 +4525,12 @@ useEffect(() => {
           </div>
         </div>
       </Modal>
+
+      {/* Modal Voir les notes (organisateur - événements archivés) */}
+      <RatingsSummaryModal
+        event={ratingsModalEvent}
+        onClose={() => setRatingsModalEvent(null)}
+      />
 
       {/* Modal Voir spectateurs */}
       <Modal

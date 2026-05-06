@@ -74,7 +74,7 @@ Une fois la vérification réussie, vous devez mettre à jour l'adresse email ut
 
 ```env
 # Avant (email Gmail vérifié)
-SMTP_USER=contact.standupconnect@gmail.com
+SMTP_USER=contact@connectcomedyclub.com
 
 # Après (utiliser votre domaine authentifié)
 SMTP_USER=noreply@mail.standup-comedy-app.com

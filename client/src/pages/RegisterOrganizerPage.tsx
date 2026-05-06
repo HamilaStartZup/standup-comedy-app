@@ -3,10 +3,19 @@ import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { Link } from 'react-router-dom';
 import { getErrorMessage, ErrorMessages } from '../services/systemMessages';
+import { loginWithKeycloak, translateOAuthError } from '../services/oauth';
+import api from '../services/api';
 
 function RegisterOrganizerPage() {
   const { registerMutation } = useAuth();
   const { showError } = useAlert();
+
+  const [oauthModal, setOauthModal] = useState(false);
+  const [pendingCode, setPendingCode] = useState('');
+  const [oauthData, setOauthData] = useState({ firstName: '', lastName: '', city: '' });
+  const [oauthErrors, setOauthErrors] = useState<{ [key: string]: string }>({});
+  const [oauthTerms, setOauthTerms] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     lastName: '',
@@ -19,6 +28,7 @@ function RegisterOrganizerPage() {
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [passwordValidation, setPasswordValidation] = useState({
     length: false,
     uppercase: false,
@@ -38,7 +48,9 @@ function RegisterOrganizerPage() {
       const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
       if (!emailRegex.test(formData.email.trim())) newErrors.email = "Format d'email invalide";
     }
-    if (formData.phone.trim()) {
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Le numéro de téléphone est requis";
+    } else {
       const cleanPhone = formData.phone.replace(/[\s\-\(\)\+]/g, '');
       const frenchPhoneRegex = /^(0[1-9])[0-9]{8}$/;
       const belgianPhoneRegex = /^(0[1-9][0-9]{7,8})$/;
@@ -71,6 +83,52 @@ function RegisterOrganizerPage() {
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSocialRegister = async (provider: 'google') => {
+    try {
+      const result = await loginWithKeycloak(provider, 'ORGANIZER');
+      if (result.pendingRegistration) {
+        setPendingCode(result.pendingCode!);
+        setOauthData(p => ({ ...p, firstName: result.firstName || '', lastName: result.lastName || '' }));
+        setOauthModal(true);
+        return;
+      }
+      if (!result.pendingRegistration) {
+        const profile = await api.get('/profile/me');
+
+        window.location.href = '/dashboard';
+      }
+    } catch (error: any) {
+      showError(translateOAuthError(error.message));
+    }
+  };
+
+  const handleOAuthModalSubmit = async () => {
+    const errs: { [key: string]: string } = {};
+    if (!oauthData.firstName.trim() || oauthData.firstName.trim().length < 2) errs.firstName = 'Le prénom est requis (min. 2 caractères)';
+    if (!oauthData.lastName.trim() || oauthData.lastName.trim().length < 2) errs.lastName = 'Le nom est requis (min. 2 caractères)';
+    if (!oauthTerms) errs.terms = 'Vous devez accepter les CGU et la politique de confidentialité';
+    setOauthErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setOauthLoading(true);
+    try {
+      const response = await api.post('/auth/oauth/complete-registration', {
+        pendingCode,
+        firstName: oauthData.firstName.trim(),
+        lastName: oauthData.lastName.trim(),
+        ...(oauthData.city.trim() && { city: oauthData.city.trim() }),
+        consent: { termsAccepted: true, privacyAccepted: true, isAdult: true },
+      });
+      const { user } = response.data;
+
+      window.location.href = '/dashboard';
+    } catch (error: any) {
+      showError("Erreur lors de la création du compte. Veuillez réessayer.");
+    } finally {
+      setOauthLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -166,13 +224,59 @@ function RegisterOrganizerPage() {
     opacity: registerMutation.isPending ? 0.7 : 1,
   };
 
+  const socialButtonBaseStyle: CSSProperties = {
+    width: '100%',
+    padding: '12px',
+    marginBottom: '10px',
+    borderRadius: '8px',
+    border: 'none',
+    fontSize: '1em',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '10px',
+  };
+
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
         <h2>Inscription Organisateur</h2>
         <p>Créez votre compte pour gérer vos plateaux et événements</p>
 
+        <button
+          type="button"
+          onClick={() => handleSocialRegister('google')}
+          style={{ ...socialButtonBaseStyle, backgroundColor: '#ffffff', color: '#3c4043' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Continuer avec Google
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '10px 0 20px', color: 'rgba(255,255,255,0.4)', fontSize: '0.9em' }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+          ou
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+        </div>
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
+          <div>
+            <input
+              type="text"
+              name="lastName"
+              placeholder="Nom *"
+              value={formData.lastName}
+              onChange={handleChange}
+              style={{ ...inputStyle, borderColor: errors.lastName ? '#ef4444' : '#444' }}
+            />
+            {errors.lastName && <div style={errorStyle}>{errors.lastName}</div>}
+          </div>
           <div>
             <input
               type="text"
@@ -187,13 +291,12 @@ function RegisterOrganizerPage() {
           <div>
             <input
               type="text"
-              name="lastName"
-              placeholder="Nom *"
-              value={formData.lastName}
+              name="city"
+              placeholder="Ville (optionnel)"
+              value={formData.city}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.lastName ? '#ef4444' : '#444' }}
+              style={inputStyle}
             />
-            {errors.lastName && <div style={errorStyle}>{errors.lastName}</div>}
           </div>
           <div>
             <input
@@ -206,43 +309,38 @@ function RegisterOrganizerPage() {
             />
             {errors.email && <div style={errorStyle}>{errors.email}</div>}
           </div>
-          <div>
-            <input
-              type="tel"
-              name="phone"
-              placeholder="Téléphone (optionnel)"
-              value={formData.phone}
-              onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.phone ? '#ef4444' : '#444' }}
-            />
-            {errors.phone && <div style={errorStyle}>{errors.phone}</div>}
-          </div>
-          <div>
-            <input
-              type="text"
-              name="city"
-              placeholder="Ville (optionnel)"
-              value={formData.city}
-              onChange={handleChange}
-              style={inputStyle}
-            />
-          </div>
-          <div>
+          <div style={{ position: 'relative' }}>
             <input
               type="password"
               name="password"
               placeholder="Mot de passe *"
               value={formData.password}
               onChange={handleChange}
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
               style={{ ...inputStyle, borderColor: errors.password ? '#ef4444' : '#444' }}
             />
             {errors.password && <div style={errorStyle}>{errors.password}</div>}
-          </div>
-          <div style={{ marginBottom: 15, padding: 10, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 5, fontSize: '0.85em' }}>
-            <div style={{ marginBottom: 8, color: '#ff4b2b', fontWeight: 'bold' }}>Critères de sécurité :</div>
-            <div style={{ color: passwordValidation.length ? '#28a745' : '#dc3545', marginBottom: 3 }}>{passwordValidation.length ? '✓' : '✗'} Au moins 8 caractères</div>
-            <div style={{ color: passwordValidation.uppercase ? '#28a745' : '#dc3545', marginBottom: 3 }}>{passwordValidation.uppercase ? '✓' : '✗'} Au moins 1 majuscule</div>
-            <div style={{ color: passwordValidation.number ? '#28a745' : '#dc3545' }}>{passwordValidation.number ? '✓' : '✗'} Au moins 1 chiffre</div>
+            {passwordFocused && (
+              <div style={{
+                padding: '8px 12px',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                borderRadius: '8px',
+                fontSize: '0.8em',
+                marginTop: '4px',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}>
+                <div style={{ color: passwordValidation.length ? '#28a745' : '#dc3545', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                  {passwordValidation.length ? '✓' : '✗'} 8 caractères min.
+                </div>
+                <div style={{ color: passwordValidation.uppercase ? '#28a745' : '#dc3545', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                  {passwordValidation.uppercase ? '✓' : '✗'} 1 majuscule
+                </div>
+                <div style={{ color: passwordValidation.number ? '#28a745' : '#dc3545', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {passwordValidation.number ? '✓' : '✗'} 1 chiffre
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <input
@@ -254,6 +352,17 @@ function RegisterOrganizerPage() {
               style={{ ...inputStyle, borderColor: errors.confirmPassword ? '#ef4444' : '#444' }}
             />
             {errors.confirmPassword && <div style={errorStyle}>{errors.confirmPassword}</div>}
+          </div>
+          <div>
+            <input
+              type="tel"
+              name="phone"
+              placeholder="Téléphone *"
+              value={formData.phone}
+              onChange={handleChange}
+              style={{ ...inputStyle, borderColor: errors.phone ? '#ef4444' : '#444' }}
+            />
+            {errors.phone && <div style={errorStyle}>{errors.phone}</div>}
           </div>
           <div style={{ textAlign: 'left', marginBottom: 15 }}>
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
@@ -278,6 +387,70 @@ function RegisterOrganizerPage() {
           Déjà un compte ? <Link to="/organisateur" style={{ color: '#ff4b2b', fontWeight: 'bold' }}>Se connecter</Link>
         </p>
       </div>
+
+      {oauthModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: '#1e1e3a', border: '1px solid #444', borderRadius: 15, padding: 32, maxWidth: 480, width: '90%', color: '#fff', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '1.3em' }}>Finalise ton inscription</h3>
+            <p style={{ margin: '0 0 20px', color: 'rgba(255,255,255,0.65)', fontSize: '0.9em' }}>Quelques infos pour compléter ton profil d'organisateur</p>
+
+            <div>
+              <input
+                type="text"
+                placeholder="Prénom *"
+                value={oauthData.firstName}
+                onChange={(e) => { setOauthData(p => ({ ...p, firstName: e.target.value })); setOauthErrors(p => ({ ...p, firstName: '' })); }}
+                style={{ ...inputStyle, borderColor: oauthErrors.firstName ? '#ef4444' : '#444' }}
+              />
+              {oauthErrors.firstName && <div style={errorStyle}>{oauthErrors.firstName}</div>}
+            </div>
+
+            <div>
+              <input
+                type="text"
+                placeholder="Nom *"
+                value={oauthData.lastName}
+                onChange={(e) => { setOauthData(p => ({ ...p, lastName: e.target.value })); setOauthErrors(p => ({ ...p, lastName: '' })); }}
+                style={{ ...inputStyle, borderColor: oauthErrors.lastName ? '#ef4444' : '#444' }}
+              />
+              {oauthErrors.lastName && <div style={errorStyle}>{oauthErrors.lastName}</div>}
+            </div>
+
+            <div>
+              <input
+                type="text"
+                placeholder="Ville (optionnel)"
+                value={oauthData.city}
+                onChange={(e) => setOauthData(p => ({ ...p, city: e.target.value }))}
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={{ margin: '15px 0' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', fontSize: '0.9em', textAlign: 'left' }}>
+                <input
+                  type="checkbox"
+                  checked={oauthTerms}
+                  onChange={(e) => { setOauthTerms(e.target.checked); setOauthErrors(p => ({ ...p, terms: '' })); }}
+                  style={{ marginTop: 3, width: 16, height: 16 }}
+                />
+                <span style={{ color: 'rgba(255,255,255,0.85)' }}>
+                  J'accepte les <Link to="/cgu" target="_blank" style={{ color: '#ff4b2b', fontWeight: 'bold' }}>CGU</Link> et la <Link to="/politique-confidentialite" target="_blank" style={{ color: '#ff4b2b', fontWeight: 'bold' }}>politique de confidentialité</Link> *
+                </span>
+              </label>
+              {oauthErrors.terms && <div style={errorStyle}>{oauthErrors.terms}</div>}
+            </div>
+
+            <button
+              onClick={handleOAuthModalSubmit}
+              disabled={oauthLoading}
+              style={{ ...buttonStyle, margin: '8px 0 0', opacity: oauthLoading ? 0.7 : 1 }}
+            >
+              {oauthLoading ? 'Enregistrement...' : 'Créer mon compte organisateur'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

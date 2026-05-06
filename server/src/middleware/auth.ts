@@ -17,27 +17,21 @@ export const authMiddleware = async (
   next: NextFunction
 ) => {
   try {
+    // Accept token from HttpOnly cookie (OAuth) or Authorization Bearer header (email/password)
+    const cookieToken = (req as any).cookies?.auth_token as string | undefined;
     const authHeader = req.headers.authorization;
 
-    // AUTH_012: Missing credentials - No authorization header
-    if (!authHeader) {
-      return res.status(401).json({
-        message: 'Credentials missing or invalid'
-      });
+    let token: string | undefined;
+
+    if (cookieToken) {
+      token = cookieToken;
+    } else if (authHeader) {
+      const parts = authHeader.split(' ');
+      if (parts.length === 2 && parts[0] === 'Bearer' && parts[1]) {
+        token = parts[1];
+      }
     }
 
-    const parts = authHeader.split(' ');
-
-    // AUTH_012: Missing credentials - Invalid Bearer format
-    if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      return res.status(401).json({
-        message: 'Credentials missing or invalid'
-      });
-    }
-
-    const token = parts[1];
-
-    // AUTH_012: Missing credentials - Empty token
     if (!token) {
       return res.status(401).json({
         message: 'Credentials missing or invalid'

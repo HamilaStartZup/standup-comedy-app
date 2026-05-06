@@ -28,4 +28,6 @@ export interface IEvent {
   cancellationReason?: string;
   /** Groupe de récurrence (événements créés ensemble) */
   recurrenceGroupId?: string;
+  /** URL de l'image de l'événement (carte spectateur) */
+  imageUrl?: string;
 } 

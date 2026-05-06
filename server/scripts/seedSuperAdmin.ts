@@ -4,7 +4,7 @@ import { config } from '../src/config/env';
 import { UserModel } from '../src/models/User';
 
 // Configuration du super-admin
-const SUPER_ADMIN_EMAIL = 'contact.standupconnect@gmail.com';
+const SUPER_ADMIN_EMAIL = 'contact@connectcomedyclub.com';
 const SUPER_ADMIN_PASSWORD = 'SuperAdmin2024!'; // Mot de passe sécurisé par défaut
 
 async function createSuperAdmin() {
@@ -108,7 +108,7 @@ function showHelp() {
   console.log('');
   console.log('Ce script crée un super-administrateur unique pour la plateforme.');
   console.log('');
-  console.log('📧 Email: contact.standupconnect@gmail.com');
+  console.log('📧 Email: contact@connectcomedyclub.com');
   console.log('🔑 Mot de passe: SuperAdmin2024!');
   console.log('');
   console.log('🛡️  Sécurité:');

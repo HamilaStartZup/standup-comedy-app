@@ -8,12 +8,13 @@ const router = Router();
 
 /**
  * Endpoint SSE pour établir une connexion de streaming d'évènements
- * GET /api/sse/stream?token=xxx
+ * GET /api/sse/stream
+ * Authentification via cookie HttpOnly auth_token
  */
 router.get('/stream', async (req: Request, res: Response) => {
   try {
-    // Récupérer le token depuis le query parameter
-    const token = req.query.token as string;
+    // Récupérer le token depuis le cookie HttpOnly (cookie-parser augmente req avec .cookies)
+    const token = req.cookies?.auth_token as string | undefined;
 
     if (!token) {
       return res.status(401).json({

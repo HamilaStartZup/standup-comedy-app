@@ -34,7 +34,7 @@ npx ts-node scripts/seedSuperAdmin.ts --help
 
 ### Informations de connexion créées
 
-- **📧 Email** : `contact.standupconnect@gmail.com`
+- **📧 Email** : `contact@connectcomedyclub.com`
 - **🔑 Mot de passe** : `SuperAdmin2024!`
 - **👤 Rôle** : `SUPER_ADMIN`
 
@@ -55,7 +55,7 @@ Le super-admin est créé avec :
 
 ```json
 {
-  "email": "contact.standupconnect@gmail.com",
+  "email": "contact@connectcomedyclub.com",
   "firstName": "Super",
   "lastName": "Administrateur",
   "role": "SUPER_ADMIN",
@@ -87,13 +87,13 @@ Le script a automatiquement ajouté le rôle `SUPER_ADMIN` aux enums dans :
 ### Super-admin déjà existant
 ```
 ⚠️  Un super-administrateur existe déjà !
-📧 Email du super-admin existant: contact.standupconnect@gmail.com
+📧 Email du super-admin existant: contact@connectcomedyclub.com
 🛑 Le script s'arrête pour éviter la duplication.
 ```
 
 ### Email déjà utilisé
 ```
-⚠️  L'email contact.standupconnect@gmail.com est déjà utilisé par un autre utilisateur !
+⚠️  L'email contact@connectcomedyclub.com est déjà utilisé par un autre utilisateur !
 👤 Utilisateur existant: John Doe (ORGANIZER)
 🛑 Veuillez supprimer cet utilisateur ou utiliser un autre email.
 ```

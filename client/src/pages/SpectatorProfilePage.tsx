@@ -18,7 +18,7 @@ export default function SpectatorProfilePage() {
       const res = await api.get('/profile/me');
       return res.data;
     },
-    enabled: !!token && !!authUser?._id && authUser?.role === 'SPECTATOR',
+    enabled: !!authUser?._id && authUser?.role === 'SPECTATOR',
   });
 
   const [formData, setFormData] = useState({
@@ -215,7 +215,7 @@ export default function SpectatorProfilePage() {
     marginBottom: 16,
   };
 
-  if (!token || authUser?.role !== 'SPECTATOR') {
+  if (!authUser || authUser?.role !== 'SPECTATOR') {
     return (
       <>
         <Navbar />

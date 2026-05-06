@@ -1,4 +1,8 @@
+import path from 'path';
+import fs from 'fs';
 import express, { Request, Response, NextFunction } from 'express';
+import multer from 'multer';
+import { v4 as uuidv4 } from 'uuid';
 import { validate } from '../middleware/validation';
 import { createEventSchema, updateEventSchema } from '../validation/schemas';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
@@ -18,7 +22,33 @@ import {
   markEventsAsCompletedCron,
   registerSpectator,
   unregisterSpectator,
+  uploadEventImage,
 } from '../controllers/event';
+import { getRatingForm, submitRatings, getRatingStatus, getEventRatingsSummary } from '../controllers/spectatorRating';
+
+const uploadsEventsDir = path.join(process.cwd(), 'uploads', 'events');
+if (!fs.existsSync(uploadsEventsDir)) {
+  fs.mkdirSync(uploadsEventsDir, { recursive: true });
+}
+
+const uploadEventImageMulter = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsEventsDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname) || '.jpg';
+      const safe = /^\.(jpe?g|png|gif)$/i.test(ext) ? ext : '.jpg';
+      cb(null, `${uuidv4()}${safe}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (['image/jpeg', 'image/png', 'image/gif'].includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Format non accepté. Utilisez JPG, PNG ou GIF.'));
+    }
+  },
+});
 
 const router = express.Router();
 
@@ -47,6 +77,17 @@ router.get('/stats', authMiddleware, asyncHandler(getEventStats));
 // EVENT CRUD ROUTES
 // ============================================================================
 
+// POST /api/events/upload-image - Upload photo de l'événement (organisateur, JPG/PNG/GIF max 5MB)
+router.post('/upload-image', authMiddleware, (req, res, next) => {
+  uploadEventImageMulter.single('image')(req, res, (err: any) => {
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Fichier trop volumineux (max 5MB).' : (err.message || 'Erreur upload.');
+      return res.status(400).json({ message: msg });
+    }
+    next();
+  });
+}, asyncHandler(uploadEventImage));
+
 // POST /api/events - Créer un nouvel évènement
 router.post('/', authMiddleware, validate(createEventSchema), asyncHandler(createEvent));
 
@@ -60,6 +101,15 @@ router.get('/user/my-events', authMiddleware, asyncHandler(getOrganizerEvents));
 router.post('/:eventId/spectator-register', authMiddleware, asyncHandler(registerSpectator));
 // DELETE /api/events/:eventId/spectator-register - Désinscription spectateur
 router.delete('/:eventId/spectator-register', authMiddleware, asyncHandler(unregisterSpectator));
+
+// GET /api/events/:eventId/rating-form - Formulaire de notation (spectateur, événement passé)
+router.get('/:eventId/rating-form', authMiddleware, asyncHandler(getRatingForm));
+// POST /api/events/:eventId/ratings - Envoyer les notes (spectateur)
+router.post('/:eventId/ratings', authMiddleware, asyncHandler(submitRatings));
+// GET /api/events/:eventId/rating-status - Savoir si déjà noté
+router.get('/:eventId/rating-status', authMiddleware, asyncHandler(getRatingStatus));
+// GET /api/events/:eventId/ratings-summary - Résumé des notes (organisateur)
+router.get('/:eventId/ratings-summary', authMiddleware, asyncHandler(getEventRatingsSummary));
 
 // GET /api/events/:eventId - Récupérer un évènement par son ID
 router.get('/:eventId', asyncHandler(getEventById));

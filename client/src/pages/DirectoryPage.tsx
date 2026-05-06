@@ -71,7 +71,7 @@ const DirectoryPage: React.FC = () => {
     isDangerous?: boolean;
     isLoading?: boolean;
   }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const { showError, showWarning, showSuccess } = useAlert();
   const queryClient = useQueryClient();
 
@@ -135,6 +135,7 @@ const DirectoryPage: React.FC = () => {
     fontSize: '14px',
     minWidth: '250px',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    color: '#000',
   };
 
   const selectStyle = {
@@ -230,16 +231,7 @@ const DirectoryPage: React.FC = () => {
   const handleViewComedianProfile = async (e: React.MouseEvent, comedianId: string) => {
     e.stopPropagation();
     try {
-      if (!token) {
-        showWarning('Vous devez être connecté pour voir le profil');
-        return;
-      }
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-      const response = await api.get<IUserData>(`/profile/${comedianId}`, config);
+      const response = await api.get<IUserData>(`/profile/${comedianId}`);
       setSelectedComedianProfile(response.data);
       setIsComedianProfileModalOpen(true);
     } catch (err: any) {
@@ -251,16 +243,7 @@ const DirectoryPage: React.FC = () => {
   const handleViewOrganizerProfile = async (e: React.MouseEvent, organizerId: string) => {
     e.stopPropagation();
     try {
-      if (!token) {
-        showWarning('Vous devez être connecté pour voir le profil');
-        return;
-      }
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-      const response = await api.get<IUserData>(`/profile/${organizerId}`, config);
+      const response = await api.get<IUserData>(`/profile/${organizerId}`);
       setSelectedOrganizerProfile(response.data);
       setIsOrganizerProfileModalOpen(true);
     } catch (err: any) {
@@ -438,6 +421,9 @@ const DirectoryPage: React.FC = () => {
             border-color: #9c27b0 !important;
             box-shadow: 0 6px 20px rgba(156, 39, 176, 0.2);
           }
+          .directory-search-input::placeholder {
+            color: #000;
+          }
         `}
       </style>
       <Navbar />
@@ -479,6 +465,7 @@ const DirectoryPage: React.FC = () => {
             value={searchTerm}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
             style={inputStyle}
+            className="directory-search-input"
           />
           <select
             value={roleFilter}
@@ -725,6 +712,7 @@ const DirectoryPage: React.FC = () => {
         }}>
           <div style={{
             backgroundColor: 'white',
+            color: '#333',
             borderRadius: '12px',
             padding: '30px',
             maxWidth: '900px',

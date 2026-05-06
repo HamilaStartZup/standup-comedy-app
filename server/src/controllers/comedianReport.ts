@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import { ComedianReportModel } from '../models/ComedianReport';
 import { UserModel } from '../models/User';
 import { Types } from 'mongoose';
+import { sendComedianReportAccountDeactivatedEmail, sendComedianReportAccountRestrictedEmail, sendComedianReportAccountValidatedEmail } from '../services/emailService';
 
 /**
  * POST /api/comedian-reports
@@ -46,7 +47,7 @@ export const createComedianReport = async (req: AuthRequest, res: Response): Pro
 
     // Vérifier qu'on ne signale pas son propre compte
     if (comedianId === reporterId) {
-      res.status(400).json({ message: 'Vous ne pouvez pas signaler votre propre compte' });
+      res.status(422).json({ message: 'Vous ne pouvez pas signaler votre propre compte' });
       return;
     }
 
@@ -72,6 +73,27 @@ export const createComedianReport = async (req: AuthRequest, res: Response): Pro
       description: description || '',
       status: 'pending'
     });
+
+    // Restreindre le compte de l'humoriste et envoyer l'email d'avertissement
+    const comedianDoc = await UserModel.findById(comedianId).select('isRestricted email firstName lastName _id');
+    const wasRestricted = comedianDoc?.isRestricted === true;
+    await UserModel.findByIdAndUpdate(comedianId, {
+      isRestricted: true,
+      restrictedAt: new Date()
+    });
+    if (!wasRestricted && comedianDoc?.email) {
+      try {
+        const comedianPayload = {
+          email: comedianDoc.email,
+          _id: String(comedianDoc._id),
+          firstName: comedianDoc.firstName,
+          lastName: comedianDoc.lastName
+        };
+        await sendComedianReportAccountRestrictedEmail(comedianPayload);
+      } catch (emailError: any) {
+        console.error('Erreur lors de l\'envoi de l\'email de restriction:', emailError);
+      }
+    }
 
     res.status(201).json({
       message: 'Signalement créé avec succès',
@@ -190,6 +212,49 @@ export const updateComedianReport = async (req: AuthRequest, res: Response): Pro
     }
 
     await report.save();
+
+    // Envoyer l'email au compte signalé selon le statut
+    if (status === 'validated' || status === 'rejected') {
+      const comedianDoc = await UserModel.findById(report.comedian).select('email firstName lastName _id');
+      if (comedianDoc?.email) {
+        const comedianPayload = {
+          email: comedianDoc.email,
+          _id: String(comedianDoc._id),
+          firstName: comedianDoc.firstName,
+          lastName: comedianDoc.lastName
+        };
+        try {
+          if (status === 'validated') {
+            // Désactiver le compte définitivement
+            await UserModel.findByIdAndUpdate(report.comedian, {
+              isActive: false,
+              isRestricted: false,
+              restrictedAt: null,
+              deactivatedAt: new Date(),
+              deactivatedBy: req.user.id,
+              deactivationReason: 'Report validé par l\'équipe'
+            });
+            await sendComedianReportAccountDeactivatedEmail(comedianPayload);
+          } else {
+            // Signalement rejeté : redonner accès si aucun autre signalement en attente
+            const pendingCount = await ComedianReportModel.countDocuments({
+              comedian: report.comedian,
+              status: 'pending'
+            });
+            if (pendingCount === 0) {
+              await UserModel.findByIdAndUpdate(report.comedian, {
+                isRestricted: false,
+                restrictedAt: null
+              });
+              await sendComedianReportAccountValidatedEmail(comedianPayload);
+            }
+          }
+        } catch (emailError: any) {
+          console.error('Erreur lors de l\'envoi de l\'email au compte signalé:', emailError);
+          // Ne pas faire échouer la mise à jour du signalement
+        }
+      }
+    }
 
     const updatedReport = await ComedianReportModel.findById(reportId)
       .populate('comedian', 'firstName lastName email role')

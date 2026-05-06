@@ -106,7 +106,7 @@ function PrivacyPolicyPage() {
         <p style={textStyle}>
           <strong>Connect Comedy Club</strong><br />
           Adresse : 23 AVENUE CLEMENT ADER 78190 TRAPPES<br />
-          Email : contact.standupconnect@gmail.com
+          Email : contact@connectcomedyclub.com
         </p>
 
         <h2 id="donnees-collectees" style={sectionTitleStyle}>2. Données personnelles collectées</h2>

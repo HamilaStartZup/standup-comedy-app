@@ -43,6 +43,13 @@ function ApplicationDetailsModal({ isOpen, onClose, application }: ApplicationDe
       case 'EXPIRED':
         backgroundColor = '#6c757d'; // gray
         break;
+      case 'WITHDRAWN':
+        backgroundColor = '#6c757d';
+        break;
+      case 'CANCELLED_BY_PLATFORM':
+        backgroundColor = '#5a6268';
+        color = '#fff';
+        break;
       default:
         backgroundColor = '#6c757d'; // gray
     }
@@ -69,6 +76,8 @@ function ApplicationDetailsModal({ isOpen, onClose, application }: ApplicationDe
         return 'Expirée';
       case 'WITHDRAWN':
         return 'Retirée';
+      case 'CANCELLED_BY_PLATFORM':
+        return 'Annulée par la plateforme';
       default:
         return status; // Fallback for other statuses
     }

@@ -73,8 +73,8 @@ const ComedianReportsPage = () => {
 
   const statusLabels: Record<string, string> = {
     pending: 'En attente',
-    validated: 'Validé',
-    rejected: 'Rejeté'
+    validated: 'Demande de signalement validé',
+    rejected: 'Demande de signalement rejeté'
   };
 
   const statusColors: Record<string, string> = {
@@ -206,8 +206,8 @@ const ComedianReportsPage = () => {
             >
               <option value="all">Tous</option>
               <option value="pending">En attente</option>
-              <option value="validated">Validé</option>
-              <option value="rejected">Rejeté</option>
+              <option value="validated">Demande de signalement validé</option>
+              <option value="rejected">Demande de signalement rejeté</option>
             </select>
             <span style={{ color: '#aaa', marginLeft: 'auto' }}>
               {reportsCount} signalement(s)
