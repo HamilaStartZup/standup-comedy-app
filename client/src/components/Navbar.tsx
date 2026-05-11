@@ -176,7 +176,7 @@ function Navbar() {
       to: "/venues",
       label: "Salles",
       icon: "🏛️",
-      show: user?.role === 'ORGANIZER' || (user?.role as string) === 'LIEU'
+      show: user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || (user?.role as string) === 'LIEU'
     });
 
     if (user?.role === 'ORGANIZER') {
@@ -250,6 +250,9 @@ function Navbar() {
             )}
             {user?.role === 'ORGANIZER' && (
               <Link to="/venues" style={{ ...navLinkBaseStyle, ...(location.pathname.startsWith('/venues') || location.pathname === '/my-venues' || location.pathname === '/my-bookings' ? activeLinkStyle : {}) }}>Salles</Link>
+            )}
+            {user?.role === 'COMEDIAN' && (
+              <Link to="/venues" style={{ ...navLinkBaseStyle, ...(location.pathname.startsWith('/venues') || location.pathname === '/my-bookings' ? activeLinkStyle : {}) }}>Salles</Link>
             )}
             {user?.role === 'ORGANIZER' && (
               <Link to="/profile/organizer" style={{ ...navLinkBaseStyle, ...(location.pathname === '/profile/organizer' ? activeLinkStyle : {}) }}>Profil</Link>
