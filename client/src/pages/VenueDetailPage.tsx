@@ -19,6 +19,9 @@ import { VENUE_TYPE_LABELS, CANCELLATION_POLICY_LABELS, CANCELLATION_POLICY_DESC
 
 type OwnerTab = 'info' | 'blocked' | 'settings';
 
+const safeUrl = (url: string): string | null =>
+  url.startsWith('https://') || url.startsWith('http://') ? url : null;
+
 const VenueDetailPage: React.FC = () => {
   const { venueId } = useParams<{ venueId: string }>();
   const navigate = useNavigate();
@@ -742,6 +745,40 @@ const VenueDetailPage: React.FC = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* Établissement */}
+                  {(() => {
+                    const hasSocialLinks = Object.values(venue.socialLinks ?? {}).some(Boolean);
+                    const hasEstablishmentInfo = !!(venue.companyName || venue.website || hasSocialLinks);
+                    if (!hasEstablishmentInfo) return null;
+                    return (
+                      <div style={{ marginBottom: 24, padding: '20px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16 }}>
+                        <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>Établissement</h3>
+                        <div style={{ display: 'grid', gap: 10 }}>
+                          {venue.companyName && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              <span style={{ fontSize: 13, color: '#888' }}>Nom</span>
+                              <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{venue.companyName}</span>
+                            </div>
+                          )}
+                          {venue.website && safeUrl(venue.website) && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              <span style={{ fontSize: 13, color: '#888' }}>Site web</span>
+                              <a href={safeUrl(venue.website)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#ff8fa3', textDecoration: 'none' }}>{venue.website}</a>
+                            </div>
+                          )}
+                          {hasSocialLinks && (
+                            <div style={{ display: 'flex', gap: 12, padding: '8px 0', flexWrap: 'wrap' }}>
+                              {venue.socialLinks?.youtube && safeUrl(venue.socialLinks.youtube) && <a href={safeUrl(venue.socialLinks.youtube)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#ff8fa3' }}>YouTube</a>}
+                              {venue.socialLinks?.instagram && safeUrl(venue.socialLinks.instagram) && <a href={safeUrl(venue.socialLinks.instagram)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#ff8fa3' }}>Instagram</a>}
+                              {venue.socialLinks?.facebook && safeUrl(venue.socialLinks.facebook) && <a href={safeUrl(venue.socialLinks.facebook)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#ff8fa3' }}>Facebook</a>}
+                              {venue.socialLinks?.twitter && safeUrl(venue.socialLinks.twitter) && <a href={safeUrl(venue.socialLinks.twitter)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#ff8fa3' }}>Twitter / X</a>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Infos légales */}
                   {(venue.legalStatus || venue.siret || venue.invoicingAvailable) && (

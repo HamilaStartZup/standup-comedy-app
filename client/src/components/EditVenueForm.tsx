@@ -58,6 +58,14 @@ const EditVenueForm: React.FC<EditVenueFormProps> = ({ venue, onUpdated }) => {
     legalStatus: venue.legalStatus ?? '',
     siret: venue.siret ?? '',
     invoicingAvailable: venue.invoicingAvailable ?? false,
+    companyName: venue.companyName ?? '',
+    website: venue.website ?? '',
+    socialLinks: {
+      youtube: venue.socialLinks?.youtube ?? '',
+      instagram: venue.socialLinks?.instagram ?? '',
+      facebook: venue.socialLinks?.facebook ?? '',
+      twitter: venue.socialLinks?.twitter ?? '',
+    },
     venueType: venue.venueType,
   };
 

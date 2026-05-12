@@ -69,6 +69,14 @@ export interface VenueDocument extends Document {
   legalStatus?: string;
   siret?: string;
   invoicingAvailable?: boolean;
+  companyName?: string;
+  website?: string;
+  socialLinks?: {
+    youtube?: string;
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+  };
   department?: string;
   region?: string;
 }
@@ -144,6 +152,14 @@ const venueSchema = new Schema<VenueDocument>(
     legalStatus: { type: String },
     siret: { type: String },
     invoicingAvailable: { type: Boolean },
+    companyName: { type: String },
+    website: { type: String },
+    socialLinks: {
+      youtube: { type: String },
+      instagram: { type: String },
+      facebook: { type: String },
+      twitter: { type: String },
+    },
     department: { type: String, index: true },
     region: { type: String, index: true },
   },

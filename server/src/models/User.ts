@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { User, UserProfile, Performance } from '../types/user';
+import { User, UserProfile, Performance, ILieuProfile } from '../types/user';
 
 // 1. Interfaces pour les types de données
 
@@ -130,6 +130,24 @@ const OrganisateurProfileSchema = new Schema<IOrganisateurProfile>({
   },
   eventFrequency: { type: String, enum: ['weekly', 'monthly', 'occasional'] },
   phone: { type: String },
+});
+
+const LieuProfileSchema = new Schema<ILieuProfile>({
+  companyName: { type: String },
+  description: { type: String },
+  website: { type: String },
+  socialLinks: {
+    youtube: { type: String },
+    instagram: { type: String },
+    facebook: { type: String },
+    twitter: { type: String },
+  },
+  contactName: { type: String },
+  contactEmail: { type: String },
+  phone: { type: String },
+  legalStatus: { type: String },
+  siret: { type: String },
+  invoicingAvailable: { type: Boolean },
 });
 
 const performanceSchema = new Schema<Performance>({
@@ -284,6 +302,7 @@ const userSchema = new Schema<UserDocument>({
     type: OrganisateurProfileSchema,
     required: false,
   },
+  lieuProfile: { type: LieuProfileSchema, required: false },
   stats: { type: UserStatsSchema, default: {} },
   onboardingCompleted: { type: Boolean, default: false },
   emailVerified: { type: Boolean, default: false },
@@ -420,6 +439,9 @@ userSchema.pre('save', function(next) {
     if (doc.role === 'ORGANIZER' && !doc.organizerProfile) {
       doc.organizerProfile = { companyName: '', location: { city: '', postalCode: '' }, venueTypes: [] };
     }
+  }
+  if (doc.role === 'LIEU' && !doc.lieuProfile) {
+    doc.lieuProfile = { companyName: '', socialLinks: {}, invoicingAvailable: false };
   }
   next();
 });

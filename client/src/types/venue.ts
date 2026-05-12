@@ -173,6 +173,14 @@ export interface IVenue {
   legalStatus?: string;
   siret?: string;
   invoicingAvailable?: boolean;
+  companyName?: string;
+  website?: string;
+  socialLinks?: {
+    youtube?: string;
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+  };
 }
 
 export type VenueBookingStatus =

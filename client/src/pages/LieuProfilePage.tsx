@@ -200,6 +200,7 @@ function LieuProfilePage() {
     { key: 'address', label: 'Adresse', value: user?.address || 'Non défini', fieldId: 'address' },
   ];
 
+
   return (
     <div style={mainContainerStyle}>
       <Navbar />

@@ -86,6 +86,19 @@ export const register = async (req: Request, res: Response) => {
       phone: phone || '',
     } : undefined;
 
+    const lieuProfile = role === 'LIEU' ? {
+      companyName: '',
+      description: '',
+      website: '',
+      socialLinks: {},
+      contactName: firstName && lastName ? `${firstName} ${lastName}` : '',
+      contactEmail: email || '',
+      phone: phone || '',
+      legalStatus: '',
+      siret: '',
+      invoicingAvailable: false,
+    } : undefined;
+
     // Créer un nouvel utilisateur
     const userData: any = {
       email,
@@ -114,7 +127,10 @@ export const register = async (req: Request, res: Response) => {
     if (organizerProfile) {
       userData.organizerProfile = organizerProfile;
     }
-    
+    if (lieuProfile) {
+      userData.lieuProfile = lieuProfile;
+    }
+
     console.log('📝 [REGISTER] Données utilisateur à créer:', JSON.stringify({ ...userData, password: '***' }, null, 2));
     
     const user = new UserModel(userData);
@@ -162,6 +178,8 @@ export const register = async (req: Request, res: Response) => {
       userResponse.profile = user.profile;
     } else if (role === 'ORGANIZER' && user.organizerProfile) {
       userResponse.organizerProfile = user.organizerProfile;
+    } else if (role === 'LIEU' && user.lieuProfile) {
+      userResponse.lieuProfile = user.lieuProfile;
     }
 
     res.cookie('auth_token', token, {
@@ -290,6 +308,8 @@ export const login = async (req: Request, res: Response) => {
       userResponse.profile = user.profile;
     } else if (user.role === 'ORGANIZER' && user.organizerProfile) {
       userResponse.organizerProfile = user.organizerProfile;
+    } else if (user.role === 'LIEU' && user.lieuProfile) {
+      userResponse.lieuProfile = user.lieuProfile;
     }
 
     res.cookie('auth_token', token, {
@@ -428,6 +448,8 @@ export const getProfile = async (req: Request, res: Response) => {
         totalApplicants: 0,
         acceptedApplications: 0,
       };
+    } else if (user.role === 'LIEU' && user.lieuProfile) {
+      userResponse.lieuProfile = user.lieuProfile;
     } else if (user.role === 'SUPER_ADMIN') {
       userResponse.stats = user.stats;
     }

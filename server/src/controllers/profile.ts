@@ -243,6 +243,32 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
       }
     }
 
+    // Handle lieuProfile updates
+    if (user.role === 'LIEU') {
+      if (!user.lieuProfile) {
+        user.lieuProfile = { companyName: '', socialLinks: {}, invoicingAvailable: false };
+      }
+      if (updateData.lieuProfile) {
+        const lp = updateData.lieuProfile;
+        if (lp.companyName !== undefined) user.lieuProfile.companyName = lp.companyName;
+        if (lp.description !== undefined) user.lieuProfile.description = lp.description;
+        if (lp.website !== undefined) user.lieuProfile.website = lp.website || undefined;
+        if (lp.contactName !== undefined) user.lieuProfile.contactName = lp.contactName;
+        if (lp.contactEmail !== undefined) user.lieuProfile.contactEmail = lp.contactEmail || undefined;
+        if (lp.phone !== undefined) user.lieuProfile.phone = lp.phone;
+        if (lp.legalStatus !== undefined) user.lieuProfile.legalStatus = lp.legalStatus;
+        if (lp.siret !== undefined) user.lieuProfile.siret = lp.siret;
+        if (lp.invoicingAvailable !== undefined) user.lieuProfile.invoicingAvailable = lp.invoicingAvailable;
+        if (lp.socialLinks) {
+          if (!user.lieuProfile.socialLinks) user.lieuProfile.socialLinks = {};
+          if (lp.socialLinks.youtube !== undefined) user.lieuProfile.socialLinks.youtube = lp.socialLinks.youtube || undefined;
+          if (lp.socialLinks.instagram !== undefined) user.lieuProfile.socialLinks.instagram = lp.socialLinks.instagram || undefined;
+          if (lp.socialLinks.facebook !== undefined) user.lieuProfile.socialLinks.facebook = lp.socialLinks.facebook || undefined;
+          if (lp.socialLinks.twitter !== undefined) user.lieuProfile.socialLinks.twitter = lp.socialLinks.twitter || undefined;
+        }
+      }
+    }
+
     console.log('💾 Tentative de sauvegarde...');
     await user.save();
     console.log('✅ Utilisateur sauvegardé avec succès');

@@ -490,6 +490,23 @@ export const updateProfileSchema = z.object({
     location: updateLocationSchema.optional(),
     phone: z.string().optional(),
   }).optional(),
+  lieuProfile: z.object({
+    companyName: z.string().optional(),
+    description: z.string().max(500).optional(),
+    website: z.string().url('URL du site invalide').optional().or(z.string().length(0)),
+    socialLinks: z.object({
+      youtube: z.string().url().optional().or(z.string().length(0)),
+      instagram: z.string().url().optional().or(z.string().length(0)),
+      facebook: z.string().url().optional().or(z.string().length(0)),
+      twitter: z.string().url().optional().or(z.string().length(0)),
+    }).optional(),
+    contactName: z.string().optional(),
+    contactEmail: z.string().email().optional().or(z.string().length(0)),
+    phone: z.string().optional(),
+    legalStatus: z.string().optional(),
+    siret: z.string().regex(/^\d{14}$/, 'SIRET invalide (14 chiffres requis)').optional().or(z.string().length(0)),
+    invoicingAvailable: z.boolean().optional(),
+  }).optional(),
   spectatorPreferences: z.object({
     radiusKm: z.number().refine((n) => [5, 10, 20, 50].includes(n), { message: 'Rayon invalide (5, 10, 20 ou 50 km)' }).optional(),
     dailyRecapEmail: z.boolean().optional(),
@@ -593,8 +610,16 @@ export const createVenueSchema = z.object({
   contactEmail: z.string().email().optional(),
   contactPhone: z.string().optional(),
   legalStatus: z.string().optional(),
-  siret: z.string().optional(),
+  siret: z.string().regex(/^\d{14}$/, 'SIRET invalide (14 chiffres requis)').optional().or(z.string().length(0)),
   invoicingAvailable: z.boolean().optional(),
+  companyName: z.string().optional(),
+  website: z.string().url('URL du site invalide').optional().or(z.string().length(0)),
+  socialLinks: z.object({
+    youtube: z.string().url().optional().or(z.string().length(0)),
+    instagram: z.string().url().optional().or(z.string().length(0)),
+    facebook: z.string().url().optional().or(z.string().length(0)),
+    twitter: z.string().url().optional().or(z.string().length(0)),
+  }).optional(),
 });
 
 export const updateVenueSchema = createVenueSchema.partial();

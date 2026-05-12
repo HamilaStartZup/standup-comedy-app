@@ -75,6 +75,9 @@ export interface VenueFormData {
   legalStatus: string;
   siret: string;
   invoicingAvailable: boolean;
+  companyName: string;
+  website: string;
+  socialLinks: { youtube: string; instagram: string; facebook: string; twitter: string };
 }
 
 interface VenueFormProps {
@@ -151,6 +154,9 @@ const defaultData: VenueFormData = {
   legalStatus: '',
   siret: '',
   invoicingAvailable: false,
+  companyName: '',
+  website: '',
+  socialLinks: { youtube: '', instagram: '', facebook: '', twitter: '' },
 };
 
 const TIME_OPTIONS_15 = [
@@ -923,6 +929,36 @@ const VenueForm: React.FC<VenueFormProps> = ({
         <input type="checkbox" checked={formData.invoicingAvailable} onChange={(e) => set('invoicingAvailable', e.target.checked)} />
         Facturation disponible
       </label>
+
+      <div style={{ marginTop: 24 }}>
+        <label style={labelStyle}>Nom de l'établissement</label>
+        <input value={formData.companyName} onChange={(e) => set('companyName', e.target.value)} placeholder="Mon Établissement" style={inputStyle} />
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <label style={labelStyle}>Site web</label>
+        <input value={formData.website} onChange={(e) => set('website', e.target.value)} placeholder="https://" style={inputStyle} />
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <label style={{ ...labelStyle, marginBottom: 12 }}>Réseaux sociaux</label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={{ ...labelStyle, fontWeight: 'normal', fontSize: 12 }}>YouTube</label>
+            <input value={formData.socialLinks.youtube} onChange={(e) => set('socialLinks', { ...formData.socialLinks, youtube: e.target.value })} placeholder="https://youtube.com/..." style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ ...labelStyle, fontWeight: 'normal', fontSize: 12 }}>Instagram</label>
+            <input value={formData.socialLinks.instagram} onChange={(e) => set('socialLinks', { ...formData.socialLinks, instagram: e.target.value })} placeholder="https://instagram.com/..." style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ ...labelStyle, fontWeight: 'normal', fontSize: 12 }}>Facebook</label>
+            <input value={formData.socialLinks.facebook} onChange={(e) => set('socialLinks', { ...formData.socialLinks, facebook: e.target.value })} placeholder="https://facebook.com/..." style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ ...labelStyle, fontWeight: 'normal', fontSize: 12 }}>Twitter / X</label>
+            <input value={formData.socialLinks.twitter} onChange={(e) => set('socialLinks', { ...formData.socialLinks, twitter: e.target.value })} placeholder="https://x.com/..." style={inputStyle} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 

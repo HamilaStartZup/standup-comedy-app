@@ -21,6 +21,24 @@ export interface IOrganizerProfile {
   phone?: string;
 }
 
+export interface ILieuProfile {
+  companyName?: string;
+  description?: string;
+  website?: string;
+  socialLinks?: {
+    youtube?: string;
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+  };
+  contactName?: string;
+  contactEmail?: string;
+  phone?: string;
+  legalStatus?: string;
+  siret?: string;
+  invoicingAvailable?: boolean;
+}
+
 export interface IUserData {
   _id: string;
   id: string;
@@ -56,6 +74,7 @@ export interface IUserData {
     // Add other user profile fields here if needed
   };
   organizerProfile?: IOrganizerProfile;
+  lieuProfile?: ILieuProfile;
   // Add other common user fields like stats, onboardingCompleted, etc.
   stats?: {
     totalEvents?: number;
