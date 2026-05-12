@@ -1,10 +1,52 @@
-import React, { type CSSProperties, useState, useRef, useEffect } from 'react';
+import React, { type CSSProperties, useState, useRef, useEffect, useMemo } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { usePostalCodeValidation } from '../hooks/usePostalCodeValidation';
+import { useMyBookings } from '../hooks/useMyBookings';
 import { X, ChevronDown, MapPin, Calendar, Users } from 'lucide-react';
 import api, { uploadEventImage } from '../services/api';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages } from '../services/systemMessages';
+import type { IVenueBooking } from '../types/venue';
+
+/** Types de lieu (salles) → valeurs acceptées par le schéma évènement */
+function mapVenueTypeToEventVenueType(vt: string | undefined): string {
+  const m: Record<string, string> = {
+    theatre: 'theatre',
+    salle_polyvalente: 'salle_polyvalente',
+    bar: 'cafe',
+    cafe_theatre: 'cafe',
+    comedy_club: 'cafe',
+    cinema: 'autre',
+    salle_municipale: 'salle_polyvalente',
+    salle_des_fetes: 'salle_polyvalente',
+    autre: 'autre',
+  };
+  return m[vt || ''] || 'autre';
+}
+
+function bookingDateLocalYMD(requestedDate: string): string {
+  const d = new Date(requestedDate);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function normalizeHHMM(t: string): string {
+  const parts = (t || '0:0').split(':');
+  const h = Number(parts[0]);
+  const m = Number(parts[1] ?? 0);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function minutesBetweenStartEnd(start: string, end: string): number {
+  const a = normalizeHHMM(start);
+  const b = normalizeHHMM(end);
+  const [sh, sm] = a.split(':').map(Number);
+  const [eh, em] = b.split(':').map(Number);
+  let s = sh * 60 + sm;
+  let e = eh * 60 + em;
+  let diff = e - s;
+  if (diff <= 0) diff += 24 * 60;
+  return diff;
+}
 
 interface CreateEventFormProps {
   onClose: () => void;
@@ -32,6 +74,22 @@ interface CreateEventFormProps {
 function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFormProps) {
   const { user } = useAuth();
   const { showSuccess, showError, showWarning } = useAlert();
+  const { data: myVenueBookings = [], isLoading: loadingVenueBookings } = useMyBookings({
+    enabled: user?.role === 'ORGANIZER',
+  });
+
+  const confirmedVenueBookings = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return (myVenueBookings as IVenueBooking[]).filter((b) => {
+      if (b.status !== 'CONFIRMED' || !b.venue || b.venue.isDeleted) return false;
+      const rd = new Date(b.requestedDate);
+      rd.setHours(0, 0, 0, 0);
+      return rd >= today;
+    }).sort((a, b) => new Date(a.requestedDate).getTime() - new Date(b.requestedDate).getTime());
+  }, [myVenueBookings]);
+
+  const [selectedVenueBookingId, setSelectedVenueBookingId] = useState('');
   const [isMobile, setIsMobile] = useState(false);
 
   // Fonction pour générer les créneaux de 30 minutes
@@ -192,7 +250,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         imageUrl: initialData.imageUrl || '',
       });
     } else {
-      // Réinitialiser à vide si pas de données initiales
       setFormData({
         title: '',
         description: '',
@@ -213,6 +270,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         imageUrl: '',
       });
     }
+    setSelectedVenueBookingId('');
   }, [initialData]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -825,6 +883,56 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     }
   };
 
+  const applyVenueBookingToForm = (booking: IVenueBooking) => {
+    const v = booking.venue;
+    if (!v) return;
+    const dateStr = bookingDateLocalYMD(booking.requestedDate);
+    const st = normalizeHHMM(booking.startTime);
+    const et = normalizeHHMM(booking.endTime);
+    let dur = minutesBetweenStartEnd(booking.startTime, booking.endTime);
+    if (!dur || dur < 30) dur = 120;
+
+    const title = `Stand-up — ${v.name}`;
+    const desc =
+      (v.shortDescription || '').trim() ||
+      (v.description || '').trim() ||
+      `Événement organisé à ${v.name} (${v.city}).`;
+
+    setEventType('unique');
+    setRecurrenceStartDate(dateStr);
+    setEventDurationMinutes(dur);
+    setFormData((prev) => ({
+      ...prev,
+      title,
+      description: desc,
+      city: v.city || '',
+      postalCode: v.postalCode || '',
+      address: v.address || '',
+      country: v.country || 'France',
+      date: dateStr,
+      venue: v.name || '',
+      venueType: mapVenueTypeToEventVenueType(v.venueType),
+      maxSpectators: v.capacity != null ? String(v.capacity) : prev.maxSpectators,
+      startTime: st,
+      endTime: et,
+      minExperience: prev.minExperience || '0',
+      maxComedians: prev.maxComedians || '5',
+      imageUrl: v.photos?.[0] ? v.photos[0] : prev.imageUrl,
+    }));
+    setSelectedVenueBookingId(booking._id);
+    setErrors({});
+  };
+
+  const handleVenueBookingSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = e.target.value;
+    if (!id) {
+      setSelectedVenueBookingId('');
+      return;
+    }
+    const booking = confirmedVenueBookings.find((x) => x._id === id);
+    if (booking) applyVenueBookingToForm(booking);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('🔍 [CreateEventForm] handleSubmit appelé', { initialData, formData, eventType, recurringDates });
@@ -1168,6 +1276,61 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         {/* Content */}
         <div style={contentStyle}>
           <form onSubmit={handleSubmit}>
+            {user?.role === 'ORGANIZER' && (
+              <div
+                style={{
+                  marginBottom: 24,
+                  padding: 16,
+                  backgroundColor: 'rgba(232, 93, 117, 0.08)',
+                  borderRadius: 12,
+                  border: '1px solid rgba(232, 93, 117, 0.25)',
+                }}
+              >
+                <label style={{ display: 'block', marginBottom: 8, fontWeight: 600, color: '#ffb3c1', fontSize: 14 }}>
+                  Remplir depuis une réservation confirmée (Salles → Mes réservations)
+                </label>
+                <select
+                  value={selectedVenueBookingId}
+                  onChange={handleVenueBookingSelect}
+                  disabled={loadingVenueBookings}
+                  style={{
+                    width: '100%',
+                    padding: isMobile ? '14px 16px' : '12px 16px',
+                    fontSize: isMobile ? '16px' : '14px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: 8,
+                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    color: '#1a1a1a',
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231a1a1a' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 12px center',
+                    backgroundSize: '12px',
+                  }}
+                >
+                  <option value="">— Choisir une réservation —</option>
+                  {confirmedVenueBookings.map((b) => {
+                    const label = `${b.venue?.name || 'Salle'} · ${new Date(b.requestedDate).toLocaleDateString('fr-FR')} · ${normalizeHHMM(b.startTime)}–${normalizeHHMM(b.endTime)}`;
+                    return (
+                      <option key={b._id} value={b._id}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+                {loadingVenueBookings && (
+                  <p style={{ margin: '8px 0 0', fontSize: 12, color: '#888' }}>Chargement des réservations…</p>
+                )}
+                {!loadingVenueBookings && confirmedVenueBookings.length === 0 && (
+                  <p style={{ margin: '8px 0 0', fontSize: 12, color: '#888', lineHeight: 1.4 }}>
+                    Aucune réservation confirmée à venir. Les réservations au statut « Confirmée » (paiement effectué ou salle
+                    gratuite) apparaissent dans <strong>Salles</strong> → <strong>Mes réservations</strong>.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Titre et Description en haut */}
             <div style={{ marginBottom: '32px' }}>
               {/* Titre */}

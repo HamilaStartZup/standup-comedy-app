@@ -427,7 +427,10 @@ export const myBookings = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     const bookings = await VenueBookingModel.find(findFilter)
-      .populate('venue', 'name city address venueType pricePerEvent cancellationPolicy isDeleted pricingType deposit extraFees currency')
+      .populate(
+        'venue',
+        'name city address postalCode country venueType capacity description shortDescription pricePerEvent cancellationPolicy isDeleted pricingType deposit extraFees currency latitude longitude photos'
+      )
       .populate('requester', requesterFields)
       .sort({ createdAt: -1 });
 
