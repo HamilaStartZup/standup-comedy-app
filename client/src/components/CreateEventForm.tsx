@@ -48,6 +48,13 @@ function minutesBetweenStartEnd(start: string, end: string): number {
   return diff;
 }
 
+/** L'API évènements n'accepte que des URLs absolues http(s) ; pas les chemins relatifs type /uploads/... */
+function sanitizeEventImageUrl(url: string | undefined): string | undefined {
+  const u = url?.trim();
+  if (!u || !/^https?:\/\//i.test(u)) return undefined;
+  return u;
+}
+
 interface CreateEventFormProps {
   onClose: () => void;
   onEventCreated: () => void;
@@ -917,7 +924,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
       endTime: et,
       minExperience: prev.minExperience || '0',
       maxComedians: prev.maxComedians || '5',
-      imageUrl: v.photos?.[0] ? v.photos[0] : prev.imageUrl,
+      imageUrl: sanitizeEventImageUrl(v.photos?.[0]) ?? sanitizeEventImageUrl(prev.imageUrl) ?? '',
     }));
     setSelectedVenueBookingId(booking._id);
     setErrors({});
@@ -1051,7 +1058,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         startTime: formData.startTime,
         endTime: effectiveEndTime,
         maxSpectators: formData.maxSpectators && formData.maxSpectators.trim() ? parseInt(formData.maxSpectators, 10) : undefined,
-        imageUrl: formData.imageUrl && formData.imageUrl.trim() ? formData.imageUrl.trim() : undefined,
+        imageUrl: sanitizeEventImageUrl(formData.imageUrl),
       };
 
       const config = {
