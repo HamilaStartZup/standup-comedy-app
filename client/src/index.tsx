@@ -60,6 +60,15 @@ const RedirectSpectatorEvents: React.FC = () => {
   return <Navigate to={`/spectateur/events${search}`} replace />;
 };
 
+const VenueAccessRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (user?.role !== 'ORGANIZER' && user?.role !== 'LIEU' && user?.role !== 'COMEDIAN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <>{children}</>;
+};
+
 const VenueOwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
@@ -132,11 +141,11 @@ const AppRouter: React.FC = () => {
       <Route path="/politique-confidentialite" element={<PrivacyPolicyPage />} />
       <Route path="/cgu" element={<TermsOfServicePage />} />
       <Route path="/a-propos" element={<AboutPage />} />
-      <Route path="/venues" element={<VenueOwnerRoute><VenuesPage /></VenueOwnerRoute>} />
+      <Route path="/venues" element={<VenueAccessRoute><VenuesPage /></VenueAccessRoute>} />
       <Route path="/venues/new" element={<VenueOwnerRoute><CreateVenuePage /></VenueOwnerRoute>} />
-      <Route path="/venues/:venueId" element={<VenueOwnerRoute><VenueDetailPage /></VenueOwnerRoute>} />
+      <Route path="/venues/:venueId" element={<VenueAccessRoute><VenueDetailPage /></VenueAccessRoute>} />
       <Route path="/my-venues" element={<VenueOwnerRoute><MyVenuesPage /></VenueOwnerRoute>} />
-      <Route path="/my-bookings" element={<VenueOwnerRoute><MyBookingsPage /></VenueOwnerRoute>} />
+      <Route path="/my-bookings" element={<VenueAccessRoute><MyBookingsPage /></VenueAccessRoute>} />
       <Route path="/my-venues-management" element={<VenueOwnerRoute><MesSallesPage /></VenueOwnerRoute>} />
       <Route path="/profile/lieu" element={<VenueOwnerRoute><LieuProfilePage /></VenueOwnerRoute>} />
     </Routes>
