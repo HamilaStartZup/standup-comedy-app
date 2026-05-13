@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import './index.css';
+import './tailwind.css';
 import Dashboard from './pages/Dashboard'
 import LoginPage from './pages/LoginPage'
 import Organisateur from './pages/LoginOrganisateur'
@@ -43,6 +44,8 @@ import MyVenuesPage from './pages/MyVenuesPage';
 import MyBookingsPage from './pages/MyBookingsPage';
 import MesSallesPage from './pages/MesSallesPage';
 import LieuProfilePage from './pages/LieuProfilePage';
+import AidesHumourPage from './pages/AidesHumourPage';
+import AidesHumourAccueilPage from './pages/AidesHumourAccueilPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,14 +80,24 @@ const VenueOwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) 
 };
 
 const ScrollToTop: React.FC = () => {
-  const { pathname } = useLocation();
+  const location = useLocation();
   useEffect(() => {
+    const { pathname, hash } = location;
+    if (hash && hash.length > 1) {
+      const id = decodeURIComponent(hash.slice(1));
+      requestAnimationFrame(() => {
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        else window.scrollTo(0, 0);
+      });
+      return;
+    }
     window.scrollTo(0, 0);
-  }, [pathname]);
+  }, [location.pathname, location.hash]);
   return null;
 };
 
-const LIEU_ALLOWED_PATHS = ['/my-venues-management', '/my-bookings', '/venues/new', '/dashboard', '/profile/lieu'];
+const LIEU_ALLOWED_PATHS = ['/my-venues-management', '/my-bookings', '/venues/new', '/dashboard', '/profile/lieu', '/aides', '/aides/accueil'];
 const PUBLIC_PATHS = ['/', '/login', '/register', '/organisateur', '/forgot-password',
   '/reset-password', '/auth/callback', '/mentions-legales', '/politique-confidentialite',
   '/cgu', '/a-propos'];
@@ -148,6 +161,8 @@ const AppRouter: React.FC = () => {
       <Route path="/my-bookings" element={<VenueAccessRoute><MyBookingsPage /></VenueAccessRoute>} />
       <Route path="/my-venues-management" element={<VenueOwnerRoute><MesSallesPage /></VenueOwnerRoute>} />
       <Route path="/profile/lieu" element={<VenueOwnerRoute><LieuProfilePage /></VenueOwnerRoute>} />
+      <Route path="/aides" element={<AidesHumourPage />} />
+      <Route path="/aides/accueil" element={<AidesHumourAccueilPage />} />
     </Routes>
     </LieuRedirectGuard>
   );

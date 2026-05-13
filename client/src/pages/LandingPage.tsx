@@ -249,6 +249,7 @@ function LandingPage() {
               <Link to="/a-propos" className="nav-link">À propos</Link>
             </nav>
             <div className="header-buttons">
+              <a href="http://localhost:3000/login" className="btn btn-primary">Dispositif de financement</a>
               <button type="button" className="btn btn-secondary" onClick={goLogin}>Se connecter</button>
               <button type="button" className="btn btn-primary" onClick={scrollToRoles}>S'inscrire</button>
             </div>
