@@ -34,6 +34,17 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
+/** Cibles autorisées après login (?redirect=…) — chemins internes uniquement */
+const POST_LOGIN_REDIRECT_WHITELIST = new Set<string>(['/aides', '/aides/accueil']);
+
+function getSafePostLoginRedirect(search: string): string | null {
+  const raw = new URLSearchParams(search).get('redirect');
+  if (!raw || !raw.startsWith('/')) return null;
+  const pathOnly = raw.split('?')[0];
+  if (!pathOnly || pathOnly.includes('..')) return null;
+  return POST_LOGIN_REDIRECT_WHITELIST.has(pathOnly) ? pathOnly : null;
+}
+
 // Pages protégées qui doivent rediriger vers /login quand la session expire
 const isProtectedPath = (path: string) => {
   const publicPrefixes = [
@@ -94,6 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loginWithKeycloak = useCallback(async (provider?: string) => {
     setIsOAuthLoading(true);
+    const postLoginTarget = getSafePostLoginRedirect(window.location.search);
     try {
       const tokens = await oauthLogin(provider);
       storeOAuthTokens(tokens);
@@ -101,14 +113,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Cookie is set by the server — just fetch the user profile
       const response = await api.get<IUserData>('/profile/me');
       setUser(response.data);
-      redirectByRole(response.data.role);
+      if (postLoginTarget) navigate(postLoginTarget, { replace: true });
+      else redirectByRole(response.data.role);
     } catch (error: any) {
       console.error('Keycloak login error:', error);
       throw error;
     } finally {
       setIsOAuthLoading(false);
     }
-  }, [redirectByRole]);
+  }, [navigate, redirectByRole]);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -188,7 +201,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     },
     onSuccess: async (data) => {
       await refreshUser();
-      redirectByRole(data.user.role);
+      const postLoginTarget = getSafePostLoginRedirect(window.location.search);
+      if (postLoginTarget) navigate(postLoginTarget, { replace: true });
+      else redirectByRole(data.user.role);
     }
   });
 
