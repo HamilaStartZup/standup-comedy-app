@@ -18,6 +18,9 @@ const isDatePast = (dateStr: string): boolean => {
   return new Date(dateStr) < today;
 };
 
+const getVenueCoverPhoto = (venue: IVenueBooking['venue']): string | undefined =>
+  venue?.photos?.[0] || venue?.mainPhoto;
+
 const MyBookingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { showSuccess, showError } = useAlert();
@@ -275,6 +278,11 @@ const MyBookingsPage: React.FC = () => {
       <style>{`
         @media (max-width: 640px) {
           .my-bookings-header h1 { font-size: 1.8em !important; }
+          .booking-card-layout { flex-direction: column !important; }
+          .booking-card-image {
+            width: 100% !important;
+            min-height: 180px !important;
+          }
           .booking-card-header { flex-direction: column; align-items: flex-start !important; }
           .booking-card-actions { flex-direction: column; }
           .booking-card-actions button { width: 100%; }
@@ -427,18 +435,23 @@ const MyBookingsPage: React.FC = () => {
 
                       const effectiveHighlight = highlightId ?? highlightIdRef.current;
                       const isHighlighted = booking._id === effectiveHighlight;
+                      const coverPhoto = getVenueCoverPhoto(booking.venue);
 
                       return (
               <div
                 key={booking._id}
                 data-booking-id={booking._id}
+                className="booking-card-layout"
                 style={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'stretch',
                   backgroundColor: '#ffffff',
                   border: isHighlighted
                     ? '2px solid #ff416c'
                     : `1px solid ${isUrgent ? '#f97316' : 'rgba(0,0,0,0.08)'}`,
                   borderRadius: 20,
-                  padding: 24,
+                  overflow: 'hidden',
                   boxShadow: isHighlighted
                     ? '0 0 20px rgba(255,65,108,0.4)'
                     : '0 10px 40px rgba(0,0,0,0.12)',
@@ -447,6 +460,52 @@ const MyBookingsPage: React.FC = () => {
                   filter: venueDeleted ? 'grayscale(0.4)' : undefined,
                 }}
               >
+                <div
+                  className="booking-card-image"
+                  style={{
+                    width: '25%',
+                    flexShrink: 0,
+                    minHeight: 200,
+                    position: 'relative',
+                    background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+                  }}
+                >
+                  {coverPhoto ? (
+                    <img
+                      src={coverPhoto}
+                      alt={booking.venue?.name || 'Salle'}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'linear-gradient(135deg, #1a1a2e 0%, #331f41 100%)',
+                      }}
+                    >
+                      <span style={{ fontSize: 48 }}>🏛️</span>
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  className="booking-card-content"
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: 24,
+                  }}
+                >
                 <div
                   className="booking-card-header"
                   style={{
@@ -801,6 +860,7 @@ const MyBookingsPage: React.FC = () => {
                       {cancellingId === booking._id ? 'Annulation...' : 'Annuler la réservation'}
                     </button>
                   )}
+                </div>
                 </div>
               </div>
                       );

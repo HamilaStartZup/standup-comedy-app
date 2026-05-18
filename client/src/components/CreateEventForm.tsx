@@ -48,6 +48,25 @@ function minutesBetweenStartEnd(start: string, end: string): number {
   return diff;
 }
 
+/** Libellé français pour une durée arbitraire (ex. hors grille 30 min–4 h). */
+function formatDurationMinutesLabel(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h > 0 && m > 0) return `${h} h ${m} min`;
+  if (h > 0) return `${h} h`;
+  return `${m} min`;
+}
+
+/** 00:00–23:59 (1439 min) ou 24 h (1440) : libellé explicite pour le select Durée. */
+const FULL_DAY_RESERVATION_MINUTES = [23 * 60 + 59, 24 * 60];
+
+function formatDurationSelectOptionLabel(totalMinutes: number): string {
+  if (FULL_DAY_RESERVATION_MINUTES.includes(totalMinutes)) {
+    return 'Réservation journée';
+  }
+  return formatDurationMinutesLabel(totalMinutes);
+}
+
 /** L'API évènements n'accepte que des URLs absolues http(s) ; pas les chemins relatifs type /uploads/... */
 function sanitizeEventImageUrl(url: string | undefined): string | undefined {
   const u = url?.trim();
@@ -166,6 +185,21 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   /** Durée en minutes pour événement unique (0 = non sélectionné). Remplace "Heure de fin" en mode unique. */
   const [eventDurationMinutes, setEventDurationMinutes] = useState<number>(120);
   const [uploadingEventImage, setUploadingEventImage] = useState(false);
+
+  /** Inclut la durée courante si elle n'est pas dans la grille (ex. journée 00:00–23:59 → 1439 min). */
+  const durationSelectOptions = useMemo(() => {
+    const base = [...DURATION_OPTIONS];
+    if (
+      eventDurationMinutes > 0 &&
+      !base.some((o) => o.value === eventDurationMinutes)
+    ) {
+      base.push({
+        value: eventDurationMinutes,
+        label: formatDurationSelectOptionLabel(eventDurationMinutes),
+      });
+    }
+    return base.sort((a, b) => a.value - b.value);
+  }, [eventDurationMinutes]);
 
   // Formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC qui affichait le jour précédent)
   const toLocalDateString = (d: Date) =>
@@ -899,19 +933,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     let dur = minutesBetweenStartEnd(booking.startTime, booking.endTime);
     if (!dur || dur < 30) dur = 120;
 
-    const title = `Stand-up — ${v.name}`;
-    const desc =
-      (v.shortDescription || '').trim() ||
-      (v.description || '').trim() ||
-      `Événement organisé à ${v.name} (${v.city}).`;
-
     setEventType('unique');
     setRecurrenceStartDate(dateStr);
     setEventDurationMinutes(dur);
     setFormData((prev) => ({
       ...prev,
-      title,
-      description: desc,
       city: v.city || '',
       postalCode: v.postalCode || '',
       address: v.address || '',
@@ -1249,6 +1275,15 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     gap: '20px',
   };
 
+  const fieldsLockedByVenueBooking = Boolean(selectedVenueBookingId);
+  const lockedFromReservationStyle: CSSProperties = fieldsLockedByVenueBooking
+    ? {
+        opacity: 0.55,
+        pointerEvents: 'none',
+        filter: 'grayscale(0.2)',
+      }
+    : {};
+
   return (
     <div style={modalStyle}>
       <div style={formStyle}>
@@ -1450,7 +1485,13 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                 <MapPin size={20} style={{ color: '#ff416c' }} />
                 <span>Localisation</span>
               </div>
-              <div style={sectionGridStyle}>
+              {fieldsLockedByVenueBooking && (
+                <p style={{ margin: '0 0 16px', fontSize: 13, color: '#aaa', lineHeight: 1.45 }}>
+                  Ces champs reprennent votre réservation de salle et ne sont pas modifiables ici. Retirez la réservation
+                  sélectionnée en haut du formulaire pour les modifier.
+                </p>
+              )}
+              <div style={{ ...sectionGridStyle, ...lockedFromReservationStyle }}>
                 {/* Lieu/Bar */}
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
@@ -1461,6 +1502,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     id="venue"
                     value={formData.venue}
                     onChange={handleChange}
+                    disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
                       borderColor: errors.venue ? '#ef4444' : '#444'
@@ -1484,6 +1526,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     id="address"
                     value={formData.address}
                     onChange={handleChange}
+                    disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
                       borderColor: errors.address ? '#ef4444' : '#444'
@@ -1533,7 +1576,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     }}
                     placeholder="Ex: 75001"
                     maxLength={5}
-                    disabled={isValidatingPostalCode}
+                    disabled={isValidatingPostalCode || fieldsLockedByVenueBooking}
                   />
                   {(errors.postalCode || postalCodeError) && (
                     <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
@@ -1591,6 +1634,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     id="city"
                     value={formData.city}
                     onChange={handleChange}
+                    disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
                       borderColor: errors.city ? '#ef4444' : '#444'
@@ -1614,6 +1658,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     id="country"
                     value={formData.country}
                     onChange={handleChange}
+                    disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
                       borderColor: errors.country ? '#ef4444' : '#444'
@@ -1635,6 +1680,13 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                 <Calendar size={20} style={{ color: '#ff416c' }} />
                 <span>Informations d'évènement</span>
               </div>
+              {fieldsLockedByVenueBooking && (
+                <p style={{ margin: '0 0 16px', fontSize: 13, color: '#aaa', lineHeight: 1.45 }}>
+                  Ces informations reprennent votre réservation de salle et ne sont pas modifiables ici. Retirez la
+                  réservation sélectionnée en haut du formulaire pour les modifier.
+                </p>
+              )}
+              <div style={lockedFromReservationStyle}>
               {/* Choix : Événement unique ou récurrent — deux blocs séparés */}
               <label style={{ display: 'block', marginBottom: '12px', fontWeight: '500', color: '#ccc' }}>
                 Type d'événement
@@ -1658,6 +1710,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     type="radio"
                     name="eventType"
                     checked={eventType === 'unique'}
+                    disabled={fieldsLockedByVenueBooking}
                     onChange={() => setEventType('unique')}
                     style={{ width: '18px', height: '18px', accentColor: '#ff416c', flexShrink: 0 }}
                   />
@@ -1681,6 +1734,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     type="radio"
                     name="eventType"
                     checked={eventType === 'recurring'}
+                    disabled={fieldsLockedByVenueBooking}
                     onChange={() => {
                       setEventType('recurring');
                       setRecurrenceStartDate(formData.date);
@@ -1703,6 +1757,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       id="date"
                       value={formData.date}
                       onChange={handleChange}
+                      disabled={fieldsLockedByVenueBooking}
                       style={{ ...inputStyle, borderColor: errors.date ? '#ef4444' : '#444' }}
                     />
                     {errors.date && <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>{errors.date}</p>}
@@ -1721,6 +1776,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         type="date"
                         value={recurrenceStartDate}
                         onChange={(e) => setRecurrenceStartDate(e.target.value)}
+                        disabled={fieldsLockedByVenueBooking}
                         style={{ ...inputStyle, borderColor: errors.recurrenceStartDate ? '#ef4444' : '#444' }}
                         min={new Date().toISOString().split('T')[0]}
                       />
@@ -1738,6 +1794,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                           type="date"
                           value={recurrenceEndDate}
                           onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                          disabled={fieldsLockedByVenueBooking}
                           style={{
                             ...inputStyle,
                             flex: 1,
@@ -1761,6 +1818,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     <select
                       value={recurrenceType}
                       onChange={(e) => setRecurrenceType(e.target.value as 'daily' | 'weekly' | 'monthly')}
+                      disabled={fieldsLockedByVenueBooking}
                       style={{ ...selectStyle, maxWidth: '220px' }}
                     >
                       <option value="daily">Quotidien</option>
@@ -1779,6 +1837,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                           <button
                             key={value}
                             type="button"
+                            disabled={fieldsLockedByVenueBooking}
                             onClick={() => toggleRecurrenceWeeklyDay(value)}
                             style={{
                               padding: '10px 14px',
@@ -1840,6 +1899,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                                 <select
                                   value={startVal}
                                   onChange={(e) => setDateTimeForDate(dateStr, e.target.value, endVal)}
+                                  disabled={fieldsLockedByVenueBooking}
                                   style={{ ...inputStyle, padding: '8px 10px', marginBottom: 0, minWidth: '90px' }}
                                 >
                                   {timeSlots.map((s) => (
@@ -1850,6 +1910,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                                 <select
                                   value={endVal}
                                   onChange={(e) => setDateTimeForDate(dateStr, startVal, e.target.value)}
+                                  disabled={fieldsLockedByVenueBooking}
                                   style={{ ...inputStyle, padding: '8px 10px', marginBottom: 0, minWidth: '90px' }}
                                 >
                                   {timeSlots.map((s) => (
@@ -1960,13 +2021,14 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     <select
                       value={eventDurationMinutes}
                       onChange={(e) => setEventDurationMinutes(Number(e.target.value))}
+                      disabled={fieldsLockedByVenueBooking}
                       style={{
                         ...selectStyle,
                         borderColor: errors.duration ? '#ef4444' : '#444',
                         cursor: 'pointer',
                       }}
                     >
-                      {DURATION_OPTIONS.map((opt) => (
+                      {durationSelectOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
                           {opt.label}
                         </option>
@@ -1974,10 +2036,19 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     </select>
                     {formData.date && formData.startTime && eventDurationMinutes > 0 && (() => {
                       const { endTime, endDate } = computeEndFromDuration(formData.date, formData.startTime, eventDurationMinutes);
-                      const endDateObj = endDate ? new Date(endDate + 'T' + endTime + ':00') : new Date(formData.date + 'T' + endTime + ':00');
-                      const label = endDate
-                        ? endDateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' à ' + endTime.replace(':', 'h')
-                        : 'à ' + endTime.replace(':', 'h');
+                      const timePart = endTime.replace(':', 'h');
+                      const isFullDayReservation =
+                        FULL_DAY_RESERVATION_MINUTES.includes(eventDurationMinutes) && !endDate;
+                      let label: string;
+                      if (isFullDayReservation) {
+                        label = `réservation journée — jusqu'à ${timePart}`;
+                      } else if (endDate) {
+                        const endDateObj = new Date(endDate + 'T' + endTime + ':00');
+                        label =
+                          endDateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' à ' + timePart;
+                      } else {
+                        label = 'à ' + timePart;
+                      }
                       return (
                         <p style={{ fontSize: '12px', color: '#aaa', marginTop: '6px' }}>
                           Fin : {label}
@@ -2083,6 +2154,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     id="venueType"
                     value={formData.venueType}
                     onChange={handleChange}
+                    disabled={fieldsLockedByVenueBooking}
                     style={selectStyle}
                   >
                     <option value="">-- Sélectionnez --</option>
@@ -2104,6 +2176,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     id="maxSpectators"
                     value={formData.maxSpectators}
                     onChange={handleChange}
+                    disabled={fieldsLockedByVenueBooking}
                     min={1}
                     max={10000}
                     placeholder="Nombre de places pour spectateur"
@@ -2118,6 +2191,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     </p>
                   )}
                 </div>
+              </div>
               </div>
             </div>
 
