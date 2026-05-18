@@ -343,7 +343,7 @@ function Navbar() {
         </div>
 
         {/* Info utilisateur Desktop - Masqué sur mobile */}
-        <div id="desktop-user" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', position: 'relative' }}>
+        <div id="desktop-user" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', position: 'relative' }}>
           {user && (
             <div ref={userMenuRef} style={{ position: 'relative' }}>
               <button
@@ -666,7 +666,7 @@ function Navbar() {
         @media (min-width: 768px) {
           #mobile-nav { display: none !important; }
           #desktop-nav { display: flex !important; }
-          #desktop-user { display: block !important; }
+          #desktop-user { display: flex !important; flex-direction: row; align-items: center; justify-content: flex-end; gap: 12px; }
         }
         @media (max-width: 767px) {
           #desktop-nav { display: none !important; }
