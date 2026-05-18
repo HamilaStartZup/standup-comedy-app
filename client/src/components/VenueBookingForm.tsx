@@ -348,9 +348,16 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
 
   const hasAvailableSlots = availableSlotsCount === null || availableSlotsCount > 0;
 
-  const canSubmit = !selectedDate
-    || !(pricingType === 'heure' || pricingType === 'demi_journee' || !pricingType)
-    || hasAvailableSlots;
+  const selectedDateHasNoSlots = useMemo(() => {
+    if (!selectedDate) return false;
+    if (pricingType === 'heure' || pricingType === 'demi_journee' || !pricingType) {
+      return !hasAvailableSlots;
+    }
+    const key = toDateStr(selectedDate);
+    return noAvailableSlotsDates.some(d => toDateStr(d) === key);
+  }, [selectedDate, pricingType, hasAvailableSlots, noAvailableSlotsDates]);
+
+  const canSubmit = !selectedDate || !selectedDateHasNoSlots;
 
   // Récapitulatif des coûts
   const priceBreakdown = useMemo(() => {
@@ -550,6 +557,12 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
           {errors.date && <p style={errorStyle}>{errors.date}</p>}
         </div>
 
+        {selectedDate && selectedDateHasNoSlots && (
+          <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, fontSize: 13, color: '#fdba74' }}>
+            Aucun créneau disponible pour cette date.
+          </div>
+        )}
+
         {/* Bouton Créneau — pour 'heure' ou type absent */}
         {showHourSelectors && (
           <div style={{ marginBottom: 16 }}>
@@ -669,12 +682,6 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
           );
         })()}
 
-
-        {selectedDate && !hasAvailableSlots && (pricingType === 'heure' || pricingType === 'demi_journee' || !pricingType) && (
-          <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, fontSize: 13, color: '#fdba74' }}>
-            Aucun créneau disponible pour cette date.
-          </div>
-        )}
 
         <div style={{ marginBottom: 20 }}>
           <label style={labelStyle}>Message (optionnel)</label>
