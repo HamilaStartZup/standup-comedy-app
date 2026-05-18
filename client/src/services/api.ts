@@ -508,6 +508,11 @@ export const getBookedDates = async (venueId: string): Promise<string[]> => {
   return response.data.dates;
 };
 
+export const getFullDates = async (venueId: string): Promise<string[]> => {
+  const response = await api.get<{ dates: string[] }>(`/venues/${venueId}/full-dates`);
+  return response.data.dates;
+};
+
 export const unblockDate = async (venueId: string, blockedDateId: string): Promise<void> => {
   await api.delete(`/venues/${venueId}/blocked-dates/${blockedDateId}`);
 };

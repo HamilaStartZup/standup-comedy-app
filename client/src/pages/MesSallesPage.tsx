@@ -76,11 +76,20 @@ const MesSallesPage: React.FC = () => {
 
   const filteredBookings = useMemo(
     () =>
-      bookings.filter((booking) => {
-        const matchVenue = selectedVenueId === 'ALL' || booking.venue?._id === selectedVenueId;
-        const matchStatus = selectedStatus === 'ALL' || booking.status === selectedStatus;
-        return matchVenue && matchStatus;
-      }),
+      bookings
+        .filter((booking) => {
+          const matchVenue = selectedVenueId === 'ALL' || booking.venue?._id === selectedVenueId;
+          const matchStatus = selectedStatus === 'ALL' || booking.status === selectedStatus;
+          return matchVenue && matchStatus;
+        })
+        .sort((a, b) => {
+          const dateA = new Date(a.requestedDate).getTime();
+          const dateB = new Date(b.requestedDate).getTime();
+          if (dateA !== dateB) return dateA - dateB;
+          const timeA = a.startTime?.split(':').map(Number) ?? [0, 0];
+          const timeB = b.startTime?.split(':').map(Number) ?? [0, 0];
+          return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+        }),
     [bookings, selectedVenueId, selectedStatus]
   );
 

@@ -37,6 +37,10 @@ const MyBookingsPage: React.FC = () => {
   // useRef guard prevents double-fire in React Strict Mode
   const paymentHandledRef = useRef(false);
 
+  // Gestion du highlight (ref stocke l'ID pour survivre au setSearchParams)
+  const highlightId = searchParams.get('highlight');
+  const highlightIdRef = useRef(highlightId);
+
   // Gestion du retour Stripe
   useEffect(() => {
     const payment = searchParams.get('payment');
@@ -70,6 +74,18 @@ const MyBookingsPage: React.FC = () => {
   }, []);
 
   const { data, isLoading, error } = useMyBookings();
+
+  // Highlight scroll effect
+  useEffect(() => {
+    const id = highlightIdRef.current;
+    if (id && data) {
+      setSearchParams({}, { replace: true });
+      const el = document.querySelector(`[data-booking-id="${id}"]`) as HTMLElement | null;
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
+      }
+    }
+  }, [data, setSearchParams]);
 
   const handleCancelClick = (booking: IVenueBooking) => {
     setCancelConfirmBooking(booking);
@@ -131,9 +147,32 @@ const MyBookingsPage: React.FC = () => {
   };
 
   const sortFn = (a: IVenueBooking, b: IVenueBooking) => {
-    if (sortBy === 'status') return statusPriority(a) - statusPriority(b);
-    if (sortBy === 'date-asc') return new Date(a.requestedDate).getTime() - new Date(b.requestedDate).getTime();
-    if (sortBy === 'date-desc') return new Date(b.requestedDate).getTime() - new Date(a.requestedDate).getTime();
+    if (sortBy === 'status') {
+      const statusDiff = statusPriority(a) - statusPriority(b);
+      if (statusDiff !== 0) return statusDiff;
+      const dateA = new Date(a.requestedDate).getTime();
+      const dateB = new Date(b.requestedDate).getTime();
+      if (dateA !== dateB) return dateA - dateB;
+      const timeA = a.startTime?.split(':').map(Number) ?? [0, 0];
+      const timeB = b.startTime?.split(':').map(Number) ?? [0, 0];
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    }
+    if (sortBy === 'date-asc') {
+      const dateA = new Date(a.requestedDate).getTime();
+      const dateB = new Date(b.requestedDate).getTime();
+      if (dateA !== dateB) return dateA - dateB;
+      const timeA = a.startTime?.split(':').map(Number) ?? [0, 0];
+      const timeB = b.startTime?.split(':').map(Number) ?? [0, 0];
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    }
+    if (sortBy === 'date-desc') {
+      const dateA = new Date(a.requestedDate).getTime();
+      const dateB = new Date(b.requestedDate).getTime();
+      if (dateA !== dateB) return dateB - dateA;
+      const timeA = a.startTime?.split(':').map(Number) ?? [0, 0];
+      const timeB = b.startTime?.split(':').map(Number) ?? [0, 0];
+      return (timeB[0] * 60 + timeB[1]) - (timeA[0] * 60 + timeA[1]);
+    }
     if (sortBy === 'created-desc') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     return 0;
   };
@@ -142,7 +181,14 @@ const MyBookingsPage: React.FC = () => {
 
   const activeBookings = (data ?? []).filter((b) => !isArchived(b) && matchesSearch(b) && matchesStatus(b)).sort(sortFn);
   const archivedBookings = (data ?? []).filter((b) => isArchived(b) && matchesSearch(b) && matchesStatus(b))
-    .sort((a, b) => new Date(b.requestedDate).getTime() - new Date(a.requestedDate).getTime());
+    .sort((a, b) => {
+      const dateA = new Date(a.requestedDate).getTime();
+      const dateB = new Date(b.requestedDate).getTime();
+      if (dateA !== dateB) return dateB - dateA;
+      const timeA = a.startTime?.split(':').map(Number) ?? [0, 0];
+      const timeB = b.startTime?.split(':').map(Number) ?? [0, 0];
+      return (timeB[0] * 60 + timeB[1]) - (timeA[0] * 60 + timeA[1]);
+    });
 
   const filtered = [...activeBookings, ...archivedBookings];
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
@@ -346,8 +392,8 @@ const MyBookingsPage: React.FC = () => {
                   }}
                 >
                   <option value="status">Trier par statut</option>
-                  <option value="date-desc">Date ↓ (récente)</option>
                   <option value="date-asc">Date ↑ (ancienne)</option>
+                  <option value="date-desc">Date ↓ (récente)</option>
                   <option value="created-desc">Demande récente</option>
                 </select>
               </div>
@@ -379,15 +425,23 @@ const MyBookingsPage: React.FC = () => {
                         : venuePricePerEvent;
                       const displayAmount = baseAmount + venueDeposit + venueExtraFeesTotal;
 
+                      const effectiveHighlight = highlightId ?? highlightIdRef.current;
+                      const isHighlighted = booking._id === effectiveHighlight;
+
                       return (
               <div
                 key={booking._id}
+                data-booking-id={booking._id}
                 style={{
                   backgroundColor: '#ffffff',
-                  border: `1px solid ${isUrgent ? '#f97316' : 'rgba(0,0,0,0.08)'}`,
+                  border: isHighlighted
+                    ? '2px solid #ff416c'
+                    : `1px solid ${isUrgent ? '#f97316' : 'rgba(0,0,0,0.08)'}`,
                   borderRadius: 20,
                   padding: 24,
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
+                  boxShadow: isHighlighted
+                    ? '0 0 20px rgba(255,65,108,0.4)'
+                    : '0 10px 40px rgba(0,0,0,0.12)',
                   transition: 'border-color 0.2s',
                   opacity: venueDeleted || archived ? 0.6 : 1,
                   filter: venueDeleted ? 'grayscale(0.4)' : undefined,

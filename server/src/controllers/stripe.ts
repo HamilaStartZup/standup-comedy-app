@@ -417,10 +417,9 @@ export const createVenueBookingCheckoutSession = async (req: AuthRequest, res: R
     }
 
     const userId = req.user?.id;
-    const userRole = req.user?.role;
 
-    if (!userId || userRole !== 'ORGANIZER') {
-      res.status(403).json({ message: 'Non autorisé' });
+    if (!userId) {
+      res.status(401).json({ message: 'Non authentifié' });
       return;
     }
 
@@ -521,9 +520,8 @@ export const confirmVenueBookingPayment = async (req: AuthRequest, res: Response
     }
 
     const userId = req.user?.id;
-    const userRole = req.user?.role;
-    if (!userId || userRole !== 'ORGANIZER') {
-      res.status(403).json({ message: 'Non autorisé' });
+    if (!userId) {
+      res.status(401).json({ message: 'Non authentifié' });
       return;
     }
 

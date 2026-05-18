@@ -67,6 +67,7 @@ const EditVenueForm: React.FC<EditVenueFormProps> = ({ venue, onUpdated }) => {
       twitter: venue.socialLinks?.twitter ?? '',
     },
     venueType: venue.venueType,
+    disabledWeekdays: venue.disabledWeekdays ?? [],
   };
 
   const handleSubmit = async (data: VenueFormData) => {

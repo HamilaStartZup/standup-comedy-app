@@ -6,12 +6,14 @@ import 'react-day-picker/src/style.css';
 const rdpCss = `
   .rdp {
     --rdp-cell-size: 38px;
-    --rdp-accent-color: #ff416c;
-    --rdp-background-color: rgba(255,65,108,0.15);
-    --rdp-accent-color-dark: #ff416c;
-    --rdp-background-color-dark: rgba(255,65,108,0.15);
-    --rdp-outline: 2px solid #ff416c;
-    --rdp-outline-selected: 2px solid #ff416c;
+    --rdp-accent-color: rgba(255,255,255,0.85);
+    --rdp-accent-background-color: rgba(255,255,255,0.12);
+    --rdp-selected-border: 2px solid rgba(255,255,255,0.6);
+    --rdp-today-color: #fff;
+    --rdp-day-height: 38px;
+    --rdp-day-width: 38px;
+    --rdp-day_button-height: 36px;
+    --rdp-day_button-width: 36px;
     margin: 0;
     font-size: 13px;
     color: #fff;
@@ -46,7 +48,7 @@ const rdpCss = `
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.1);
   }
-  .rdp-button:hover:not([disabled]) { background: rgba(255,65,108,0.25); color: #fff; }
+  .rdp-button:hover:not([disabled]) { background: rgba(249,115,22,0.25); color: #fff; }
   .rdp-weekday {
     color: rgba(255, 255, 255, 0.75) !important;
     opacity: 1 !important;
@@ -58,70 +60,35 @@ const rdpCss = `
   .rdp-day {
     color: #ffffff;
     font-weight: 700;
-    border-radius: 10px;
+  }
+  .rdp-day_button {
+    border-radius: 10px !important;
     transition: background 150ms ease, color 150ms ease, transform 150ms ease;
   }
-  .rdp-day:hover:not(.rdp-day_selected):not([disabled]) {
-    background: rgba(255,65,108,0.22);
+  .rdp-day_button:hover:not(:disabled) {
+    background: rgba(249,115,22,0.22) !important;
     color: #fff;
     transform: translateY(-1px);
   }
-  .rdp-day_selected {
-    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%) !important;
+  .rdp-selected .rdp-day_button {
+    background: rgba(255,255,255,0.12) !important;
+    border: 2px solid rgba(255,255,255,0.6) !important;
     color: #fff !important;
-    border-radius: 12px;
-    box-shadow: 0 0 0 3px rgba(255,65,108,0.18);
   }
-  .rdp-day_today {
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+  .rdp-today .rdp-day_button {
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.5);
+    color: #fff;
   }
-  .rdp-day_disabled {
+  .rdp-today:not(.rdp-selected) .rdp-day_button {
+    border: 2px solid rgba(255,255,255,0.35) !important;
+  }
+  .rdp-disabled .rdp-day_button {
     opacity: 0.4;
     cursor: not-allowed;
   }
-  .rdp-day_fullyBlocked {
-    color: #ef4444 !important;
-    opacity: 1 !important;
-    cursor: not-allowed;
-    position: relative;
-  }
-  .rdp-day_fullyBlocked::before,
-  .rdp-day_fullyBlocked::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 65%;
-    height: 2px;
-    background: rgba(239, 68, 68, 0.75);
-    border-radius: 1px;
-    pointer-events: none;
-  }
-  .rdp-day_fullyBlocked::before {
-    transform: translate(-50%, -50%) rotate(45deg);
-  }
-  .rdp-day_fullyBlocked::after {
-    transform: translate(-50%, -50%) rotate(-45deg);
-  }
-  .rdp-day_bookedDay {
-    color: #3b82f6 !important;
-    opacity: 1 !important;
-    cursor: not-allowed;
-  }
-  .rdp-day_partiallyBlocked {
+  .rdp-day_noAvailableSlots .rdp-day_button {
     color: #f97316 !important;
-    position: relative;
-  }
-  .rdp-day_partiallyBlocked::after {
-    content: '';
-    position: absolute;
-    bottom: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 4px;
-    height: 4px;
-    background: #f97316;
-    border-radius: 50%;
+    opacity: 1 !important;
   }
   .rdp-day_outside { opacity: 0.3; }
 `;

@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import StyledDayPicker from './StyledDayPicker';
+import SlotPickerModal from './SlotPickerModal';
 import { useNavigate } from 'react-router-dom';
-import { createBooking, getTakenSlots, getBookedDates } from '../services/api';
+import { createBooking, getTakenSlots, getBookedDates, getFullDates } from '../services/api';
 import { SuccessMessages, ErrorMessages, getErrorMessage } from '../services/systemMessages';
 import { useAlert } from '../hooks/useAlert';
 import { PRICING_TYPE_LABELS_DISPLAY } from '../types/venue';
@@ -58,6 +59,7 @@ interface VenueBookingFormProps {
   cancellationConditions?: string;
   houseRules?: string;
   timeRestrictions?: IVenueTimeRestrictions;
+  disabledWeekdays?: number[];
 }
 
 const toMin = (t: string) => { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + m; };
@@ -141,6 +143,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
   minDuration,
   maxDuration,
   timeRestrictions,
+  disabledWeekdays = [],
 }) => {
   const { showSuccess, showError } = useAlert();
   const navigate = useNavigate();
@@ -151,6 +154,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [takenSlots, setTakenSlots] = useState<{ startTime: string; endTime: string }[]>([]);
   const [bookedCalendarDates, setBookedCalendarDates] = useState<Date[]>([]);
+  const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
+  const [fullBookedDates, setFullBookedDates] = useState<Set<string>>(new Set());
 
   const isFullDayPricing = FULL_DAY_TYPES.includes(pricingType || '');
 
@@ -160,6 +165,13 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
       .then(dates => setBookedCalendarDates(dates.map(parseLocalDate)))
       .catch(() => setBookedCalendarDates([]));
   }, [venueId, isFullDayPricing]);
+
+  useEffect(() => {
+    if (isFullDayPricing || (pricingType && pricingType !== 'heure')) return;
+    getFullDates(venueId)
+      .then(dates => setFullBookedDates(new Set(dates)))
+      .catch(() => setFullBookedDates(new Set()));
+  }, [venueId, isFullDayPricing, pricingType]);
 
   useEffect(() => {
     if (!selectedDate) {
@@ -217,77 +229,75 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
     return blockedDates.filter(b => !b.startTime || !b.endTime).map(b => parseLocalDate(b.date.split('T')[0]));
   }, [blockedDates, demiJourneeMap]);
 
-  const partiallyBlockedDates = useMemo(() => {
-    if (!pricingType || pricingType === 'heure') {
-      const fullDayKeys = new Set(
-        blockedDates.filter(b => !b.startTime || !b.endTime).map(b => b.date.split('T')[0])
-      );
-      const partialKeys = new Set<string>();
-      blockedDates.forEach(b => {
-        if (!b.startTime || !b.endTime) return;
-        const key = b.date.split('T')[0];
-        if (!fullDayKeys.has(key)) partialKeys.add(key);
+  const noAvailableSlotsDates = useMemo(() => {
+    const fullDayBlockedKeys = new Set(fullDayBlockedDates.map(d => toDateStr(d)));
+    const noSlotsSet = new Set<string>(fullBookedDates);
+
+    // Pour tarifs journée/soiree/forfait: les dates réservées n'ont pas de créneau
+    if (isFullDayPricing) {
+      bookedCalendarDates.forEach(d => {
+        const key = toDateStr(d);
+        if (!fullDayBlockedKeys.has(key)) noSlotsSet.add(key);
       });
-      return Array.from(partialKeys).map(parseLocalDate);
+      return Array.from(noSlotsSet).map(parseLocalDate);
     }
-    if (demiJourneeMap) {
-      const { map, matinOn, apremOn } = demiJourneeMap;
-      if (!(matinOn && apremOn)) return [];
-      return Object.entries(map)
-        .filter(([_, v]) => (v.matin || v.aprem) && !(v.matin && v.aprem))
-        .map(([key]) => parseLocalDate(key));
+
+    // Pour tarifs heure/demi-journée: vérifier les créneaux disponibles
+    if (!pricingType || pricingType === 'heure') {
+      const openMin = timeRestrictions?.openTime ? toMin(timeRestrictions.openTime) : 0;
+      const closeMin = timeRestrictions?.closeTime ? toMin(timeRestrictions.closeTime) : 24 * 60;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      for (let i = 0; i < 365; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(checkDate.getDate() + i);
+        const dateStr = toDateStr(checkDate);
+
+        // Skip if fully blocked by owner
+        if (fullDayBlockedKeys.has(dateStr)) continue;
+
+        // Check if this date has any available slots
+        let hasAvailable = false;
+        const checkMinStartHour = i === 0 ? new Date().getHours() + 1 : 0;
+
+        for (let m = openMin; m + 60 <= closeMin; m += 60) {
+          const h = Math.floor(m / 60).toString().padStart(2, '0');
+          const start = `${h}:00`;
+          const endH = Math.floor((m + 60) / 60).toString().padStart(2, '0');
+          const end = `${endH}:00`;
+          const tooEarly = Math.floor(m / 60) < checkMinStartHour;
+          const blocked = blockedDates.some(b => {
+            const bDate = b.date.split('T')[0];
+            if (bDate !== dateStr) return false;
+            if (!b.startTime || !b.endTime) return true;
+            return overlaps(start, end, b.startTime, b.endTime);
+          });
+
+          if (!tooEarly && !blocked) {
+            hasAvailable = true;
+            break;
+          }
+        }
+
+        if (!hasAvailable) noSlotsSet.add(dateStr);
+      }
+
+      return Array.from(noSlotsSet).map(parseLocalDate);
     }
+
+    if (pricingType === 'demi_journee') {
+      blockedDates.forEach(b => {
+        if (b.startTime && b.endTime) return;
+        const key = b.date.split('T')[0];
+        if (!fullDayBlockedKeys.has(key)) noSlotsSet.add(key);
+      });
+
+      return Array.from(noSlotsSet).map(parseLocalDate);
+    }
+
     return [];
-  }, [blockedDates, pricingType, demiJourneeMap]);
-
-  // For demi_journee: which sub-slots are blocked for the currently selected date
-  const blockedSlotsForDate = useMemo(() => {
-    if (pricingType !== 'demi_journee' || !selectedDate) return { matin: false, aprem: false };
-    const dateStr = toDateStr(selectedDate);
-    const mS = timeRestrictions?.matinStart || '09:00';
-    const mE = timeRestrictions?.matinEnd   || '13:00';
-    const aS = timeRestrictions?.apremStart || '14:00';
-    const aE = timeRestrictions?.apremEnd   || '18:00';
-    let matin = false;
-    let aprem = false;
-    blockedDates.forEach(b => {
-      if (!b.date.startsWith(dateStr)) return;
-      if (!b.startTime || !b.endTime) { matin = true; aprem = true; return; }
-      if (overlaps(b.startTime, b.endTime, mS, mE)) matin = true;
-      if (overlaps(b.startTime, b.endTime, aS, aE)) aprem = true;
-    });
-    return { matin, aprem };
-  }, [blockedDates, pricingType, selectedDate, timeRestrictions]);
-
-  const isStartHourDisabled = (hour: string): boolean =>
-    allBlockedSlots.some(slot => toMin(hour) >= toMin(slot.startTime) && toMin(hour) < toMin(slot.endTime));
-
-  const isEndHourDisabled = (hour: string): boolean => {
-    if (!formData.startTime) return false;
-    if (allBlockedSlots.some(slot =>
-      toMin(formData.startTime) < toMin(slot.endTime) && toMin(slot.startTime) < toMin(hour)
-    )) return true;
-    const durationH = (toMin(hour) - toMin(formData.startTime)) / 60;
-    if (minDuration !== undefined && durationH < minDuration) return true;
-    if (maxDuration !== undefined && durationH > maxDuration) return true;
-    return false;
-  };
-
-  const hourOptions = useMemo(() => {
-    return Array.from({ length: 24 }, (_, i) => {
-      const h = i.toString().padStart(2, '0');
-      return { value: `${h}:00`, label: `${h}h00` };
-    });
-  }, []);
-
-  const filteredHourOptions = useMemo(() => {
-    if (pricingType !== 'heure' || !timeRestrictions?.openTime || !timeRestrictions?.closeTime) {
-      return hourOptions;
-    }
-    const open = toMin(timeRestrictions.openTime);
-    const close = toMin(timeRestrictions.closeTime);
-    return hourOptions.filter((opt) => toMin(opt.value) >= open && toMin(opt.value) < close);
-  }, [pricingType, timeRestrictions, hourOptions]);
+  }, [fullDayBlockedDates, bookedCalendarDates, pricingType, timeRestrictions, blockedDates, isFullDayPricing, fullBookedDates]);
 
   const isToday = useMemo(() => {
     if (!selectedDate) return false;
@@ -301,6 +311,46 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
     if (!isToday) return 0;
     return new Date().getHours() + 1;
   }, [isToday]);
+
+  const availableSlotsCount = useMemo(() => {
+    if (!selectedDate) return null;
+    if (pricingType === 'heure' || !pricingType) {
+      const openMin = timeRestrictions?.openTime ? toMin(timeRestrictions.openTime) : 0;
+      const closeMin = timeRestrictions?.closeTime ? toMin(timeRestrictions.closeTime) : 24 * 60;
+      let count = 0;
+      for (let m = openMin; m + 60 <= closeMin; m += 60) {
+        const h = Math.floor(m / 60).toString().padStart(2, '0');
+        const start = `${h}:00`;
+        const endH = Math.floor((m + 60) / 60).toString().padStart(2, '0');
+        const end = `${endH}:00`;
+        const tooEarly = Math.floor(m / 60) < minStartHour;
+        const blocked = allBlockedSlots.some(s => overlaps(start, end, s.startTime, s.endTime));
+        if (!tooEarly && !blocked) count++;
+      }
+      return count;
+    }
+    if (pricingType === 'demi_journee') {
+      const matinOn = timeRestrictions?.matinEnabled !== false;
+      const apremOn = timeRestrictions?.apremEnabled !== false;
+      const mS = timeRestrictions?.matinStart || '09:00';
+      const mE = timeRestrictions?.matinEnd || '13:00';
+      const aS = timeRestrictions?.apremStart || '14:00';
+      const aE = timeRestrictions?.apremEnd || '18:00';
+      const matinBlocked = allBlockedSlots.some(s => overlaps(s.startTime, s.endTime, mS, mE));
+      const apremBlocked = allBlockedSlots.some(s => overlaps(s.startTime, s.endTime, aS, aE));
+      let count = 0;
+      if (matinOn && !matinBlocked) count++;
+      if (apremOn && !apremBlocked) count++;
+      return count;
+    }
+    return null;
+  }, [selectedDate, pricingType, timeRestrictions, allBlockedSlots, minStartHour]);
+
+  const hasAvailableSlots = availableSlotsCount === null || availableSlotsCount > 0;
+
+  const canSubmit = !selectedDate
+    || !(pricingType === 'heure' || pricingType === 'demi_journee' || !pricingType)
+    || hasAvailableSlots;
 
   // Récapitulatif des coûts
   const priceBreakdown = useMemo(() => {
@@ -435,18 +485,6 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
     lineHeight: 1.5,
   };
 
-  const priceBadgeStyle: React.CSSProperties = {
-    display: 'inline-block',
-    padding: '6px 14px',
-    background: 'rgba(16,185,129,0.1)',
-    border: '1px solid rgba(16,185,129,0.25)',
-    borderRadius: 8,
-    fontSize: 13,
-    color: '#6ee7b7',
-    marginTop: 8,
-    fontWeight: 600,
-  };
-
   const infoBadgeSuccessStyle: React.CSSProperties = {
     ...infoBadgeStyle,
     background: 'rgba(16,185,129,0.1)',
@@ -499,71 +537,47 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
                 setFormData((p) => ({ ...p, startTime: '', endTime: '' }));
                 setDemiJourneeSlot('');
               }}
-              disabled={[{ before: minSelectableDate }, ...fullDayBlockedDates, ...bookedCalendarDates]}
+              disabled={[{ before: minSelectableDate }, ...fullDayBlockedDates, ...(disabledWeekdays.length > 0 ? [{ dayOfWeek: disabledWeekdays }] : [])]}
               modifiers={{
-                fullyBlocked: fullDayBlockedDates,
-                bookedDay: bookedCalendarDates,
-                partiallyBlocked: partiallyBlockedDates,
+                noAvailableSlots: noAvailableSlotsDates,
               }}
               modifiersClassNames={{
-                fullyBlocked: 'rdp-day_fullyBlocked',
-                bookedDay: 'rdp-day_bookedDay',
-                partiallyBlocked: 'rdp-day_partiallyBlocked',
+                noAvailableSlots: 'rdp-day_noAvailableSlots',
               }}
               showOutsideDays={false}
             />
           </div>
           {errors.date && <p style={errorStyle}>{errors.date}</p>}
-          {(fullDayBlockedDates.length > 0 || bookedCalendarDates.length > 0 || partiallyBlockedDates.length > 0) && (
-            <div style={{ fontSize: 11, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {fullDayBlockedDates.length > 0 && (
-                <span style={{ color: '#ef4444' }}>● Dates en rouge (×) = bloquées par le propriétaire</span>
-              )}
-              {bookedCalendarDates.length > 0 && (
-                <span style={{ color: '#3b82f6' }}>● Dates en bleu = déjà réservées</span>
-              )}
-              {partiallyBlockedDates.length > 0 && (
-                <span style={{ color: '#f97316' }}>● Dates en orange = créneaux partiellement indisponibles</span>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Sélecteurs d'heures — uniquement pour 'heure' ou type absent */}
+        {/* Bouton Créneau — pour 'heure' ou type absent */}
         {showHourSelectors && (
-          <div className="booking-time-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <div>
-              <label style={labelStyle}>Heure de début</label>
-              <select
-                value={formData.startTime}
-                onChange={(e) => setFormData((p) => ({ ...p, startTime: e.target.value, endTime: '' }))}
-                style={{ ...inputStyle, cursor: 'pointer' }}
-              >
-                <option value="">--</option>
-                {filteredHourOptions.filter((opt) => parseInt(opt.value) >= minStartHour).map((opt) => (
-                  <option key={opt.value} value={opt.value} style={{ background: '#1a1a1a' }} disabled={isStartHourDisabled(opt.value)}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              {errors.startTime && <p style={errorStyle}>{errors.startTime}</p>}
-            </div>
-            <div>
-              <label style={labelStyle}>Heure de fin</label>
-              <select
-                value={formData.endTime}
-                onChange={(e) => setFormData((p) => ({ ...p, endTime: e.target.value }))}
-                style={{ ...inputStyle, cursor: 'pointer' }}
-              >
-                <option value="">--</option>
-                {filteredHourOptions.filter((opt) => !formData.startTime || opt.value > formData.startTime).map((opt) => (
-                  <option key={opt.value} value={opt.value} style={{ background: '#1a1a1a' }} disabled={isEndHourDisabled(opt.value)}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              {errors.endTime && <p style={errorStyle}>{errors.endTime}</p>}
-            </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Créneau</label>
+            <button
+              type="button"
+              disabled={!selectedDate}
+              onClick={() => setIsSlotModalOpen(true)}
+              style={{ ...inputStyle, cursor: selectedDate ? 'pointer' : 'not-allowed', textAlign: 'left', display: 'block', width: '100%', opacity: selectedDate ? 1 : 0.5 }}
+            >
+              {formData.startTime ? `${formData.startTime} – ${formData.endTime}` : 'Choisir un créneau…'}
+            </button>
+            {errors.startTime && <p style={errorStyle}>{errors.startTime}</p>}
+            {selectedDate && (
+              <SlotPickerModal
+                open={isSlotModalOpen}
+                onClose={() => setIsSlotModalOpen(false)}
+                pricingType="heure"
+                selectedDate={selectedDate}
+                timeRestrictions={timeRestrictions}
+                blockedSlots={allBlockedSlots}
+                minStartHour={minStartHour}
+                minDuration={minDuration}
+                maxDuration={maxDuration}
+                onSelect={({ startTime, endTime }) => setFormData((p) => ({ ...p, startTime, endTime }))}
+                initialSelection={formData.startTime ? { startTime: formData.startTime, endTime: formData.endTime } : undefined}
+              />
+            )}
           </div>
         )}
 
@@ -577,7 +591,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
           </div>
         )}
 
-        {/* Sélecteur créneau pour 'demi_journee' */}
+        {/* Bouton Créneau — pour 'demi_journee' */}
         {showDemiJournee && timeRestrictions?.matinEnabled === false && timeRestrictions?.apremEnabled === false && (
           <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 13, color: '#fca5a5' }}>
             Aucun créneau demi-journée n'est disponible pour cette salle.
@@ -587,24 +601,35 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
         {showDemiJournee && !(timeRestrictions?.matinEnabled === false && timeRestrictions?.apremEnabled === false) && (
           <div style={{ marginBottom: 16 }}>
             <label style={labelStyle}>Créneau</label>
-            <select
-              value={demiJourneeSlot}
-              onChange={(e) => setDemiJourneeSlot(e.target.value as 'matin' | 'aprem' | '')}
-              style={{ ...inputStyle, cursor: 'pointer' }}
+            <button
+              type="button"
+              disabled={!selectedDate}
+              onClick={() => setIsSlotModalOpen(true)}
+              style={{ ...inputStyle, cursor: selectedDate ? 'pointer' : 'not-allowed', textAlign: 'left', display: 'block', width: '100%', opacity: selectedDate ? 1 : 0.5 }}
             >
-              <option value="">-- Choisir un créneau --</option>
-              {timeRestrictions?.matinEnabled !== false && (
-                <option value="matin" disabled={blockedSlotsForDate.matin} style={{ background: '#1a1a1a' }}>
-                  Matin ({timeRestrictions?.matinStart || '09:00'}–{timeRestrictions?.matinEnd || '13:00'}){blockedSlotsForDate.matin ? ' — indisponible' : ''}
-                </option>
-              )}
-              {timeRestrictions?.apremEnabled !== false && (
-                <option value="aprem" disabled={blockedSlotsForDate.aprem} style={{ background: '#1a1a1a' }}>
-                  Après-midi ({timeRestrictions?.apremStart || '14:00'}–{timeRestrictions?.apremEnd || '18:00'}){blockedSlotsForDate.aprem ? ' — indisponible' : ''}
-                </option>
-              )}
-            </select>
+              {demiJourneeSlot
+                ? demiJourneeSlot === 'matin'
+                  ? `Matin (${timeRestrictions?.matinStart || '09:00'} – ${timeRestrictions?.matinEnd || '13:00'})`
+                  : `Après-midi (${timeRestrictions?.apremStart || '14:00'} – ${timeRestrictions?.apremEnd || '18:00'})`
+                : 'Choisir un créneau…'}
+            </button>
             {errors.slot && <p style={errorStyle}>{errors.slot}</p>}
+            {selectedDate && (
+              <SlotPickerModal
+                open={isSlotModalOpen}
+                onClose={() => setIsSlotModalOpen(false)}
+                pricingType="demi_journee"
+                selectedDate={selectedDate}
+                timeRestrictions={timeRestrictions}
+                blockedSlots={allBlockedSlots}
+                minStartHour={0}
+                onSelect={({ startTime, endTime, label }) => {
+                  setFormData((p) => ({ ...p, startTime, endTime }));
+                  if (label) setDemiJourneeSlot(label);
+                }}
+                initialSelection={formData.startTime ? { startTime: formData.startTime, endTime: formData.endTime } : undefined}
+              />
+            )}
             {priceBreakdown && (
               <>
                 <p style={{ margin: '8px 0 8px 0', fontSize: 12, color: '#888' }}>
@@ -645,6 +670,12 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
         })()}
 
 
+        {selectedDate && !hasAvailableSlots && (pricingType === 'heure' || pricingType === 'demi_journee' || !pricingType) && (
+          <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, fontSize: 13, color: '#fdba74' }}>
+            Aucun créneau disponible pour cette date.
+          </div>
+        )}
+
         <div style={{ marginBottom: 20 }}>
           <label style={labelStyle}>Message (optionnel)</label>
           <textarea
@@ -656,25 +687,27 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          style={{
-            width: '100%',
-            padding: '14px',
-            background: isSubmitting
-              ? 'rgba(255,65,108,0.5)'
-              : 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 10,
-            fontSize: 15,
-            fontWeight: 700,
-            cursor: isSubmitting ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {isSubmitting ? 'Envoi en cours...' : 'Envoyer la demande'}
-        </button>
+        {canSubmit && (
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: isSubmitting
+                ? 'rgba(255,65,108,0.5)'
+                : 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 10,
+              fontSize: 15,
+              fontWeight: 700,
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {isSubmitting ? 'Envoi en cours...' : 'Envoyer la demande'}
+          </button>
+        )}
 
       </form>
     </div>

@@ -11,7 +11,7 @@ import {
   blockDateSchema,
 } from '../validation/schemas';
 import { createVenue, listVenues, listMyVenues, getVenue, updateVenue, deleteVenue } from '../controllers/venue';
-import { createBooking, listVenueBookings, myBookings, updateBookingStatus, cancelBooking, cancelBookingByOwner, blockDate, listBlockedDates, unblockDate, takenSlots, checkPaymentTimeouts, getRefundEstimate, getMyVenueBookings } from '../controllers/venueBooking';
+import { createBooking, listVenueBookings, myBookings, updateBookingStatus, cancelBooking, cancelBookingByOwner, blockDate, listBlockedDates, unblockDate, takenSlots, checkPaymentTimeouts, getRefundEstimate, getMyVenueBookings, fullDates } from '../controllers/venueBooking';
 
 const router = express.Router();
 
@@ -48,13 +48,14 @@ router.get('/:venueId/my-bookings', authMiddleware, authorizeRoles('ORGANIZER', 
 router.post('/:venueId/bookings', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU', 'COMEDIAN'), validateVenueId, validate(createBookingSchema), asyncHandler(createBooking));
 router.get('/:venueId/bookings', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateVenueId, asyncHandler(listVenueBookings));
 router.patch('/bookings/:bookingId', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateBookingId, validate(updateBookingStatusSchema), asyncHandler(updateBookingStatus));
-router.delete('/bookings/:bookingId', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateBookingId, asyncHandler(cancelBooking));
+router.delete('/bookings/:bookingId', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU', 'COMEDIAN'), validateBookingId, asyncHandler(cancelBooking));
 // Annulation d'une réservation ACCEPTED par le propriétaire
 router.patch('/bookings/:bookingId/cancel', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateBookingId, validate(cancelBookingByOwnerSchema), asyncHandler(cancelBookingByOwner));
 // Estimation du remboursement avant annulation (lecture seule)
 router.get('/bookings/:bookingId/refund-estimate', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateBookingId, asyncHandler(getRefundEstimate));
 
 router.get('/:venueId/taken-slots', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU', 'COMEDIAN'), validateVenueId, asyncHandler(takenSlots));
+router.get('/:venueId/full-dates', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU', 'COMEDIAN'), validateVenueId, asyncHandler(fullDates));
 
 // ── Dates bloquées ────────────────────────────────────────────────────────────
 router.post('/:venueId/blocked-dates', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateVenueId, validate(blockDateSchema), asyncHandler(blockDate));
