@@ -143,6 +143,11 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
+    if (venue.disabledWeekdays && venue.disabledWeekdays.includes(date.getDay())) {
+      res.status(400).json({ message: 'Cette salle n\'est pas disponible ce jour-là.' });
+      return;
+    }
+
     const pricingType = venue.pricingType as string | undefined;
 
     // Normaliser startTime/endTime selon le pricingType
@@ -1064,6 +1069,83 @@ export const takenSlots = async (req: AuthRequest, res: Response): Promise<void>
     res.status(200).json({ slots: accepted.map((b) => ({ startTime: b.startTime, endTime: b.endTime })) });
   } catch (error) {
     console.error('Erreur takenSlots:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+};
+
+// ─── Dates où tous les créneaux horaires sont complets ───────────────────────
+
+export const fullDates = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { venueId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(venueId)) {
+      res.status(400).json({ message: 'ID de salle invalide' });
+      return;
+    }
+
+    const venue = await VenueModel.findById(venueId).select('timeRestrictions pricingType disabledWeekdays').lean();
+    if (!venue) {
+      res.status(404).json({ message: 'Salle introuvable' });
+      return;
+    }
+
+    const openMin = venue.timeRestrictions?.openTime
+      ? parseInt(venue.timeRestrictions.openTime.split(':')[0]) * 60 + parseInt(venue.timeRestrictions.openTime.split(':')[1])
+      : 0;
+    const closeMin = venue.timeRestrictions?.closeTime
+      ? parseInt(venue.timeRestrictions.closeTime.split(':')[0]) * 60 + parseInt(venue.timeRestrictions.closeTime.split(':')[1])
+      : 24 * 60;
+
+    const totalSlots = Math.floor((closeMin - openMin) / 60);
+    if (totalSlots <= 0) {
+      res.status(200).json({ dates: [] });
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const horizon = new Date(today);
+    horizon.setDate(horizon.getDate() + 365);
+
+    const bookings = await VenueBookingModel.find({
+      venue: venueId,
+      status: { $in: ['ACCEPTED', 'CONFIRMED'] },
+      requestedDate: { $gte: today, $lte: horizon },
+    }).select('requestedDate startTime endTime').lean();
+
+    const slotsByDate = new Map<string, { startTime: string; endTime: string }[]>();
+    for (const b of bookings) {
+      const d = new Date(b.requestedDate);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (!slotsByDate.has(key)) slotsByDate.set(key, []);
+      if (b.startTime && b.endTime) slotsByDate.get(key)!.push({ startTime: b.startTime, endTime: b.endTime });
+    }
+
+    const toMin = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+    const overlaps = (s1: string, e1: string, s2: string, e2: string) =>
+      toMin(s1) < toMin(e2) && toMin(e1) > toMin(s2);
+
+    const fullDatesList: string[] = [];
+    for (const [dateStr, taken] of slotsByDate.entries()) {
+      let availableCount = 0;
+      for (let m = openMin; m + 60 <= closeMin; m += 60) {
+        const h = Math.floor(m / 60).toString().padStart(2, '0');
+        const start = `${h}:00`;
+        const endH = Math.floor((m + 60) / 60).toString().padStart(2, '0');
+        const end = `${endH}:00`;
+        const blocked = taken.some(t => overlaps(start, end, t.startTime, t.endTime));
+        if (!blocked) availableCount++;
+      }
+      if (availableCount === 0) fullDatesList.push(dateStr);
+    }
+
+    res.status(200).json({ dates: fullDatesList });
+  } catch (error) {
+    console.error('Erreur fullDates:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 };

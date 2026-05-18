@@ -68,6 +68,7 @@ export interface VenueFormData {
     soireeStart: string;
     soireeEnd: string;
   };
+  disabledWeekdays: number[];
   // Étape 6 — Contact & infos légales
   contactName: string;
   contactEmail: string;
@@ -148,6 +149,7 @@ const defaultData: VenueFormData = {
     soireeStart: '18:00',
     soireeEnd: '23:59',
   },
+  disabledWeekdays: [],
   contactName: '',
   contactEmail: '',
   contactPhone: '',
@@ -860,6 +862,30 @@ const VenueForm: React.FC<VenueFormProps> = ({
         {!formData.pricingType && (
           <p style={{ fontSize: 13, color: '#666', fontStyle: 'italic' }}>Sélectionnez un type de tarification pour configurer les restrictions horaires.</p>
         )}
+
+        <div style={{ marginTop: 20 }}>
+          <label style={labelStyle}>Jours indisponibles</label>
+          <p style={{ margin: '0 0 10px', fontSize: 13, color: '#aaa' }}>Ces jours seront grisés et non réservables, quel que soit le mode de tarification.</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {([['L', 1], ['M', 2], ['M', 3], ['J', 4], ['V', 5], ['S', 6], ['D', 0]] as [string, number][]).map(([label, day]) => {
+              const active = formData.disabledWeekdays.includes(day);
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() =>
+                    set('disabledWeekdays', active
+                      ? formData.disabledWeekdays.filter((d) => d !== day)
+                      : [...formData.disabledWeekdays, day])
+                  }
+                  style={chipStyle(active)}
+                >
+                  {active ? '✓ ' : ''}{label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <div style={sectionStyle}>

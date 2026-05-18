@@ -866,6 +866,7 @@ const VenueDetailPage: React.FC = () => {
                     minDuration={venue.minDuration}
                     maxDuration={venue.maxDuration}
                     timeRestrictions={venue.timeRestrictions}
+                    disabledWeekdays={venue.disabledWeekdays}
                   />
                 )}
               </div>

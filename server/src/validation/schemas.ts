@@ -259,7 +259,7 @@ export const createEventSchema = z.object({
       message: 'Invalid start time'
     }),
   endTime: z.string()
-    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^24:00$/, {
       message: 'Invalid end time'
     }),
   /** Date de fin (événement unique qui dépasse minuit, ex. 22h → 1h lendemain) */
@@ -285,7 +285,7 @@ export const createEventSchema = z.object({
   dateTimes: z.array(z.object({
     date: z.string(),
     startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
-    endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
+    endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^24:00$/),
   })).optional(),
   imageUrl: z.string().max(2000).optional().transform((v) => (v && v.trim() ? v.trim() : undefined)).refine((v) => !v || /^https?:\/\//i.test(v), { message: 'L\'URL de l\'image doit commencer par http:// ou https://' }),
 }).refine((data) => {
@@ -353,7 +353,7 @@ export const updateEventSchema = z.object({
     })
     .optional(),
   endTime: z.string()
-    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^24:00$/, {
       message: 'Invalid end time'
     })
     .optional(),
@@ -538,7 +538,7 @@ export const getSmartRecommendationsQuerySchema = z.object({
 // SCHÉMAS VENUES (SALLES)
 // ============================================================================
 
-const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$|^24:00$/;
 
 const photoArraySchema = z.array(
   z.string().refine(
@@ -605,6 +605,7 @@ export const createVenueSchema = z.object({
   cancellationConditions: z.string().optional(),
   houseRules: z.string().optional(),
   timeRestrictions: timeRestrictionsSchema,
+  disabledWeekdays: z.array(z.number().int().min(0).max(6)).optional().default([]),
   // Étape 6
   contactName: z.string().optional(),
   contactEmail: z.string().email().optional(),

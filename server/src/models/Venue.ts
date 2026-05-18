@@ -79,6 +79,7 @@ export interface VenueDocument extends Document {
   };
   department?: string;
   region?: string;
+  disabledWeekdays?: number[];
 }
 
 const venueSchema = new Schema<VenueDocument>(
@@ -162,6 +163,7 @@ const venueSchema = new Schema<VenueDocument>(
     },
     department: { type: String, index: true },
     region: { type: String, index: true },
+    disabledWeekdays: { type: [Number], default: [] },
   },
   { timestamps: true }
 );

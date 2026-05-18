@@ -166,6 +166,7 @@ export interface IVenue {
   cancellationConditions?: string;
   houseRules?: string;
   timeRestrictions?: IVenueTimeRestrictions;
+  disabledWeekdays?: number[];
   // Étape 6
   contactName?: string;
   contactEmail?: string;
