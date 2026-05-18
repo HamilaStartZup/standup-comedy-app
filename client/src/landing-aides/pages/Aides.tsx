@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import aidesData from "../data/aides.json";
 import type { Aide, ProfilUtilisateur } from "../lib/types";
 import { PROFIL_LABELS } from "../lib/types";
@@ -47,7 +48,12 @@ export default function Aides() {
     <div className="w-full">
       <div className="mx-auto max-w-7xl px-6 py-16">
       <div className="max-w-2xl">
-        <span className="text-sm text-[var(--ah-accent)] font-semibold">Toutes les aides</span>
+        <Link
+          to="/aides/accueil"
+          className="inline-block text-sm text-[var(--ah-accent)] font-semibold hover:underline"
+        >
+          {"<-Retour"}
+        </Link>
         <h1 className="mt-2 text-4xl md:text-5xl font-extrabold tracking-tight">
           Explorez les <span className="ah-gradient-text">aides disponibles</span>
         </h1>

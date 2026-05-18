@@ -15,11 +15,7 @@ export default function Home() {
       <section className="relative">
         <div className="mx-auto max-w-7xl px-6 pt-20 pb-24 grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--ah-border-strong)] bg-white/[0.03] px-3 py-1 text-xs text-[var(--ah-text-muted)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--ah-accent)]" />
-              Nouvelle plateforme dédiée à l&apos;humour
-            </span>
-            <h1 className="mt-6 text-5xl md:text-6xl font-extrabold leading-[1.05] tracking-tight">
+            <h1 className="text-5xl md:text-6xl font-extrabold leading-[1.05] tracking-tight">
               Toutes les aides pour les{" "}
               <span className="ah-gradient-text">humoristes</span> et le{" "}
               <span className="ah-gradient-text">spectacle vivant</span>.
@@ -98,8 +94,7 @@ export default function Home() {
 
       <section id="pour-qui" className="mx-auto max-w-7xl px-6 py-20">
         <div className="max-w-2xl">
-          <span className="text-sm text-[var(--ah-accent)] font-semibold">Pour qui</span>
-          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
             Une plateforme pensée pour <span className="ah-gradient-text">tous les acteurs</span>{" "}de l&apos;humour
           </h2>
         </div>
@@ -122,8 +117,7 @@ export default function Home() {
 
       <section id="comment" className="mx-auto max-w-7xl px-6 py-20">
         <div className="max-w-2xl">
-          <span className="text-sm text-[var(--ah-accent)] font-semibold">Comment ça marche</span>
-          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
             Trois étapes pour trouver vos aides
           </h2>
         </div>
@@ -145,8 +139,7 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-6 py-20">
         <div className="flex items-end justify-between gap-6 mb-10 flex-wrap">
           <div>
-            <span className="text-sm text-[var(--ah-accent)] font-semibold">À découvrir</span>
-            <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
+            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
               Aides phares pour l&apos;humour
             </h2>
           </div>
