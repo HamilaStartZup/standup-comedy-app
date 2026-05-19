@@ -1249,9 +1249,9 @@ export const deleteEvent = async (req: AuthRequest, res: Response): Promise<void
           if (spectatorId) {
             await createNotification(
               spectatorId,
-              'event_cancelled',
-              'Évènement annulé',
-              `L'évènement "${event.title}" auquel vous étiez inscrit a été annulé par l'organisateur.`,
+              'event_deleted',
+              'Évènement supprimé',
+              `L'évènement "${event.title}" auquel vous étiez inscrit a été supprimé par l'organisateur.`,
               eventId
             );
           }

@@ -56,6 +56,8 @@ export interface IApplication {
 type ComedianApplicationTab = 'accepted' | 'pending' | 'rejected' | 'archived' | 'cancelled';
 type OrganizerApplicationTab = 'all' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'favorites';
 
+const VALID_COMEDIAN_TABS: ComedianApplicationTab[] = ['accepted', 'pending', 'rejected', 'archived', 'cancelled'];
+
 // Composant pour afficher l'indicateur de compatibilité géographique
 function GeographicCompatibilityBadge({ 
   eventCity, 
@@ -359,14 +361,56 @@ function ApplicationsPage() {
     }
   }, [location.search, showInfo]);
 
+  // Synchronise l'onglet COMEDIAN depuis ?tab= (ex: clic notif → accepted/rejected/cancelled)
   useEffect(() => {
-    if (!applicationIdFromUrl) return;
-    const found = applications.find(app => app._id === applicationIdFromUrl);
-    if (found) {
-      setSelectedApplication(found);
-      setIsModalOpen(true);
+    if (user?.role !== 'COMEDIAN') return;
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab && VALID_COMEDIAN_TABS.includes(tab as ComedianApplicationTab)) {
+      setComedianTab(tab as ComedianApplicationTab);
     }
-  }, [applicationIdFromUrl, applications]);
+  }, [location.search, user?.role]);
+
+  // Auto-switch du tab COMEDIAN quand ?applicationId= est présent sans ?tab= (#8)
+  useEffect(() => {
+    if (user?.role !== 'COMEDIAN') return;
+    if (!applicationIdFromUrl) return;
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab')) return; // tab explicite → déjà géré par l'effet précédent
+    const found = applications.find(app => app._id === applicationIdFromUrl);
+    if (!found) return;
+    const status = found.status;
+    if (status === 'PENDING') {
+      setComedianTab('pending');
+    } else if (status === 'ACCEPTED') {
+      setComedianTab('accepted');
+    } else if (status === 'REJECTED') {
+      setComedianTab('rejected');
+    } else {
+      // WITHDRAWN / EXPIRED / CANCELLED_BY_PLATFORM
+      const isPast = found.event?.date ? new Date(found.event.date) < new Date() : false;
+      setComedianTab(isPast ? 'archived' : 'cancelled');
+    }
+  }, [applicationIdFromUrl, applications, user?.role, location.search]);
+
+  // Scroll + highlight de la candidature ciblée via ?applicationId= (clic depuis notif)
+  useEffect(() => {
+    if (!applicationIdFromUrl || loading || !applications.length) return;
+    const timer = setTimeout(() => {
+      const node = document.querySelector<HTMLElement>(`[data-application-id="${applicationIdFromUrl}"]`);
+      if (!node) return;
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const previousOutline = node.style.outline;
+      const previousOffset = node.style.outlineOffset;
+      node.style.outline = '3px solid #ff416c';
+      node.style.outlineOffset = '2px';
+      setTimeout(() => {
+        node.style.outline = previousOutline;
+        node.style.outlineOffset = previousOffset;
+      }, 2000);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [applicationIdFromUrl, applications, loading, comedianTab, selectedTab]);
 
   // Charger les évènements de l'organisateur pour le sélecteur
   useEffect(() => {
@@ -1500,8 +1544,9 @@ function ApplicationsPage() {
               <>
                 <div style={applicationsListStyle}>
                   {paginatedComedianApplications.map(app => (
-                    <div 
-                      key={app._id} 
+                    <div
+                      key={app._id}
+                      data-application-id={app._id}
                       style={{
                         ...applicationCardStyle,
                         ...(app.status === 'PENDING' ? applicationCardStylePending : app.status === 'ACCEPTED' ? applicationCardStyleAccepted : app.status === 'REJECTED' ? applicationCardStyleRejected : app.status === 'EXPIRED' ? applicationCardStyleExpired : ((app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM') || app.status === 'CANCELLED_BY_PLATFORM') ? applicationCardStyleWithdrawn : {}),
@@ -1725,8 +1770,9 @@ function ApplicationsPage() {
               <>
                 <div style={applicationsListStyle}>
                   {paginatedOrganizerApplications.map((app) => (
-                  <div 
-                    key={app._id} 
+                  <div
+                    key={app._id}
+                    data-application-id={app._id}
                     style={{
                       ...applicationCardStyle,
                       ...(app.status === 'PENDING' ? applicationCardStylePending : app.status === 'ACCEPTED' ? applicationCardStyleAccepted : app.status === 'REJECTED' ? applicationCardStyleRejected : app.status === 'EXPIRED' ? applicationCardStyleExpired : ((app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM') || app.status === 'CANCELLED_BY_PLATFORM') ? applicationCardStyleWithdrawn : {}),

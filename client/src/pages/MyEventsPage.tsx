@@ -399,6 +399,26 @@ useEffect(() => {
     gcTime: 10 * 60 * 1000,
   });
 
+  // Scroll + highlight de la carte event ciblée via ?focus= (clic depuis notif)
+  useEffect(() => {
+    const focusId = new URLSearchParams(location.search).get('focus');
+    if (!focusId || eventsLoading || !fetchedEvents?.length) return;
+    const timer = setTimeout(() => {
+      const node = document.querySelector<HTMLElement>(`[data-event-id="${focusId}"]`);
+      if (!node) return;
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const previousOutline = node.style.outline;
+      const previousOffset = node.style.outlineOffset;
+      node.style.outline = '3px solid #ff416c';
+      node.style.outlineOffset = '2px';
+      setTimeout(() => {
+        node.style.outline = previousOutline;
+        node.style.outlineOffset = previousOffset;
+      }, 2000);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [location.search, eventsLoading, fetchedEvents]);
+
   // New useQuery for comedian's applications
   const { data: comedianApplications, isLoading: comedianApplicationsLoading, isError: comedianApplicationsError, error: comedianApplicationsErrorMessage } = useQuery<IApplication[], Error>({
     queryKey: ['comedianApplications', user?._id],
@@ -2866,6 +2886,7 @@ useEffect(() => {
             return (
               <div
                 key={event._id}
+                data-event-id={event._id}
                 style={{
                   ...eventCardStyle,
                   ...(isCompleteEvent ? eventCardStyleComplete : {}),
@@ -3707,7 +3728,7 @@ useEffect(() => {
                       const participantsRatio = getParticipantsRatio(event);
                       const statusLabel = translateEventStatus(event.status);
                       return (
-                        <div key={event._id} style={{ ...eventCardStyle, ...(isCompleteEvent ? eventCardStyleComplete : {}) }} onClick={() => handleCardClick(event)}>
+                        <div key={event._id} data-event-id={event._id} style={{ ...eventCardStyle, ...(isCompleteEvent ? eventCardStyleComplete : {}) }} onClick={() => handleCardClick(event)}>
                           <div style={cardContentStyle}>
                             <div style={cardHeaderRowStyle}>
                               <div>
@@ -3790,6 +3811,7 @@ useEffect(() => {
                               return (
                                 <div
                                   key={event._id}
+                                  data-event-id={event._id}
                                   onClick={(e) => { e.stopPropagation(); handleCardClick(event); }}
                                   style={{
                                     padding: '12px 16px',
@@ -3858,7 +3880,7 @@ useEffect(() => {
                       const participantsRatio = getParticipantsRatio(event);
                       const statusLabel = translateEventStatus(event.status);
                       return (
-                        <div key={event._id} style={{ ...eventCardStyle, ...(isCompleteEvent ? eventCardStyleComplete : {}) }} onClick={() => handleCardClick(event)}>
+                        <div key={event._id} data-event-id={event._id} style={{ ...eventCardStyle, ...(isCompleteEvent ? eventCardStyleComplete : {}) }} onClick={() => handleCardClick(event)}>
                           <div style={cardContentStyle}>
                             <div style={cardHeaderRowStyle}>
                               <div>
@@ -3936,7 +3958,7 @@ useEffect(() => {
                 const statusLabel = translateEventStatus(event.status);
 
                 return (
-                  <div key={event._id} style={{ ...eventCardStyle, ...eventCardStyleComplete }} onClick={() => handleCardClick(event)}>
+                  <div key={event._id} data-event-id={event._id} style={{ ...eventCardStyle, ...eventCardStyleComplete }} onClick={() => handleCardClick(event)}>
                     <div style={cardContentStyle}>
                       <div style={cardHeaderRowStyle}>
                         <div>
@@ -4009,7 +4031,7 @@ useEffect(() => {
             const isFutureButArchived = new Date(event.date) >= new Date();
 
             return (
-              <div key={event._id} style={eventCardStyle} onClick={() => handleCardClick(event)}>
+              <div key={event._id} data-event-id={event._id} style={eventCardStyle} onClick={() => handleCardClick(event)}>
                 <div style={cardContentStyle}>
                   <div style={cardHeaderRowStyle}>
                     <div>
@@ -4122,7 +4144,7 @@ useEffect(() => {
             const reason = event.cancellationReason;
 
             return (
-              <div key={event._id} style={{ ...eventCardStyle, ...eventCardStyleCancelled }} onClick={() => handleCardClick(event)}>
+              <div key={event._id} data-event-id={event._id} style={{ ...eventCardStyle, ...eventCardStyleCancelled }} onClick={() => handleCardClick(event)}>
                 <div style={cardContentStyle}>
                   <div style={cardHeaderRowStyle}>
                     <div>
@@ -4374,6 +4396,7 @@ useEffect(() => {
                         return (
                           <div
                             key={event._id}
+                            data-event-id={event._id}
                             onClick={() => handleCardClick(event)}
                             style={{
                               ...eventCardStyle,

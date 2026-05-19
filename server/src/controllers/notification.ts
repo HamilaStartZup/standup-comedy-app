@@ -29,6 +29,7 @@ export const getNotifications = async (req: AuthRequest, res: Response): Promise
       .populate('relatedApplication', 'status')
       .populate('relatedUser', 'firstName lastName')
       .populate('relatedVenue', 'name')
+      .populate('relatedBooking', '_id')
       .sort({ createdAt: -1 })
       .limit(limit ? (isNaN(parseInt(limit as string, 10)) ? 50 : Math.max(1, parseInt(limit as string, 10))) : 50);
 
@@ -161,7 +162,8 @@ export const createNotification = async (
   relatedEventId?: string,
   relatedApplicationId?: string,
   relatedUserId?: string,
-  relatedVenueId?: string
+  relatedVenueId?: string,
+  relatedBookingId?: string
 ): Promise<void> => {
   try {
     await NotificationModel.create({
@@ -173,6 +175,7 @@ export const createNotification = async (
       relatedApplication: relatedApplicationId ? new Types.ObjectId(relatedApplicationId) : undefined,
       relatedUser: relatedUserId ? new Types.ObjectId(relatedUserId) : undefined,
       relatedVenue: relatedVenueId ? new Types.ObjectId(relatedVenueId) : undefined,
+      relatedBooking: relatedBookingId ? new Types.ObjectId(relatedBookingId) : undefined,
       read: false
     });
   } catch (error) {

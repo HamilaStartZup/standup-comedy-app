@@ -9,13 +9,23 @@ import type { IVenueBooking } from '../types/venue';
 import { useAlert } from '../hooks/useAlert';
 import { ErrorMessages, SuccessMessages, getErrorMessage } from '../services/systemMessages';
 
+type ActiveTab = 'salles' | 'reservations';
+
+const resolveTab = (tabParam: string | null, bookingIdParam: string | null): ActiveTab =>
+  (tabParam === 'reservations' || !!bookingIdParam) ? 'reservations' : 'salles';
+
+const HIGHLIGHT_DURATION_MS = 2000;
+
 const MesSallesPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useAlert();
-  const [activeTab, setActiveTab] = useState<'salles' | 'reservations'>(
-    searchParams.get('tab') === 'reservations' ? 'reservations' : 'salles'
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    resolveTab(searchParams.get('tab'), searchParams.get('bookingId'))
+  );
+  const [highlightedBookingId, setHighlightedBookingId] = useState<string | null>(
+    searchParams.get('bookingId')
   );
   const [selectedVenueId, setSelectedVenueId] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
@@ -24,11 +34,9 @@ const MesSallesPage: React.FC = () => {
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam === 'reservations') {
-      setActiveTab('reservations');
-    } else if (tabParam === 'salles') {
-      setActiveTab('salles');
-    }
+    const bookingIdParam = searchParams.get('bookingId');
+    setActiveTab(resolveTab(tabParam, bookingIdParam));
+    setHighlightedBookingId(bookingIdParam);
   }, [searchParams]);
 
   const { data: venuesResponse, isLoading: loadingVenues } = useQuery({
@@ -93,6 +101,16 @@ const MesSallesPage: React.FC = () => {
     [bookings, selectedVenueId, selectedStatus]
   );
 
+  // Scroll vers la réservation ciblée et flash de surbrillance ~2 s
+  useEffect(() => {
+    if (!highlightedBookingId || loadingBookings) return;
+    const node = document.querySelector<HTMLElement>(`[data-booking-id="${highlightedBookingId}"]`);
+    if (!node) return;
+    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const timer = setTimeout(() => setHighlightedBookingId(null), HIGHLIGHT_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [highlightedBookingId, loadingBookings, filteredBookings]);
+
   const hasBookingEnded = (requestedDate: string | Date, endTime: string) => {
     const [h, m] = endTime.split(':').map(Number);
     const bookingEnd = new Date(requestedDate);
@@ -124,6 +142,10 @@ const MesSallesPage: React.FC = () => {
           .mes-salles-header h1 { font-size: 1.8em !important; }
           .tab-btn { padding: 10px 16px !important; font-size: 14px !important; }
           .venue-grid { grid-template-columns: 1fr !important; }
+        }
+        .is-highlighted {
+          background-color: rgba(255, 65, 108, 0.12) !important;
+          transition: background-color 0.3s ease;
         }
       `}</style>
       <Navbar />
@@ -345,9 +367,12 @@ const MesSallesPage: React.FC = () => {
                       normalizedStatus === 'CANCELLED_BY_REQUESTER' ? 'Annulée par le demandeur' :
                       normalizedStatus === 'CANCELLED_BY_OWNER' ? 'Annulée par vous' : normalizedStatus;
 
+                    const isHighlighted = highlightedBookingId === booking._id;
                     return (
                     <div
                       key={booking._id}
+                      data-booking-id={booking._id}
+                      className={isHighlighted ? 'is-highlighted' : undefined}
                       style={{
                         backgroundColor: '#ffffff',
                         borderRadius: 20,

@@ -313,6 +313,7 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
           title: 'Nouvelle demande de réservation',
           message: `Une demande de réservation a été faite pour votre salle "${venue.name}".`,
           relatedVenue: venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
       } else if (initialStatus === 'CONFIRMED') {
@@ -323,6 +324,7 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
           title: 'Réservation confirmée',
           message: `Votre réservation pour "${venue.name}" a été confirmée automatiquement (aucun paiement requis).`,
           relatedVenue: venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
       } else {
@@ -333,6 +335,7 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
           title: 'Réservation acceptée — paiement requis',
           message: `Votre réservation pour "${venue.name}" a été acceptée automatiquement. Vous avez 72h pour effectuer le paiement.`,
           relatedVenue: venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
       }
@@ -594,6 +597,7 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
           title: 'Réservation refusée',
           message: `Votre demande de réservation pour "${booking.venue.name}" a été refusée.`,
           relatedVenue: booking.venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
       } else if (booking.status === 'CONFIRMED') {
@@ -604,6 +608,7 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
           title: 'Réservation confirmée',
           message: `Votre réservation pour "${booking.venue.name}" a été confirmée (aucun paiement requis).`,
           relatedVenue: booking.venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
       } else {
@@ -616,6 +621,7 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
           title: 'Réservation acceptée — paiement requis',
           message: `Votre réservation pour "${booking.venue.name}" a été acceptée. Prix : ${price}€. Vous avez 72h pour effectuer le paiement.`,
           relatedVenue: booking.venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
       }
@@ -707,6 +713,7 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
           type: 'venue_booking_cancelled_by_requester',
           title: 'Réservation annulée — remboursement effectué',
           message: `Votre réservation a été annulée. Remboursement de ${booking.refundedAmount ?? booking.paidAmount}€ en cours.`,
+          relatedBooking: booking._id,
           read: false,
         });
       } catch (notifError) {
@@ -803,6 +810,7 @@ export const cancelBookingByOwner = async (req: AuthRequest, res: Response): Pro
           ? `Votre réservation pour "${booking.venue.name}" a été annulée par le propriétaire. Motif : ${reason}.${refundInfo}`
           : `Votre réservation pour "${booking.venue.name}" a été annulée par le propriétaire.${refundInfo}`,
         relatedVenue: booking.venue._id,
+        relatedBooking: booking._id,
         read: false,
       });
     } catch (notifError) {
@@ -931,6 +939,7 @@ export const blockDate = async (req: AuthRequest, res: Response): Promise<void> 
             ? `Votre réservation pour "${venue.name}" a été annulée car la salle est indisponible ce jour-là. Motif : ${reason}`
             : `Votre réservation pour "${venue.name}" a été annulée car la salle est indisponible ce jour-là.`,
           relatedVenue: venue._id,
+          relatedBooking: booking._id,
           read: false,
         }).catch((notifError) => {
           console.error('blockDate — échec notification:', notifError, { bookingId: booking._id });
@@ -1233,6 +1242,7 @@ export const refundVenueBookings = async (venueId: string): Promise<{ refunded: 
             title: 'Salle supprimée — remboursement effectué',
             message: `La salle "${venueName}" a été supprimée. Votre paiement de ${refundAmount}€ sera remboursé intégralement.`,
             relatedVenue: venueId as any,
+            relatedBooking: booking._id,
             read: false,
           });
         } catch (notifErr) {
@@ -1323,6 +1333,7 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
             title: 'Réservation expirée',
             message: `Votre réservation pour "${booking.venue.name}" le ${eventDate} a expiré car le paiement n'a pas été effectué dans les 72h.`,
             relatedVenue: booking.venue._id,
+            relatedBooking: booking._id,
             read: false,
           });
         } catch (notifError) {
@@ -1340,6 +1351,7 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
             title: 'Réservation expirée — créneau disponible',
             message: `La réservation de "${requesterName}" pour "${booking.venue.name}" le ${eventDate} a expiré faute de paiement. Le créneau est de nouveau disponible.`,
             relatedVenue: booking.venue._id,
+            relatedBooking: booking._id,
             read: false,
           });
         } catch (notifError) {
@@ -1379,6 +1391,7 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
           title: 'Rappel — paiement requis',
           message: `Rappel : votre réservation pour "${booking.venue.name}" le ${eventDate} expire dans 24h. Effectuez le paiement pour confirmer.`,
           relatedVenue: booking.venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
         reminderCount++;

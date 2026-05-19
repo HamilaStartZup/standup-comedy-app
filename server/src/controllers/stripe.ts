@@ -197,6 +197,7 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
               title: 'Réservation confirmée',
               message: `Votre paiement pour "${booking.venue.name}" a été reçu. Réservation confirmée !`,
               relatedVenue: booking.venue._id,
+              relatedBooking: booking._id,
               read: false,
             },
             {
@@ -205,6 +206,7 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
               title: 'Paiement reçu',
               message: `Le paiement pour la réservation de "${booking.venue.name}" a été reçu. Réservation confirmée !`,
               relatedVenue: booking.venue._id,
+              relatedBooking: booking._id,
               read: false,
             },
           ]);
@@ -322,6 +324,7 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
               title: 'Remboursement effectué',
               message: `Votre remboursement de ${booking.refundedAmount}€ pour "${booking.venue.name}" a été traité.`,
               relatedVenue: booking.venue._id,
+              relatedBooking: booking._id,
               read: false,
             });
           } catch (notifError) {
@@ -595,6 +598,7 @@ export const confirmVenueBookingPayment = async (req: AuthRequest, res: Response
           title: 'Réservation confirmée',
           message: `Votre paiement pour "${booking.venue.name}" a été reçu. Réservation confirmée !`,
           relatedVenue: booking.venue._id,
+          relatedBooking: booking._id,
           read: false,
         },
         {
@@ -603,6 +607,7 @@ export const confirmVenueBookingPayment = async (req: AuthRequest, res: Response
           title: 'Paiement reçu',
           message: `Le paiement pour la réservation de "${booking.venue.name}" a été reçu. Réservation confirmée !`,
           relatedVenue: booking.venue._id,
+          relatedBooking: booking._id,
           read: false,
         },
       ]);

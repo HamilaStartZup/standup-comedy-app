@@ -40,8 +40,8 @@ const MyBookingsPage: React.FC = () => {
   // useRef guard prevents double-fire in React Strict Mode
   const paymentHandledRef = useRef(false);
 
-  // Gestion du highlight (ref stocke l'ID pour survivre au setSearchParams)
-  const highlightId = searchParams.get('highlight');
+  // Gestion du highlight — ?bookingId= (notifs) ou ?highlight= (legacy)
+  const highlightId = searchParams.get('bookingId') ?? searchParams.get('highlight');
   const highlightIdRef = useRef(highlightId);
 
   // Gestion du retour Stripe

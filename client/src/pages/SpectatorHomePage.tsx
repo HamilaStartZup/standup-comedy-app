@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
@@ -25,14 +26,17 @@ const RADII = [5, 10, 20, 50] as const;
 
 export default function SpectatorHomePage() {
   const { token, user } = useAuth();
-  const { showSuccess, showError } = useAlert();
+  const { showSuccess, showError, showInfo } = useAlert();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [searchLieuInput, setSearchLieuInput] = useState('');
   const [searchLieu, setSearchLieu] = useState('');
   const [searchVenueType, setSearchVenueType] = useState('');
   const [searchRadius, setSearchRadius] = useState<number>(20);
   const [selectedEvent, setSelectedEvent] = useState<IEvent | null>(null);
   const [unregisterConfirm, setUnregisterConfirm] = useState<{ isOpen: boolean; eventId: string | null }>({ isOpen: false, eventId: null });
+  const focusId = searchParams.get('focus');
+  const processedFocusIdRef = useRef<string | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?._id],
@@ -143,6 +147,23 @@ export default function SpectatorHomePage() {
     onSuccess: () => { invalidateEvents(); showSuccess('Désinscription enregistrée'); },
     onError: (e: any) => showError(e?.response?.data?.message || 'Erreur'),
   });
+
+  // Ouvre le modal ciblé quand ?focus=<eventId> est présent en URL
+  useEffect(() => {
+    if (!focusId || processedFocusIdRef.current === focusId) return;
+    if (loadingAroundMe || loadingRegistrations) return;
+
+    const allLoaded = [...aroundMeEvents, ...myRegistrationsList];
+    const found = allLoaded.find((e) => e._id === focusId);
+
+    processedFocusIdRef.current = focusId;
+
+    if (found) {
+      setSelectedEvent(found);
+    } else {
+      showInfo("Cet événement n'est pas dans votre périmètre actuel. Élargissez le rayon de recherche pour le voir.");
+    }
+  }, [focusId, aroundMeEvents, myRegistrationsList, loadingAroundMe, loadingRegistrations, showInfo]);
 
   const now = new Date();
   const allEvents = eventsData || [];
