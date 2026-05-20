@@ -156,21 +156,32 @@ export default function SpectatorEventsPage() {
     }
   };
 
-  const now = new Date();
-  const registeredUpcoming = myRegistrationsList
-    .filter((e) => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const registeredArchived = myRegistrationsList
-    .filter((e) => (new Date(e.date) < now) && e.status?.toLowerCase() !== 'cancelled')
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const registeredUpcoming = useMemo(() => {
+    const ref = Date.now();
+    return myRegistrationsList
+      .filter((e) => new Date(e.date).getTime() >= ref && e.status?.toLowerCase() !== 'cancelled')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [myRegistrationsList]);
 
-  const registeredCancelled = myRegistrationsList
-    .filter((e) => e.status?.toLowerCase() === 'cancelled')
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const registeredArchived = useMemo(() => {
+    const ref = Date.now();
+    return myRegistrationsList
+      .filter((e) => new Date(e.date).getTime() < ref && e.status?.toLowerCase() !== 'cancelled')
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [myRegistrationsList]);
 
-  const favoritesUpcoming = favoritesList
-    .filter((e) => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled' && !isUserWithdrawn(e))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const registeredCancelled = useMemo(() => {
+    return myRegistrationsList
+      .filter((e) => e.status?.toLowerCase() === 'cancelled')
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [myRegistrationsList]);
+
+  const favoritesUpcoming = useMemo(() => {
+    const ref = Date.now();
+    return favoritesList
+      .filter((e) => new Date(e.date).getTime() >= ref && e.status?.toLowerCase() !== 'cancelled' && !isUserWithdrawn(e))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [favoritesList, user?._id]);
 
   const isLoading = loadingRegistrations || loadingFavorites;
 

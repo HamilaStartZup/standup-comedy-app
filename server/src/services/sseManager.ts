@@ -125,19 +125,17 @@ class SSEManager {
    */
   private sendToClient(clientId: string, payload: SSEEventPayload): void {
     const client = this.clients.get(clientId);
-    if (!client) {
-      return;
-    }
+    if (!client) return;
 
     try {
       const eventType = payload.type;
-      const data = JSON.stringify(payload);
+      // Strip server-only routing field before sending to client
+      const { targetUserIds: _ignored, ...payloadForClient } = payload as any;
+      const data = JSON.stringify(payloadForClient);
 
-      // Format SSE standard
       client.response.write(`event: ${eventType}\n`);
       client.response.write(`data: ${data}\n\n`);
 
-      // Mettre à jour le dernier heartbeat
       client.lastHeartbeat = new Date();
     } catch (error) {
       console.error(`❌ Erreur lors de l'envoi à ${clientId}:`, error);
@@ -149,12 +147,31 @@ class SSEManager {
    * Broadcaster un évènement à tous les clients connectés
    */
   public broadcast(payload: SSEEventPayload): void {
+    // Si des cibles spécifiques sont définies, broadcast ciblé uniquement
+    if ((payload as any).targetUserIds && (payload as any).targetUserIds.length > 0) {
+      this.broadcastToUsers((payload as any).targetUserIds, payload);
+      return;
+    }
+
     const clientIds = Array.from(this.clients.keys());
-
-    console.log(`📢 Broadcasting évènement ${payload.type} à ${clientIds.length} client(s)`);
-
+    console.log(`📢 Broadcasting ${payload.type} à ${clientIds.length} client(s)`);
     clientIds.forEach(clientId => {
       this.sendToClient(clientId, payload);
+    });
+  }
+
+  /**
+   * Broadcaster un évènement à un ensemble ciblé d'utilisateurs
+   */
+  public broadcastToUsers(userIds: string[], payload: SSEEventPayload): void {
+    const targetClients = Array.from(this.clients.values()).filter(
+      client => userIds.includes(client.userId)
+    );
+
+    console.log(`🎯 Targeted broadcast ${payload.type} → ${userIds.length} user(s) ciblé(s), ${targetClients.length} client(s) actif(s)`);
+
+    targetClients.forEach(client => {
+      this.sendToClient(client.id, payload);
     });
   }
 
@@ -177,10 +194,6 @@ class SSEManager {
         }
       }
     });
-
-    if (clientIds.length > 0) {
-      console.log(`💓 Heartbeat envoyé à ${clientIds.length} client(s)`);
-    }
   }
 
   /**

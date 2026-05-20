@@ -219,7 +219,8 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
             booking._id.toString(),
             (booking.venue as { _id: mongoose.Types.ObjectId })._id.toString(),
             booking.status,
-            booking.paymentStatus
+            booking.paymentStatus,
+            [booking.requester.toString(), (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId }).owner.toString()]
           );
         }
 
@@ -314,7 +315,8 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
             booking._id.toString(),
             (booking.venue as { _id: mongoose.Types.ObjectId })._id.toString(),
             booking.status,
-            booking.paymentStatus
+            booking.paymentStatus,
+            [booking.requester.toString(), (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId }).owner.toString()]
           );
 
           try {
@@ -620,7 +622,8 @@ export const confirmVenueBookingPayment = async (req: AuthRequest, res: Response
         booking._id.toString(),
         (booking.venue as { _id: mongoose.Types.ObjectId })._id.toString(),
         booking.status,
-        booking.paymentStatus
+        booking.paymentStatus,
+        [booking.requester.toString(), (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId }).owner.toString()]
       );
     }
 

@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { NotificationModel, NotificationDocument } from '../models/Notification';
 import { Types } from 'mongoose';
+import { emitNotificationCreated, emitNotificationRead, emitNotificationAllRead } from '../services/eventEmitter';
 
 /**
  * GET /api/notifications
@@ -76,6 +77,7 @@ export const markNotificationAsRead = async (req: AuthRequest, res: Response): P
     notification.read = true;
     notification.readAt = new Date();
     await notification.save();
+    emitNotificationRead(userId, notificationId);
 
     res.status(200).json({
       message: 'Notification marquée comme lue',
@@ -104,6 +106,7 @@ export const markAllNotificationsAsRead = async (req: AuthRequest, res: Response
       { user: userId, read: false },
       { read: true, readAt: new Date() }
     );
+    emitNotificationAllRead(userId);
 
     res.status(200).json({
       message: 'Toutes les notifications ont été marquées comme lues',
@@ -166,7 +169,7 @@ export const createNotification = async (
   relatedBookingId?: string
 ): Promise<void> => {
   try {
-    await NotificationModel.create({
+    const notification = await NotificationModel.create({
       user: new Types.ObjectId(userId),
       type,
       title,
@@ -178,6 +181,7 @@ export const createNotification = async (
       relatedBooking: relatedBookingId ? new Types.ObjectId(relatedBookingId) : undefined,
       read: false
     });
+    emitNotificationCreated(userId, notification._id.toString());
   } catch (error) {
     console.error('Erreur lors de la création de la notification:', { userId, type }, error);
     // Ne pas faire échouer l'opération principale si la notification échoue

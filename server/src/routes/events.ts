@@ -57,7 +57,6 @@ const router = express.Router();
 // ============================================================================
 const asyncHandler = (fn: (req: Request | AuthRequest, res: Response) => Promise<any>) => {
   return (req: Request | AuthRequest, res: Response, next: NextFunction) => {
-    console.log('🔀 AsyncHandler appelé pour:', req.method, req.path);
     Promise.resolve(fn(req, res))
       .catch((error) => {
         console.error('❌ AsyncHandler caught error:', error);

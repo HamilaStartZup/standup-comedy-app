@@ -79,10 +79,7 @@ const DirectoryPage: React.FC = () => {
   const { data: usersData, isLoading: loading, refetch: refetchUsers } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      console.log('🔍 Chargement des utilisateurs...');
-      console.log('👤 Utilisateur actuel:', user);
       const response = await api.get('/auth/users');
-      console.log('📊 Réponse API reçue:', response.data);
       return (response.data.users || []) as User[];
     },
     enabled: !!user && user.role === 'SUPER_ADMIN',

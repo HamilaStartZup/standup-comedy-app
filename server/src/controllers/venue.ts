@@ -8,6 +8,7 @@ import { refundVenueBookings } from './venueBooking';
 import { updateVenueSchema } from '../validation/schemas';
 import { getDepartmentFromPostalCode } from '../utils/cityMapping';
 import { DEPARTMENT_TO_REGION, getDepartmentsByRegion, normalizeDepartment } from '../utils/geographicMatching';
+import { emitVenueCreated, emitVenueUpdated, emitVenueDeleted } from '../services/eventEmitter';
 // ─── CRUD Venues ─────────────────────────────────────────────────────────────
 
 export const createVenue = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -19,6 +20,7 @@ export const createVenue = async (req: AuthRequest, res: Response): Promise<void
     }
 
     const venue = await VenueModel.create({ ...req.body, owner: ownerId });
+    emitVenueCreated(venue._id.toString(), ownerId);
     res.status(201).json({ venue });
   } catch (error) {
     if (error instanceof mongoose.Error.ValidationError) {
@@ -223,6 +225,7 @@ export const updateVenue = async (req: AuthRequest, res: Response): Promise<void
       res.status(exists ? 403 : 404).json({ message: exists ? 'Non autorisé à modifier cette salle' : 'Salle introuvable' });
       return;
     }
+    emitVenueUpdated(venueId, ownerId);
     res.status(200).json({ venue: updated });
   } catch (error) {
     if (error instanceof mongoose.Error.ValidationError) {
@@ -255,6 +258,13 @@ export const deleteVenue = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    const activeBookings = await VenueBookingModel.find({
+      venue: venueId,
+      status: { $in: ['PENDING', 'ACCEPTED', 'CONFIRMED'] }
+    }).select('requester').lean();
+    const bookerIds = activeBookings.map(b => b.requester.toString());
+    const allTargets = [ownerId, ...bookerIds].filter((id, i, arr) => arr.indexOf(id) === i);
+
     // Soft delete first: mark venue as deleted so no new bookings can be created
     // while refunds are in progress. Bookings are preserved so requesters can
     // still see them in "mes réservations".
@@ -263,6 +273,8 @@ export const deleteVenue = async (req: AuthRequest, res: Response): Promise<void
     await VenueBlockedDateModel.deleteMany({ venue: venueId });
     // Rembourser tous les bookings payés après suppression (salle déjà invisible)
     await refundVenueBookings(venueId);
+
+    emitVenueDeleted(venueId, allTargets);
     res.status(204).send();
   } catch (error) {
     console.error('Erreur deleteVenue:', error);

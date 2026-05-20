@@ -300,7 +300,8 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
       booking._id.toString(),
       venueId,
       booking.status,
-      booking.paymentStatus
+      booking.paymentStatus,
+      [requesterId, venue.owner.toString()]
     );
 
     // Notifications selon le mode de réservation
@@ -585,7 +586,8 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
       booking._id.toString(),
       (booking.venue as { _id: mongoose.Types.ObjectId })._id.toString(),
       booking.status,
-      booking.paymentStatus
+      booking.paymentStatus,
+      [booking.requester.toString(), ownerId]
     );
 
     // Notifier le demandeur (découplé : un échec de notif ne doit pas faire échouer la réponse)
@@ -654,7 +656,7 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     const booking = await VenueBookingModel.findById(bookingId)
-      .populate<{ venue: { _id: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy } }>('venue', 'cancellationPolicy');
+      .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy } }>('venue', 'cancellationPolicy owner');
     if (!booking) {
       res.status(404).json({ message: 'Réservation introuvable' });
       return;
@@ -723,9 +725,10 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
 
     emitVenueBookingStatusChanged(
       booking._id.toString(),
-      booking.venue.toString(),
+      (booking.venue as any)._id.toString(),
       booking.status,
-      booking.paymentStatus
+      booking.paymentStatus,
+      [requesterId, (booking.venue as any).owner?.toString() || ''].filter(Boolean)
     );
 
     res.status(200).json({
@@ -793,7 +796,8 @@ export const cancelBookingByOwner = async (req: AuthRequest, res: Response): Pro
       booking._id.toString(),
       (booking.venue as { _id: mongoose.Types.ObjectId })._id.toString(),
       booking.status,
-      booking.paymentStatus
+      booking.paymentStatus,
+      [booking.requester.toString(), ownerId]
     );
 
     try {
@@ -915,7 +919,8 @@ export const blockDate = async (req: AuthRequest, res: Response): Promise<void> 
         b._id.toString(),
         venueId,
         b.status,
-        b.paymentStatus
+        b.paymentStatus,
+        [b.requester.toString(), ownerId]
       );
     });
 
@@ -1232,7 +1237,8 @@ export const refundVenueBookings = async (venueId: string): Promise<{ refunded: 
           booking._id.toString(),
           venueId,
           booking.status,
-          booking.paymentStatus
+          booking.paymentStatus,
+          [booking.requester._id.toString(), venue?.owner?.toString() || ''].filter(Boolean)
         );
 
         try {
@@ -1317,9 +1323,10 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
 
         emitVenueBookingPaymentUpdated(
           booking._id.toString(),
-          booking.venue._id.toString(),
+          (booking.venue as any)._id.toString(),
           'EXPIRED',
-          booking.paymentStatus
+          booking.paymentStatus,
+          [(booking.requester as any)._id?.toString() || booking.requester.toString(), (booking.venue as any)?.owner?.toString() || ''].filter(Boolean)
         );
 
         const d = booking.requestedDate;
@@ -1398,9 +1405,10 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
 
         emitVenueBookingPaymentUpdated(
           booking._id.toString(),
-          booking.venue._id.toString(),
+          (booking.venue as any)._id.toString(),
           booking.status,
-          booking.paymentStatus
+          booking.paymentStatus,
+          [booking.requester.toString(), (booking.venue as any)?.owner?.toString() || ''].filter(Boolean)
         );
       } catch (reminderErr) {
         console.error('[PaymentTimeout] Erreur reminder booking:', reminderErr, { bookingId: booking._id });

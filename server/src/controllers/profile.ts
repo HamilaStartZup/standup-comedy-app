@@ -24,10 +24,8 @@ export const getMyProfile = async (req: AuthRequest, res: Response): Promise<any
   try {
     const user = await UserModel.findById(req.user?.id);
     if (!user) {
-      console.log('Utilisateur non trouvé pour /me avec ID:', req.user?.id);
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
-    console.log('Données utilisateur renvoyées par /api/profile/me:', user.stats?.totalEvents);
 
     // Transform the response to include 'id' instead of just '_id' for consistency with JWT token
     const userObj = user.toObject ? user.toObject() : user;

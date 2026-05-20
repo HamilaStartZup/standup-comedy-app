@@ -9,7 +9,7 @@ import { useAlert } from '../hooks/useAlert';
 import {
   addEventFavorite,
   removeEventFavorite,
-  checkIsEventFavorite,
+  getEventFavorites,
   createStripeCheckoutSession,
   unregisterSpectatorFromEvent,
 } from '../services/api';
@@ -105,6 +105,17 @@ export default function SpectatorHomePage() {
     enabled: !!user && !!user?.city?.trim(),
   });
 
+  const { data: favoritesData } = useQuery({
+    queryKey: ['event-favorites'],
+    queryFn: getEventFavorites,
+    enabled: !!user,
+  });
+
+  const favoriteEventIds = useMemo(() => {
+    const favorites: IEvent[] = favoritesData?.favorites ?? [];
+    return new Set(favorites.map((e) => e._id));
+  }, [favoritesData]);
+
   const updateRadiusMutation = useMutation({
     mutationFn: async (km: number) => {
       if (!user?._id) throw new Error('Non connecté');
@@ -124,7 +135,6 @@ export default function SpectatorHomePage() {
   const invalidateEvents = () => {
     queryClient.invalidateQueries({ queryKey: ['events'], exact: false });
     queryClient.invalidateQueries({ queryKey: ['event-favorites'], exact: false });
-    queryClient.invalidateQueries({ queryKey: ['event-favorites-check'], exact: false });
   };
 
   const addFavoriteMutation = useMutation({
@@ -342,6 +352,7 @@ export default function SpectatorHomePage() {
                       key={event._id}
                       event={event}
                       isRegistered={isUserRegistered(event)}
+                      isFavorite={favoriteEventIds.has(event._id)}
                       onEventClick={() => setSelectedEvent(event)}
                       onRegister={() => stripeCheckoutMutation.mutate(event._id)}
                       onToggleFavorite={(isFav: boolean) =>
@@ -375,6 +386,7 @@ export default function SpectatorHomePage() {
                       key={event._id}
                       event={event}
                       isRegistered={true}
+                      isFavorite={favoriteEventIds.has(event._id)}
                       onEventClick={() => setSelectedEvent(event)}
                       onRegister={() => {}}
                       onToggleFavorite={(isFav: boolean) =>
@@ -434,6 +446,7 @@ export default function SpectatorHomePage() {
                       key={event._id}
                       event={event}
                       isRegistered={isUserRegistered(event)}
+                      isFavorite={favoriteEventIds.has(event._id)}
                       onEventClick={() => setSelectedEvent(event)}
                       onRegister={() => stripeCheckoutMutation.mutate(event._id)}
                       onToggleFavorite={(isFav: boolean) =>
@@ -471,6 +484,7 @@ export default function SpectatorHomePage() {
 function EventCard({
   event,
   isRegistered,
+  isFavorite,
   onEventClick,
   onRegister,
   onUnregister,
@@ -479,18 +493,13 @@ function EventCard({
 }: {
   event: IEvent;
   isRegistered: boolean;
+  isFavorite: boolean;
   onEventClick?: () => void;
   onRegister: () => void;
   onUnregister?: () => void;
   onToggleFavorite: (currentlyFavorite: boolean) => void;
   isRegistering: boolean;
 }) {
-  const queryClient = useQueryClient();
-  const { data: favData } = useQuery({
-    queryKey: ['event-favorites-check', event._id],
-    queryFn: () => checkIsEventFavorite(event._id),
-  });
-  const isFavorite = favData?.isFavorite ?? false;
   const dateStr = new Date(event.date).toLocaleDateString('fr-FR', {
     weekday: 'short',
     day: 'numeric',

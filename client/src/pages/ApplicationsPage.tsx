@@ -71,22 +71,12 @@ function GeographicCompatibilityBadge({
 
   useEffect(() => {
     // Log pour déboguer
-    console.log('📍 GeographicCompatibilityBadge - Données reçues:', {
-      eventCity,
-      mobilityZones,
-      hasMobilityZones: !!mobilityZones,
-      mobilityZonesLength: mobilityZones?.length || 0
-    });
-
     const checkCompatibility = async () => {
       setIsChecking(true);
       try {
-        console.log('🔍 Vérification compatibilité géographique:', { eventCity, mobilityZones });
         const result = await checkGeographicCompatibility(eventCity, mobilityZones);
-        console.log('✅ Résultat compatibilité:', result);
         setIsCompatible(result.isCompatible);
       } catch (error) {
-        console.error('Erreur lors de la vérification de compatibilité:', error);
         setIsCompatible(false);
       } finally {
         setIsChecking(false);
@@ -96,7 +86,6 @@ function GeographicCompatibilityBadge({
     if (eventCity && mobilityZones && mobilityZones.length > 0) {
       checkCompatibility();
     } else {
-      console.log('⚠️ Pas de zones de mobilité ou ville manquante:', { eventCity, mobilityZones });
       setIsCompatible(false);
       setIsChecking(false);
     }
@@ -204,16 +193,11 @@ function ApplicationsPage() {
         : (Array.isArray((res.data as any)?.applications) ? (res.data as any).applications : []);
       
       // Log pour déboguer les zones de mobilité
-      console.log('📋 Applications chargées:', list.length);
       list.forEach((app: IApplication, idx: number) => {
         if (app.comedian?.profile?.mobilityZone) {
-          console.log(`  Application ${idx + 1} - Humoriste: ${app.comedian?.firstName ?? ''} ${app.comedian?.lastName ?? ''}`, {
-            mobilityZones: app.comedian.profile.mobilityZone,
-            eventCity: app.event?.location?.city
-          });
         }
       });
-      
+
       return list as IApplication[];
     },
     enabled: !!user,
@@ -277,7 +261,6 @@ function ApplicationsPage() {
     
     const app = applications.find(a => a._id === appId);
     if (!app) {
-      console.error('Candidature introuvable');
       return;
     }
 
@@ -303,7 +286,6 @@ function ApplicationsPage() {
       // Rafraîchir les favoris depuis l'API pour s'assurer de la cohérence
       await refetchApplicationFavorites();
     } catch (error: any) {
-      console.error('Erreur lors de la modification des favoris:', error);
       // Revert optimistic update en cas d'erreur
       setFavoriteApplicationIds(prev => {
         const updated = new Set(prev);
@@ -471,7 +453,6 @@ function ApplicationsPage() {
       refreshUser();
       closeStatusModal();
     } catch (err: any) {
-      console.error('Erreur lors de la mise à jour du statut:', err.response?.status);
       showError(getErrorMessage(err, ErrorMessages.APPLICATION_UPDATE_FAILED));
     }
   };
@@ -1646,18 +1627,13 @@ function ApplicationsPage() {
                                     title: 'Confirmer la désinscription',
                                     message: ConfirmMessages.UNSUBSCRIBE_DETAIL,
                                      onConfirm: async () => {
-                                       console.log('🔄 Début de la désinscription (accepted) pour application:', app._id);
                                        try {
-                                         console.log('📡 Appel API de suppression:', `/applications/${app._id}`);
                                          await api.delete(`/applications/${app._id}`);
-                                         console.log('✅ API call réussi, affichage de l\'alerte de succès');
                                          showSuccess(SuccessMessages.APPLICATION_UNSUBSCRIBED);
                                          queryClient.invalidateQueries({ queryKey: ['applications'] });
                                          refreshUser();
                                          setConfirmDialog({ ...confirmDialog, isOpen: false });
                                        } catch (err: any) {
-                                         console.log('❌ Erreur lors de la désinscription:', err);
-                                         console.log('📢 Affichage de l\'alerte d\'erreur');
                                          showError(ErrorMessages.APPLICATION_WITHDRAW_FAILED);
                                        }
                                      },
@@ -1701,18 +1677,13 @@ function ApplicationsPage() {
                                     title: 'Confirmer la désinscription',
                                     message: ConfirmMessages.UNSUBSCRIBE,
                                      onConfirm: async () => {
-                                       console.log('🔄 Début de la désinscription pour application:', app._id);
                                        try {
-                                         console.log('📡 Appel API de suppression:', `/applications/${app._id}`);
                                          await api.delete(`/applications/${app._id}`);
-                                         console.log('✅ API call réussi, affichage de l\'alerte de succès');
                                          showSuccess(SuccessMessages.APPLICATION_WITHDRAWN);
                                          queryClient.invalidateQueries({ queryKey: ['applications'] });
                                          refreshUser();
                                          setConfirmDialog({ ...confirmDialog, isOpen: false });
                                        } catch (err: any) {
-                                         console.log('❌ Erreur lors de la désinscription:', err);
-                                         console.log('📢 Affichage de l\'alerte d\'erreur');
                                          showError(ErrorMessages.APPLICATION_WITHDRAW_FAILED);
                                        }
                                      },

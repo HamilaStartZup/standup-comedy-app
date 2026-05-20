@@ -4,6 +4,14 @@ import { ComedianReportModel } from '../models/ComedianReport';
 import { UserModel } from '../models/User';
 import { Types } from 'mongoose';
 import { sendComedianReportAccountDeactivatedEmail, sendComedianReportAccountRestrictedEmail, sendComedianReportAccountValidatedEmail } from '../services/emailService';
+import { emitComedianReportCreated, emitComedianReportUpdated } from '../services/eventEmitter';
+
+const getSuperAdminIds = async (): Promise<string[]> => {
+  const admins = await UserModel.find({ role: 'SUPER_ADMIN', isActive: true })
+    .select('_id')
+    .lean();
+  return admins.map(a => (a._id as any).toString());
+};
 
 /**
  * POST /api/comedian-reports
@@ -94,6 +102,10 @@ export const createComedianReport = async (req: AuthRequest, res: Response): Pro
         console.error('Erreur lors de l\'envoi de l\'email de restriction:', emailError);
       }
     }
+
+    getSuperAdminIds().then(adminIds => {
+      if (adminIds.length > 0) emitComedianReportCreated(report._id.toString(), adminIds);
+    }).catch(() => {});
 
     res.status(201).json({
       message: 'Signalement créé avec succès',
@@ -212,6 +224,7 @@ export const updateComedianReport = async (req: AuthRequest, res: Response): Pro
     }
 
     await report.save();
+    emitComedianReportUpdated(reportId, report.comedian.toString());
 
     // Envoyer l'email au compte signalé selon le statut
     if (status === 'validated' || status === 'rejected') {

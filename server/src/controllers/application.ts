@@ -174,7 +174,8 @@ export const createApplication = async (req: AuthRequest, res: Response): Promis
 
     // Émettre un évènement SSE pour notifier tous les clients (non-bloquant)
     try {
-      emitApplicationCreated(application._id.toString(), eventId);
+      const organizerId = event.organizer?.toString() || '';
+      emitApplicationCreated(application._id.toString(), eventId, organizerId);
     } catch (sseError) {
       console.error('⚠️ Erreur lors de l\'émission SSE (non-bloquant):', sseError);
       // Ne pas throw, continuer le flux
@@ -386,7 +387,10 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response): 
     // Émettre un évènement SSE pour notifier tous les clients
     if (updatedApplication) {
       const eventId = (updatedApplication.event as any)?._id?.toString() || updatedApplication.event?.toString() || '';
-      emitApplicationStatusChanged(applicationId, status, eventId);
+      const comedianId = (updatedApplication.comedian as any)?._id?.toString() || updatedApplication.comedian?.toString() || '';
+      const organizerId = (updatedApplication.event as any)?.organizer?._id?.toString() || (updatedApplication.event as any)?.organizer?.toString() || '';
+      const targets = [comedianId, organizerId].filter(Boolean);
+      emitApplicationStatusChanged(applicationId, status, eventId, targets);
     }
 
     // Ajout du participant à l'évènement si la candidature est acceptée
@@ -442,7 +446,7 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response): 
               { $pull: { participants: comedianId } }
             );
           }
-          emitApplicationStatusChanged(app._id.toString(), 'CANCELLED_BY_PLATFORM', otherEventId?.toString() || '');
+          emitApplicationStatusChanged(app._id.toString(), 'CANCELLED_BY_PLATFORM', otherEventId?.toString() || '', []);
         }
         if (overlapping.length > 0) {
           console.log(`🔄 [PLATFORM] ${overlapping.length} candidature(s) au même créneau annulée(s) pour le comédien`);
@@ -977,10 +981,12 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
           );
 
           // 9. Émettre événement SSE pour temps réel
+          const lateCancelOrgId = (organizer as any)?._id?.toString() || (event.organizer as any)?._id?.toString() || (event.organizer as any)?.toString() || '';
           emitLateCancellation(
             eventId.toString(),
             comedian._id.toString(),
-            (application._id as any).toString()
+            (application._id as any).toString(),
+            lateCancelOrgId
           );
 
           // 10. Notifier les humoristes de la place disponible
@@ -1021,7 +1027,8 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
 
     // Émettre un évènement SSE pour notifier tous les clients
     const eventId = (application.event as any)?._id?.toString() || application.event?.toString() || '';
-    emitApplicationWithdrawn(applicationId, eventId);
+    const organizerId = (application.event as any)?.organizer?._id?.toString() || (application.event as any)?.organizer?.toString() || '';
+    emitApplicationWithdrawn(applicationId, eventId, organizerId);
 
     res.status(204).send();
   } catch (error) {

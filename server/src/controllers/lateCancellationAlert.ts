@@ -5,6 +5,15 @@ import {
   acknowledgeLateCancellationAlert,
   getComedianLateCancellationHistory
 } from '../services/lateCancellationAlertService';
+import { emitLateCancellationAlertAcknowledged } from '../services/eventEmitter';
+import { UserModel } from '../models/User';
+
+const getSuperAdminIds = async (): Promise<string[]> => {
+  const admins = await UserModel.find({ role: 'SUPER_ADMIN', isActive: true })
+    .select('_id')
+    .lean();
+  return admins.map(a => (a._id as any).toString());
+};
 
 /**
  * GET /api/late-cancellation-alerts
@@ -78,6 +87,10 @@ export const acknowledgeAlert = async (req: AuthRequest, res: Response): Promise
       res.status(404).json({ message: 'Alerte non trouvée' });
       return;
     }
+
+    getSuperAdminIds().then(adminIds => {
+      if (adminIds.length > 0) emitLateCancellationAlertAcknowledged(alertId, adminIds);
+    }).catch(() => {});
 
     res.status(200).json({
       message: 'Alerte acquittée avec succès'

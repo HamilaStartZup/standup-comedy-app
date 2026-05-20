@@ -122,8 +122,7 @@ const CalendarPage = () => {
     },
   });
 
-  const handleEventClick = (event: IEvent) => {
-    console.log('Événement cliqué :', event);
+  const handleEventClick = (_event: IEvent) => {
   };
 
   const handleAbsenceClick = (participant: any, event: IEvent) => {

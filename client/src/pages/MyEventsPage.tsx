@@ -378,19 +378,8 @@ useEffect(() => {
       try {
         const res = await api.get<IEvent[]>(apiUrl);
         const list = Array.isArray(res.data) ? res.data : (Array.isArray((res.data as any)?.events) ? (res.data as any).events : []);
-        console.log("MyEventsPage: Données d'évènements reçues par useQuery:", list);
-        console.log("MyEventsPage: User role:", user?.role);
-        console.log("📅 DÉTAIL DES DATES RÉCUPÉRÉES:", list.map((e: IEvent) => ({
-          title: e.title,
-          status: e.status,
-          dateOriginale: e.date,
-          dateParsee: new Date(e.date).toLocaleDateString('fr-FR'),
-          estPasse: new Date(e.date) < new Date()
-        })));
         return list as IEvent[];
       } catch (error: any) {
-        console.error("❌ Erreur lors de la récupération des évènements:", error);
-        console.error("❌ Détails de l'erreur:", error.response?.data || error.message);
         throw error;
       }
     },
@@ -529,13 +518,11 @@ useEffect(() => {
     // Délai pour s'assurer que les éléments sont rendus
     const scrollTimeout = setTimeout(() => {
       if (statusFilters.includes('cancelled') && cancelledSectionRef.current) {
-        console.log('🎯 Scroll automatique vers la section "Évènements annulés"');
         cancelledSectionRef.current.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'start' 
         });
       } else if (statusFilters.includes('completed') && archivedSectionRef.current) {
-        console.log('🎯 Scroll automatique vers la section "Évènements archivés"');
         archivedSectionRef.current.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'start' 
@@ -581,7 +568,6 @@ useEffect(() => {
       // Rafraîchir les favoris depuis l'API pour s'assurer de la cohérence
       await refetchEventFavorites();
     } catch (error: any) {
-      console.error('❌ [MyEventsPage] Erreur lors de la modification des favoris:', error);
       // Revert optimistic update en cas d'erreur
       setFavoriteEventIds(prev => {
         const updated = new Set(prev);
@@ -618,7 +604,6 @@ useEffect(() => {
         await addFavorite(comedianId);
       }
     } catch (error: any) {
-      console.error('Erreur lors de la modification des favoris d\'humoriste:', error);
       // Revert en cas d'erreur
       setFavoriteComedianIds((prev: string[]) => {
         if (isCurrentlyFavorite) {
@@ -748,13 +733,6 @@ useEffect(() => {
       const organizerFilter = queryParams.get('organizer');
       const keywordFilter = queryParams.get('search');
 
-      console.log('🔄 RECALCUL DES FILTRES:', {
-        totalEvents: eventsToFilter.length,
-        organizerFilter,
-        keywordFilter,
-        userRole: user?.role
-      });
-
       let filteredEvents = eventsToFilter;
 
       if (statusFilters.length > 0) {
@@ -767,11 +745,6 @@ useEffect(() => {
           const organizerId = getOrganizerIdFromEvent(event.organizer);
           const matches = organizerId === user._id;
           if (!matches) {
-            console.warn('🚫 Évènement ignoré car il n’appartient pas à cet organisateur:', {
-              eventTitle: event.title,
-              eventOrganizer: organizerId,
-              currentUser: user._id,
-            });
           }
           return matches;
         });
@@ -779,15 +752,11 @@ useEffect(() => {
 
       // Filtre par organisateur (pour super admin)
       if (user?.role === 'SUPER_ADMIN' && organizerFilter) {
-        console.log(`🔍 Filtrage par organisateur: "${organizerFilter}"`);
-        console.log(`📊 Évènements avant filtrage organisateur: ${filteredEvents.length}`);
         filteredEvents = filteredEvents.filter((event: IEvent) => {
           const eventOrganizerName = getOrganizerName(event.organizer);
           const matches = eventOrganizerName === organizerFilter;
-          console.log(`   - Évènement "${event.title}" (organisateur: "${eventOrganizerName}") → ${matches ? 'INCLUS' : 'EXCLU'}`);
           return matches;
         });
-        console.log(`📊 Évènements après filtrage organisateur: ${filteredEvents.length}`);
       }
 
       // Barre de recherche mots-clés (pour super admin)
@@ -812,8 +781,6 @@ useEffect(() => {
       // Comparaison uniquement par date (ignorer l'heure)
       const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       
-      console.log(`🔍 DEBUG CLASSIFICATION - Aujourd'hui: ${todayMidnight.toLocaleDateString('fr-FR')}`);
-      console.log(`📊 Total évènements récupérés: ${filteredEvents.length}`);
       
       filteredEvents.forEach((event: IEvent) => {
         // D'abord, isoler les évènements annulés pour qu'ils n'apparaissent pas ailleurs
@@ -827,29 +794,14 @@ useEffect(() => {
         const eventDate = new Date(event.date);
         
         // Debug logging détaillé pour tracer TOUS les évènements
-        console.log(`\n🎭 Évènement "${event.title}":`, {
-          dateOriginale: event.date,
-          dateParsee: eventDate.toLocaleDateString('fr-FR'),
-          aujourdhuiMidnight: todayMidnight.toLocaleDateString('fr-FR'),
-          status: event.status,
-          estPasse: eventIsPast,
-          estFutur: !eventIsPast
-        });
-        
         // **LOGIQUE UNIVERSELLE** : TOUS les évènements passés sont archivés
         if (eventIsPast) {
           archived.push(event);
-          console.log(`✅ → ARCHIVÉ: ${event.title} (date passée: ${eventDate.toLocaleDateString('fr-FR')})`);
         } else {
           upcoming.push(event);
-          console.log(`📅 → À VENIR: ${event.title} (date future/aujourd'hui: ${eventDate.toLocaleDateString('fr-FR')})`);
         }
       });
       
-      console.log(`\n📈 RÉSULTAT CLASSIFICATION:`);
-      console.log(`   • Évènements à venir: ${upcoming.length}`);
-      console.log(`   • Évènements archivés: ${archived.length}`);
-      console.log(`   • Évènements annulés: ${cancelled.length}`);
 
       if (dateFilter === 'upcoming') {
           archived.length = 0;
@@ -1654,7 +1606,6 @@ useEffect(() => {
       setComedianSearchResults(response.comedians);
       setComedianSearchTotal(response.total);
     } catch (error) {
-      console.error('Erreur lors de la recherche d\'humoristes:', error);
       setComedianSearchError('Erreur lors de la recherche. Veuillez réessayer.');
       setComedianSearchResults([]);
       setComedianSearchTotal(0);
@@ -1679,19 +1630,7 @@ useEffect(() => {
   }, [comedianZoneSearch, comedianExperienceFilter, comedianZoneType]);
 
   const handleEditClick = (event: IEvent) => {
-    console.log('🔍 [MyEventsPage] handleEditClick - Vérification évènement', {
-      eventId: event._id,
-      eventTitle: event.title,
-      eventOrganizer: event.organizer,
-      organizerId: typeof event.organizer === 'object' ? event.organizer._id : event.organizer,
-      userId: user?._id,
-      isOwner: typeof event.organizer === 'object' 
-        ? event.organizer._id === user?._id 
-        : event.organizer === user?._id,
-    });
-    
     if (!event._id) {
-      console.error('❌ [MyEventsPage] Évènement sans ID - impossible de modifier', { event });
       showError(ErrorMessages.EVENT_MISSING_ID);
       return;
     }
@@ -1718,22 +1657,17 @@ useEffect(() => {
   const confirmWithdrawApplication = async () => {
     if (!user?._id || !eventToWithdraw) return;
     try {
-      console.log('🔄 Début de la désinscription depuis MyEventsPage pour event:', eventToWithdraw._id);
       const app = comedianApplications?.find(a => a.event && a.event._id === eventToWithdraw._id);
       if (!app) {
-        console.log('❌ Application non trouvée pour cet événement');
         return;
       }
       await api.delete(`/applications/${app._id}`);
-      console.log('✅ API call réussi, affichage de l\'alerte de succès');
       showSuccess(SuccessMessages.APPLICATION_UNSUBSCRIBED);
       refetch();
       refreshUser();
       queryClient.invalidateQueries({ queryKey: ['comedianApplications'] });
       closeWithdrawModal();
     } catch (error: any) {
-      console.error('❌ Erreur lors de la désinscription:', error.response?.status);
-      console.log('📢 Affichage de l\'alerte d\'erreur');
       showError(getErrorMessage(error, ErrorMessages.APPLICATION_DELETE_FAILED));
     }
   };
@@ -1824,7 +1758,6 @@ useEffect(() => {
       setCancelReason('');
       setShowCancelModal(true);
     } catch (error: any) {
-      console.error('Erreur lors de la suppression de l\'évènement:', error.response?.status);
       showError(getErrorMessage(error, ErrorMessages.EVENT_DELETE_FAILED));
     }
   };
@@ -1881,7 +1814,6 @@ useEffect(() => {
         showInfo(InfoMessages.EVENT_NOT_CANCELLED_OLD);
       }
     } catch (err: any) {
-      console.error("Erreur lors de l'annulation:", err.response?.data || err.message);
       showError(err.response?.data?.message || err.message);
     } finally {
       setShowCancelModal(false);
@@ -1913,7 +1845,6 @@ useEffect(() => {
           showSuccess(SuccessMessages.NOTIFICATIONS_SENT);
           setConfirmDialog({ ...confirmDialog, isOpen: false });
         } catch (error: any) {
-          console.error('Erreur lors de l\'envoi des notifications:', error.response?.status);
           showError(getErrorMessage(error, ErrorMessages.PROFILE_UPDATE_FAILED));
         } finally {
           setNotifyingEventId(null);
@@ -1943,7 +1874,6 @@ useEffect(() => {
       setComedianToInvite(null);
       setSelectedEventForInvite('');
     } catch (error: any) {
-      console.error('Erreur lors de l\'envoi de l\'invitation:', error);
       showError(getErrorMessage(error, ErrorMessages.INVITATION_FAILED));
     } finally {
       setIsInviting(false);
@@ -1967,7 +1897,6 @@ useEffect(() => {
       const absences = await getEventAbsences(eventId);
       setEventAbsences(absences);
     } catch (error) {
-      console.error('Erreur lors du chargement des absences:', error);
       setEventAbsences([]);
     }
   };
@@ -2006,7 +1935,6 @@ useEffect(() => {
       closeAbsenceModal();
       closeModal();
     } catch (error: any) {
-      console.error('Erreur lors du marquage d\'absence:', error.response?.status);
       showError(getErrorMessage(error, ErrorMessages.ABSENCE_MARK_FAILED));
       throw error; // Re-throw pour que AbsenceModal sache que l'opération a échoué
     }
@@ -2045,7 +1973,6 @@ useEffect(() => {
       closeAbsenceModal();
       closeModal();
     } catch (error: any) {
-      console.error('Erreur lors de l\'annulation d\'absence:', error.response?.status);
       showError(getErrorMessage(error, ErrorMessages.ABSENCE_CANCEL_FAILED));
       throw error; // Re-throw pour que AbsenceModal sache que l'opération a échoué
     }

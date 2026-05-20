@@ -9,7 +9,7 @@ import { sendEventUpdatedNotificationToApplicants, sendEventCancellationToPartic
 import { notifyComediansByMobilityAsync, notifyComediansByMobilityForRecurringGroupAsync } from '../services/mobilityNotificationService';
 import { config } from '../config/env';
 import { AbsenceModel } from '../models/Absence';
-import { emitEventCreated, emitEventUpdated, emitEventDeleted, emitEventCompleted } from '../services/eventEmitter';
+import { emitEventCreated, emitEventUpdated, emitEventDeleted, emitEventCompleted, emitSpectatorRegistered, emitSpectatorUnregistered } from '../services/eventEmitter';
 import { Types } from 'mongoose';
 import { extractPostalCode, getDepartmentFromPostalCode } from '../utils/cityMapping';
 import { getCityCoordinates } from '../utils/cityMapping';
@@ -92,8 +92,6 @@ async function hasDuplicateEvent(
 // ============================================================================
 export const createEvent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    console.log('🔍 [DEBUG] createEvent - Données reçues:', req.body);
-
     // Vérifier que l'utilisateur est authentifié
     const organizerId = req.user?.id;
     if (!organizerId) {
@@ -143,7 +141,6 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
         const department = getDepartmentFromPostalCode(postalCode);
         if (department) {
           enhancedLocation.department = department;
-          console.log(`📍 [DEBUG] Code postal extrait: ${postalCode} → Département: ${department}`);
         }
       }
     }
@@ -728,22 +725,7 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
         (typeof event.organizer === 'object' ?
           (event.organizer as any).firstName || (event.organizer as any)._id :
           true);
-
-      if (!hasValidOrganizer) {
-        console.warn(`⚠️ [WARNING] Évènement "${event.title}" (${event._id}) a un organisateur invalide/null - sera exclu des résultats`);
-      }
-
       return hasValidOrganizer;
-    });
-
-    // Debug temporaire pour voir quels évènements sont retournés
-    console.log(`🔍 [DEBUG] Route GET /api/events - Role: ${userRole}, Query:`, JSON.stringify(query, null, 2));
-    console.log(`📊 [DEBUG] Évènements trouvés: ${events.length}, Évènements valides (avec organisateur): ${validEvents.length}`);
-    validEvents.forEach(event => {
-      const organizerName = event.organizer && typeof event.organizer === 'object'
-        ? `${(event.organizer as any).firstName || ''} ${(event.organizer as any).lastName || ''}`.trim()
-        : 'N/A';
-      console.log(`📅 [DEBUG] - "${event.title}" (${new Date(event.date).toLocaleDateString('fr-FR')}) - Statut: ${event.status} - Organisateur: ${organizerName}`);
     });
 
     res.json({ events: validEvents });
@@ -814,11 +796,6 @@ export const getEventById = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Vérifier que l'organisateur est valide
-    if (!event.organizer || (typeof event.organizer === 'object' && !(event.organizer as any).firstName)) {
-      console.warn(`⚠️ [WARNING] Évènement "${event.title}" (${eventId}) a un organisateur invalide/null`);
-    }
-
     res.json(event);
   } catch (error) {
     console.error('Get event error:', error);
@@ -874,6 +851,11 @@ export const registerSpectator = async (req: AuthRequest, res: Response): Promis
       $addToSet: { spectatorRegistrations: new mongoose.Types.ObjectId(userId) },
     });
 
+    const eventForSSE = await EventModel.findById(eventId).select('organizer');
+    if (eventForSSE?.organizer) {
+      emitSpectatorRegistered(eventId, userId, eventForSSE.organizer.toString());
+    }
+
     const updated = await EventModel.findById(eventId).populate('organizer', 'firstName lastName email').populate('spectatorRegistrations', 'firstName lastName');
     res.status(201).json({ message: 'Inscription enregistrée', event: updated });
   } catch (error) {
@@ -901,6 +883,11 @@ export const unregisterSpectator = async (req: AuthRequest, res: Response): Prom
       $pull: { spectatorRegistrations: new mongoose.Types.ObjectId(userId) },
       $addToSet: { withdrawnSpectators: new mongoose.Types.ObjectId(userId) },
     });
+
+    const eventForSSE = await EventModel.findById(eventId).select('organizer');
+    if (eventForSSE?.organizer) {
+      emitSpectatorUnregistered(eventId, userId, eventForSSE.organizer.toString());
+    }
 
     res.status(204).send();
   } catch (error) {
@@ -1022,12 +1009,10 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
     const isEventTodayOrFuture = updatedEvent && eventDateAtMidnight >= todayAtMidnight;
 
     if (isEventTodayOrFuture) {
-      console.log('📧 [DEBUG] Mise à jour évènement (aujourd\'hui ou futur), préparation envoi emails de mise à jour...');
       const applications = await ApplicationModel.find({ event: updatedEvent._id, status: { $in: ['PENDING', 'ACCEPTED'] } })
         .populate('comedian', 'email firstName lastName');
 
       const organizer = await UserModel.findById(organizerId).select('firstName lastName email');
-      console.log(`📧 [DEBUG] Candidatures ciblées: ${applications.length}`);
       if (organizer && applications.length > 0) {
         // Si l'évènement est annulé, informer les candidats ACCEPTED et PENDING
         if (req.body.status === 'cancelled' || updatedEvent.status === 'cancelled') {
@@ -1098,7 +1083,6 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
               lastName: organizer.lastName,
               email: organizer.email,
             }, changes);
-            console.log(`✅ [DEBUG] Emails de mise à jour envoyés à ${applications.length} humoriste(s)${changes.length ? ` (${changes.length} modification(s))` : ''}`);
             // Créer des notifications in-app pour les humoristes concernés
             try {
               const { createNotification } = await import('./notification');
@@ -1124,8 +1108,6 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
             console.error('❌ Erreur envoi emails maj évènement:', err);
           }
         }
-      } else {
-        console.log('ℹ️ [DEBUG] Aucun destinataire email trouvé ou organisateur introuvable.');
       }
     }
 
@@ -1336,53 +1318,11 @@ export const getEventStats = async (req: AuthRequest, res: Response): Promise<an
       return res.status(401).json({ message: 'Utilisateur non authentifié' });
     }
 
-    console.log('🔍 [DEBUG] getEventStats appelé:');
-    console.log('   • User ID:', organizerId);
-    console.log('   • User Role:', userRole);
-    console.log('   • req.user:', req.user);
-
     const now = new Date();
 
     // Si c'est un super admin, récupérer les statistiques globales de toute la plateforme
     if (userRole === 'SUPER_ADMIN') {
-      console.log('🔥 Super Admin - Récupération des statistiques globales');
-
-      // Récupérer TOUS les évènements de la plateforme avec participants peuplés
-      console.log('🔍 Requête MongoDB: EventModel.find({}).populate("participants")');
       const allEvents = await EventModel.find({}).populate('participants');
-      console.log('📊 Évènements trouvés dans la DB:', allEvents.length);
-
-      // Log des premiers évènements pour debug
-      if (allEvents.length > 0) {
-        console.log('📅 Détail des évènements trouvés:');
-        allEvents.forEach((event, index) => {
-          console.log(`   ${index + 1}. "${event.title}" - ${event.date} - Status: "${event.status}" - Organisateur: ${event.organizer}`);
-        });
-      } else {
-        console.log('❌ AUCUN évènement trouvé dans la base !');
-        // Test direct de connexion MongoDB
-        console.log('🔍 Test de connexion MongoDB...');
-        try {
-          if (mongoose.connection.db) {
-            const collections = await mongoose.connection.db.listCollections().toArray();
-            console.log('📚 Collections disponibles:', collections.map(c => c.name));
-
-            // Test direct sur la collection events
-            const rawEvents = await mongoose.connection.db.collection('events').find({}).toArray();
-            console.log('📊 Évènements via collection directe:', rawEvents.length);
-            if (rawEvents.length > 0) {
-              rawEvents.slice(0, 2).forEach((event, index) => {
-                console.log(`   RAW ${index + 1}. "${event.title}" - Status: "${event.status}"`);
-              });
-            }
-          } else {
-            console.log('❌ mongoose.connection.db est undefined');
-          }
-        } catch (dbError) {
-          console.error('❌ Erreur test DB:', dbError);
-        }
-      }
-
       const eventIds = allEvents.map(event => event._id);
 
       // Récupérer TOUTES les candidatures de la plateforme (SAUF WITHDRAWN)
@@ -1390,7 +1330,6 @@ export const getEventStats = async (req: AuthRequest, res: Response): Promise<an
         event: { $in: eventIds },
         status: { $ne: 'WITHDRAWN' }
       });
-      console.log('📊 Candidatures trouvées dans la DB (hors WITHDRAWN):', allApplications.length);
 
       const totalEvents = allEvents.length;
       const pendingApplications = allApplications.filter(app => app.status === 'PENDING').length;
@@ -1424,18 +1363,6 @@ export const getEventStats = async (req: AuthRequest, res: Response): Promise<an
       const organizerCount = await UserModel.countDocuments({ role: 'ORGANIZER' });
       const comedianCount = await UserModel.countDocuments({ role: 'COMEDIAN' });
 
-      console.log('📊 Statistiques globales calculées:', {
-        totalEvents,
-        pendingApplications,
-        acceptedApplications,
-        rejectedApplications,
-        upcomingIncompleteEvents,
-        fullEvents,
-        cancelledEvents,
-        organizerCount,
-        comedianCount
-      });
-
       return res.status(200).json({
         totalEvents,
         upcomingIncompleteEvents,
@@ -1449,31 +1376,24 @@ export const getEventStats = async (req: AuthRequest, res: Response): Promise<an
       });
     }
 
-    console.log('👤 Utilisateur normal (non super admin) - Role:', userRole);
-
     // Logique existante pour les organisateurs normaux
-    let objectOrganizerId;
+    let objectOrganizerId: mongoose.Types.ObjectId;
     try {
       objectOrganizerId = new mongoose.Types.ObjectId(organizerId);
-      console.log('✅ ObjectId créé avec succès:', objectOrganizerId);
     } catch (e) {
-      console.error('❌ Erreur création ObjectId:', e);
+      console.error('Erreur création ObjectId:', e);
       return res.status(400).json({ message: 'ID organisateur invalide' });
     }
 
     // Récupérer tous les évènements de l'organisateur avec participants peuplés
-    console.log('🔍 Recherche évènements pour organisateur:', objectOrganizerId);
     const allEvents = await EventModel.find({ organizer: objectOrganizerId }).populate('participants');
-    console.log('📊 Évènements trouvés:', allEvents.length);
     const eventIds = allEvents.map(event => event._id);
 
     // Récupérer toutes les candidatures liées à ces évènements (SAUF WITHDRAWN)
-    console.log('🔍 Recherche candidatures pour évènements:', eventIds.length);
     const allApplications = await ApplicationModel.find({
       event: { $in: eventIds },
       status: { $ne: 'WITHDRAWN' }
     });
-    console.log('📊 Candidatures trouvées (hors WITHDRAWN):', allApplications.length);
 
     const totalEvents = allEvents.length;
     const pendingApplications = allApplications.filter(app => app.status === 'PENDING').length;
@@ -1504,16 +1424,6 @@ export const getEventStats = async (req: AuthRequest, res: Response): Promise<an
 
     const cancelledEvents = allEvents.filter(event => event.status === 'cancelled').length;
 
-    console.log('📊 Statistiques calculées pour organisateur:', {
-      totalEvents,
-      upcomingIncompleteEvents,
-      fullEvents,
-      cancelledEvents,
-      pendingApplications,
-      acceptedApplications,
-      rejectedApplications
-    });
-
     return res.status(200).json({
       totalEvents,
       upcomingIncompleteEvents,
@@ -1524,7 +1434,7 @@ export const getEventStats = async (req: AuthRequest, res: Response): Promise<an
       rejectedApplications
     });
   } catch (err) {
-    console.error('❌ Error fetching event stats:', err);
+    console.error('Error fetching event stats:', err);
     return res.status(500).json({
       message: 'Erreur lors du chargement des statistiques',
       error: err instanceof Error ? err.message : 'Erreur interne du serveur'
