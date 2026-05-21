@@ -200,7 +200,7 @@ function ApplicationsPage() {
       const pagination: PaginationMeta | null = raw?.pagination ?? null;
       return { applications: list, pagination };
     },
-    enabled: !!user,
+    enabled: isQueryEnabled,
   });
 
   const applications = applicationsData?.applications || [];

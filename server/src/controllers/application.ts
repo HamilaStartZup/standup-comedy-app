@@ -22,7 +22,8 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/env';
 import { emitApplicationCreated, emitApplicationStatusChanged, emitApplicationWithdrawn, emitLateCancellation } from '../services/eventEmitter';
 import { createNotification } from './notification';
-import { parsePagination, buildPaginationResult } from '../utils/pagination';
+import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
+import { FilterQuery } from 'mongoose';
 
 // Fonction pour construire avatarUrl à partir de avatar.data
 const buildAvatarDataUrl = (user: any): string | undefined => {
@@ -652,76 +653,75 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const paginationParams = parsePagination(req.query as Record<string, unknown>);
-    const { status, eventId } = req.query as { status?: string | string[]; eventId?: string };
+    const { status, eventId, comedianId, sort, tab } = req.query as Record<string, string | string[] | undefined>;
 
-    // Construire un filtre DB minimal si eventId est fourni
-    const dbFilter: any = {};
-    if (eventId && Types.ObjectId.isValid(eventId)) {
-      dbFilter.event = new Types.ObjectId(eventId);
-    }
+    const currentUser = await UserModel.findById(userId).select('role').lean();
 
-    // Récupérer les candidatures (avec filtre éventuel par eventId)
-    const applications = await ApplicationModel.find(dbFilter).select('+performanceDetails +message +organizerMessage')
-      .populate({
-        path: 'event',
-        select: 'title date startTime endTime organizer location updatedAt modifiedByOrganizer status requirements participants',
-        populate: {
-          path: 'organizer',
-          select: 'firstName lastName email'
-        }
-      })
-      .populate({
-        path: 'comedian',
-        select: 'firstName lastName email phone avatarUrl profile avatar'
-      });
+    const dbFilter: FilterQuery<ApplicationDocument> = {};
 
-    // Récupérer les informations de l'utilisateur pour vérifier son rôle
-    const currentUser = await UserModel.findById(userId);
-    const isSuperAdmin = currentUser && currentUser.role === 'SUPER_ADMIN';
-
-    // Filtrage JS : l'utilisateur est soit le comédien, soit l'organisateur de l'évènement, soit un super admin
-    let filteredApplications = applications.filter(app => {
-      // Super admin peut voir toutes les candidatures
-      if (isSuperAdmin) {
-        return true;
-      }
-
-      const isComedian = app.comedian && (app.comedian as any)._id.toString() === userId;
-      const isOrganizer = app.event && (app.event as any).organizer && (app.event as any).organizer._id.toString() === userId;
-      return isComedian || isOrganizer;
-    });
-
-    // Filtrage par statut si demandé
-    if (status) {
-      const statusArray = Array.isArray(status) ? status : [status];
-      filteredApplications = filteredApplications.filter(app => statusArray.includes(app.status));
-    }
-
-    // Transformer les applications pour ajouter avatarUrl à chaque humoriste
-    const transformedApplications = filteredApplications.map(app => {
-      const appObj: any = app.toObject ? app.toObject() : app;
-      if (appObj.comedian) {
-        appObj.comedian = {
-          ...appObj.comedian,
-          avatarUrl: buildAvatarDataUrl(appObj.comedian)
-        };
-        // Supprimer le champ avatar pour ne pas l'envoyer au client
-        if ('avatar' in appObj.comedian) {
-          delete appObj.comedian.avatar;
-        }
-      }
-      return appObj;
-    });
-
-    if (paginationParams.isPaginated) {
-      const total = transformedApplications.length;
-      const pageData = transformedApplications.slice(paginationParams.skip, paginationParams.skip + paginationParams.limit);
-      res.json({ applications: pageData, pagination: buildPaginationResult(paginationParams, total) });
+    if (currentUser?.role === 'SUPER_ADMIN') {
+      // no role filter
+    } else if (currentUser?.role === 'COMEDIAN') {
+      dbFilter.comedian = new Types.ObjectId(userId);
+      // tab → status mapping for comedians
+      if (tab === 'pending') dbFilter.status = 'PENDING';
+      else if (tab === 'accepted') dbFilter.status = 'ACCEPTED';
+      else if (tab === 'archived') dbFilter.status = { $in: ['REJECTED', 'EXPIRED'] };
+    } else if (currentUser?.role === 'ORGANIZER') {
+      const ownedEventIds = await EventModel.find({ organizer: userId }).distinct('_id');
+      dbFilter.event = { $in: ownedEventIds };
+    } else {
+      res.status(403).json({ error: 'Accès refusé' });
       return;
     }
 
-    res.json(transformedApplications);
+    // Optional filters (override tab mapping for status)
+    if (eventId && !Array.isArray(eventId) && Types.ObjectId.isValid(eventId)) {
+      dbFilter.event = new Types.ObjectId(eventId);
+    }
+    if (status) {
+      const statusArray = Array.isArray(status) ? status : [status];
+      dbFilter.status = { $in: statusArray };
+    }
+    if (comedianId && !Array.isArray(comedianId) && Types.ObjectId.isValid(comedianId)) {
+      dbFilter.comedian = new Types.ObjectId(comedianId);
+    }
+
+    const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>);
+
+    const sortMap: Record<string, Record<string, 1 | -1>> = {
+      dateAsc: { createdAt: 1 },
+      dateDesc: { createdAt: -1 },
+      statusAsc: { status: 1 },
+      statusDesc: { status: -1 },
+    };
+    const dbSort: Record<string, 1 | -1> = (sort && !Array.isArray(sort) && sortMap[sort]) ? sortMap[sort] : { createdAt: -1 };
+
+    const [rawApplications, total] = await Promise.all([
+      ApplicationModel.find(dbFilter)
+        .select('+performanceDetails +message +organizerMessage')
+        .populate({
+          path: 'event',
+          select: 'title date startTime endTime organizer location updatedAt modifiedByOrganizer status requirements participants',
+          populate: { path: 'organizer', select: 'firstName lastName email' }
+        })
+        .populate({ path: 'comedian', select: 'firstName lastName email phone avatarUrl profile avatar' })
+        .sort(dbSort)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      ApplicationModel.countDocuments(dbFilter),
+    ]);
+
+    const applications = (rawApplications as any[]).map(app => {
+      if (app.comedian) {
+        app.comedian = { ...app.comedian, avatarUrl: buildAvatarDataUrl(app.comedian) };
+        delete app.comedian.avatar;
+      }
+      return app;
+    });
+
+    res.json({ applications, pagination: buildPaginationResult({ page, limit }, total) });
   } catch (error) {
     console.error('Erreur lors de la récupération des candidatures:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération des candidatures' });

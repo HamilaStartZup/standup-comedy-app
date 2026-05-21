@@ -10,3 +10,5 @@ export interface Paginated<T> {
   data: T[];
   pagination: PaginationMeta;
 }
+
+export type PaginatedResponse<K extends string, T> = { [P in K]: T[] } & { pagination: PaginationMeta };

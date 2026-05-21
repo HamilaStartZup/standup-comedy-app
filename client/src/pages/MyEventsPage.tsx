@@ -1,5 +1,7 @@
 import { type CSSProperties, useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Navbar from '../components/Navbar';
+import Pagination from '../components/Pagination';
+import { useUserEvents } from '../hooks/useUserEvents';
 import Modal from '../components/Modal';
 import CreateEventForm from '../components/CreateEventForm';
 import EditEventForm from '../components/EditEventForm';
@@ -272,6 +274,7 @@ function MyEventsPage() {
   const [selectedEventForInvite, setSelectedEventForInvite] = useState<string>('');
   const [isInviting, setIsInviting] = useState(false);
   const [upcomingPage, setUpcomingPage] = useState(1);
+  const [eventsPage, setEventsPage] = useState(1);
   const [archivedPage, setArchivedPage] = useState(1);
   const [cancelledPage, setCancelledPage] = useState(1);
   const [completedPage, setCompletedPage] = useState(1);
@@ -363,30 +366,12 @@ useEffect(() => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [openActionsEventId]);
 
-  const { data: fetchedEvents, isLoading: eventsLoading, isError: eventsError, error: eventsErrorMessage, refetch } = useQuery<IEvent[], Error>({
-    queryKey: ['events', user?._id, user?.role, location.search],
-    queryFn: async () => {
-      if (!user?._id) {
-        throw new Error("Informations d'authentification manquantes.");
-      }
-      // Pour les humoristes, récupérer TOUS les évènements
-      // Pour les organisateurs, récupérer seulement leurs évènements
-      const apiUrl = user?.role === 'ORGANIZER'
-        ? `/events?organizerId=${user._id}&limit=50`
-        : `/events?limit=50`; // Pas de filtre organizerId pour les humoristes
-      
-      try {
-        const res = await api.get<IEvent[]>(apiUrl);
-        const list = Array.isArray(res.data) ? res.data : (Array.isArray((res.data as any)?.events) ? (res.data as any).events : []);
-        return list as IEvent[];
-      } catch (error: any) {
-        throw error;
-      }
-    },
-    enabled: isQueryEnabled, // Utiliser isQueryEnabled au lieu de true
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+  const { data: userEventsData, isLoading: eventsLoading, isError: eventsError, error: eventsErrorMessage, refetch } = useUserEvents({
+    page: eventsPage,
+    limit: 20,
   });
+  const fetchedEvents: IEvent[] = userEventsData?.events ?? [];
+  const serverEventsPagination = userEventsData?.pagination ?? null;
 
   // Scroll + highlight de la carte event ciblée via ?focus= (clic depuis notif)
   useEffect(() => {
@@ -3864,6 +3849,14 @@ useEffect(() => {
                           Suivant
                         </button>
                       </div>
+                    )}
+                    {serverEventsPagination && serverEventsPagination.totalPages > 1 && (
+                      <Pagination
+                        page={eventsPage}
+                        totalPages={serverEventsPagination.totalPages}
+                        onChange={(p) => { setEventsPage(p); setUpcomingPage(1); }}
+                        disabled={eventsLoading}
+                      />
                     )}
                   </>
                 )}

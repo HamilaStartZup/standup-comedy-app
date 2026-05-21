@@ -65,7 +65,7 @@ export const listVenues = async (req: AuthRequest, res: Response): Promise<void>
     }
     if (city) {
       const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      filter.city = new RegExp(escaped, 'i');
+      filter.city = new RegExp(`^${escaped}`, 'i');
     }
     if (region) {
       const depts = getDepartmentsByRegion(region);
@@ -91,10 +91,14 @@ export const listVenues = async (req: AuthRequest, res: Response): Promise<void>
         .skip(skip)
         .limit(safeLimit)
         .lean(),
-      VenueModel.countDocuments(filter),
+      VenueModel.countDocuments(filter).collation(collation),
     ]);
 
-    res.status(200).json({ venues, total, page: pageNum, limit: safeLimit });
+    const totalPages = Math.ceil(total / safeLimit);
+    res.status(200).json({
+      venues,
+      pagination: { page: pageNum, limit: safeLimit, total, totalPages, hasMore: pageNum < totalPages },
+    });
   } catch (error) {
     console.error('Erreur listVenues:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });

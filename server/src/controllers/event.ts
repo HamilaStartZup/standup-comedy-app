@@ -14,7 +14,7 @@ import { Types } from 'mongoose';
 import { extractPostalCode, getDepartmentFromPostalCode } from '../utils/cityMapping';
 import { getCityCoordinates } from '../utils/cityMapping';
 import { notifySpectatorsInRadius } from '../services/spectatorNotificationService';
-import { parsePagination, buildPaginationResult } from '../utils/pagination';
+import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 
 /** Retourne la liste des modifications entre l'ancien et le nouvel évènement (pour l'email aux candidats) */
 function getEventChanges(oldEvent: any, newEvent: any): string[] {
@@ -690,31 +690,30 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
       }
     }
 
-    const paginationParams = parsePagination(req.query as Record<string, unknown>);
+    const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>);
     const isGeoFilter = (userRole === 'SPECTATOR' && nearMe) || Boolean(city && city.trim() && cityRadiusKm > 0);
 
-    if (paginationParams.isPaginated && !isGeoFilter) {
+    // P14: filter out events without a valid organizer at DB level
+    query.organizer = { $exists: true, $ne: null };
+
+    if (!isGeoFilter) {
       const total = await EventModel.countDocuments(query);
-      const paginatedEvents = await EventModel.find(query)
+      const events = await EventModel.find(query)
         .populate('organizer', 'firstName lastName email organizerProfile.companyName')
         .select('title date endDate startTime endTime status city location isRecurrent recurrenceGroupId imageUrl organizer withdrawnComedians requirements budget description maxSpectators applications venue modifiedByOrganizer cancellationReason')
         .sort({ date: -1 })
-        .skip(paginationParams.skip)
-        .limit(paginationParams.limit)
+        .skip(skip)
+        .limit(limit)
         .lean() as any[];
-      const validPaginatedEvents = paginatedEvents.filter((event: any) => {
-        const org = event.organizer;
-        return org && (typeof org === 'object' ? (org as any).firstName || (org as any)._id : true);
-      });
-      res.json({ events: validPaginatedEvents, pagination: buildPaginationResult(paginationParams, total) });
+      res.json({ events, pagination: buildPaginationResult({ page, limit }, total) });
       return;
     }
 
     let events = await EventModel.find(query)
       .populate('organizer', 'firstName lastName email organizerProfile.companyName')
       .select('title date endDate startTime endTime status city location isRecurrent recurrenceGroupId imageUrl organizer withdrawnComedians requirements budget description maxSpectators applications venue modifiedByOrganizer cancellationReason')
-      .lean()
-      .limit(100) as any[];
+      .sort({ date: -1 })
+      .lean() as any[];
 
     // Filtre "près de moi" (rayon en km) pour le spectateur
     if (userRole === 'SPECTATOR' && nearMe && userId) {
@@ -754,16 +753,9 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
       }
     }
 
-    // Filtrer les évènements qui n'ont pas d'organisateur valide
-    const validEvents = events.filter(event => {
-      const hasValidOrganizer = event.organizer &&
-        (typeof event.organizer === 'object' ?
-          (event.organizer as any).firstName || (event.organizer as any)._id :
-          true);
-      return hasValidOrganizer;
-    });
-
-    res.json({ events: validEvents });
+    const total = events.length;
+    const pageEvents = events.slice(skip, skip + limit);
+    res.json({ events: pageEvents, pagination: buildPaginationResult({ page, limit }, total) });
   } catch (error) {
     console.error('Get events error:', error);
     res.status(500).json({ message: 'Error fetching events' });

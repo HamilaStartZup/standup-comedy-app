@@ -12,7 +12,7 @@ import {
   emitVenueBookingPaymentUpdated,
 } from '../services/eventEmitter';
 import { computeBookingAmount } from '../utils/venuePricing';
-import { parsePagination, buildPaginationResult } from '../utils/pagination';
+import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 
 // Vérifie si deux plages horaires se chevauchent (même date)
 function timesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean {
@@ -380,27 +380,15 @@ export const listVenueBookings = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const paginationParams = parsePagination(req.query as Record<string, unknown>, 20, 100);
-
-    if (paginationParams.isPaginated) {
-      const total = await VenueBookingModel.countDocuments({ venue: venueId });
-      const bookings = await VenueBookingModel.find({ venue: venueId })
-        .populate('requester', 'firstName lastName email phone avatarUrl role organizerProfile.companyName organizerProfile.phone')
-        .sort({ requestedDate: 1 })
-        .skip(paginationParams.skip)
-        .limit(paginationParams.limit);
-      res.status(200).json({ bookings, pagination: buildPaginationResult(paginationParams, total) });
-      return;
-    }
-
+    const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>);
+    const total = await VenueBookingModel.countDocuments({ venue: venueId });
     const bookings = await VenueBookingModel.find({ venue: venueId })
-      .populate(
-        'requester',
-        'firstName lastName email phone avatarUrl role organizerProfile.companyName organizerProfile.phone'
-      )
-      .sort({ requestedDate: 1 });
-
-    res.status(200).json({ bookings });
+      .populate('requester', 'firstName lastName email phone avatarUrl role organizerProfile.companyName organizerProfile.phone')
+      .sort({ requestedDate: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+    res.status(200).json({ bookings, pagination: buildPaginationResult({ page, limit }, total) });
   } catch (error) {
     console.error('Erreur listVenueBookings:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });

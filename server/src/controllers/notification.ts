@@ -3,7 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import { NotificationModel, NotificationDocument } from '../models/Notification';
 import { Types } from 'mongoose';
 import { emitNotificationCreated, emitNotificationRead, emitNotificationAllRead } from '../services/eventEmitter';
-import { parsePagination, buildPaginationResult } from '../utils/pagination';
+import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 
 /**
  * GET /api/notifications
@@ -19,43 +19,29 @@ export const getNotifications = async (req: AuthRequest, res: Response): Promise
     }
 
     const { read } = req.query;
-    const paginationParams = parsePagination(req.query as Record<string, unknown>, 50, 100);
-    const rawLimit = req.query.limit;
-    const effectiveLimit = paginationParams.isPaginated
-      ? paginationParams.limit
-      : (rawLimit ? Math.max(1, parseInt(rawLimit as string, 10) || 50) : 50);
-    const effectiveSkip = paginationParams.isPaginated ? paginationParams.skip : 0;
+    const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>, 50, 100);
 
     const query: any = { user: userId };
-
-    // Filtrer par statut de lecture si fourni
     if (read !== undefined) {
       query.read = read === 'true';
     }
 
-    const notifications = await NotificationModel.find(query)
-      .populate('relatedEvent', 'title date')
-      .populate('relatedApplication', 'status')
-      .populate('relatedUser', 'firstName lastName')
-      .populate('relatedVenue', 'name')
-      .populate('relatedBooking', '_id')
-      .sort({ createdAt: -1 })
-      .skip(effectiveSkip)
-      .limit(effectiveLimit);
+    const [notifications, total, unreadCount] = await Promise.all([
+      NotificationModel.find(query)
+        .populate('relatedEvent', 'title date')
+        .populate('relatedApplication', 'status')
+        .populate('relatedUser', 'firstName lastName')
+        .populate('relatedVenue', 'name')
+        .populate('relatedBooking', '_id')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      NotificationModel.countDocuments(query),
+      NotificationModel.countDocuments({ user: userId, read: false }),
+    ]);
 
-    const unreadCount = await NotificationModel.countDocuments({ user: userId, read: false });
-
-    if (paginationParams.isPaginated) {
-      const total = await NotificationModel.countDocuments(query);
-      res.status(200).json({ notifications, unreadCount, pagination: buildPaginationResult(paginationParams, total) });
-      return;
-    }
-
-    res.status(200).json({
-      notifications,
-      unreadCount,
-      total: notifications.length
-    });
+    res.status(200).json({ notifications, unreadCount, pagination: buildPaginationResult({ page, limit }, total) });
   } catch (error) {
     console.error('Erreur lors de la récupération des notifications:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération des notifications' });

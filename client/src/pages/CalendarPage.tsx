@@ -58,7 +58,7 @@ const CalendarPage = () => {
   // Fetch complet en arrière-plan pour permettre la navigation vers les mois passés
   const fullQuery = useUserEvents();
 
-  const fetchedEvents = fullQuery.data ?? upcomingQuery.data ?? [];
+  const fetchedEvents = fullQuery.data?.events ?? upcomingQuery.data?.events ?? [];
   const isLoading = !fullQuery.data && !upcomingQuery.data && (fullQuery.isLoading || upcomingQuery.isLoading);
   const isError = fullQuery.isError && upcomingQuery.isError;
 

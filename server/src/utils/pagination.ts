@@ -1,9 +1,13 @@
-export interface PaginationParams {
-  page: number;
-  limit: number;
-  skip: number;
-  isPaginated: boolean;
+export class PaginationValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PaginationValidationError';
+  }
 }
+
+export type PaginationParams =
+  | { isPaginated: true; page: number; limit: number; skip: number }
+  | { isPaginated: false };
 
 export interface PaginationResult {
   page: number;
@@ -22,24 +26,47 @@ export function parsePagination(
   const hasLimit = query.limit !== undefined;
 
   if (!hasPage && !hasLimit) {
-    return { page: 1, limit: 0, skip: 0, isPaginated: false };
+    return { isPaginated: false };
   }
 
-  const page = Math.max(1, parseInt(String(query.page ?? 1), 10) || 1);
+  if (hasPage && isNaN(parseInt(String(query.page), 10))) {
+    throw new PaginationValidationError('page doit être un entier valide');
+  }
+  if (hasLimit && isNaN(parseInt(String(query.limit), 10))) {
+    throw new PaginationValidationError('limit doit être un entier valide');
+  }
+
+  const page = Math.min(1000, Math.max(1, parseInt(String(query.page ?? 1), 10)));
+  const rawLimit = parseInt(String(query.limit ?? defaultLimit), 10);
+  const limit = Math.min(Math.max(1, rawLimit), maxLimit);
+
+  return { isPaginated: true, page, limit, skip: (page - 1) * limit };
+}
+
+export function parsePaginationWithDefaults(
+  query: Record<string, unknown>,
+  defaultLimit = 20,
+  maxLimit = 100,
+): { page: number; limit: number; skip: number } {
+  if (query.page !== undefined && isNaN(parseInt(String(query.page), 10))) {
+    throw new PaginationValidationError('page doit être un entier valide');
+  }
+  if (query.limit !== undefined && isNaN(parseInt(String(query.limit), 10))) {
+    throw new PaginationValidationError('limit doit être un entier valide');
+  }
+
+  const page = Math.min(1000, Math.max(1, parseInt(String(query.page ?? 1), 10) || 1));
   const rawLimit = parseInt(String(query.limit ?? defaultLimit), 10) || defaultLimit;
   const limit = Math.min(Math.max(1, rawLimit), maxLimit);
 
-  return { page, limit, skip: (page - 1) * limit, isPaginated: true };
+  return { page, limit, skip: (page - 1) * limit };
 }
 
-export function buildPaginationResult(params: PaginationParams, total: number): PaginationResult {
-  const limit = params.isPaginated ? params.limit : total;
+export function buildPaginationResult(
+  params: { page: number; limit: number },
+  total: number,
+): PaginationResult {
+  const { page, limit } = params;
   const totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
-  return {
-    page: params.page,
-    limit,
-    total,
-    totalPages,
-    hasMore: params.page < totalPages,
-  };
+  return { page, limit, total, totalPages, hasMore: page < totalPages };
 }

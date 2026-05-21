@@ -48,7 +48,7 @@ const VenuesPage: React.FC = () => {
   });
 
   const data = venuesResponse?.venues;
-  const totalPages = venuesResponse ? Math.ceil(venuesResponse.total / venuesResponse.limit) : 1;
+  const totalPages = venuesResponse?.pagination?.totalPages ?? 1;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

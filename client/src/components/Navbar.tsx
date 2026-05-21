@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { listVenues } from '../services/api';
+import { normalizeFilters } from '../hooks/useVenues';
 import NotificationDropdown from './NotificationDropdown';
 
 function getProfilePathForRole(role: string | undefined): string | null {
@@ -27,9 +28,10 @@ function Navbar() {
   const queryClient = useQueryClient();
 
   const prefetchVenues = useCallback(() => {
+    const filters = { page: 1, limit: 20 };
     queryClient.prefetchQuery({
-      queryKey: ['venues', { page: 1, limit: 20 }],
-      queryFn: () => listVenues({ page: 1, limit: 20 }),
+      queryKey: ['venues', normalizeFilters(filters)],
+      queryFn: () => listVenues(filters),
       staleTime: 60_000,
     });
   }, [queryClient]);
