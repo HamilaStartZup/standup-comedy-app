@@ -135,20 +135,20 @@ export const appEventEmitter = AppEventEmitter.getInstance();
 
 // Fonctions helpers typées pour émettre des évènements spécifiques
 
-export const emitEventCreated = (id: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.EVENT_CREATED, { id });
+export const emitEventCreated = (id: string, targetUserIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.EVENT_CREATED, { id }, targetUserIds);
 };
 
-export const emitEventUpdated = (id: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.EVENT_UPDATED, { id });
+export const emitEventUpdated = (id: string, targetUserIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.EVENT_UPDATED, { id }, targetUserIds);
 };
 
-export const emitEventDeleted = (id: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.EVENT_DELETED, { id });
+export const emitEventDeleted = (id: string, targetUserIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.EVENT_DELETED, { id }, targetUserIds);
 };
 
-export const emitEventCompleted = (id: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.EVENT_COMPLETED, { id });
+export const emitEventCompleted = (id: string, targetUserIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.EVENT_COMPLETED, { id }, targetUserIds);
 };
 
 export const emitApplicationCreated = (id: string, eventId: string, organizerId: string) => {
@@ -216,13 +216,9 @@ export const emitVenueBookingStatusChanged = (
   venueId: string,
   status: string,
   paymentStatus: string,
-  targetUserIds: string[] = []
+  targetUserIds: string[]
 ) => {
-  if (targetUserIds.length > 0) {
-    appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_BOOKING_STATUS_CHANGED, { id, venueId, status, paymentStatus }, targetUserIds);
-  } else {
-    appEventEmitter.emitSSEEvent(SSEEventType.VENUE_BOOKING_STATUS_CHANGED, { id, venueId, status, paymentStatus });
-  }
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_BOOKING_STATUS_CHANGED, { id, venueId, status, paymentStatus }, targetUserIds);
 };
 
 export const emitVenueBookingPaymentUpdated = (
@@ -230,13 +226,9 @@ export const emitVenueBookingPaymentUpdated = (
   venueId: string,
   status: string,
   paymentStatus: string,
-  targetUserIds: string[] = []
+  targetUserIds: string[]
 ) => {
-  if (targetUserIds.length > 0) {
-    appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_BOOKING_PAYMENT_UPDATED, { id, venueId, status, paymentStatus }, targetUserIds);
-  } else {
-    appEventEmitter.emitSSEEvent(SSEEventType.VENUE_BOOKING_PAYMENT_UPDATED, { id, venueId, status, paymentStatus });
-  }
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_BOOKING_PAYMENT_UPDATED, { id, venueId, status, paymentStatus }, targetUserIds);
 };
 
 // === NOTIFICATIONS ===
@@ -254,15 +246,15 @@ export const emitNotificationAllRead = (userId: string) => {
 
 // === VENUES ===
 export const emitVenueCreated = (venueId: string, ownerId: string) => {
-  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_CREATED, { id: venueId }, [ownerId]);
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_CREATED, { venueId }, [ownerId]);
 };
 
 export const emitVenueUpdated = (venueId: string, ownerId: string) => {
-  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_UPDATED, { id: venueId }, [ownerId]);
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_UPDATED, { venueId }, [ownerId]);
 };
 
 export const emitVenueDeleted = (venueId: string, targetUserIds: string[]) => {
-  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_DELETED, { id: venueId }, targetUserIds);
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_DELETED, { venueId }, targetUserIds);
 };
 
 // === SIGNALEMENTS ===

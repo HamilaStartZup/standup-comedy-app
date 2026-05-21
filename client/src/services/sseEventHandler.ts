@@ -225,7 +225,10 @@ export const handleSSEEvent = (queryClient: QueryClient, event: SSEEvent): void 
       queryClient.invalidateQueries({ queryKey: ['venues'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['my-venues'], exact: false });
       if (event.data.venueId) {
+        queryClient.cancelQueries({ queryKey: ['venue', event.data.venueId] });
         queryClient.removeQueries({ queryKey: ['venue', event.data.venueId] });
+        queryClient.removeQueries({ queryKey: ['venue-bookings', event.data.venueId] });
+        queryClient.removeQueries({ queryKey: ['my-venue-bookings', event.data.venueId] });
       }
       queryClient.invalidateQueries({ queryKey: ['my-bookings'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['notifications'], exact: false });
@@ -266,6 +269,28 @@ export const handleSSEEvent = (queryClient: QueryClient, event: SSEEvent): void 
       if (event.data.eventId) {
         queryClient.invalidateQueries({ queryKey: ['event-ratings', event.data.eventId], exact: false });
         queryClient.invalidateQueries({ queryKey: ['ratings-summary', event.data.eventId], exact: false });
+      }
+      break;
+
+    // === FAVORIS CANDIDATURES ===
+    case 'APPLICATION_FAVORITE_ADDED':
+      console.log('⭐ [SSE] Candidature ajoutée aux favoris:', event.data.applicationId);
+      queryClient.invalidateQueries({ queryKey: ['favorite-applications'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['applicationFavorites'], exact: false });
+      break;
+
+    case 'APPLICATION_FAVORITE_REMOVED':
+      console.log('⭐ [SSE] Candidature retirée des favoris:', event.data.applicationId);
+      queryClient.invalidateQueries({ queryKey: ['favorite-applications'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['applicationFavorites'], exact: false });
+      break;
+
+    // === ANNULATION TARDIVE ===
+    case 'LATE_CANCELLATION':
+      console.log('⏰ [SSE] Annulation tardive:', event.data.eventId);
+      queryClient.invalidateQueries({ queryKey: ['applications'], exact: false });
+      if (event.data.eventId) {
+        queryClient.invalidateQueries({ queryKey: ['event', event.data.eventId], exact: false });
       }
       break;
 

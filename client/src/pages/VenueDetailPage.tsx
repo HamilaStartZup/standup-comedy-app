@@ -76,7 +76,7 @@ const VenueDetailPage: React.FC = () => {
       await deleteVenue(venueId!);
       setShowDeleteModal(false);
       showSuccess(SuccessMessages.VENUE_DELETED);
-      navigate('/my-bookings');
+      navigate('/my-venues');
     } catch (err) {
       showError(getErrorMessage(err, ErrorMessages.VENUE_DELETE_FAILED));
     }

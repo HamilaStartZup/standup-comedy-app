@@ -447,7 +447,7 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response): 
               { $pull: { participants: comedianId } }
             );
           }
-          emitApplicationStatusChanged(app._id.toString(), 'CANCELLED_BY_PLATFORM', otherEventId?.toString() || '', []);
+          emitApplicationStatusChanged(app._id.toString(), 'CANCELLED_BY_PLATFORM', otherEventId?.toString() || '', [comedianId]);
         }
         if (overlapping.length > 0) {
           console.log(`🔄 [PLATFORM] ${overlapping.length} candidature(s) au même créneau annulée(s) pour le comédien`);

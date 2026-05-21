@@ -21,6 +21,7 @@ class SSEManager {
   private clients: Map<string, SSEClient>;
   private heartbeatInterval: NodeJS.Timeout | null;
   private cleanupInterval: NodeJS.Timeout | null;
+  private readonly handleSSEEvent: (payload: SSEEventPayload) => void;
 
   // Limites de sécurité
   private readonly MAX_CONNECTIONS_PER_USER = 5;
@@ -34,10 +35,12 @@ class SSEManager {
     this.heartbeatInterval = null;
     this.cleanupInterval = null;
 
-    // Écouter les évènements de l'EventEmitter
-    appEventEmitter.on('sse-event', (payload: SSEEventPayload) => {
+    this.handleSSEEvent = (payload: SSEEventPayload) => {
       this.broadcast(payload);
-    });
+    };
+
+    // Écouter les évènements de l'EventEmitter
+    appEventEmitter.on('sse-event', this.handleSSEEvent);
 
     // Démarrer le heartbeat et le cleanup
     this.startHeartbeat();
@@ -73,13 +76,7 @@ class SSEManager {
 
     if (userConnections.length >= this.MAX_CONNECTIONS_PER_USER) {
       console.warn(`⚠️ Limite de connexions atteinte pour l'utilisateur ${userId} (${this.MAX_CONNECTIONS_PER_USER})`);
-
-      // Fermer la connexion la plus ancienne pour cet utilisateur
-      const oldestConnection = userConnections.sort((a, b) =>
-        a.connectedAt.getTime() - b.connectedAt.getTime()
-      )[0];
-
-      this.removeClient(oldestConnection.id);
+      return false;
     }
 
     // Ajouter le client
@@ -147,9 +144,14 @@ class SSEManager {
    * Broadcaster un évènement à tous les clients connectés
    */
   public broadcast(payload: SSEEventPayload): void {
-    // Si des cibles spécifiques sont définies, broadcast ciblé uniquement
-    if ((payload as any).targetUserIds && (payload as any).targetUserIds.length > 0) {
-      this.broadcastToUsers((payload as any).targetUserIds, payload);
+    const targetUserIds: string[] | undefined = (payload as any).targetUserIds;
+
+    if (targetUserIds !== undefined) {
+      if (targetUserIds.length === 0) {
+        console.warn(`⚠️ broadcast ${payload.type} ignoré: targetUserIds défini mais vide`);
+        return;
+      }
+      this.broadcastToUsers(targetUserIds, payload);
       return;
     }
 
@@ -266,6 +268,9 @@ class SSEManager {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
     }
+
+    // Désenregistrer le listener EventEmitter pour éviter les fuites mémoire
+    appEventEmitter.off('sse-event', this.handleSSEEvent);
 
     // Fermer toutes les connexions
     const clientIds = Array.from(this.clients.keys());

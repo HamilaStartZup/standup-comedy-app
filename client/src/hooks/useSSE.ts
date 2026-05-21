@@ -32,6 +32,11 @@ export const useSSE = (
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);
   const isUnmountingRef = useRef<boolean>(false);
+  const onEventRef = useRef<SSEEventHandler | undefined>(onEvent);
+
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  }, [onEvent]);
 
   // Constantes de reconnexion
   const MAX_RECONNECT_DELAY = 30000; // 30 secondes max
@@ -117,8 +122,8 @@ export const useSSE = (
         try {
           const event: SSEEvent = JSON.parse(e.data);
           console.log('📨 [SSE] Évènement reçu:', event.type, event.data);
-          if (onEvent) {
-            onEvent(event);
+          if (onEventRef.current) {
+            onEventRef.current(event);
           }
         } catch (error) {
           console.error('❌ [SSE] Erreur de parsing:', error);
@@ -149,8 +154,8 @@ export const useSSE = (
             const messageEvent = e as MessageEvent;
             const event: SSEEvent = JSON.parse(messageEvent.data);
             console.log(`📨 [SSE] ${eventType}:`, event.data);
-            if (onEvent) {
-              onEvent(event);
+            if (onEventRef.current) {
+              onEventRef.current(event);
             }
           } catch (error) {
             console.error(`❌ [SSE] Erreur de parsing pour ${eventType}:`, error);
@@ -186,7 +191,7 @@ export const useSSE = (
       console.error('❌ [SSE] Erreur lors de la création de EventSource:', error);
       setStatus('error');
     }
-  }, [enabled, onEvent, getReconnectDelay]);
+  }, [enabled, getReconnectDelay]);
 
   // Effet principal : gérer la connexion
   useEffect(() => {

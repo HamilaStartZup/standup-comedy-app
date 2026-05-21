@@ -64,6 +64,16 @@ function getEventChanges(oldEvent: any, newEvent: any): string[] {
   return changes;
 }
 
+/** Retourne l'ensemble des userIds à notifier pour un évènement : organisateur + comedians ayant une candidature active */
+async function getEventAudience(eventId: string | mongoose.Types.ObjectId, organizerId: string): Promise<string[]> {
+  const applications = await ApplicationModel.find(
+    { event: eventId, status: { $in: ['PENDING', 'ACCEPTED'] } },
+    { comedian: 1 }
+  );
+  const comedianIds = applications.map((a: any) => a.comedian?.toString()).filter(Boolean) as string[];
+  return [organizerId, ...comedianIds].filter((v, i, arr) => arr.indexOf(v) === i);
+}
+
 /**
  * Vérifie si l'organisateur a déjà un événement avec le même titre, la même date (jour) et la même heure de début.
  * Les événements annulés sont exclus (on peut recréer après annulation).
@@ -182,7 +192,7 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
     }
 
     // Émettre un évènement SSE pour notifier tous les clients
-    emitEventCreated(event._id.toString());
+    emitEventCreated(event._id.toString(), [organizerId]);
 
     // Récupérer les informations de l'organisateur pour l'email et mise à jour stats
     console.log('🔍 Récupération des infos organisateur pour email...');
@@ -448,7 +458,7 @@ const createRecurringEvents = async (
         console.log(`✅ [RECURRENCE] Événement créé pour le ${dateStr}:`, savedEvent._id);
 
         // Émettre un évènement SSE pour chaque événement créé
-        emitEventCreated(savedEvent._id.toString());
+        emitEventCreated(savedEvent._id.toString(), [organizerId]);
       } catch (eventError: any) {
         console.error(`❌ [RECURRENCE] Erreur lors de la création de l'événement pour ${dateStr}:`, eventError);
         console.error(`❌ [RECURRENCE] Détails de l'erreur:`, {
@@ -1024,7 +1034,8 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
     }
 
     // Émettre un évènement SSE pour notifier tous les clients
-    emitEventUpdated(updatedEvent._id.toString());
+    const updateAudience = await getEventAudience(updatedEvent._id.toString(), organizerId);
+    emitEventUpdated(updatedEvent._id.toString(), updateAudience);
 
     // Notifier les humoristes ayant postulé si l'évènement est aujourd'hui ou futur (comparaison à minuit pour inclure "aujourd'hui")
     const eventDateAtMidnight = new Date(updatedEvent.date);
@@ -1220,11 +1231,13 @@ export const deleteEvent = async (req: AuthRequest, res: Response): Promise<void
     }
 
     // Notifier les candidats PENDING et ACCEPTED avant suppression
+    let deletedComedianIds: string[] = [];
     try {
       const applications = await ApplicationModel.find({
         event: eventId,
         status: { $in: ['PENDING', 'ACCEPTED'] }
       }).populate('comedian', 'email firstName lastName');
+      deletedComedianIds = applications.map((a: any) => a.comedian?._id?.toString() || a.comedian?.toString()).filter(Boolean);
 
       const participants = applications
         .map((app: any) => app.comedian)
@@ -1275,7 +1288,7 @@ export const deleteEvent = async (req: AuthRequest, res: Response): Promise<void
     await EventModel.findByIdAndDelete(eventId);
 
     // Émettre un évènement SSE pour notifier tous les clients
-    emitEventDeleted(eventId);
+    emitEventDeleted(eventId, [organizerId, ...deletedComedianIds]);
 
     // Décrémenter le compteur d'évènements créés de l'organisateur
     // Utiliser findByIdAndUpdate avec $inc pour éviter les problèmes de validation
@@ -1894,7 +1907,8 @@ export const markEventsAsCompletedCron = async (req: Request, res: Response): Pr
           console.log(`✅ Évènement "${event.title}" marqué comme completed`);
 
           // Émettre un évènement SSE pour notifier tous les clients
-          emitEventCompleted(event._id.toString());
+          const completedAudience = await getEventAudience(event._id.toString(), event.organizer.toString());
+          emitEventCompleted(event._id.toString(), completedAudience);
 
           // Expirer les candidatures en attente pour cet évènement
           try {
