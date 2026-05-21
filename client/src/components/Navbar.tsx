@@ -1,6 +1,8 @@
-import { type CSSProperties, useState, useEffect, useRef } from 'react';
+import { type CSSProperties, useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
+import { listVenues } from '../services/api';
 import NotificationDropdown from './NotificationDropdown';
 
 function getProfilePathForRole(role: string | undefined): string | null {
@@ -22,6 +24,15 @@ function getProfilePathForRole(role: string | undefined): string | null {
 function Navbar() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const queryClient = useQueryClient();
+
+  const prefetchVenues = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: ['venues', { page: 1, limit: 20 }],
+      queryFn: () => listVenues({ page: 1, limit: 20 }),
+      staleTime: 60_000,
+    });
+  }, [queryClient]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -297,10 +308,10 @@ function Navbar() {
               <Link to="/directory" style={{ ...navLinkBaseStyle, ...(location.pathname === '/directory' ? activeLinkStyle : {}) }}>Répertoire</Link>
             )}
             {user?.role === 'ORGANIZER' && (
-              <Link to="/venues" style={{ ...navLinkBaseStyle, ...(location.pathname.startsWith('/venues') || location.pathname === '/my-venues' || location.pathname === '/my-bookings' ? activeLinkStyle : {}) }}>Salles</Link>
+              <Link to="/venues" onMouseEnter={prefetchVenues} style={{ ...navLinkBaseStyle, ...(location.pathname.startsWith('/venues') || location.pathname === '/my-venues' || location.pathname === '/my-bookings' ? activeLinkStyle : {}) }}>Salles</Link>
             )}
             {user?.role === 'COMEDIAN' && (
-              <Link to="/venues" style={{ ...navLinkBaseStyle, ...(location.pathname.startsWith('/venues') || location.pathname === '/my-bookings' ? activeLinkStyle : {}) }}>Salles</Link>
+              <Link to="/venues" onMouseEnter={prefetchVenues} style={{ ...navLinkBaseStyle, ...(location.pathname.startsWith('/venues') || location.pathname === '/my-bookings' ? activeLinkStyle : {}) }}>Salles</Link>
             )}
             {(user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || user?.role === 'SUPER_ADMIN') && (
               <Link to={aidesEntryPath} style={{ ...navLinkBaseStyle, ...(isAidesNavActive ? activeLinkStyle : {}) }}>Aides</Link>

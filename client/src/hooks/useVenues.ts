@@ -8,6 +8,8 @@ interface VenueFilters {
   owner?: 'me';
   region?: string;
   department?: string;
+  page?: number;
+  limit?: number;
 }
 
 export function useVenues(filters?: VenueFilters) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
@@ -45,7 +45,6 @@ interface User {
 }
 
 const DirectoryPage: React.FC = () => {
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -86,6 +85,23 @@ const DirectoryPage: React.FC = () => {
   });
 
   const users = usersData || [];
+
+  const filteredUsers = useMemo(() => {
+    let filtered = users;
+    if (searchTerm) {
+      filtered = filtered.filter(user =>
+        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.stageName && user.stageName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    if (roleFilter !== 'all') {
+      filtered = filtered.filter(user => user.role === roleFilter);
+    }
+    return filtered;
+  }, [users, searchTerm, roleFilter]);
 
   // Styles
   const mainContainerStyle = {
@@ -187,32 +203,6 @@ const DirectoryPage: React.FC = () => {
     color: 'white',
     backgroundColor: role === 'COMEDIAN' ? '#9c27b0' : '#2196f3',
   });
-
-  useEffect(() => {
-    filterUsers();
-  }, [users, searchTerm, roleFilter]);
-
-  const filterUsers = () => {
-    let filtered = users;
-
-    // Filtrer par terme de recherche
-    if (searchTerm) {
-      filtered = filtered.filter(user =>
-        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.stageName && user.stageName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    // Filtrer par rôle
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(user => user.role === roleFilter);
-    }
-
-    setFilteredUsers(filtered);
-  };
 
   const getRoleLabel = (role: string) => {
     switch (role) {

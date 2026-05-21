@@ -446,4 +446,6 @@ userSchema.pre('save', function(next) {
   next();
 });
 
+userSchema.index({ role: 1, isActive: 1 });
+
 export const UserModel = mongoose.model<UserDocument>('User', userSchema); 

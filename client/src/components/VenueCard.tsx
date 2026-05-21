@@ -37,6 +37,7 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
           <img
             src={coverPhoto}
             alt={venue.name}
+            loading="lazy"
             style={{
               position: 'absolute',
               top: 0,
@@ -133,4 +134,4 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
   );
 };
 
-export default VenueCard;
+export default React.memo(VenueCard);

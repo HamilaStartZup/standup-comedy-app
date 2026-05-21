@@ -1,6 +1,7 @@
 import path from 'path';
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { config } from './config/env';
 import authRoutes from './routes/auth';
@@ -51,6 +52,13 @@ export const createApp = () => {
     preflightContinue: false,
     optionsSuccessStatus: 200,
   };
+
+  app.use(compression({
+    filter: (req, res) => {
+      if (req.path.startsWith('/api/sse')) return false;
+      return compression.filter(req, res);
+    },
+  }));
 
   app.use(cors(corsOptions));
   app.options('*', (req, res) => {

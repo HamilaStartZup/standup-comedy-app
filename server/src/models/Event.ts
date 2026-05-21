@@ -221,5 +221,8 @@ eventSchema.index({ date: 1 });
 eventSchema.index({ organizer: 1 });
 eventSchema.index({ status: 1 });
 eventSchema.index({ recurrenceGroupId: 1 });
+eventSchema.index({ organizer: 1, status: 1, date: -1 });
+eventSchema.index({ status: 1, date: -1 });
+eventSchema.index({ 'location.city': 1 });
 
 export const EventModel = mongoose.model<EventDocument>('Event', eventSchema); 

@@ -10,6 +10,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { addFavorite, removeFavorite, getFavorites, addApplicationFavorite, removeApplicationFavorite, getApplicationFavorites } from '../services/api';
 import { checkGeographicCompatibility, isGeographicMatch, matchesMobilityZones, normalizeString } from '../utils/geographicMatching';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages, InfoMessages, ConfirmMessages } from '../services/systemMessages';
+import Pagination from '../components/Pagination';
+import type { PaginationMeta } from '../types/pagination';
 
 export interface IUser {
   _id: string;
@@ -180,30 +182,29 @@ function ApplicationsPage() {
   const isQueryEnabled = !!user?._id && isOrganizerView;
 
   // Charger les candidatures avec React Query
-  const { data: applicationsData, isLoading: loading, error: applicationsError } = useQuery({
-    queryKey: ['applications', selectedEventId],
+  const { data: applicationsData, isLoading: loading, error: applicationsError } = useQuery<{ applications: IApplication[]; pagination: PaginationMeta | null }>({
+    queryKey: ['applications', selectedEventId, currentPage],
     queryFn: async () => {
       if (!user?._id) {
         throw new Error("Vous devez être connecté pour voir les candidatures.");
       }
-      const query = selectedEventId !== 'all' ? `?eventId=${encodeURIComponent(selectedEventId)}` : '';
-      const res = await api.get<IApplication[]>(`/applications${query}`);
-      const list = Array.isArray(res.data)
-        ? res.data
-        : (Array.isArray((res.data as any)?.applications) ? (res.data as any).applications : []);
-      
-      // Log pour déboguer les zones de mobilité
-      list.forEach((app: IApplication, idx: number) => {
-        if (app.comedian?.profile?.mobilityZone) {
-        }
-      });
-
-      return list as IApplication[];
+      const params = new URLSearchParams();
+      if (selectedEventId !== 'all') params.set('eventId', selectedEventId);
+      params.set('page', String(currentPage));
+      params.set('limit', '20');
+      const res = await api.get(`/applications?${params.toString()}`);
+      const raw = res.data as any;
+      const list: IApplication[] = Array.isArray(raw)
+        ? raw
+        : (Array.isArray(raw?.applications) ? raw.applications : []);
+      const pagination: PaginationMeta | null = raw?.pagination ?? null;
+      return { applications: list, pagination };
     },
     enabled: !!user,
   });
 
-  const applications = applicationsData || [];
+  const applications = applicationsData?.applications || [];
+  const serverPagination = applicationsData?.pagination || null;
   const error = applicationsError ? (applicationsError as any).response?.data?.message || (applicationsError as any).message || 'Échec de la récupération des candidatures.' : null;
 
   // Charger les favoris d'humoristes depuis l'API
@@ -397,23 +398,12 @@ function ApplicationsPage() {
   // Charger les évènements de l'organisateur pour le sélecteur
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedTab, selectedEventId, comedianFilter, sortKey, applications.length, eventZoneSearch, organizerExperienceFilter]);
+  }, [selectedTab, selectedEventId, comedianFilter, sortKey, eventZoneSearch, organizerExperienceFilter]);
   const organizerFilteredApplications = user?.role === 'ORGANIZER'
     ? getFilteredApplications().filter(app => app.event && app.comedian && app.event.organizer)
     : [];
 
-  const totalOrganizerPages = Math.max(1, Math.ceil(organizerFilteredApplications.length / ITEMS_PER_PAGE));
-
-  useEffect(() => {
-    if (currentPage > totalOrganizerPages) {
-      setCurrentPage(totalOrganizerPages);
-    }
-  }, [totalOrganizerPages, currentPage]);
-
-  const paginatedOrganizerApplications = organizerFilteredApplications.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const totalOrganizerPages = serverPagination?.totalPages ?? Math.max(1, Math.ceil(organizerFilteredApplications.length / ITEMS_PER_PAGE));
 
   const clearApplicationParam = () => {
     const params = new URLSearchParams(location.search);
@@ -1740,7 +1730,7 @@ function ApplicationsPage() {
               // Affichage organisateur - Liste horizontale
               <>
                 <div style={applicationsListStyle}>
-                  {paginatedOrganizerApplications.map((app) => (
+                  {organizerFilteredApplications.map((app) => (
                   <div
                     key={app._id}
                     data-application-id={app._id}
@@ -1845,35 +1835,12 @@ function ApplicationsPage() {
                   </div>
                 ))}
                 </div>
-                {organizerFilteredApplications.length > ITEMS_PER_PAGE && (
-                  <div style={paginationContainerStyle}>
-                    <button
-                      style={{
-                        ...paginationButtonStyle,
-                        opacity: currentPage === 1 ? 0.5 : 1,
-                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                      }}
-                      onClick={() => currentPage > 1 && setCurrentPage(prev => prev - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      ◀ Précédent
-                    </button>
-                    <span style={paginationInfoStyle}>
-                      Page {currentPage} / {totalOrganizerPages}
-                    </span>
-                    <button
-                      style={{
-                        ...paginationButtonStyle,
-                        opacity: currentPage === totalOrganizerPages ? 0.5 : 1,
-                        cursor: currentPage === totalOrganizerPages ? 'not-allowed' : 'pointer',
-                      }}
-                      onClick={() => currentPage < totalOrganizerPages && setCurrentPage(prev => prev + 1)}
-                      disabled={currentPage === totalOrganizerPages}
-                    >
-                      Suivant ▶
-                    </button>
-                  </div>
-                )}
+                <Pagination
+                  page={currentPage}
+                  totalPages={totalOrganizerPages}
+                  onChange={setCurrentPage}
+                  disabled={loading}
+                />
               </>
             )}
           </>

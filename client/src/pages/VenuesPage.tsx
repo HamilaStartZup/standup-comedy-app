@@ -6,6 +6,7 @@ import VenuesTabs from '../components/VenuesTabs';
 import { VENUE_TYPES } from '../types/venue';
 import { useVenues } from '../hooks/useVenues';
 import VenueCardSkeleton from '../components/skeletons/VenueCardSkeleton';
+import Pagination from '../components/Pagination';
 import {
   FRENCH_REGIONS,
   FRENCH_DEPARTMENTS,
@@ -34,6 +35,7 @@ const VenuesPage: React.FC = () => {
 
   const [filters, setFilters] = useState(filtersFromUrl);
   const [activeFilters, setActiveFilters] = useState(filtersFromUrl);
+  const [page, setPage] = useState(1);
 
   const { data: venuesResponse, isLoading, error } = useVenues({
     city: activeFilters.city || undefined,
@@ -41,12 +43,16 @@ const VenuesPage: React.FC = () => {
     minCapacity: activeFilters.minCapacity ? parseInt(activeFilters.minCapacity) : undefined,
     region: activeFilters.region || undefined,
     department: activeFilters.department || undefined,
+    page,
+    limit: 20,
   });
 
   const data = venuesResponse?.venues;
+  const totalPages = venuesResponse ? Math.ceil(venuesResponse.total / venuesResponse.limit) : 1;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setPage(1);
     setActiveFilters({ ...filters });
     const params: Record<string, string> = {};
     if (filters.city) params.city = filters.city;
@@ -58,6 +64,7 @@ const VenuesPage: React.FC = () => {
   };
 
   const handleReset = () => {
+    setPage(1);
     setFilters(EMPTY_FILTERS);
     setActiveFilters(EMPTY_FILTERS);
     setSearchParams({}, { replace: true });
@@ -274,6 +281,12 @@ const VenuesPage: React.FC = () => {
                 <VenueCard key={venue._id} venue={venue} />
               ))}
             </div>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onChange={setPage}
+              disabled={isLoading}
+            />
           </>
         )}
       </div>

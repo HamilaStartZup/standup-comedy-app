@@ -62,5 +62,7 @@ const applicationSchema = new Schema<ApplicationDocument>({
 applicationSchema.index({ event: 1, comedian: 1 }, { unique: true });
 applicationSchema.index({ status: 1 });
 applicationSchema.index({ comedian: 1 });
+applicationSchema.index({ event: 1, status: 1 });
+applicationSchema.index({ comedian: 1, status: 1, createdAt: -1 });
 
 export const ApplicationModel = mongoose.model<ApplicationDocument>('Application', applicationSchema); 

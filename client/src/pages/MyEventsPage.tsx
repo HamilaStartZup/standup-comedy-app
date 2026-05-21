@@ -372,8 +372,8 @@ useEffect(() => {
       // Pour les humoristes, récupérer TOUS les évènements
       // Pour les organisateurs, récupérer seulement leurs évènements
       const apiUrl = user?.role === 'ORGANIZER'
-        ? `/events?organizerId=${user._id}`
-        : `/events`; // Pas de filtre organizerId pour les humoristes
+        ? `/events?organizerId=${user._id}&limit=50`
+        : `/events?limit=50`; // Pas de filtre organizerId pour les humoristes
       
       try {
         const res = await api.get<IEvent[]>(apiUrl);

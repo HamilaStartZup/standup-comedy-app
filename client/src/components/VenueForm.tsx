@@ -366,7 +366,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
       {images.map((url, i) => (
         <div key={i} style={{ position: 'relative' }}>
-          <img src={url} alt="" style={{ width: 120, height: 84, objectFit: 'cover', borderRadius: 10 }} />
+          <img src={url} alt="" style={{ width: 120, height: 84, objectFit: 'cover', borderRadius: 10 }} loading="lazy" />
           <button
             type="button"
             onClick={() => onRemove(i)}

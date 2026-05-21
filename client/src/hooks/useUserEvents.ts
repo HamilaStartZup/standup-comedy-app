@@ -5,19 +5,23 @@ import type { IEvent } from '../types/event';
 
 interface UseUserEventsOptions {
   dateFrom?: string;
+  limit?: number;
+  page?: number;
 }
 
 export function useUserEvents(options: UseUserEventsOptions = {}): UseQueryResult<IEvent[], Error> {
   const { user } = useAuth();
-  const { dateFrom } = options;
+  const { dateFrom, limit, page } = options;
 
   return useQuery<IEvent[], Error>({
-    queryKey: ['events', user?._id, dateFrom ?? null],
+    queryKey: ['events', user?._id, dateFrom ?? null, limit ?? null, page ?? null],
     queryFn: async () => {
       if (!user?._id) throw new Error('Authentification manquante');
       const params = new URLSearchParams();
       if (user.role === 'ORGANIZER') params.set('organizerId', user._id);
       if (dateFrom) params.set('dateFrom', dateFrom);
+      if (limit) params.set('limit', String(limit));
+      if (page) params.set('page', String(page));
       const qs = params.toString();
       const res = await api.get(`/events${qs ? `?${qs}` : ''}`);
 

@@ -48,7 +48,7 @@ export const listVenues = async (req: AuthRequest, res: Response): Promise<void>
     }
     const safeLimit = Math.min(limitNum, 50);
 
-    const filter: Record<string, unknown> = { isActive: true };
+    const filter: Record<string, unknown> = { isActive: true, isDeleted: { $ne: true } };
     if (req.query.owner === 'me' && req.user?.id) {
       filter.owner = req.user.id;
     } else if (req.user?.role === 'LIEU') {
@@ -86,11 +86,12 @@ export const listVenues = async (req: AuthRequest, res: Response): Promise<void>
     const [venues, total] = await Promise.all([
       VenueModel.find(filter)
         .collation(collation)
-        .populate('owner', 'firstName lastName organizerProfile.companyName')
+        .select('name city address capacity venueType pricePerEvent pricingType photos isActive')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(safeLimit),
-      VenueModel.countDocuments(filter).collation(collation),
+        .limit(safeLimit)
+        .lean(),
+      VenueModel.countDocuments(filter),
     ]);
 
     res.status(200).json({ venues, total, page: pageNum, limit: safeLimit });
@@ -131,9 +132,11 @@ export const listMyVenues = async (req: AuthRequest, res: Response): Promise<voi
       VenueModel.find(filter)
         .collation(collation)
         .populate('owner', 'firstName lastName organizerProfile.companyName')
+        .select('name city address capacity venueType pricePerEvent photos isActive owner')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(safeLimit),
+        .limit(safeLimit)
+        .lean(),
       VenueModel.countDocuments(filter).collation(collation),
     ]);
 

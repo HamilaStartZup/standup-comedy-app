@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import { NotificationModel, NotificationDocument } from '../models/Notification';
 import { Types } from 'mongoose';
 import { emitNotificationCreated, emitNotificationRead, emitNotificationAllRead } from '../services/eventEmitter';
+import { parsePagination, buildPaginationResult } from '../utils/pagination';
 
 /**
  * GET /api/notifications
@@ -17,7 +18,14 @@ export const getNotifications = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const { read, limit } = req.query;
+    const { read } = req.query;
+    const paginationParams = parsePagination(req.query as Record<string, unknown>, 50, 100);
+    const rawLimit = req.query.limit;
+    const effectiveLimit = paginationParams.isPaginated
+      ? paginationParams.limit
+      : (rawLimit ? Math.max(1, parseInt(rawLimit as string, 10) || 50) : 50);
+    const effectiveSkip = paginationParams.isPaginated ? paginationParams.skip : 0;
+
     const query: any = { user: userId };
 
     // Filtrer par statut de lecture si fourni
@@ -32,9 +40,16 @@ export const getNotifications = async (req: AuthRequest, res: Response): Promise
       .populate('relatedVenue', 'name')
       .populate('relatedBooking', '_id')
       .sort({ createdAt: -1 })
-      .limit(limit ? (isNaN(parseInt(limit as string, 10)) ? 50 : Math.max(1, parseInt(limit as string, 10))) : 50);
+      .skip(effectiveSkip)
+      .limit(effectiveLimit);
 
     const unreadCount = await NotificationModel.countDocuments({ user: userId, read: false });
+
+    if (paginationParams.isPaginated) {
+      const total = await NotificationModel.countDocuments(query);
+      res.status(200).json({ notifications, unreadCount, pagination: buildPaginationResult(paginationParams, total) });
+      return;
+    }
 
     res.status(200).json({
       notifications,

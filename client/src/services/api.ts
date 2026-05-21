@@ -394,6 +394,8 @@ export const listVenues = async (filters?: {
   owner?: 'me';
   region?: string;
   department?: string;
+  page?: number;
+  limit?: number;
 }): Promise<{ venues: IVenue[]; total: number; page: number; limit: number }> => {
   const params = new URLSearchParams();
   if (filters?.city) params.append('city', filters.city);
@@ -406,6 +408,8 @@ export const listVenues = async (filters?: {
   } else if (filters?.region) {
     params.append('region', filters.region);
   }
+  if (filters?.page) params.append('page', filters.page.toString());
+  if (filters?.limit) params.append('limit', filters.limit.toString());
   const query = params.toString();
   const response = await api.get<{ venues: IVenue[]; total: number; page: number; limit: number }>(
     `/venues${query ? `?${query}` : ''}`

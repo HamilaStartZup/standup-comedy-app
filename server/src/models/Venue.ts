@@ -170,6 +170,7 @@ const venueSchema = new Schema<VenueDocument>(
 
 venueSchema.index({ city: 1 });
 venueSchema.index({ owner: 1, isActive: 1 });
+venueSchema.index({ isActive: 1, isDeleted: 1 });
 
 venueSchema.pre('save', function (next) {
   if (this.isModified('postalCode') || this.isNew) {

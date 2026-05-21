@@ -542,7 +542,7 @@ function LandingPage() {
                   >
                     <div className="tutorial-thumbnail-wrap">
                       {thumbOrg ? (
-                        <img src={thumbOrg} alt="" />
+                        <img src={thumbOrg} alt="" loading="lazy" />
                       ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 48 }}>▶</div>
                       )}
@@ -564,7 +564,7 @@ function LandingPage() {
                   >
                     <div className="tutorial-thumbnail-wrap">
                       {thumbHum ? (
-                        <img src={thumbHum} alt="" />
+                        <img src={thumbHum} alt="" loading="lazy" />
                       ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 48 }}>▶</div>
                       )}
@@ -628,7 +628,7 @@ function LandingPage() {
         <div className="container">
           <div className="footer-content">
             <div className="footer-brand">
-              <img src="/logo-connect-comedy-club.png" alt="Connect Comedy Club" style={{ height: '95px', width: 'auto' }} />
+              <img src="/logo-connect-comedy-club.png" alt="Connect Comedy Club" style={{ height: '95px', width: 'auto' }} loading="lazy" />
               <p>La plateforme qui connecte humoristes, scènes et public pour simplifier l'organisation du stand-up.</p>
               <p>Contact: contact@connectcomedyclub.com</p>
             </div>

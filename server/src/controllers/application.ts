@@ -22,6 +22,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/env';
 import { emitApplicationCreated, emitApplicationStatusChanged, emitApplicationWithdrawn, emitLateCancellation } from '../services/eventEmitter';
 import { createNotification } from './notification';
+import { parsePagination, buildPaginationResult } from '../utils/pagination';
 
 // Fonction pour construire avatarUrl à partir de avatar.data
 const buildAvatarDataUrl = (user: any): string | undefined => {
@@ -651,6 +652,7 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
+    const paginationParams = parsePagination(req.query as Record<string, unknown>);
     const { status, eventId } = req.query as { status?: string | string[]; eventId?: string };
 
     // Construire un filtre DB minimal si eventId est fourni
@@ -711,6 +713,13 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
       }
       return appObj;
     });
+
+    if (paginationParams.isPaginated) {
+      const total = transformedApplications.length;
+      const pageData = transformedApplications.slice(paginationParams.skip, paginationParams.skip + paginationParams.limit);
+      res.json({ applications: pageData, pagination: buildPaginationResult(paginationParams, total) });
+      return;
+    }
 
     res.json(transformedApplications);
   } catch (error) {

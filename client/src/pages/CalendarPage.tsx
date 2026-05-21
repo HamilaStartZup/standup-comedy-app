@@ -63,21 +63,23 @@ const CalendarPage = () => {
   const isError = fullQuery.isError && upcomingQuery.isError;
 
   // Séparer les événements et éviter doublons pour les annulés
-  const now = new Date();
+  const { upcomingEvents, archivedEvents, cancelledEvents, allEvents } = useMemo(() => {
+    const now = new Date();
 
-  const upcomingEvents = fetchedEvents
-    .filter(e => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const upcomingEvents = fetchedEvents
+      .filter(e => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const archivedEvents = fetchedEvents
-    .filter(e => new Date(e.date) < now && e.status?.toLowerCase() !== 'cancelled')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const archivedEvents = fetchedEvents
+      .filter(e => new Date(e.date) < now && e.status?.toLowerCase() !== 'cancelled')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const cancelledEvents = fetchedEvents
-    .filter(e => e.status?.toLowerCase() === 'cancelled')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const cancelledEvents = fetchedEvents
+      .filter(e => e.status?.toLowerCase() === 'cancelled')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const allEvents = [...upcomingEvents, ...archivedEvents, ...cancelledEvents];
+    return { upcomingEvents, archivedEvents, cancelledEvents, allEvents: [...upcomingEvents, ...archivedEvents, ...cancelledEvents] };
+  }, [fetchedEvents]);
 
   // Récupérer les absences pour tous les événements affichés
   const { data: eventAbsences = [] } = useQuery({
