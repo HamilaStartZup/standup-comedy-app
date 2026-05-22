@@ -13,7 +13,7 @@ export default function Home() {
   return (
     <div className="w-full">
       <section className="relative">
-        <div className="mx-auto max-w-7xl px-6 pt-20 pb-24 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="mx-auto max-w-7xl px-6 pb-24 grid lg:grid-cols-2 gap-12 items-center">
           <div>
             <h1 className="text-5xl md:text-6xl font-extrabold leading-[1.05] tracking-tight">
               Toutes les aides pour les{" "}

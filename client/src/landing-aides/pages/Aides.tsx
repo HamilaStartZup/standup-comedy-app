@@ -46,7 +46,7 @@ export default function Aides() {
 
   return (
     <div className="w-full">
-      <div className="mx-auto max-w-7xl px-6 py-16">
+      <div className="mx-auto max-w-7xl px-6 pb-16">
       <div className="max-w-2xl">
         <Link
           to="/aides/accueil"

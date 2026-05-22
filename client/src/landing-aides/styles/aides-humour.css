@@ -33,6 +33,11 @@
   background-attachment: fixed;
 }
 
+/* Aligner la navbar app sur le même rendu que les autres pages (évite décalage Tailwind sur h2) */
+.ah-page > nav h2 {
+  margin: 0;
+}
+
 /* Wrapper racine — contenu principal (souvent à l’intérieur de .ah-page) */
 .ah-root {
   background: var(--ah-bg);
