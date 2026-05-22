@@ -244,6 +244,11 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
       } catch (e) {
         // Return 500 so Stripe retries the webhook instead of silently losing the confirmation
         console.error('[Stripe] Erreur confirmation réservation après webhook:', e);
+        try {
+          await ProcessedStripeEventModel.deleteOne({ stripeEventId: event.id });
+        } catch (cleanupErr) {
+          console.error('[Stripe] Erreur nettoyage dedup record:', cleanupErr);
+        }
         res.status(500).send('Internal error');
         return;
       }

@@ -660,6 +660,8 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
 
     const dbFilter: FilterQuery<ApplicationDocument> = {};
 
+    let ownedEventIds: Types.ObjectId[] | undefined;
+
     if (currentUser?.role === 'SUPER_ADMIN') {
       // no role filter
     } else if (currentUser?.role === 'COMEDIAN') {
@@ -669,23 +671,42 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
       else if (tab === 'accepted') dbFilter.status = 'ACCEPTED';
       else if (tab === 'archived') dbFilter.status = { $in: ['REJECTED', 'EXPIRED'] };
     } else if (currentUser?.role === 'ORGANIZER') {
-      const ownedEventIds = await EventModel.find({ organizer: userId }).distinct('_id');
+      ownedEventIds = (await EventModel.find({ organizer: userId }).distinct('_id')) as Types.ObjectId[];
       dbFilter.event = { $in: ownedEventIds };
     } else {
       res.status(403).json({ error: 'Accès refusé' });
       return;
     }
 
-    // Optional filters (override tab mapping for status)
+    // Optional filters — role-aware guards, never replace ownership constraints
     if (eventId && !Array.isArray(eventId) && Types.ObjectId.isValid(eventId)) {
-      dbFilter.event = new Types.ObjectId(eventId);
+      if (currentUser?.role === 'ORGANIZER') {
+        const eventObjectId = new Types.ObjectId(eventId);
+        if (!ownedEventIds!.some(id => id.equals(eventObjectId))) {
+          res.status(403).json({ error: 'Accès refusé' });
+          return;
+        }
+        dbFilter.event = eventObjectId;
+      } else {
+        // COMEDIAN or SUPER_ADMIN: safe narrowing on own data / admin access
+        dbFilter.event = new Types.ObjectId(eventId);
+      }
     }
     if (status) {
       const statusArray = Array.isArray(status) ? status : [status];
       dbFilter.status = { $in: statusArray };
     }
     if (comedianId && !Array.isArray(comedianId) && Types.ObjectId.isValid(comedianId)) {
-      dbFilter.comedian = new Types.ObjectId(comedianId);
+      if (currentUser?.role === 'COMEDIAN') {
+        if (comedianId !== userId) {
+          res.status(403).json({ error: 'Accès refusé' });
+          return;
+        }
+        // Filter already set to own userId — no override needed
+      } else {
+        // ORGANIZER: narrowing within owned events; SUPER_ADMIN: no restriction
+        dbFilter.comedian = new Types.ObjectId(comedianId);
+      }
     }
 
     const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>);
