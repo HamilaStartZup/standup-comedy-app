@@ -6,6 +6,7 @@ import api from '../services/api';
 import type { IEvent } from '../types/event';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
+import { useNow } from '../hooks/useNow';
 import {
   getEventFavorites,
   removeEventFavorite,
@@ -30,6 +31,7 @@ const VALID_TABS: EventsFilterTab[] = ['inscrits', 'archives', 'annules', 'favor
 export default function SpectatorEventsPage() {
   const { token, user } = useAuth();
   const { showSuccess, showError } = useAlert();
+  const now = useNow();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -157,18 +159,18 @@ export default function SpectatorEventsPage() {
   };
 
   const registeredUpcoming = useMemo(() => {
-    const ref = Date.now();
+    const ref = now;
     return myRegistrationsList
       .filter((e) => new Date(e.date).getTime() >= ref && e.status?.toLowerCase() !== 'cancelled')
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [myRegistrationsList]);
+  }, [myRegistrationsList, now]);
 
   const registeredArchived = useMemo(() => {
-    const ref = Date.now();
+    const ref = now;
     return myRegistrationsList
       .filter((e) => new Date(e.date).getTime() < ref && e.status?.toLowerCase() !== 'cancelled')
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [myRegistrationsList]);
+  }, [myRegistrationsList, now]);
 
   const registeredCancelled = useMemo(() => {
     return myRegistrationsList
@@ -177,11 +179,11 @@ export default function SpectatorEventsPage() {
   }, [myRegistrationsList]);
 
   const favoritesUpcoming = useMemo(() => {
-    const ref = Date.now();
+    const ref = now;
     return favoritesList
       .filter((e) => new Date(e.date).getTime() >= ref && e.status?.toLowerCase() !== 'cancelled' && !isUserWithdrawn(e))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [favoritesList, user?._id]);
+  }, [favoritesList, user?._id, now]);
 
   const isLoading = loadingRegistrations || loadingFavorites;
 

@@ -128,6 +128,7 @@ const MyBookingsPage: React.FC = () => {
 
   const isArchived = (b: IVenueBooking) =>
     isDatePast(b.requestedDate) ||
+    b.venue?.isDeleted === true ||
     ['EXPIRED', 'REFUSED', 'CANCELLED_BY_OWNER', 'CANCELLED_BY_REQUESTER'].includes(b.status);
 
   const statusPriority = (booking: IVenueBooking) => {

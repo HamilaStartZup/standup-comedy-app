@@ -109,6 +109,7 @@ export default function SpectatorHomePage() {
     queryKey: ['event-favorites'],
     queryFn: getEventFavorites,
     enabled: !!user,
+    staleTime: 5 * 60 * 1000,
   });
 
   const favoriteEventIds = useMemo(() => {

@@ -5,13 +5,8 @@ import { UserModel } from '../models/User';
 import { Types } from 'mongoose';
 import { sendComedianReportAccountDeactivatedEmail, sendComedianReportAccountRestrictedEmail, sendComedianReportAccountValidatedEmail } from '../services/emailService';
 import { emitComedianReportCreated, emitComedianReportUpdated } from '../services/eventEmitter';
-
-const getSuperAdminIds = async (): Promise<string[]> => {
-  const admins = await UserModel.find({ role: 'SUPER_ADMIN', isActive: true })
-    .select('_id')
-    .lean();
-  return admins.map(a => (a._id as any).toString());
-};
+import { getSuperAdminIds } from '../utils/superAdminCache';
+import Logger from '../utils/logger';
 
 /**
  * POST /api/comedian-reports
@@ -105,7 +100,7 @@ export const createComedianReport = async (req: AuthRequest, res: Response): Pro
 
     getSuperAdminIds().then(adminIds => {
       if (adminIds.length > 0) emitComedianReportCreated(report._id.toString(), adminIds);
-    }).catch(() => {});
+    }).catch(err => Logger.error('Erreur alerte superAdmin', { err: String(err) }));
 
     res.status(201).json({
       message: 'Signalement créé avec succès',

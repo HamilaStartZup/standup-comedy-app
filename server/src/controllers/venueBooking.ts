@@ -727,10 +727,10 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
 
     emitVenueBookingStatusChanged(
       booking._id.toString(),
-      (booking.venue as any)._id.toString(),
+      (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy })._id.toString(),
       booking.status,
       booking.paymentStatus,
-      [requesterId, (booking.venue as any).owner?.toString() || ''].filter(Boolean)
+      [requesterId, (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy }).owner?.toString() || ''].filter(Boolean)
     );
 
     res.status(200).json({

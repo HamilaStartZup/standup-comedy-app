@@ -152,7 +152,7 @@ export const submitRatings = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     const event = await EventModel.findById(eventId)
-      .select('title date status spectatorRegistrations participants endTime');
+      .select('title date status spectatorRegistrations participants endTime organizer');
     if (!event) {
       res.status(404).json({ message: 'Événement non trouvé' });
       return;
@@ -204,9 +204,8 @@ export const submitRatings = async (req: AuthRequest, res: Response): Promise<vo
     );
 
     const ratedComedianIds = validatedComedianRatings.map((r: any) => r.comedian.toString());
-    const eventForRatingSSE = await EventModel.findById(eventId).select('organizer').lean();
     const ratingTargets = [
-      eventForRatingSSE?.organizer?.toString(),
+      (event.organizer as any)?.toString?.() ?? event.organizer?.toString(),
       ...ratedComedianIds
     ].filter((id): id is string => !!id);
     emitSpectatorRatingSubmitted(eventId, ratingTargets);

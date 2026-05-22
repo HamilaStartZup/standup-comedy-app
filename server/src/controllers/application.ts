@@ -24,6 +24,7 @@ import { emitApplicationCreated, emitApplicationStatusChanged, emitApplicationWi
 import { createNotification } from './notification';
 import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 import { FilterQuery } from 'mongoose';
+import Logger from '../utils/logger';
 
 // Fonction pour construire avatarUrl à partir de avatar.data
 const buildAvatarDataUrl = (user: any): string | undefined => {
@@ -529,9 +530,9 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response): 
           status,
           organizerMessage || ''
         ).then(() => {
-          console.log(`[EMAIL] Succès de l'envoi à l'humoriste (${(updatedApplication.comedian as any).email}) pour statut ${status}`);
+          Logger.info(`[EMAIL] Succès de l'envoi à l'humoriste pour statut ${status}`, { applicationId: updatedApplication._id });
         }).catch(err => {
-          console.error(`[EMAIL] Erreur lors de l'envoi à l'humoriste (${(updatedApplication.comedian as any).email}) :`, err);
+          Logger.error(`[EMAIL] Erreur lors de l'envoi à l'humoriste`, { applicationId: updatedApplication._id, error: err });
         });
       }
 
@@ -820,10 +821,10 @@ export const confirmParticipation = async (req: AuthRequest, res: Response): Pro
       message: 'Participation confirmée'
     });
   } catch (error) {
-    console.error('❌ ERREUR:', error);
+    Logger.error('Erreur dans confirmParticipation', { error });
     res.status(500).json({
-      message: 'Erreur serveur',
-      error: error instanceof Error ? error.message : 'Erreur inconnue'
+      message: 'Something went wrong!',
+      ...(process.env.NODE_ENV === 'development' && { error: error instanceof Error ? error.message : String(error) }),
     });
   }
 };
@@ -895,7 +896,7 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
         comedian.stats = {};
       }
 
-      console.log(`📊 [STATS UPDATE - WITHDRAWN] ${comedian.firstName} ${comedian.lastName}: ${oldStatus} → WITHDRAWN`);
+      Logger.info(`[STATS UPDATE - WITHDRAWN] userId=${comedian._id}: ${oldStatus} → WITHDRAWN`);
 
       // Décrémenter le compteur approprié selon le statut actuel
       if (oldStatus === 'PENDING') {
@@ -913,19 +914,19 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
 
         if (hoursUntilEvent > 0 && hoursUntilEvent < 72) {
           isLateCancellation = true;
-          console.log(`🚨 ANNULATION TARDIVE DÉTECTÉE: ${comedian.firstName} ${comedian.lastName} - ${hoursUntilEvent.toFixed(1)}h avant l'événement`);
+          Logger.info(`[ANNULATION TARDIVE] userId=${comedian._id} - ${hoursUntilEvent.toFixed(1)}h avant l'événement`);
 
           // Incrémenter le compteur d'annulations tardives AVANT la sauvegarde
           comedian.stats.lateCancellations = (comedian.stats.lateCancellations || 0) + 1;
           totalLateCancellations = comedian.stats.lateCancellations;
-          console.log(`📊 Compteur lateCancellations incrémenté: ${totalLateCancellations}`);
+          Logger.info(`[STATS] lateCancellations incrémenté: ${totalLateCancellations}`, { userId: comedian._id });
         }
       }
 
       // Sauvegarder TOUTES les stats (y compris lateCancellations si applicable)
       comedian.markModified('stats');
       await comedian.save();
-      console.log(`💾 Stats sauvegardées après retrait pour ${comedian.firstName} ${comedian.lastName}`);
+      Logger.info(`[STATS] Stats sauvegardées après retrait`, { userId: comedian._id });
 
       // 🚨 TRAITEMENT ANNULATION TARDIVE (notifications, emails, etc.)
       if (isLateCancellation && oldStatus === 'ACCEPTED') {
@@ -1075,7 +1076,7 @@ export const expirePendingApplicationsForEvent = async (eventId: Types.ObjectId)
           comedian.stats.applicationsPending = Math.max(0, (comedian.stats.applicationsPending || 0) - 1);
           comedian.markModified('stats');
           await comedian.save();
-          console.log(`📊 applicationsPending décrementé pour ${comedian.firstName} ${comedian.lastName}`);
+          Logger.info(`[STATS] applicationsPending décrementé`, { userId: comedian._id, applicationId: application._id });
         }
       }
 

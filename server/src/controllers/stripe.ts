@@ -8,6 +8,7 @@ import { NotificationModel } from '../models/Notification';
 import mongoose from 'mongoose';
 import { emitVenueBookingPaymentUpdated } from '../services/eventEmitter';
 import { computeBookingAmount } from '../utils/venuePricing';
+import { ProcessedStripeEventModel } from '../models/ProcessedStripeEvent';
 
 const stripe = config.stripe.secretKey ? new Stripe(config.stripe.secretKey) : null;
 
@@ -131,6 +132,21 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
     console.error('[Stripe] Webhook signature verification failed:', err.message);
     res.status(400).send(`Webhook Error: ${err.message}`);
     return;
+  }
+
+  try {
+    await ProcessedStripeEventModel.create({ stripeEventId: event.id });
+  } catch (dedupErr: unknown) {
+    // Clé dupliquée = événement déjà traité
+    if (
+      typeof dedupErr === 'object' &&
+      dedupErr !== null &&
+      (dedupErr as any).code === 11000
+    ) {
+      res.status(200).json({ received: true });
+      return;
+    }
+    throw dedupErr;
   }
 
   if (event.type === 'checkout.session.completed') {

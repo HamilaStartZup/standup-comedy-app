@@ -56,19 +56,12 @@ export const createApp = () => {
   app.use(compression({
     filter: (req, res) => {
       if (req.path.startsWith('/api/sse')) return false;
+      if (req.path === '/api/stripe/webhook') return false;
       return compression.filter(req, res);
     },
   }));
 
   app.use(cors(corsOptions));
-  app.options('*', (req, res) => {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Max-Age', '86400');
-    res.sendStatus(200);
-  });
 
   app.use(cookieParser());
   app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
@@ -104,7 +97,10 @@ export const createApp = () => {
 
   app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('Erreur du serveur:', err.message);
-    res.status(500).json({ message: 'Something went wrong!', error: err.message });
+    res.status(500).json({
+      message: 'Something went wrong!',
+      ...(process.env.NODE_ENV === 'development' && { error: err.message }),
+    });
   });
 
   return app;

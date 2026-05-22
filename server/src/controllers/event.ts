@@ -15,6 +15,8 @@ import { extractPostalCode, getDepartmentFromPostalCode } from '../utils/cityMap
 import { getCityCoordinates } from '../utils/cityMapping';
 import { notifySpectatorsInRadius } from '../services/spectatorNotificationService';
 import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
+import { escapeRegex } from '../utils/regex';
+import Logger from '../utils/logger';
 
 /** Retourne la liste des modifications entre l'ancien et le nouvel évènement (pour l'email aux candidats) */
 function getEventChanges(oldEvent: any, newEvent: any): string[] {
@@ -176,7 +178,6 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
     });
 
     await event.save();
-    console.log('✅ Évènement sauvegardé avec succès:', event._id);
 
     // Géocoder l'événement pour le rayon spectateurs (async, non bloquant)
     const loc = event.location;
@@ -195,53 +196,35 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
     emitEventCreated(event._id.toString(), [organizerId]);
 
     // Récupérer les informations de l'organisateur pour l'email et mise à jour stats
-    console.log('🔍 Récupération des infos organisateur pour email...');
+    Logger.info('Récupération infos organisateur', { organizerId });
     const organizer = await UserModel.findById(organizerId);
     if (!organizer) {
-      console.error('❌ Organisateur non trouvé:', organizerId);
+      Logger.error('Organisateur non trouvé', { organizerId });
       res.status(404).json({ message: 'Organisateur non trouvé' });
       return;
     }
-    console.log('👤 Organisateur trouvé:', `${organizer.firstName} ${organizer.lastName} (${organizer.email})`);
+    Logger.debug('Organisateur chargé', { organizerId });
 
     // Update organizer's totalEvents count et envoi d'emails
     try {
-      console.log('Organisateur trouvé dans events.ts:', organizer.email);
-      console.log('Total events avant incrémentation:', organizer.stats?.totalEvents);
       if (!organizer.stats) {
         organizer.stats = {};
       }
       organizer.stats.totalEvents = (organizer.stats.totalEvents || 0) + 1;
       organizer.markModified('stats');
       await organizer.save();
-      console.log('Total events après incrémentation et sauvegarde:', organizer.stats.totalEvents);
     } catch (statsError) {
       console.error('⚠️ Erreur lors de la mise à jour des stats de l\'organisateur:', statsError);
       // Ne pas faire échouer la création de l'évènement si les stats échouent
     }
 
     // Envoyer les notifications par mobilité aux humoristes dont la zone correspond
-    console.log('📍 [EVENT_UNIQUE] Démarrage envoi notifications par mobilité...');
-    console.log('📋 [EVENT_UNIQUE] Données évènement:', {
-      title: event.title,
-      date: event.date,
-      location: event.location,
-      requirements: event.requirements,
-      eventId: event._id.toString()
-    });
-    console.log('👤 [EVENT_UNIQUE] Organisateur:', {
-      firstName: organizer.firstName,
-      lastName: organizer.lastName,
-      email: organizer.email
-    });
-
     try {
       notifyComediansByMobilityAsync(event, {
         firstName: organizer.firstName,
         lastName: organizer.lastName,
         email: organizer.email
       });
-      console.log('✅ [EVENT_UNIQUE] Notification mobilité lancée avec succès');
     } catch (notifError) {
       console.error('❌ [EVENT_UNIQUE] Erreur lors du lancement de la notification mobilité:', notifError);
       // Ne pas faire échouer la création de l'événement si la notification échoue
@@ -264,7 +247,6 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
       message: 'Event created successfully',
       event: eventResponse
     });
-    console.log('✅ Réponse envoyée avec succès');
   } catch (error) {
     console.error('Create event error:', error);
     res.status(500).json({ message: 'Error creating event' });
@@ -667,14 +649,15 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     // Filtre par ville (lieu) — si cityRadius est fourni, on filtre par distance après la requête
     const cityRadiusKm = [5, 10, 20, 50].includes(Number(cityRadius)) ? Number(cityRadius) : 0;
     if (city && city.trim() && !cityRadiusKm) {
-      query['location.city'] = new RegExp(city.trim(), 'i');
+      query['location.city'] = new RegExp(escapeRegex(city.trim().slice(0, 80)), 'i');
     }
 
     // Filtre par type (mot-clé dans titre ou description)
     if (type && type.trim()) {
+      const safeType = escapeRegex(type.trim().slice(0, 80));
       query.$or = [
-        { title: new RegExp(type.trim(), 'i') },
-        { description: new RegExp(type.trim(), 'i') },
+        { title: new RegExp(safeType, 'i') },
+        { description: new RegExp(safeType, 'i') },
       ];
     }
 
@@ -724,13 +707,11 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
         const specCoords = await getSpectatorCoordinates(spectator as any);
         const radiusKm = [5, 10, 20, 50].includes(Number(radiusKmParam)) ? Number(radiusKmParam) : (spectator as any).spectatorPreferences?.radiusKm ?? 20;
         if (specCoords) {
-          const inRadius: typeof events = [];
-          for (const ev of events) {
-            const coords = await getEventCoordinates(ev as any);
-            if (coords && distanceKm(coords.lat, coords.lon, specCoords.lat, specCoords.lon) <= radiusKm) {
-              inRadius.push(ev);
-            }
-          }
+          const coordsArray = await Promise.all(events.map(ev => getEventCoordinates(ev as any)));
+          const inRadius: typeof events = events.filter((_ev, i) => {
+            const coords = coordsArray[i];
+            return coords && distanceKm(coords.lat, coords.lon, specCoords.lat, specCoords.lon) <= radiusKm;
+          });
           events = inRadius;
         }
       }
@@ -742,13 +723,11 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
       const { getCityCoordinates, distanceKm } = await import('../utils/cityMapping');
       const cityCoords = await getCityCoordinates(city.trim());
       if (cityCoords) {
-        const inRadius: typeof events = [];
-        for (const ev of events) {
-          const coords = await getEventCoordinates(ev as any);
-          if (coords && distanceKm(cityCoords.lat, cityCoords.lon, coords.lat, coords.lon) <= cityRadiusKm) {
-            inRadius.push(ev);
-          }
-        }
+        const coordsArray = await Promise.all(events.map(ev => getEventCoordinates(ev as any)));
+        const inRadius: typeof events = events.filter((_ev, i) => {
+          const coords = coordsArray[i];
+          return coords && distanceKm(cityCoords.lat, cityCoords.lon, coords.lat, coords.lon) <= cityRadiusKm;
+        });
         events = inRadius;
       }
     }
@@ -878,9 +857,8 @@ export const registerSpectator = async (req: AuthRequest, res: Response): Promis
       $addToSet: { spectatorRegistrations: new mongoose.Types.ObjectId(userId) },
     });
 
-    const eventForSSE = await EventModel.findById(eventId).select('organizer');
-    if (eventForSSE?.organizer) {
-      emitSpectatorRegistered(eventId, userId, eventForSSE.organizer.toString());
+    if (event.organizer) {
+      emitSpectatorRegistered(eventId, userId, event.organizer.toString());
     }
 
     const updated = await EventModel.findById(eventId).populate('organizer', 'firstName lastName email').populate('spectatorRegistrations', 'firstName lastName');
@@ -911,7 +889,7 @@ export const unregisterSpectator = async (req: AuthRequest, res: Response): Prom
       $addToSet: { withdrawnSpectators: new mongoose.Types.ObjectId(userId) },
     });
 
-    const eventForSSE = await EventModel.findById(eventId).select('organizer');
+    const eventForSSE = await EventModel.findById(eventId).select('organizer').lean();
     if (eventForSSE?.organizer) {
       emitSpectatorUnregistered(eventId, userId, eventForSSE.organizer.toString());
     }

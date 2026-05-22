@@ -393,7 +393,7 @@ function ApplicationsPage() {
       }, 2000);
     }, 350);
     return () => clearTimeout(timer);
-  }, [applicationIdFromUrl, applications, loading, comedianTab, selectedTab]);
+  }, [applicationIdFromUrl, applicationsData?.applications, loading, comedianTab, selectedTab]);
 
   // Charger les évènements de l'organisateur pour le sélecteur
   useEffect(() => {
@@ -548,13 +548,17 @@ function ApplicationsPage() {
       return order.indexOf(a) - order.indexOf(b);
     };
     const sorted = [...filtered].sort((a, b) => {
+      // Les candidatures d'événements passés toujours après les actives
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const aPast = a.event?.date ? new Date(a.event.date) < today : false;
+      const bPast = b.event?.date ? new Date(b.event.date) < today : false;
+      if (aPast !== bPast) return aPast ? 1 : -1;
+
       if (sortKey === 'dateAsc') {
-        // Vérifier que les évènements et leurs dates existent
         if (!a.event || !a.event.date || !b.event || !b.event.date) return 0;
         return new Date(a.event.date).getTime() - new Date(b.event.date).getTime();
       }
       if (sortKey === 'dateDesc') {
-        // Vérifier que les évènements et leurs dates existent
         if (!a.event || !a.event.date || !b.event || !b.event.date) return 0;
         return new Date(b.event.date).getTime() - new Date(a.event.date).getTime();
       }
@@ -769,11 +773,12 @@ function ApplicationsPage() {
     comedianPage * ITEMS_PER_PAGE
   );
 
-  const allApplicationsCount = applications.length;
-  const pendingApplicationsCount = applications.filter(app => app.status === 'PENDING').length;
-  const acceptedApplicationsCount = applications.filter(app => app.status === 'ACCEPTED').length;
-  const rejectedApplicationsCount = applications.filter(app => app.status === 'REJECTED').length;
-  const favoriteApplicationsCount = applications.filter(app => favoriteApplicationIdsSet.has(app._id)).length;
+  const validOrganizerApps = applications.filter(app => app.event && app.comedian && app.event.organizer);
+  const allApplicationsCount = validOrganizerApps.length;
+  const pendingApplicationsCount = validOrganizerApps.filter(app => app.status === 'PENDING').length;
+  const acceptedApplicationsCount = validOrganizerApps.filter(app => app.status === 'ACCEPTED').length;
+  const rejectedApplicationsCount = validOrganizerApps.filter(app => app.status === 'REJECTED').length;
+  const favoriteApplicationsCount = validOrganizerApps.filter(app => favoriteApplicationIdsSet.has(app._id)).length;
 
   const organizerTabsConfig: Array<{ id: OrganizerApplicationTab; label: string; count: number }> = [
     { id: 'all', label: 'Toutes', count: allApplicationsCount },
@@ -1730,23 +1735,30 @@ function ApplicationsPage() {
               // Affichage organisateur - Liste horizontale
               <>
                 <div style={applicationsListStyle}>
-                  {organizerFilteredApplications.map((app) => (
+                  {organizerFilteredApplications.map((app) => {
+                  const today = new Date(); today.setHours(0, 0, 0, 0);
+                  const isOrgPast = app.event?.date ? new Date(app.event.date) < today : false;
+                  return (
                   <div
                     key={app._id}
                     data-application-id={app._id}
                     style={{
                       ...applicationCardStyle,
                       ...(app.status === 'PENDING' ? applicationCardStylePending : app.status === 'ACCEPTED' ? applicationCardStyleAccepted : app.status === 'REJECTED' ? applicationCardStyleRejected : app.status === 'EXPIRED' ? applicationCardStyleExpired : ((app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM') || app.status === 'CANCELLED_BY_PLATFORM') ? applicationCardStyleWithdrawn : {}),
+                      ...(isOrgPast ? { opacity: 0.45, filter: 'grayscale(0.3)', cursor: 'default' } : {}),
                     }}
                     onMouseEnter={(e) => {
+                      if (isOrgPast) return;
                       e.currentTarget.style.transform = 'translateY(-2px)';
                       e.currentTarget.style.boxShadow = '0 6px 15px rgba(0, 0, 0, 0.6)';
                     }}
                     onMouseLeave={(e) => {
+                      if (isOrgPast) return;
                       e.currentTarget.style.transform = 'translateY(0)';
                       e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.5)';
                     }}
                     onClick={() => {
+                      if (isOrgPast) return;
                       setSelectedApplication(app);
                       setIsModalOpen(true);
                     }}
@@ -1833,7 +1845,7 @@ function ApplicationsPage() {
                       )}
                     </div>
                   </div>
-                ))}
+                ); })}
                 </div>
                 <Pagination
                   page={currentPage}

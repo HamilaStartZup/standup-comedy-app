@@ -27,7 +27,7 @@ const PasswordResetManagementPage = lazy(() => import('./pages/PasswordResetMana
 const PresenceAlertsPage = lazy(() => import('./pages/PresenceAlertsPage'))
 const LateCancellationAlertsPage = lazy(() => import('./pages/LateCancellationAlertsPage'))
 const ComedianReportsPage = lazy(() => import('./pages/ComedianReportsPage'))
-const LandingPage = lazy(() => import('./pages/LandingPage'))
+import LandingPage from './pages/LandingPage'
 const OAuthCallback = lazy(() => import('./pages/OAuthCallback'))
 const CalendarPage = lazy(() => import('./pages/CalendarPage'))
 const SpectatorHomePage = lazy(() => import('./pages/SpectatorHomePage'))
@@ -123,14 +123,8 @@ const AppRouter: React.FC = () => {
     <LieuRedirectGuard>
       <ScrollToTop />
       <Suspense fallback={
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
-        }}>
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-500" />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+          <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         </div>
       }>
       <Routes>

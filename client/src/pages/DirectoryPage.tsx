@@ -89,16 +89,16 @@ const DirectoryPage: React.FC = () => {
   const filteredUsers = useMemo(() => {
     let filtered = users;
     if (searchTerm) {
-      filtered = filtered.filter(user =>
-        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.stageName && user.stageName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
+      filtered = filtered.filter(directoryUser =>
+        directoryUser.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        directoryUser.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        directoryUser.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (directoryUser.stageName && directoryUser.stageName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (directoryUser.companyName && directoryUser.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
     if (roleFilter !== 'all') {
-      filtered = filtered.filter(user => user.role === roleFilter);
+      filtered = filtered.filter(directoryUser => directoryUser.role === roleFilter);
     }
     return filtered;
   }, [users, searchTerm, roleFilter]);

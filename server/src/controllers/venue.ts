@@ -5,7 +5,8 @@ import { VenueModel } from '../models/Venue';
 import { VenueBookingModel } from '../models/VenueBooking';
 import { VenueBlockedDateModel } from '../models/VenueBlockedDate';
 import { refundVenueBookings } from './venueBooking';
-import { updateVenueSchema } from '../validation/schemas';
+import { createVenueSchema, updateVenueSchema } from '../validation/schemas';
+import { escapeRegex } from '../utils/regex';
 import { getDepartmentFromPostalCode } from '../utils/cityMapping';
 import { DEPARTMENT_TO_REGION, getDepartmentsByRegion, normalizeDepartment } from '../utils/geographicMatching';
 import { emitVenueCreated, emitVenueUpdated, emitVenueDeleted } from '../services/eventEmitter';
@@ -19,7 +20,18 @@ export const createVenue = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    const venue = await VenueModel.create({ ...req.body, owner: ownerId });
+    let validated: ReturnType<typeof createVenueSchema.parse>;
+    try {
+      validated = createVenueSchema.parse(req.body);
+    } catch (zodErr: unknown) {
+      const { ZodError } = await import('zod');
+      if (zodErr instanceof ZodError) {
+        res.status(400).json({ message: zodErr.errors.map(e => e.message).join(', ') });
+        return;
+      }
+      throw zodErr;
+    }
+    const venue = await VenueModel.create({ ...validated, owner: ownerId });
     emitVenueCreated(venue._id.toString(), ownerId);
     res.status(201).json({ venue });
   } catch (error) {
@@ -64,8 +76,7 @@ export const listVenues = async (req: AuthRequest, res: Response): Promise<void>
       filter.capacity = { $gte: capacityNum };
     }
     if (city) {
-      const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      filter.city = new RegExp(`^${escaped}`, 'i');
+      filter.city = new RegExp(`^${escapeRegex(city.trim().slice(0, 80))}`, 'i');
     }
     if (region) {
       const depts = getDepartmentsByRegion(region);
