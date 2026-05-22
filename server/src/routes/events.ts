@@ -15,6 +15,7 @@ import {
   getEventById,
   deleteEvent,
   getOrganizerEvents,
+  getVenueBookingIdsInUse,
   notifyHumorists,
   inviteComedian,
   processCompletedEvents,
@@ -95,6 +96,9 @@ router.get('/', authMiddleware, asyncHandler(getEventsList));
 
 // GET /api/events/user/my-events - Récupérer les évènements de l'organisateur connecté
 router.get('/user/my-events', authMiddleware, asyncHandler(getOrganizerEvents));
+
+// GET /api/events/venue-bookings-in-use — réservations de salle déjà liées à un événement
+router.get('/venue-bookings-in-use', authMiddleware, asyncHandler(getVenueBookingIdsInUse));
 
 // POST /api/events/:eventId/spectator-register - Inscription spectateur
 router.post('/:eventId/spectator-register', authMiddleware, asyncHandler(registerSpectator));

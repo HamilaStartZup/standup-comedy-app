@@ -45,6 +45,8 @@ export interface EventDocument extends Document {
   maxSpectators?: number;
   /** URL de l'image de l'événement (affichée sur les cartes spectateur) */
   imageUrl?: string;
+  /** Réservation de salle utilisée pour créer cet événement (une réservation = un événement) */
+  venueBookingId?: Types.ObjectId;
   // Annulation tardive : boost recommandations
   hasLateCancellation?: boolean;
   lateCancellationAt?: Date;
@@ -175,6 +177,12 @@ const eventSchema = new Schema<EventDocument>({
   },
   maxSpectators: { type: Number, required: false },
   imageUrl: { type: String, required: false },
+  venueBookingId: {
+    type: Schema.Types.ObjectId,
+    ref: 'VenueBooking',
+    required: false,
+    index: true,
+  },
   // Schéma pour le tracking des relances humoristes par mobilité (événements incomplets)
   mobilityReminders: {
     j2: {

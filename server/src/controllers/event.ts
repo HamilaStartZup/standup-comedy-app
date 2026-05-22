@@ -17,6 +17,10 @@ import { notifySpectatorsInRadius } from '../services/spectatorNotificationServi
 import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 import { escapeRegex } from '../utils/regex';
 import Logger from '../utils/logger';
+import {
+  assertVenueBookingAvailableForNewEvent,
+  getUsedVenueBookingIdsForOrganizer,
+} from '../utils/venueBookingEventLink';
 
 /** Retourne la liste des modifications entre l'ancien et le nouvel évènement (pour l'email aux candidats) */
 function getEventChanges(oldEvent: any, newEvent: any): string[] {
@@ -103,6 +107,26 @@ async function hasDuplicateEvent(
 // ============================================================================
 // CREATE EVENT
 // ============================================================================
+/** Réservations de salle déjà utilisées pour un événement (organisateur connecté). */
+export const getVenueBookingIdsInUse = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const organizerId = req.user?.id;
+    if (!organizerId) {
+      res.status(401).json({ message: 'Utilisateur non authentifié' });
+      return;
+    }
+    if (req.user?.role !== 'ORGANIZER') {
+      res.status(403).json({ message: 'Réservé aux organisateurs' });
+      return;
+    }
+    const bookingIds = await getUsedVenueBookingIdsForOrganizer(organizerId);
+    res.status(200).json({ bookingIds });
+  } catch (error) {
+    console.error('getVenueBookingIdsInUse error:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des réservations utilisées' });
+  }
+};
+
 export const createEvent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     // Vérifier que l'utilisateur est authentifié
@@ -112,7 +136,24 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    const { title, description, date, dates, location, requirements, startTime, endTime, endDate, budget, maxPerformers, maxSpectators, isRecurring, dateTimes, imageUrl } = req.body;
+    const { title, description, date, dates, location, requirements, startTime, endTime, endDate, budget, maxPerformers, maxSpectators, isRecurring, dateTimes, imageUrl, venueBookingId } = req.body;
+
+    if (venueBookingId && isRecurring) {
+      res.status(400).json({
+        message: 'Une réservation de salle ne peut être liée qu\'à un événement unique, pas à une série récurrente.',
+      });
+      return;
+    }
+
+    let linkedVenueBookingId: Types.ObjectId | undefined;
+    if (venueBookingId) {
+      const check = await assertVenueBookingAvailableForNewEvent(organizerId, venueBookingId);
+      if (check.ok === false) {
+        res.status(409).json({ message: check.message });
+        return;
+      }
+      linkedVenueBookingId = new Types.ObjectId(venueBookingId);
+    }
 
     // Si c'est un événement récurrent avec plusieurs dates
     if (isRecurring && dates && Array.isArray(dates) && dates.length > 0) {
@@ -175,6 +216,7 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
       maxPerformers,
       maxSpectators: maxSpectators != null ? Number(maxSpectators) : undefined,
       imageUrl: imageUrl && typeof imageUrl === 'string' && imageUrl.trim() ? imageUrl.trim() : undefined,
+      venueBookingId: linkedVenueBookingId,
     });
 
     await event.save();

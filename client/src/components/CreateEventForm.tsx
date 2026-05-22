@@ -1,10 +1,11 @@
 import React, { type CSSProperties, useState, useRef, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { usePostalCodeValidation } from '../hooks/usePostalCodeValidation';
 import { useMyBookings } from '../hooks/useMyBookings';
 import { X, ChevronDown, MapPin, Calendar, Users } from 'lucide-react';
-import api, { uploadEventImage } from '../services/api';
+import api, { getVenueBookingIdsInUse, uploadEventImage } from '../services/api';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages } from '../services/systemMessages';
 import type { IVenueBooking } from '../types/venue';
 
@@ -99,12 +100,37 @@ interface CreateEventFormProps {
 
 function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFormProps) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { showSuccess, showError, showWarning } = useAlert();
   const { data: myVenueBookings = [], isLoading: loadingVenueBookings } = useMyBookings({
     enabled: user?.role === 'ORGANIZER',
   });
 
+  const { data: usedVenueBookingIds = [], isLoading: loadingUsedVenueBookings } = useQuery({
+    queryKey: ['venue-bookings-in-use', user?._id],
+    queryFn: getVenueBookingIdsInUse,
+    enabled: user?.role === 'ORGANIZER',
+    staleTime: 30_000,
+  });
+
+  const usedVenueBookingIdSet = useMemo(
+    () => new Set(usedVenueBookingIds),
+    [usedVenueBookingIds]
+  );
+
   const confirmedVenueBookings = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return (myVenueBookings as IVenueBooking[]).filter((b) => {
+      if (b.status !== 'CONFIRMED' || !b.venue || b.venue.isDeleted) return false;
+      if (usedVenueBookingIdSet.has(b._id)) return false;
+      const rd = new Date(b.requestedDate);
+      rd.setHours(0, 0, 0, 0);
+      return rd >= today;
+    }).sort((a, b) => new Date(a.requestedDate).getTime() - new Date(b.requestedDate).getTime());
+  }, [myVenueBookings, usedVenueBookingIdSet]);
+
+  const availableVenueBookingsCount = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return (myVenueBookings as IVenueBooking[]).filter((b) => {
@@ -112,11 +138,17 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
       const rd = new Date(b.requestedDate);
       rd.setHours(0, 0, 0, 0);
       return rd >= today;
-    }).sort((a, b) => new Date(a.requestedDate).getTime() - new Date(b.requestedDate).getTime());
+    }).length;
   }, [myVenueBookings]);
 
   const [selectedVenueBookingId, setSelectedVenueBookingId] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (selectedVenueBookingId && usedVenueBookingIdSet.has(selectedVenueBookingId)) {
+      setSelectedVenueBookingId('');
+    }
+  }, [selectedVenueBookingId, usedVenueBookingIdSet]);
 
   // Fonction pour générer les créneaux de 30 minutes
   const generateTimeSlots = () => {
@@ -1117,20 +1149,26 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           ...baseEventData,
           date: eventType === 'unique' ? formData.date : formData.date,
           ...(eventType === 'unique' && effectiveEndDate && { endDate: effectiveEndDate }),
+          ...(selectedVenueBookingId && { venueBookingId: selectedVenueBookingId }),
         };
         response = await api.post('/events', eventData);
         console.log('✅ Réponse serveur:', response.data);
         showSuccess(SuccessMessages.EVENT_CREATED);
       }
 
+      queryClient.invalidateQueries({ queryKey: ['venue-bookings-in-use'] });
       onEventCreated();
       onClose();
     } catch (error: any) {
       console.error('Erreur lors de la création de l\'évènement:', error.response?.status);
       const status = error?.response?.status;
-      const message = status === 409
-        ? ErrorMessages.EVENT_DUPLICATE
-        : getErrorMessage(error, ErrorMessages.EVENT_CREATE_FAILED);
+      const serverMsg = error?.response?.data?.message as string | undefined;
+      const message =
+        status === 409 && serverMsg?.includes('réservation')
+          ? serverMsg
+          : status === 409
+            ? ErrorMessages.EVENT_DUPLICATE
+            : getErrorMessage(error, ErrorMessages.EVENT_CREATE_FAILED);
       showError(message);
     } finally {
       setIsSubmitting(false);
@@ -1334,7 +1372,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                 <select
                   value={selectedVenueBookingId}
                   onChange={handleVenueBookingSelect}
-                  disabled={loadingVenueBookings}
+                  disabled={loadingVenueBookings || loadingUsedVenueBookings}
                   style={{
                     width: '100%',
                     padding: isMobile ? '14px 16px' : '12px 16px',
@@ -1361,13 +1399,22 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     );
                   })}
                 </select>
-                {loadingVenueBookings && (
+                {(loadingVenueBookings || loadingUsedVenueBookings) && (
                   <p style={{ margin: '8px 0 0', fontSize: 12, color: '#888' }}>Chargement des réservations…</p>
                 )}
-                {!loadingVenueBookings && confirmedVenueBookings.length === 0 && (
+                {!loadingVenueBookings && !loadingUsedVenueBookings && confirmedVenueBookings.length === 0 && (
                   <p style={{ margin: '8px 0 0', fontSize: 12, color: '#888', lineHeight: 1.4 }}>
-                    Aucune réservation confirmée à venir. Les réservations au statut « Confirmée » (paiement effectué ou salle
-                    gratuite) apparaissent dans <strong>Salles</strong> → <strong>Mes réservations</strong>.
+                    {availableVenueBookingsCount > 0 ? (
+                      <>
+                        Toutes vos réservations confirmées à venir sont déjà liées à un événement. Une réservation de salle ne
+                        peut servir qu&apos;à un seul événement.
+                      </>
+                    ) : (
+                      <>
+                        Aucune réservation confirmée à venir. Les réservations au statut « Confirmée » (paiement effectué ou
+                        salle gratuite) apparaissent dans <strong>Salles</strong> → <strong>Mes réservations</strong>.
+                      </>
+                    )}
                   </p>
                 )}
               </div>

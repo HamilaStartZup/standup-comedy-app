@@ -288,6 +288,7 @@ export const createEventSchema = z.object({
     endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^24:00$/),
   })).optional(),
   imageUrl: z.string().max(2000).optional().transform((v) => (v && v.trim() ? v.trim() : undefined)).refine((v) => !v || /^https?:\/\//i.test(v), { message: 'L\'URL de l\'image doit commencer par http:// ou https://' }),
+  venueBookingId: z.string().regex(/^[a-fA-F0-9]{24}$/, { message: 'Identifiant de réservation invalide' }).optional(),
 }).refine((data) => {
   // Validation : si isRecurring est true, dates doit être présent et date ne doit pas l'être
   if (data.isRecurring === true) {

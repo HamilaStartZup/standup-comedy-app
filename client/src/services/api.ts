@@ -462,6 +462,12 @@ export const myBookings = async (): Promise<IVenueBooking[]> => {
   return response.data.bookings;
 };
 
+/** Réservations confirmées déjà utilisées pour créer un événement (organisateur). */
+export const getVenueBookingIdsInUse = async (): Promise<string[]> => {
+  const response = await api.get<{ bookingIds: string[] }>('/events/venue-bookings-in-use');
+  return response.data.bookingIds ?? [];
+};
+
 export const getMyVenueBookings = async (venueId: string): Promise<IVenueBooking[]> => {
   const response = await api.get<{ bookings: IVenueBooking[] }>(`/venues/${venueId}/my-bookings`);
   return response.data.bookings;
