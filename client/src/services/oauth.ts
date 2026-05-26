@@ -44,10 +44,10 @@ export const loginWithKeycloak = (provider?: string, userType?: string): Promise
       const params: Record<string, string> = {};
       if (provider) params.provider = provider;
       if (userType) params.userType = userType;
-      const response = await api.get('https://auth-dev.connectcomedyclub.com/auth/oauth/authorize', {
+      const response = await api.get('/auth/oauth/authorize', {
         params: Object.keys(params).length > 0 ? params : undefined,
       });
-      const { authorizationUrl, state } = response.data;
+      const { authorizationUrl } = response.data;
 
       // Calculate popup position (centered)
       const left = window.screenX + (window.outerWidth - POPUP_WIDTH) / 2;
