@@ -8,7 +8,7 @@ import ApplicationDetailsModal from '../components/ApplicationDetailsModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { addFavorite, removeFavorite, getFavorites, addApplicationFavorite, removeApplicationFavorite, getApplicationFavorites } from '../services/api';
-import { checkGeographicCompatibility, isGeographicMatch, matchesMobilityZones, normalizeString } from '../utils/geographicMatching';
+import { checkGeographicCompatibility } from '../utils/geographicMatching';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages, InfoMessages, ConfirmMessages } from '../services/systemMessages';
 import Pagination from '../components/Pagination';
 import type { PaginationMeta } from '../types/pagination';
@@ -163,6 +163,7 @@ function ApplicationsPage() {
   const [organizerExperienceFilter, setOrganizerExperienceFilter] = useState<'all' | '0-50' | '50-200' | '200+'>('all');
   const ITEMS_PER_PAGE = 5;
   const [currentPage, setCurrentPage] = useState(1);
+  const [comedianPage, setComedianPage] = useState(1);
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.innerWidth < 768;
@@ -179,19 +180,36 @@ function ApplicationsPage() {
   );
   const [applicationIdFromUrl, setApplicationIdFromUrl] = useState<string | null>(null);
   const isOrganizerView = user?.role === 'ORGANIZER';
-  const isQueryEnabled = !!user?._id && isOrganizerView;
+  const isComedianView = user?.role === 'COMEDIAN';
+  const isQueryEnabled = !!user?._id && (isOrganizerView || isComedianView);
 
   // Charger les candidatures avec React Query
   const { data: applicationsData, isLoading: loading, error: applicationsError } = useQuery<{ applications: IApplication[]; pagination: PaginationMeta | null }>({
-    queryKey: ['applications', selectedEventId, currentPage],
+    queryKey: isComedianView
+      ? ['applications', 'comedian', comedianTab, comedianPage]
+      : ['applications', selectedEventId, currentPage, selectedTab, sortKey, eventZoneSearch, organizerExperienceFilter],
     queryFn: async () => {
       if (!user?._id) {
         throw new Error("Vous devez être connecté pour voir les candidatures.");
       }
       const params = new URLSearchParams();
-      if (selectedEventId !== 'all') params.set('eventId', selectedEventId);
-      params.set('page', String(currentPage));
-      params.set('limit', '20');
+      if (isComedianView) {
+        params.set('page', String(comedianPage));
+        params.set('limit', '10');
+        if (comedianTab === 'accepted') params.set('tab', 'accepted');
+        else if (comedianTab === 'pending') params.set('tab', 'pending');
+        else if (comedianTab === 'archived') params.set('tab', 'archived');
+        else if (comedianTab === 'cancelled') params.set('tab', 'pending');
+        else if (comedianTab === 'rejected') params.set('status', 'REJECTED');
+      } else {
+        if (selectedEventId !== 'all') params.set('eventId', selectedEventId);
+        params.set('page', String(currentPage));
+        params.set('limit', '10');
+        if (selectedTab !== 'all' && selectedTab !== 'favorites') params.set('status', selectedTab);
+        params.set('sort', sortKey);
+        if (eventZoneSearch.trim()) params.set('zone', eventZoneSearch.trim());
+        if (organizerExperienceFilter !== 'all') params.set('experienceLevel', organizerExperienceFilter);
+      }
       const res = await api.get(`/applications?${params.toString()}`);
       const raw = res.data as any;
       const list: IApplication[] = Array.isArray(raw)
@@ -206,6 +224,36 @@ function ApplicationsPage() {
   const applications = applicationsData?.applications || [];
   const serverPagination = applicationsData?.pagination || null;
   const error = applicationsError ? (applicationsError as any).response?.data?.message || (applicationsError as any).message || 'Échec de la récupération des candidatures.' : null;
+
+  // Compteurs globaux par statut (limit:1, on lit pagination.total).
+  // Évite que les compteurs de tab reflètent seulement la page courante.
+  const useApplicationCount = (params: Record<string, string>, enabled: boolean) => {
+    const query = useQuery<number>({
+      queryKey: ['applications', 'count', params],
+      queryFn: async () => {
+        const qs = new URLSearchParams({ ...params, page: '1', limit: '1' }).toString();
+        const res = await api.get(`/applications?${qs}`);
+        return res.data?.pagination?.total ?? 0;
+      },
+      enabled: isQueryEnabled && enabled,
+      staleTime: 30 * 1000,
+    });
+    return query.data ?? null;
+  };
+
+  const orgEventScope: Record<string, string> = selectedEventId !== 'all' ? { eventId: selectedEventId } : {};
+  const orgZoneScope: Record<string, string> = eventZoneSearch.trim() ? { zone: eventZoneSearch.trim() } : {};
+  const orgExpScope: Record<string, string> = organizerExperienceFilter !== 'all' ? { experienceLevel: organizerExperienceFilter } : {};
+  const orgFilterScope = { ...orgEventScope, ...orgZoneScope, ...orgExpScope };
+  const orgAllCount = useApplicationCount({ ...orgFilterScope }, isOrganizerView);
+  const orgPendingCount = useApplicationCount({ ...orgFilterScope, status: 'PENDING' }, isOrganizerView);
+  const orgAcceptedCount = useApplicationCount({ ...orgFilterScope, status: 'ACCEPTED' }, isOrganizerView);
+  const orgRejectedCount = useApplicationCount({ ...orgFilterScope, status: 'REJECTED' }, isOrganizerView);
+
+  const comedianAcceptedCount = useApplicationCount({ tab: 'accepted' }, isComedianView);
+  const comedianPendingCount = useApplicationCount({ tab: 'pending' }, isComedianView);
+  const comedianRejectedCount = useApplicationCount({ status: 'REJECTED' }, isComedianView);
+  const comedianArchivedCount = useApplicationCount({ tab: 'archived' }, isComedianView);
 
   // Charger les favoris d'humoristes depuis l'API
   const { data: favoritesData, refetch: refetchFavorites } = useQuery<{ favorites: IUser[] }, Error>({
@@ -469,77 +517,9 @@ function ApplicationsPage() {
   // Fonction de filtrage combinée
   function getFilteredApplications(): IApplication[] {
     let filtered = applications;
-    if (selectedTab !== 'all' && selectedTab !== 'favorites') {
-      filtered = filtered.filter(app => app.status === selectedTab);
-    }
     // Filtre par humoriste: seulement utile côté ORGANIZER
     if (user?.role === 'ORGANIZER' && comedianFilter !== 'all') {
       filtered = filtered.filter(app => app.comedian && app.comedian._id === comedianFilter);
-    }
-    
-    // Filtre par zone d'événement (recherche par zone de mobilité compatible)
-    if (user?.role === 'ORGANIZER' && eventZoneSearch.trim()) {
-      const searchTerm = eventZoneSearch.trim();
-      const searchNormalized = normalizeString(searchTerm);
-      
-      filtered = filtered.filter(app => {
-        const mobilityZones = app.comedian?.profile?.mobilityZone;
-        
-        // Si l'humoriste n'a pas de zones de mobilité, on ne l'affiche pas
-        if (!mobilityZones || mobilityZones.length === 0) {
-          return false;
-        }
-        
-        // Déterminer le type de recherche (ville, département ou région)
-        // On essaie de deviner le type en fonction du format
-        let searchType: 'ville' | 'departement' | 'region' = 'ville';
-        
-        // Si c'est un numéro à 2 chiffres (ou 2A, 2B), c'est probablement un département
-        if (/^\d{1,2}[AB]?$/.test(searchTerm.toUpperCase())) {
-          searchType = 'departement';
-        } else {
-          // Vérifier si c'est une région connue
-          const knownRegions = [
-            'Auvergne-Rhône-Alpes', 'Bourgogne-Franche-Comté', 'Bretagne',
-            'Centre-Val de Loire', 'Corse', 'Grand Est', 'Hauts-de-France',
-            'Île-de-France', 'Normandie', 'Nouvelle-Aquitaine', 'Occitanie',
-            'Pays de la Loire', "Provence-Alpes-Côte d'Azur"
-          ];
-          const isRegion = knownRegions.some(region => 
-            normalizeString(region) === searchNormalized
-          );
-          if (isRegion) {
-            searchType = 'region';
-          }
-        }
-        
-        const searchZone = { type: searchType, value: searchTerm };
-        
-        // Vérifier si la recherche correspond à une zone de mobilité de l'humoriste
-        const matches = matchesMobilityZones(searchZone, mobilityZones);
-        
-        if (matches) {
-          return true;
-        }
-        
-        // Vérifier aussi si la recherche correspond directement à une zone de mobilité
-        // (match partiel dans le nom)
-        const directMatch = mobilityZones.some(zone => {
-          const zoneNormalized = normalizeString(zone.value);
-          return zoneNormalized.includes(searchNormalized) || searchNormalized.includes(zoneNormalized);
-        });
-        
-        return directMatch;
-      });
-    }
-    
-    // Filtre par niveau d'expérience (organisateur)
-    if (user?.role === 'ORGANIZER' && organizerExperienceFilter !== 'all') {
-      filtered = filtered.filter(app => {
-        const comedianLevel = app.comedian?.profile?.numberOfScenes;
-        if (!comedianLevel) return false;
-        return comedianLevel === organizerExperienceFilter;
-      });
     }
     
     // Tri
@@ -703,25 +683,27 @@ function ApplicationsPage() {
     ? getComedianFilteredApplications() 
     : [];
 
+  // Compteurs comedian : on privilégie le total serveur (par tab), avec fallback local
+  // sur la page courante. `cancelled` reste local car non-dérivable d'un tab/status serveur.
   const comedianTabCounts = {
-    accepted: applications.filter(app =>
+    accepted: comedianAcceptedCount ?? applications.filter(app =>
       app.status === 'ACCEPTED' &&
       app.event?.date &&
       isEventUpcoming(app.event.date) &&
       !isEventCancelled(app.event)
     ).length,
-    pending: applications.filter(app =>
+    pending: comedianPendingCount ?? applications.filter(app =>
       app.status === 'PENDING' &&
       app.event?.date &&
       isEventUpcoming(app.event.date) &&
       !isEventCancelled(app.event)
     ).length,
-    rejected: applications.filter(app =>
+    rejected: comedianRejectedCount ?? applications.filter(app =>
       app.status === 'REJECTED' &&
       app.event?.date &&
       isEventUpcoming(app.event.date)
     ).length,
-    archived: applications.filter(app =>
+    archived: comedianArchivedCount ?? applications.filter(app =>
       app.event?.date &&
       isEventPast(app.event.date) &&
       app.status !== 'PENDING' &&
@@ -746,9 +728,10 @@ function ApplicationsPage() {
     cancelled: 'Aucun évènement annulé.',
   };
 
-  // Pagination pour les candidatures humoriste
-  const totalComedianPages = Math.max(1, Math.ceil(comedianFilteredApplications.length / ITEMS_PER_PAGE));
-  const [comedianPage, setComedianPage] = useState(1);
+  // Pagination pour les candidatures humoriste — serveur quand dispo
+  const comedianServerPagination = isComedianView ? (applicationsData?.pagination ?? null) : null;
+  const totalComedianPages = comedianServerPagination?.totalPages
+    ?? Math.max(1, Math.ceil(comedianFilteredApplications.length / ITEMS_PER_PAGE));
 
   useEffect(() => {
     setComedianPage(1);
@@ -760,7 +743,7 @@ function ApplicationsPage() {
 
   useEffect(() => {
     setComedianPage(1);
-  }, [comedianSortKey, comedianOrganizerFilter, archivedOutcomeFilter, comedianFilteredApplications.length]);
+  }, [comedianSortKey, comedianOrganizerFilter, archivedOutcomeFilter]);
 
   useEffect(() => {
     if (comedianPage > totalComedianPages) {
@@ -768,17 +751,21 @@ function ApplicationsPage() {
     }
   }, [comedianPage, totalComedianPages]);
 
-  const paginatedComedianApplications = comedianFilteredApplications.slice(
-    (comedianPage - 1) * ITEMS_PER_PAGE,
-    comedianPage * ITEMS_PER_PAGE
-  );
+  const paginatedComedianApplications = comedianServerPagination
+    ? comedianFilteredApplications
+    : comedianFilteredApplications.slice(
+        (comedianPage - 1) * ITEMS_PER_PAGE,
+        comedianPage * ITEMS_PER_PAGE
+      );
 
   const validOrganizerApps = applications.filter(app => app.event && app.comedian && app.event.organizer);
-  const allApplicationsCount = validOrganizerApps.length;
-  const pendingApplicationsCount = validOrganizerApps.filter(app => app.status === 'PENDING').length;
-  const acceptedApplicationsCount = validOrganizerApps.filter(app => app.status === 'ACCEPTED').length;
-  const rejectedApplicationsCount = validOrganizerApps.filter(app => app.status === 'REJECTED').length;
-  const favoriteApplicationsCount = validOrganizerApps.filter(app => favoriteApplicationIdsSet.has(app._id)).length;
+  // Compteurs organisateur : totaux serveur (scopés à eventId si filtré) avec fallback local.
+  // Favoris = taille du set global chargé depuis /applications-favorites — pas besoin de query.
+  const allApplicationsCount = orgAllCount ?? validOrganizerApps.length;
+  const pendingApplicationsCount = orgPendingCount ?? validOrganizerApps.filter(app => app.status === 'PENDING').length;
+  const acceptedApplicationsCount = orgAcceptedCount ?? validOrganizerApps.filter(app => app.status === 'ACCEPTED').length;
+  const rejectedApplicationsCount = orgRejectedCount ?? validOrganizerApps.filter(app => app.status === 'REJECTED').length;
+  const favoriteApplicationsCount = favoriteApplicationIdsSet.size;
 
   const organizerTabsConfig: Array<{ id: OrganizerApplicationTab; label: string; count: number }> = [
     { id: 'all', label: 'Toutes', count: allApplicationsCount },
@@ -1176,33 +1163,6 @@ function ApplicationsPage() {
     marginBottom: '20px',
     flexWrap: 'wrap',
     alignItems: 'center',
-  };
-
-  const paginationContainerStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '12px',
-    marginTop: '20px',
-    flexWrap: 'wrap',
-  };
-
-  const paginationButtonStyle: CSSProperties = {
-    padding: '8px 14px',
-    borderRadius: '6px',
-    border: '1px solid rgba(255, 255, 255, 0.3)',
-    backgroundColor: '#331f41',
-    color: '#fff',
-    fontWeight: 600,
-    cursor: 'pointer',
-    minWidth: '100px',
-    opacity: 1,
-    transition: 'opacity 0.2s, transform 0.2s',
-  };
-
-  const paginationInfoStyle: CSSProperties = {
-    color: '#ddd',
-    fontWeight: 600,
   };
 
   const favoriteStarButtonStyle = (isActive: boolean): CSSProperties => ({
@@ -1700,26 +1660,13 @@ function ApplicationsPage() {
                     </div>
                   ))}
                 </div>
-                {comedianFilteredApplications.length > ITEMS_PER_PAGE && (
-                  <div style={paginationContainerStyle}>
-                    <button
-                      style={paginationButtonStyle}
-                      disabled={comedianPage === 1}
-                      onClick={() => setComedianPage(prev => Math.max(1, prev - 1))}
-                    >
-                      Précédent
-                    </button>
-                    <span style={paginationInfoStyle}>
-                      Page {Math.min(comedianPage, totalComedianPages)} / {Math.max(totalComedianPages, 1)}
-                    </span>
-                    <button
-                      style={paginationButtonStyle}
-                      disabled={comedianPage >= totalComedianPages}
-                      onClick={() => setComedianPage(prev => Math.min(totalComedianPages, prev + 1))}
-                    >
-                      Suivant
-                    </button>
-                  </div>
+                {totalComedianPages > 1 && (
+                  <Pagination
+                    page={comedianPage}
+                    totalPages={totalComedianPages}
+                    onChange={setComedianPage}
+                    disabled={loading}
+                  />
                 )}
               </>
             )}

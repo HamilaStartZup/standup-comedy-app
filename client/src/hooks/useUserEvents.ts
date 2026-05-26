@@ -8,6 +8,11 @@ interface UseUserEventsOptions {
   dateFrom?: string;
   limit?: number;
   page?: number;
+  status?: string;
+  zone?: string;
+  experienceLevel?: string;
+  hasRecurrence?: boolean;
+  enabled?: boolean;
 }
 
 export interface UserEventsResult {
@@ -17,10 +22,10 @@ export interface UserEventsResult {
 
 export function useUserEvents(options: UseUserEventsOptions = {}): UseQueryResult<UserEventsResult, Error> {
   const { user } = useAuth();
-  const { dateFrom, limit, page } = options;
+  const { dateFrom, limit, page, status, zone, experienceLevel, hasRecurrence, enabled } = options;
 
   return useQuery<UserEventsResult, Error>({
-    queryKey: ['events', user?._id, dateFrom ?? null, limit ?? null, page ?? null],
+    queryKey: ['events', user?._id, dateFrom ?? null, limit ?? null, page ?? null, status ?? null, zone ?? null, experienceLevel ?? null, hasRecurrence ?? null],
     queryFn: async () => {
       if (!user?._id) throw new Error('Authentification manquante');
       const params = new URLSearchParams();
@@ -28,6 +33,10 @@ export function useUserEvents(options: UseUserEventsOptions = {}): UseQueryResul
       if (dateFrom) params.set('dateFrom', dateFrom);
       if (limit !== undefined) params.set('limit', String(limit));
       if (page !== undefined) params.set('page', String(page));
+      if (status) params.set('status', status);
+      if (zone && zone.trim()) params.set('zone', zone.trim());
+      if (experienceLevel && experienceLevel !== 'all') params.set('experienceLevel', experienceLevel);
+      if (hasRecurrence) params.set('hasRecurrence', 'true');
       const qs = params.toString();
       const res = await api.get(`/events${qs ? `?${qs}` : ''}`);
 
@@ -40,7 +49,7 @@ export function useUserEvents(options: UseUserEventsOptions = {}): UseQueryResul
       }
       return { events: [], pagination: null };
     },
-    enabled: !!user?._id,
+    enabled: !!user?._id && (enabled ?? true),
     placeholderData: keepPreviousData,
   });
 }

@@ -78,6 +78,8 @@ export const listVenues = async (req: AuthRequest, res: Response): Promise<void>
     if (city) {
       filter.city = new RegExp(`^${escapeRegex(city.trim().slice(0, 80))}`, 'i');
     }
+    // region + department combinés : on garde l'intersection (le département doit appartenir
+    // à la région). Avant : department écrasait region sans valider l'appartenance.
     if (region) {
       const depts = getDepartmentsByRegion(region);
       if (depts.length === 0) {
@@ -88,6 +90,13 @@ export const listVenues = async (req: AuthRequest, res: Response): Promise<void>
     }
     if (department) {
       const normalizedDept = normalizeDepartment(department);
+      if (region) {
+        const depts = getDepartmentsByRegion(region);
+        if (!depts.includes(normalizedDept)) {
+          res.status(400).json({ message: `Département "${department}" hors de la région "${region}"` });
+          return;
+        }
+      }
       filter.department = normalizedDept;
     }
 

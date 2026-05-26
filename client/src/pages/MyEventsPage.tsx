@@ -12,7 +12,7 @@ import EventCalendar from '../components/EventCalendar';
 import EventDetailModal from '../components/EventDetailModal';
 import ScorePieChart from '../components/ScorePieChart';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { matchesMobilityZones, normalizeString, FRENCH_REGIONS, FRENCH_DEPARTMENTS, DEPARTMENTS_ORDER } from '../utils/geographicMatching';
+import { FRENCH_REGIONS, FRENCH_DEPARTMENTS, DEPARTMENTS_ORDER } from '../utils/geographicMatching';
 import { getOrganizerName, translateEventStatus } from '../utils/eventHelpers';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
@@ -274,7 +274,7 @@ function MyEventsPage() {
   const [selectedEventForInvite, setSelectedEventForInvite] = useState<string>('');
   const [isInviting, setIsInviting] = useState(false);
   const [upcomingPage, setUpcomingPage] = useState(1);
-  const [eventsPage, setEventsPage] = useState(1);
+  const [eventsPage] = useState(1);
   const [archivedPage, setArchivedPage] = useState(1);
   const [cancelledPage, setCancelledPage] = useState(1);
   const [completedPage, setCompletedPage] = useState(1);
@@ -366,12 +366,65 @@ useEffect(() => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [openActionsEventId]);
 
+  const isOrganizerRole = user?.role === 'ORGANIZER';
+  // 'full' is a capacity-derived view (no DB status), so we don't filter it server-side
+  const activeStatusFilter = (() => {
+    if (!isOrganizerRole) return undefined;
+    switch (organizerTab) {
+      case 'archived': return 'completed';
+      case 'cancelled': return 'cancelled';
+      case 'upcoming': return 'published';
+      default: return undefined;
+    }
+  })();
+  const activePage = (() => {
+    if (!isOrganizerRole) return eventsPage;
+    switch (organizerTab) {
+      case 'archived': return archivedPage;
+      case 'cancelled': return cancelledPage;
+      case 'upcoming': return upcomingPage;
+      default: return eventsPage;
+    }
+  })();
+  const orgServerStatusTab = isOrganizerRole && (organizerTab === 'upcoming' || organizerTab === 'archived' || organizerTab === 'cancelled');
+
+  const eventsZone = isOrganizerRole
+    ? (organizerEventZoneSearch.trim() || undefined)
+    : (locationSearch.trim() || undefined);
+  const eventsExperienceLevel = isOrganizerRole
+    ? (organizerEventExperienceFilter !== 'all' ? organizerEventExperienceFilter : undefined)
+    : (experienceFilter !== 'all' ? experienceFilter : undefined);
+
   const { data: userEventsData, isLoading: eventsLoading, isError: eventsError, error: eventsErrorMessage, refetch } = useUserEvents({
-    page: eventsPage,
-    limit: 20,
+    page: activePage,
+    limit: isOrganizerRole ? (orgServerStatusTab ? ITEMS_PER_PAGE : 100) : 20,
+    status: activeStatusFilter,
+    zone: eventsZone,
+    experienceLevel: eventsExperienceLevel,
   });
   const fetchedEvents: IEvent[] = userEventsData?.events ?? [];
   const serverEventsPagination = userEventsData?.pagination ?? null;
+
+  // Compteurs globaux par statut (organizer + super admin) — limit:1, on lit pagination.total.
+  // Évite que le compteur du tab reflète seulement la page courante.
+  const needsStatusCounts = isOrganizerRole || isSuperAdminView;
+  const { data: upcomingCountData } = useUserEvents({ page: 1, limit: 1, status: 'published', zone: eventsZone, experienceLevel: eventsExperienceLevel, enabled: needsStatusCounts });
+  const { data: archivedCountData } = useUserEvents({ page: 1, limit: 1, status: 'completed', zone: eventsZone, experienceLevel: eventsExperienceLevel, enabled: needsStatusCounts });
+  const { data: cancelledCountData } = useUserEvents({ page: 1, limit: 1, status: 'cancelled', zone: eventsZone, experienceLevel: eventsExperienceLevel, enabled: needsStatusCounts });
+  const upcomingTotal = upcomingCountData?.pagination?.total ?? null;
+  const archivedTotal = archivedCountData?.pagination?.total ?? null;
+  const cancelledTotal = cancelledCountData?.pagination?.total ?? null;
+
+  // Fetch dédié des events récurrents (organizer) — indépendant du tab actif.
+  // Sinon `recurringGroups` n'est rempli que lorsqu'on est sur l'onglet "récurrents"
+  // et le compteur affiche 0 tant qu'on n'y a pas cliqué.
+  const { data: recurringEventsData } = useUserEvents({
+    page: 1,
+    limit: 500,
+    hasRecurrence: true,
+    enabled: isOrganizerRole,
+  });
+  const recurringFetchedEvents: IEvent[] = recurringEventsData?.events ?? [];
 
   // Scroll + highlight de la carte event ciblée via ?focus= (clic depuis notif)
   useEffect(() => {
@@ -767,25 +820,38 @@ useEffect(() => {
       const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       
       
-      filteredEvents.forEach((event: IEvent) => {
-        // D'abord, isoler les évènements annulés pour qu'ils n'apparaissent pas ailleurs
-        const isCancelled = (event.status === 'CANCELLED' || event.status === 'cancelled');
-        if (isCancelled) {
-          cancelled.push(event);
-          return;
+      // Sur les tabs server-paginés (organizer upcoming/archived/cancelled), le serveur
+      // a déjà filtré par status — pas de re-classement par date sinon les items disparaissent
+      // (ex: status='completed' mais endTime futur => bascule dans upcoming et trou de pagination).
+      if (isOrganizerRole && orgServerStatusTab) {
+        if (organizerTab === 'archived') {
+          archived.push(...filteredEvents);
+        } else if (organizerTab === 'cancelled') {
+          cancelled.push(...filteredEvents);
+        } else if (organizerTab === 'upcoming') {
+          filteredEvents.forEach((event: IEvent) => {
+            const isCancelled = (event.status === 'CANCELLED' || event.status === 'cancelled');
+            if (isCancelled) cancelled.push(event);
+            else upcoming.push(event);
+          });
         }
-        // Utilise la nouvelle logique avec endTime
-        const eventIsPast = isEventPast(event.date, event.endTime);
-        const eventDate = new Date(event.date);
-        
-        // Debug logging détaillé pour tracer TOUS les évènements
-        // **LOGIQUE UNIVERSELLE** : TOUS les évènements passés sont archivés
-        if (eventIsPast) {
-          archived.push(event);
-        } else {
-          upcoming.push(event);
-        }
-      });
+      } else {
+        filteredEvents.forEach((event: IEvent) => {
+          // D'abord, isoler les évènements annulés pour qu'ils n'apparaissent pas ailleurs
+          const isCancelled = (event.status === 'CANCELLED' || event.status === 'cancelled');
+          if (isCancelled) {
+            cancelled.push(event);
+            return;
+          }
+          // **LOGIQUE UNIVERSELLE** : TOUS les évènements passés sont archivés
+          const eventIsPast = isEventPast(event.date, event.endTime);
+          if (eventIsPast) {
+            archived.push(event);
+          } else {
+            upcoming.push(event);
+          }
+        });
+      }
       
 
       if (dateFilter === 'upcoming') {
@@ -800,13 +866,15 @@ useEffect(() => {
     }
 
     return { upcomingEvents: upcoming, archivedEvents: archived, cancelledEvents: cancelled };
-  }, [fetchedEvents, location.search]);
+  }, [fetchedEvents, location.search, isOrganizerRole, orgServerStatusTab, organizerTab, user?._id, user?.role]);
 
-  // Groupes d'événements récurrents (par recurrenceGroupId) pour l'organisateur
+  // Groupes d'événements récurrents (par recurrenceGroupId) pour l'organisateur.
+  // Basé sur `recurringFetchedEvents` (fetch dédié hasRecurrence=true) et non
+  // `fetchedEvents` qui dépend du tab actif — sinon compteur faussé.
   const recurringGroups = useMemo(() => {
-    if (!fetchedEvents || !Array.isArray(fetchedEvents) || user?.role !== 'ORGANIZER' || !user?._id) return new Map<string, IEvent[]>();
+    if (!Array.isArray(recurringFetchedEvents) || user?.role !== 'ORGANIZER' || !user?._id) return new Map<string, IEvent[]>();
     const map = new Map<string, IEvent[]>();
-    (fetchedEvents as IEvent[]).forEach((event: IEvent) => {
+    recurringFetchedEvents.forEach((event: IEvent) => {
       const groupId = (event as IEvent & { recurrenceGroupId?: string }).recurrenceGroupId;
       if (!groupId) return;
       const organizerId = getOrganizerIdFromEvent(event.organizer);
@@ -817,7 +885,7 @@ useEffect(() => {
     });
     map.forEach((list) => list.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
     return map;
-  }, [fetchedEvents, user?._id, user?.role]);
+  }, [recurringFetchedEvents, user?._id, user?.role]);
 
   // Groupes d'événements récurrents pour le super admin (tous organisateurs)
   const recurringGroupsSuperAdmin = useMemo(() => {
@@ -834,15 +902,19 @@ useEffect(() => {
     return map;
   }, [fetchedEvents, user?.role]);
 
-  const totalCancelledPages = Math.max(1, Math.ceil(cancelledEvents.length / ITEMS_PER_PAGE));
-  const paginatedCancelledEvents = cancelledEvents.slice(
-    (cancelledPage - 1) * ITEMS_PER_PAGE,
-    cancelledPage * ITEMS_PER_PAGE
-  );
+  const totalCancelledPages = (isOrganizerRole && organizerTab === 'cancelled' && serverEventsPagination)
+    ? Math.max(1, serverEventsPagination.totalPages)
+    : Math.max(1, Math.ceil(cancelledEvents.length / ITEMS_PER_PAGE));
+  const paginatedCancelledEvents = (isOrganizerRole && organizerTab === 'cancelled' && serverEventsPagination)
+    ? cancelledEvents
+    : cancelledEvents.slice(
+        (cancelledPage - 1) * ITEMS_PER_PAGE,
+        cancelledPage * ITEMS_PER_PAGE
+      );
 
   useEffect(() => {
-    setCancelledPage(1);
-  }, [cancelledEvents]);
+    if (!(isOrganizerRole && organizerTab === 'cancelled')) setCancelledPage(1);
+  }, [cancelledEvents, isOrganizerRole, organizerTab]);
 
   useEffect(() => {
     if (cancelledPage > totalCancelledPages) {
@@ -858,15 +930,19 @@ useEffect(() => {
     return archivedEvents;
   }, [archivedEvents, appliedEventIds, user?.role]);
 
-  const totalArchivedPages = Math.max(1, Math.ceil(archivedEventsToShow.length / ITEMS_PER_PAGE));
-  const paginatedArchivedEvents = archivedEventsToShow.slice(
-    (archivedPage - 1) * ITEMS_PER_PAGE,
-    archivedPage * ITEMS_PER_PAGE
-  );
+  const totalArchivedPages = (isOrganizerRole && organizerTab === 'archived' && serverEventsPagination)
+    ? Math.max(1, serverEventsPagination.totalPages)
+    : Math.max(1, Math.ceil(archivedEventsToShow.length / ITEMS_PER_PAGE));
+  const paginatedArchivedEvents = (isOrganizerRole && organizerTab === 'archived' && serverEventsPagination)
+    ? archivedEventsToShow
+    : archivedEventsToShow.slice(
+        (archivedPage - 1) * ITEMS_PER_PAGE,
+        archivedPage * ITEMS_PER_PAGE
+      );
 
   useEffect(() => {
-    setArchivedPage(1);
-  }, [archivedEventsToShow]);
+    if (!(isOrganizerRole && organizerTab === 'archived')) setArchivedPage(1);
+  }, [archivedEventsToShow, isOrganizerRole, organizerTab]);
 
   useEffect(() => {
     if (archivedPage > totalArchivedPages) {
@@ -883,38 +959,10 @@ useEffect(() => {
         return app && app.status === 'ACCEPTED';
       });
       
-      // Filtre 1 : par lieu (recherche dans city, address, venue)
-      if (locationSearch.trim()) {
-        const searchLower = locationSearch.toLowerCase().trim();
-        filtered = filtered.filter(event => {
-          const location = event.location;
-          if (!location || typeof location !== 'object') return false;
-          const city = (location.city || '').toLowerCase();
-          const address = (location.address || '').toLowerCase();
-          const venue = (location.venue || '').toLowerCase();
-          return city.includes(searchLower) || address.includes(searchLower) || venue.includes(searchLower);
-        });
-      }
-      
-      // Filtre 2 : par niveau d'expérience requis de l'événement
-      // Ce filtre est appliqué sur les résultats déjà filtrés par lieu
-      if (experienceFilter !== 'all') {
-        filtered = filtered.filter(event => {
-          const eventRequiredLevel = event.requirements?.requiredExperienceLevel || 'all';
-          // Si l'événement accepte tous les niveaux, on l'affiche
-          if (eventRequiredLevel === 'all') {
-            return true;
-          }
-          // Sinon, on vérifie si le niveau requis correspond au filtre sélectionné
-          return eventRequiredLevel === experienceFilter;
-        });
-      }
-      
-      // Retourne les événements acceptés qui satisfont les deux filtres (si les deux sont actifs)
       return filtered;
     }
     return [] as IEvent[];
-  }, [user?.role, comedianApplications, upcomingEvents, locationSearch, experienceFilter]);
+  }, [user?.role, comedianApplications, upcomingEvents]);
 
   // Base des évènements à venir POUR POSTULER (exclut les acceptés pour l'humoriste)
   const upcomingEventsForApply = useMemo(() => {
@@ -965,36 +1013,8 @@ useEffect(() => {
     const favoriteSet = favoriteIdsSet;
     let filtered = comedianVisibleEvents.filter(event => favoriteSet.has(event._id));
     
-    // Filtre 1 : par lieu (recherche dans city, address, venue)
-    if (locationSearch.trim()) {
-      const searchLower = locationSearch.toLowerCase().trim();
-      filtered = filtered.filter(event => {
-        const location = event.location;
-        if (!location || typeof location !== 'object') return false;
-        const city = (location.city || '').toLowerCase();
-        const address = (location.address || '').toLowerCase();
-        const venue = (location.venue || '').toLowerCase();
-        return city.includes(searchLower) || address.includes(searchLower) || venue.includes(searchLower);
-      });
-    }
-    
-    // Filtre 2 : par niveau d'expérience requis de l'événement
-    // Ce filtre est appliqué sur les résultats déjà filtrés par lieu
-    if (experienceFilter !== 'all') {
-      filtered = filtered.filter(event => {
-        const eventRequiredLevel = event.requirements?.requiredExperienceLevel || 'all';
-        // Si l'événement accepte tous les niveaux, on l'affiche
-        if (eventRequiredLevel === 'all') {
-          return true;
-        }
-        // Sinon, on vérifie si le niveau requis correspond au filtre sélectionné
-        return eventRequiredLevel === experienceFilter;
-      });
-    }
-    
-    // Retourne les événements favoris qui satisfont les deux filtres (si les deux sont actifs)
     return filtered;
-  }, [isComedianView, favoriteEventIds, favoriteIdsSet, comedianVisibleEvents, locationSearch, experienceFilter]);
+  }, [isComedianView, favoriteEventIds, favoriteIdsSet, comedianVisibleEvents]);
 
   // Fonction de filtrage pour les humoristes (par lieu ET niveau d'expérience)
   // Utilise les événements de l'API principale avec les scores de l'API recommendations
@@ -1004,30 +1024,6 @@ useEffect(() => {
       ...event,
       _recommendationScore: eventRecommendationMap.get(String(event._id))?.score ?? 0
     })) as (IEvent & { _recommendationScore: number })[];
-
-    // Filtre 1 : par lieu (recherche dans city, address, venue)
-    if (locationSearch.trim()) {
-      const searchLower = locationSearch.toLowerCase().trim();
-      base = base.filter(event => {
-        const location = event.location;
-        if (!location || typeof location !== 'object') return false;
-        const city = (location.city || '').toLowerCase();
-        const address = (location.address || '').toLowerCase();
-        const venue = (location.venue || '').toLowerCase();
-        return city.includes(searchLower) || address.includes(searchLower) || venue.includes(searchLower);
-      });
-    }
-
-    // Filtre 2 : par niveau d'expérience requis de l'événement
-    if (experienceFilter !== 'all') {
-      base = base.filter(event => {
-        const eventRequiredLevel = event.requirements?.requiredExperienceLevel || 'all';
-        if (eventRequiredLevel === 'all') {
-          return true;
-        }
-        return eventRequiredLevel === experienceFilter;
-      });
-    }
 
     // Filtre par complétion
     if (completionFilter === 'complete') {
@@ -1054,69 +1050,32 @@ useEffect(() => {
     return upcomingEvents.filter(event => !isEventComplete(event));
   }, [upcomingEvents]);
 
-  // Fonction de filtrage pour les organisateurs (par zone d'événement ET niveau d'expérience)
-  // Les deux filtres sont appliqués ensemble : un événement doit satisfaire les deux conditions
-  const getFilteredOrganizerEvents = (events: IEvent[]): IEvent[] => {
-    let filtered = [...events];
-    
-    // Filtre 1 : par zone d'événement (recherche dans city, address, venue)
-    if (organizerEventZoneSearch.trim()) {
-      const searchLower = organizerEventZoneSearch.toLowerCase().trim();
-      filtered = filtered.filter(event => {
-        const location = event.location;
-        if (!location || typeof location !== 'object') return false;
-        const city = (location.city || '').toLowerCase();
-        const address = (location.address || '').toLowerCase();
-        const venue = (location.venue || '').toLowerCase();
-        return city.includes(searchLower) || address.includes(searchLower) || venue.includes(searchLower);
-      });
-    }
-    
-    // Filtre 2 : par niveau d'expérience requis de l'événement
-    // Ce filtre est appliqué sur les résultats déjà filtrés par zone
-    if (organizerEventExperienceFilter !== 'all') {
-      filtered = filtered.filter(event => {
-        const eventRequiredLevel = event.requirements?.requiredExperienceLevel || 'all';
-        // Si l'événement accepte tous les niveaux, on l'affiche
-        if (eventRequiredLevel === 'all') {
-          return true;
-        }
-        // Sinon, on vérifie si le niveau requis correspond au filtre
-        return eventRequiredLevel === organizerEventExperienceFilter;
-      });
-    }
-    
-    // Retourne les événements qui satisfont les deux filtres (si les deux sont actifs)
-    return filtered;
-  };
-
   // Appliquer les filtres aux événements organisateur
   const filteredOrganizerUpcomingEvents = useMemo(() => {
     if (!isOrganizerView) return upcomingEvents;
     let base = upcomingEvents;
-    // Appliquer le filtre par complétion si nécessaire
     if (completionFilter === 'complete') {
       base = base.filter(event => isEventComplete(event));
     } else if (completionFilter === 'incomplete') {
       base = base.filter(event => !isEventComplete(event));
     }
-    return getFilteredOrganizerEvents(base);
-  }, [isOrganizerView, upcomingEvents, completionFilter, organizerEventZoneSearch, organizerEventExperienceFilter]);
+    return base;
+  }, [isOrganizerView, upcomingEvents, completionFilter]);
 
   const filteredOrganizerCompletedEvents = useMemo(() => {
     if (!isOrganizerView) return completedUpcomingEvents;
-    return getFilteredOrganizerEvents(completedUpcomingEvents);
-  }, [isOrganizerView, completedUpcomingEvents, organizerEventZoneSearch, organizerEventExperienceFilter]);
+    return completedUpcomingEvents;
+  }, [isOrganizerView, completedUpcomingEvents]);
 
   const filteredOrganizerArchivedEvents = useMemo(() => {
     if (!isOrganizerView) return archivedEventsToShow;
-    return getFilteredOrganizerEvents(archivedEventsToShow);
-  }, [isOrganizerView, archivedEventsToShow, organizerEventZoneSearch, organizerEventExperienceFilter]);
+    return archivedEventsToShow;
+  }, [isOrganizerView, archivedEventsToShow]);
 
   const filteredOrganizerCancelledEvents = useMemo(() => {
     if (!isOrganizerView) return cancelledEvents;
-    return getFilteredOrganizerEvents(cancelledEvents);
-  }, [isOrganizerView, cancelledEvents, organizerEventZoneSearch, organizerEventExperienceFilter]);
+    return cancelledEvents;
+  }, [isOrganizerView, cancelledEvents]);
 
   // Liste d'affichage "Évènements à venir" pour l'organisateur : événements uniques + groupes récurrents (un bloc par groupe)
   type UpcomingDisplayItem = { type: 'event'; event: IEvent } | { type: 'group'; groupId: string; events: IEvent[] };
@@ -1266,21 +1225,21 @@ useEffect(() => {
   }), [filteredUpcomingEvents, acceptedUpcomingEvents, favoriteEvents, smartRecommendationEvents]);
 
   const organizerTabCounts: Record<OrganizerTab, number> = useMemo(() => ({
-    upcoming: isOrganizerView ? upcomingDisplayItems.length : filteredUpcomingEvents.length,
+    upcoming: upcomingTotal ?? (isOrganizerView ? upcomingDisplayItems.length : filteredUpcomingEvents.length),
     full: completedUpcomingEvents.length,
-    archived: archivedEventsToShow.length,
-    cancelled: cancelledEvents.length,
-    calendar: upcomingEvents.length + archivedEventsToShow.length + cancelledEvents.length,
+    archived: archivedTotal ?? archivedEventsToShow.length,
+    cancelled: cancelledTotal ?? cancelledEvents.length,
+    calendar: (upcomingTotal ?? upcomingEvents.length) + (archivedTotal ?? archivedEventsToShow.length) + (cancelledTotal ?? cancelledEvents.length),
     favoriteComedians: favoriteComedianIds.length,
     recurringEvents: recurringGroups.size,
-  }), [isOrganizerView, upcomingDisplayItems.length, filteredUpcomingEvents, completedUpcomingEvents, archivedEventsToShow, cancelledEvents, upcomingEvents, favoriteComedianIds, recurringGroups.size]);
+  }), [isOrganizerView, upcomingDisplayItems.length, filteredUpcomingEvents, completedUpcomingEvents, archivedEventsToShow, cancelledEvents, upcomingEvents, favoriteComedianIds, recurringGroups.size, upcomingTotal, archivedTotal, cancelledTotal]);
 
   const superAdminTabCounts: Record<SuperAdminTab, number> = useMemo(() => ({
     full: completedUpcomingEvents.length,
-    upcoming: superAdminUpcomingDisplayItems.length,
-    archived: archivedEventsToShow.length,
-    cancelled: cancelledEvents.length,
-  }), [completedUpcomingEvents, superAdminUpcomingDisplayItems.length, archivedEventsToShow, cancelledEvents]);
+    upcoming: upcomingTotal ?? superAdminUpcomingDisplayItems.length,
+    archived: archivedTotal ?? archivedEventsToShow.length,
+    cancelled: cancelledTotal ?? cancelledEvents.length,
+  }), [completedUpcomingEvents, superAdminUpcomingDisplayItems.length, archivedEventsToShow, cancelledEvents, upcomingTotal, archivedTotal, cancelledTotal]);
 
   const comedianTabTitles: Record<ComedianTab, string> = {
     opportunities: 'Opportunités à venir',
@@ -1526,15 +1485,19 @@ useEffect(() => {
     );
   };
 
-  const totalUpcomingPages = Math.max(1, Math.ceil(eventsToDisplay.length / ITEMS_PER_PAGE));
-  const paginatedUpcomingEvents = eventsToDisplay.slice(
-    (upcomingPage - 1) * ITEMS_PER_PAGE,
-    upcomingPage * ITEMS_PER_PAGE
-  );
+  const totalUpcomingPages = (isOrganizerRole && organizerTab === 'upcoming' && serverEventsPagination)
+    ? Math.max(1, serverEventsPagination.totalPages)
+    : Math.max(1, Math.ceil(eventsToDisplay.length / ITEMS_PER_PAGE));
+  const paginatedUpcomingEvents = (isOrganizerRole && organizerTab === 'upcoming' && serverEventsPagination)
+    ? eventsToDisplay
+    : eventsToDisplay.slice(
+        (upcomingPage - 1) * ITEMS_PER_PAGE,
+        upcomingPage * ITEMS_PER_PAGE
+      );
 
   useEffect(() => {
-    setUpcomingPage(1);
-  }, [eventsToDisplay]);
+    if (!(isOrganizerRole && organizerTab === 'upcoming')) setUpcomingPage(1);
+  }, [eventsToDisplay, isOrganizerRole, organizerTab]);
 
   useEffect(() => {
     if (upcomingPage > totalUpcomingPages) {
@@ -1542,15 +1505,19 @@ useEffect(() => {
     }
   }, [upcomingPage, totalUpcomingPages]);
 
-  const totalCompletedPages = Math.max(1, Math.ceil(completedUpcomingEvents.length / ITEMS_PER_PAGE));
-  const paginatedCompletedEvents = completedUpcomingEvents.slice(
-    (completedPage - 1) * ITEMS_PER_PAGE,
-    completedPage * ITEMS_PER_PAGE
-  );
+  const totalCompletedPages = (isOrganizerRole && organizerTab === 'full' && serverEventsPagination)
+    ? Math.max(1, serverEventsPagination.totalPages)
+    : Math.max(1, Math.ceil(completedUpcomingEvents.length / ITEMS_PER_PAGE));
+  const paginatedCompletedEvents = (isOrganizerRole && organizerTab === 'full' && serverEventsPagination)
+    ? completedUpcomingEvents
+    : completedUpcomingEvents.slice(
+        (completedPage - 1) * ITEMS_PER_PAGE,
+        completedPage * ITEMS_PER_PAGE
+      );
 
   useEffect(() => {
-    setCompletedPage(1);
-  }, [completedUpcomingEvents]);
+    if (!(isOrganizerRole && organizerTab === 'full')) setCompletedPage(1);
+  }, [completedUpcomingEvents, isOrganizerRole, organizerTab]);
 
   useEffect(() => {
     if (completedPage > totalCompletedPages) {
@@ -2320,28 +2287,6 @@ useEffect(() => {
     cursor: 'not-allowed',
   };
 
-  const paginationControlsStyle: CSSProperties = {
-    marginTop: '18px',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: '12px',
-    flexWrap: 'wrap',
-  };
-
-  const paginationButtonStyle: CSSProperties = {
-    ...actionButtonStyleSmall,
-    backgroundColor: '#2d2d44',
-    padding: '8px 14px',
-    minWidth: '90px',
-  };
-
-  const paginationInfoStyle: CSSProperties = {
-    color: '#aaa',
-    fontWeight: 'bold',
-    fontSize: '0.95em',
-  };
-
   const organizerMobileButtonAdjustments: CSSProperties = isMobile
     ? {
         padding: '6px 10px',
@@ -2921,26 +2866,13 @@ useEffect(() => {
               </div>
             );
           })}
-          {filteredUpcomingEvents.length > ITEMS_PER_PAGE && (
-            <div style={paginationControlsStyle}>
-              <button
-                style={paginationButtonStyle}
-                disabled={upcomingPage === 1}
-                onClick={() => setUpcomingPage(prev => Math.max(1, prev - 1))}
-              >
-                Précédent
-              </button>
-              <span style={paginationInfoStyle}>
-                Page {Math.min(upcomingPage, totalUpcomingPages)} / {Math.max(totalUpcomingPages, 1)}
-              </span>
-              <button
-                style={paginationButtonStyle}
-                disabled={upcomingPage >= totalUpcomingPages}
-                onClick={() => setUpcomingPage(prev => Math.min(totalUpcomingPages, prev + 1))}
-              >
-                Suivant
-              </button>
-            </div>
+          {totalUpcomingPages > 1 && (
+            <Pagination
+              page={upcomingPage}
+              totalPages={totalUpcomingPages}
+              onChange={setUpcomingPage}
+              disabled={eventsLoading}
+            />
           )}
         </div>
       ) : (
@@ -3633,7 +3565,9 @@ useEffect(() => {
                               {isOrganizerView ? 'Aucun évènement à venir pour ce filtre.' : 'Aucun évènement à venir (non complet).'}
                             </p>
                           )}
-                          {upcomingSectionItems.slice((upcomingPage - 1) * ITEMS_PER_PAGE, upcomingPage * ITEMS_PER_PAGE).map((item) => {
+                          {((isOrganizerView && organizerTab === 'upcoming' && serverEventsPagination)
+                            ? upcomingSectionItems
+                            : upcomingSectionItems.slice((upcomingPage - 1) * ITEMS_PER_PAGE, upcomingPage * ITEMS_PER_PAGE)).map((item) => {
                     if (item.type === 'event') {
                       const event = item.event;
                       const isCompleteEvent = isEventComplete(event);
@@ -3754,27 +3688,19 @@ useEffect(() => {
                       </div>
                     );
                   })}
-                          {upcomingSectionItems.length > ITEMS_PER_PAGE && (
-                            <div style={paginationControlsStyle}>
-                              <button
-                                style={paginationButtonStyle}
-                                disabled={upcomingPage === 1}
-                                onClick={() => { setExpandedUpcomingGroupId(null); setUpcomingPage(prev => Math.max(1, prev - 1)); }}
-                              >
-                                Précédent
-                              </button>
-                              <span style={paginationInfoStyle}>
-                                Page {Math.min(upcomingPage, Math.max(1, Math.ceil(upcomingSectionItems.length / ITEMS_PER_PAGE)))} / {Math.max(1, Math.ceil(upcomingSectionItems.length / ITEMS_PER_PAGE))}
-                              </span>
-                              <button
-                                style={paginationButtonStyle}
-                                disabled={upcomingPage >= Math.ceil(upcomingSectionItems.length / ITEMS_PER_PAGE)}
-                                onClick={() => { setExpandedUpcomingGroupId(null); setUpcomingPage(prev => Math.min(Math.ceil(upcomingSectionItems.length / ITEMS_PER_PAGE), prev + 1)); }}
-                              >
-                                Suivant
-                              </button>
-                            </div>
-                          )}
+                          {(() => {
+                            const pages = (isOrganizerView && organizerTab === 'upcoming' && serverEventsPagination)
+                              ? serverEventsPagination.totalPages
+                              : Math.max(1, Math.ceil(upcomingSectionItems.length / ITEMS_PER_PAGE));
+                            return pages > 1 ? (
+                              <Pagination
+                                page={upcomingPage}
+                                totalPages={pages}
+                                onChange={(p) => { setExpandedUpcomingGroupId(null); setUpcomingPage(p); }}
+                                disabled={eventsLoading}
+                              />
+                            ) : null;
+                          })()}
                         </>
                       );
                     })()}
@@ -3829,32 +3755,11 @@ useEffect(() => {
                         </div>
                       );
                     })}
-                    {filteredUpcomingEvents.length > ITEMS_PER_PAGE && (
-                      <div style={paginationControlsStyle}>
-                        <button
-                          style={paginationButtonStyle}
-                          disabled={upcomingPage === 1}
-                          onClick={() => setUpcomingPage(prev => Math.max(1, prev - 1))}
-                        >
-                          Précédent
-                        </button>
-                        <span style={paginationInfoStyle}>
-                          Page {Math.min(upcomingPage, totalUpcomingPages)} / {Math.max(totalUpcomingPages, 1)}
-                        </span>
-                        <button
-                          style={paginationButtonStyle}
-                          disabled={upcomingPage >= totalUpcomingPages}
-                          onClick={() => setUpcomingPage(prev => Math.min(totalUpcomingPages, prev + 1))}
-                        >
-                          Suivant
-                        </button>
-                      </div>
-                    )}
-                    {serverEventsPagination && serverEventsPagination.totalPages > 1 && (
+                    {totalUpcomingPages > 1 && (
                       <Pagination
-                        page={eventsPage}
-                        totalPages={serverEventsPagination.totalPages}
-                        onChange={(p) => { setEventsPage(p); setUpcomingPage(1); }}
+                        page={upcomingPage}
+                        totalPages={totalUpcomingPages}
+                        onChange={setUpcomingPage}
                         disabled={eventsLoading}
                       />
                     )}
@@ -3911,26 +3816,13 @@ useEffect(() => {
                   </div>
                 );
               })}
-              {completedUpcomingEvents.length > ITEMS_PER_PAGE && (
-                <div style={paginationControlsStyle}>
-                  <button
-                    style={paginationButtonStyle}
-                    disabled={completedPage === 1}
-                    onClick={() => setCompletedPage(prev => Math.max(1, prev - 1))}
-                  >
-                    Précédent
-                  </button>
-                  <span style={paginationInfoStyle}>
-                    Page {Math.min(completedPage, totalCompletedPages)} / {Math.max(totalCompletedPages, 1)}
-                  </span>
-                  <button
-                    style={paginationButtonStyle}
-                    disabled={completedPage >= totalCompletedPages}
-                    onClick={() => setCompletedPage(prev => Math.min(totalCompletedPages, prev + 1))}
-                  >
-                    Suivant
-                  </button>
-                </div>
+              {totalCompletedPages > 1 && (
+                <Pagination
+                  page={completedPage}
+                  totalPages={totalCompletedPages}
+                  onChange={setCompletedPage}
+                  disabled={eventsLoading}
+                />
               )}
             </div>
           )}
@@ -3979,26 +3871,13 @@ useEffect(() => {
               </div>
             );
           })}
-          {archivedEventsToShow.length > ITEMS_PER_PAGE && (
-            <div style={paginationControlsStyle}>
-              <button
-                style={paginationButtonStyle}
-                disabled={archivedPage === 1}
-                onClick={() => setArchivedPage(prev => Math.max(1, prev - 1))}
-              >
-                Précédent
-              </button>
-              <span style={paginationInfoStyle}>
-                Page {Math.min(archivedPage, totalArchivedPages)} / {Math.max(totalArchivedPages, 1)}
-              </span>
-              <button
-                style={paginationButtonStyle}
-                disabled={archivedPage >= totalArchivedPages}
-                onClick={() => setArchivedPage(prev => Math.min(totalArchivedPages, prev + 1))}
-              >
-                Suivant
-              </button>
-            </div>
+          {totalArchivedPages > 1 && (
+            <Pagination
+              page={archivedPage}
+              totalPages={totalArchivedPages}
+              onChange={setArchivedPage}
+              disabled={eventsLoading}
+            />
           )}
         </div>
       )}
@@ -4094,26 +3973,13 @@ useEffect(() => {
               </div>
             );
           })}
-          {cancelledEvents.length > ITEMS_PER_PAGE && (
-            <div style={paginationControlsStyle}>
-              <button
-                style={paginationButtonStyle}
-                disabled={cancelledPage === 1}
-                onClick={() => setCancelledPage(prev => Math.max(1, prev - 1))}
-              >
-                Précédent
-              </button>
-              <span style={paginationInfoStyle}>
-                Page {Math.min(cancelledPage, totalCancelledPages)} / {Math.max(totalCancelledPages, 1)}
-              </span>
-              <button
-                style={paginationButtonStyle}
-                disabled={cancelledPage >= totalCancelledPages}
-                onClick={() => setCancelledPage(prev => Math.min(totalCancelledPages, prev + 1))}
-              >
-                Suivant
-              </button>
-            </div>
+          {totalCancelledPages > 1 && (
+            <Pagination
+              page={cancelledPage}
+              totalPages={totalCancelledPages}
+              onChange={setCancelledPage}
+              disabled={eventsLoading}
+            />
           )}
         </div>
       )}

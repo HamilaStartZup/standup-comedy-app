@@ -25,6 +25,8 @@ import { createNotification } from './notification';
 import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 import { FilterQuery } from 'mongoose';
 import Logger from '../utils/logger';
+import { detectZoneType, matchesMobilityZone, normalizeDepartment, getRegionByDepartment, FRENCH_REGIONS } from '../utils/geographicMatching';
+import { escapeRegex } from '../utils/regex';
 
 // Fonction pour construire avatarUrl à partir de avatar.data
 const buildAvatarDataUrl = (user: any): string | undefined => {
@@ -654,7 +656,7 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const { status, eventId, comedianId, sort, tab } = req.query as Record<string, string | string[] | undefined>;
+    const { status, eventId, comedianId, sort, tab, zone, experienceLevel } = req.query as Record<string, string | string[] | undefined>;
 
     const currentUser = await UserModel.findById(userId).select('role').lean();
 
@@ -709,6 +711,63 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
       }
     }
 
+    const VALID_EXPERIENCE_LEVELS = ['0-50', '50-200', '200+'] as const;
+    type ExperienceLevelValue = typeof VALID_EXPERIENCE_LEVELS[number];
+    const isOrganizerOrAdmin = currentUser?.role === 'ORGANIZER' || currentUser?.role === 'SUPER_ADMIN';
+
+    const resolvedExperienceLevel: ExperienceLevelValue | null =
+      isOrganizerOrAdmin &&
+      experienceLevel &&
+      !Array.isArray(experienceLevel) &&
+      (VALID_EXPERIENCE_LEVELS as readonly string[]).includes(experienceLevel)
+        ? (experienceLevel as ExperienceLevelValue)
+        : null;
+
+    if (isOrganizerOrAdmin && zone && !Array.isArray(zone) && zone.trim() && !comedianId) {
+      const searchZone = await detectZoneType(zone.trim());
+
+      // Pré-filtre DB : ne charge que les comédiens dont au moins une mobilityZone
+      // peut potentiellement matcher (superset du match exact via matchesMobilityZone).
+      // Évite un scan complet de la collection users à chaque requête.
+      const candidateDepts = new Set<string>();
+      const candidateRegions = new Set<string>();
+      if (searchZone.type === 'ville') {
+        if (searchZone.department) candidateDepts.add(searchZone.department);
+        if (searchZone.region) candidateRegions.add(searchZone.region);
+      } else if (searchZone.type === 'departement') {
+        candidateDepts.add(normalizeDepartment(searchZone.value));
+        const r = getRegionByDepartment(searchZone.value);
+        if (r) candidateRegions.add(r);
+      } else if (searchZone.type === 'region') {
+        candidateRegions.add(searchZone.value);
+        (FRENCH_REGIONS[searchZone.value] || []).forEach(d => candidateDepts.add(d));
+      }
+
+      const cityRegex = new RegExp(escapeRegex(searchZone.value), 'i');
+      const orPrefilter: Array<Record<string, unknown>> = [
+        { 'profile.mobilityZone': { $elemMatch: { type: 'ville', value: cityRegex } } },
+      ];
+      if (candidateDepts.size > 0) {
+        orPrefilter.push({ 'profile.mobilityZone': { $elemMatch: { type: 'departement', value: { $in: [...candidateDepts] } } } });
+      }
+      if (candidateRegions.size > 0) {
+        orPrefilter.push({ 'profile.mobilityZone': { $elemMatch: { type: 'region', value: { $in: [...candidateRegions] } } } });
+      }
+
+      const candidates = await UserModel.find({ role: 'COMEDIAN', $or: orPrefilter })
+        .select('_id profile.mobilityZone')
+        .lean();
+
+      const matchingComedianIds = candidates
+        .filter((c: any) => {
+          const mobilityZones = c.profile?.mobilityZone;
+          if (!mobilityZones || mobilityZones.length === 0) return false;
+          return mobilityZones.some((mz: any) => matchesMobilityZone(mz, searchZone));
+        })
+        .map((c: any) => c._id as Types.ObjectId);
+      dbFilter.comedian = { $in: matchingComedianIds };
+    }
+
     const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>);
 
     const sortMap: Record<string, Record<string, 1 | -1>> = {
@@ -719,8 +778,51 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
     };
     const dbSort: Record<string, 1 | -1> = (sort && !Array.isArray(sort) && sortMap[sort]) ? sortMap[sort] : { createdAt: -1 };
 
-    const [rawApplications, total] = await Promise.all([
-      ApplicationModel.find(dbFilter)
+    // Exclure les candidatures orphelines (comedian/event supprimé) au niveau DB.
+    // Sinon le count gonfle et la pagination affiche moins d'items que le compteur (cf. UI).
+    const orphanFilterPipeline = [
+      { $match: dbFilter },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'comedian',
+          foreignField: '_id',
+          as: 'comedianDoc',
+          pipeline: [{ $project: { _id: 1, 'profile.numberOfScenes': 1 } }],
+        },
+      },
+      { $match: { 'comedianDoc.0': { $exists: true } } },
+      ...(resolvedExperienceLevel ? [{ $match: { 'comedianDoc.0.profile.numberOfScenes': resolvedExperienceLevel } }] : []),
+      {
+        $lookup: {
+          from: 'events',
+          localField: 'event',
+          foreignField: '_id',
+          as: 'eventDoc',
+          pipeline: [{ $project: { _id: 1 } }],
+        },
+      },
+      { $match: { 'eventDoc.0': { $exists: true } } },
+      { $project: { _id: 1, createdAt: 1, status: 1 } },
+    ];
+
+    const [validRefs, totalArr] = await Promise.all([
+      ApplicationModel.aggregate([
+        ...orphanFilterPipeline,
+        { $sort: dbSort },
+        { $skip: skip },
+        { $limit: limit },
+      ]),
+      ApplicationModel.aggregate([
+        ...orphanFilterPipeline,
+        { $count: 'total' },
+      ]),
+    ]);
+    const total: number = totalArr[0]?.total ?? 0;
+    const pageIds = validRefs.map((d: any) => d._id);
+
+    const rawApplications = pageIds.length === 0 ? [] : await (async () => {
+      const docs = await ApplicationModel.find({ _id: { $in: pageIds } })
         .select('+performanceDetails +message +organizerMessage')
         .populate({
           path: 'event',
@@ -728,12 +830,11 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
           populate: { path: 'organizer', select: 'firstName lastName email' }
         })
         .populate({ path: 'comedian', select: 'firstName lastName email phone avatarUrl profile avatar' })
-        .sort(dbSort)
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      ApplicationModel.countDocuments(dbFilter),
-    ]);
+        .lean();
+      // Préserver l'ordre du tri
+      const byId = new Map(docs.map((d: any) => [String(d._id), d]));
+      return pageIds.map((id) => byId.get(String(id))).filter(Boolean) as any[];
+    })();
 
     const applications = (rawApplications as any[]).map(app => {
       if (app.comedian) {

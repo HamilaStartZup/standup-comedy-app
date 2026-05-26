@@ -21,6 +21,7 @@ import {
   assertVenueBookingAvailableForNewEvent,
   getUsedVenueBookingIdsForOrganizer,
 } from '../utils/venueBookingEventLink';
+import { detectZoneType, FRENCH_REGIONS, normalizeDepartment } from '../utils/geographicMatching';
 
 /** Retourne la liste des modifications entre l'ancien et le nouvel évènement (pour l'email aux candidats) */
 function getEventChanges(oldEvent: any, newEvent: any): string[] {
@@ -662,6 +663,10 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     const nearMe = req.query.nearMe === 'true';
     const radiusKmParam = req.query.radiusKm as string; // 5, 10, 20, 50
     const dateFrom = req.query.dateFrom as string | undefined;
+    const statusFilter = req.query.status as string | undefined;
+    const zone = req.query.zone as string | undefined;
+    const experienceLevel = req.query.experienceLevel as string | undefined;
+    const hasRecurrence = req.query.hasRecurrence === 'true';
     const userRole = req.user?.role;
     const userId = req.user?.id;
 
@@ -670,11 +675,17 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     // If an organizerId is provided, filter events by it
     if (organizerId && mongoose.Types.ObjectId.isValid(organizerId)) {
       query.organizer = organizerId;
+      if (statusFilter && ['published', 'completed', 'cancelled', 'full', 'draft', 'PUBLISHED', 'COMPLETED', 'CANCELLED', 'FULL', 'DRAFT'].includes(statusFilter)) {
+        query.status = statusFilter;
+      }
     } else if (organizerId && !mongoose.Types.ObjectId.isValid(organizerId)) {
       res.status(400).json({ message: 'Invalid organizerId format' });
       return;
     } else if (userRole === 'ORGANIZER') {
       query.organizer = userId;
+      if (statusFilter && ['published', 'completed', 'cancelled', 'full', 'draft', 'PUBLISHED', 'COMPLETED', 'CANCELLED', 'FULL', 'DRAFT'].includes(statusFilter)) {
+        query.status = statusFilter;
+      }
     } else if (userRole === 'COMEDIAN' || userRole === 'SPECTATOR') {
       query.status = { $in: ['published', 'PUBLISHED', 'completed', 'COMPLETED', 'cancelled', 'CANCELLED'] };
     } else if (userRole === 'SUPER_ADMIN') {
@@ -715,11 +726,56 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
       }
     }
 
+    if (hasRecurrence) {
+      query.recurrenceGroupId = { $exists: true, $ne: null };
+    }
+
+    const VALID_EXPERIENCE_LEVELS = ['0-50', '50-200', '200+'] as const;
+    if (experienceLevel && (VALID_EXPERIENCE_LEVELS as readonly string[]).includes(experienceLevel)) {
+      // Inclure 'all' et les events sans niveau requis : un event ouvert à tous les niveaux
+      // doit apparaître quand un humoriste filtre par son propre niveau.
+      query['requirements.requiredExperienceLevel'] = { $in: [experienceLevel, 'all', null] };
+    }
+
+    if (zone && zone.trim()) {
+      const searchZone = await detectZoneType(zone.trim());
+      if (searchZone.type === 'ville') {
+        // Match ville/adresse/salle : conserve la flexibilité du search libre antérieur
+        // (nom de salle, bout d'adresse) en plus du match strict sur city.
+        const cityRegex = new RegExp(escapeRegex(searchZone.value), 'i');
+        const zoneOr = [
+          { 'location.city': cityRegex },
+          { 'location.address': cityRegex },
+          { 'location.venue': cityRegex },
+        ];
+        // Combiner avec un éventuel $or préexistant (filtre `type` sur titre/description)
+        // via $and pour ne pas l'écraser.
+        if (query.$or) {
+          query.$and = ([] as Array<Record<string, unknown>>).concat(
+            (query.$and as Array<Record<string, unknown>>) || [],
+            [{ $or: query.$or }, { $or: zoneOr }],
+          );
+          delete query.$or;
+        } else {
+          query.$or = zoneOr;
+        }
+      } else if (searchZone.type === 'departement') {
+        query['location.department'] = normalizeDepartment(searchZone.value);
+      } else if (searchZone.type === 'region' && searchZone.region && FRENCH_REGIONS[searchZone.region]) {
+        query['location.department'] = { $in: FRENCH_REGIONS[searchZone.region] };
+      }
+    }
+
     const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>);
     const isGeoFilter = (userRole === 'SPECTATOR' && nearMe) || Boolean(city && city.trim() && cityRadiusKm > 0);
 
-    // P14: filter out events without a valid organizer at DB level
-    query.organizer = { $exists: true, $ne: null };
+    // P14: filter out events without a valid organizer at DB level.
+    // Ne PAS écraser un filtre organizer déjà posé (ORGANIZER role / organizerId param) :
+    // sans ça le serveur renvoyait tous les events d'un statut, le client filtrait ensuite et
+    // la pagination se retrouvait avec des pages quasi vides.
+    if (!query.organizer) {
+      query.organizer = { $exists: true, $ne: null };
+    }
 
     if (!isGeoFilter) {
       const total = await EventModel.countDocuments(query);

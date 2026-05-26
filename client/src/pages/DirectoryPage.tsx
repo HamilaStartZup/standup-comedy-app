@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import Navbar from '../components/Navbar';
+import Pagination from '../components/Pagination';
 import ComedianApplicationsModal from '../components/ComedianApplicationsModal';
 import ComedianDetailsModal from '../components/ComedianDetailsModal';
 import OrganizerDetailsModal from '../components/OrganizerDetailsModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import type { IUserData } from '../types/user';
+import type { PaginationMeta } from '../types/pagination';
 import api, { deactivateUser as apiDeactivateUser, reactivateUser as apiReactivateUser, deleteUser as apiDeleteUser } from '../services/api';
 
 interface UserStats {
@@ -74,34 +76,39 @@ const DirectoryPage: React.FC = () => {
   const { showError, showWarning, showSuccess } = useAlert();
   const queryClient = useQueryClient();
 
-  // Charger les utilisateurs avec React Query
+  const [currentPage, setCurrentPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roleFilter]);
+
+  // Charger les utilisateurs avec React Query (pagination serveur)
   const { data: usersData, isLoading: loading, refetch: refetchUsers } = useQuery({
-    queryKey: ['users'],
+    queryKey: ['users', currentPage, debouncedSearch, roleFilter],
     queryFn: async () => {
-      const response = await api.get('/auth/users');
-      return (response.data.users || []) as User[];
+      const params = new URLSearchParams();
+      params.set('page', String(currentPage));
+      params.set('limit', '10');
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
+      if (roleFilter !== 'all') params.set('role', roleFilter);
+      const response = await api.get(`/auth/users?${params.toString()}`);
+      return {
+        users: (response.data.users || []) as User[],
+        pagination: (response.data.pagination ?? null) as PaginationMeta | null,
+      };
     },
     enabled: !!user && user.role === 'SUPER_ADMIN',
   });
 
-  const users = usersData || [];
-
-  const filteredUsers = useMemo(() => {
-    let filtered = users;
-    if (searchTerm) {
-      filtered = filtered.filter(directoryUser =>
-        directoryUser.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        directoryUser.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        directoryUser.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (directoryUser.stageName && directoryUser.stageName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (directoryUser.companyName && directoryUser.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(directoryUser => directoryUser.role === roleFilter);
-    }
-    return filtered;
-  }, [users, searchTerm, roleFilter]);
+  const users = usersData?.users || [];
+  const usersPagination = usersData?.pagination ?? null;
+  const filteredUsers = users;
 
   // Styles
   const mainContainerStyle = {
@@ -490,7 +497,7 @@ const DirectoryPage: React.FC = () => {
             fontWeight: 'bold',
             color: '#333'
           }}>
-            Affichage: {filteredUsers.length} / {users.length} utilisateurs
+            {usersPagination ? `${usersPagination.total} utilisateurs` : `${filteredUsers.length} utilisateurs`}
           </span>
         </div>
 
@@ -635,6 +642,16 @@ const DirectoryPage: React.FC = () => {
                 </div>
               </div>
             ))}
+            {usersPagination && usersPagination.totalPages > 1 && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <Pagination
+                  page={currentPage}
+                  totalPages={usersPagination.totalPages}
+                  onChange={setCurrentPage}
+                  disabled={loading}
+                />
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>

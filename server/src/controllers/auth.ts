@@ -16,6 +16,7 @@ import { AuthRequest } from '../middleware/auth';
 import sgMail from '@sendgrid/mail';
 import { emitUserRegistered, emitPasswordReset } from '../services/eventEmitter';
 import { getAuthCookieOptions, AUTH_COOKIE_MAX_AGE } from '../utils/cookieOptions';
+import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 
 /**
  * POST /api/auth/logout
@@ -464,34 +465,42 @@ export const getProfile = async (req: Request, res: Response) => {
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const userRole = (req as any).user?.role;
-    const userId = (req as any).user?.id;
-
-    // Vérifier l'accès super administrateur
     if (userRole !== 'SUPER_ADMIN') {
-      return res.status(403).json({
-        message: 'Seuls les super administrateurs peuvent accéder à cette ressource'
-      });
+      return res.status(403).json({ message: 'Seuls les super administrateurs peuvent accéder à cette ressource' });
     }
 
-    // Récupérer tous les utilisateurs non administrateurs
-    const users = await UserModel.find({
-      role: { $in: ['COMEDIAN', 'ORGANIZER'] }
-    })
-      .select('firstName lastName email phone role city createdAt stats profile organizerProfile isActive deactivatedAt deactivationReason')
-      .populate('profile')
-      .populate('organizerProfile')
-      .sort({ createdAt: -1 });
+    const { role, search } = req.query as Record<string, string | undefined>;
+    const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>, 10, 100);
 
-    // Formater les données utilisateur pour la réponse
-    const formattedUsers = users.map(user => {
+    const filter: Record<string, unknown> = { role: { $in: ['COMEDIAN', 'ORGANIZER'] } };
+    if (role && ['COMEDIAN', 'ORGANIZER'].includes(role)) {
+      filter.role = role;
+    }
+    if (search && typeof search === 'string' && search.trim()) {
+      const escaped = search.trim().slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(escaped, 'i');
+      filter.$or = [{ firstName: re }, { lastName: re }, { email: re }];
+    }
+
+    const [users, total] = await Promise.all([
+      UserModel.find(filter)
+        .select('firstName lastName email phone role city createdAt stats profile organizerProfile isActive deactivatedAt deactivationReason')
+        .populate('profile')
+        .populate('organizerProfile')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      UserModel.countDocuments(filter),
+    ]);
+
+    const formattedUsers = (users as any[]).map(user => {
       const baseData = {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        phone: user.role === 'ORGANIZER'
-          ? (user.organizerProfile?.phone || null)
-          : (user.phone || null),
+        phone: user.role === 'ORGANIZER' ? (user.organizerProfile?.phone || null) : (user.phone || null),
         role: user.role,
         city: user.role === 'ORGANIZER'
           ? (user.organizerProfile?.location?.city || user.city || null)
@@ -499,40 +508,26 @@ export const getAllUsers = async (req: Request, res: Response) => {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
         stats: user.stats || {},
-        isActive: (user as any).isActive !== false, // Par defaut true si non defini
-        deactivatedAt: (user as any).deactivatedAt || null,
-        deactivationReason: (user as any).deactivationReason || null,
+        isActive: user.isActive !== false,
+        deactivatedAt: user.deactivatedAt || null,
+        deactivationReason: user.deactivationReason || null,
       };
-
-      // Ajouter des données spécifiques au rôle
       if (user.role === 'COMEDIAN' && user.profile) {
-        return {
-          ...baseData,
-          bio: (user.profile as any).bio || '',
-          experience: (user.profile as any).experience || 0,
-          numberOfScenes: (user.profile as any).numberOfScenes || '0-50',
-        };
+        return { ...baseData, bio: user.profile.bio || '', experience: user.profile.experience || 0, numberOfScenes: user.profile.numberOfScenes || '0-50' };
       }
-
       if (user.role === 'ORGANIZER' && user.organizerProfile) {
-        return {
-          ...baseData,
-          companyName: (user.organizerProfile as any).companyName || null,
-          description: (user.organizerProfile as any).description || null,
-          website: (user.organizerProfile as any).website || null,
-        };
+        return { ...baseData, companyName: user.organizerProfile.companyName || null, description: user.organizerProfile.description || null, website: user.organizerProfile.website || null };
       }
-
       return baseData;
     });
 
     res.status(200).json({
       success: true,
-      count: formattedUsers.length,
-      users: formattedUsers
+      users: formattedUsers,
+      pagination: buildPaginationResult({ page, limit }, total),
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des utilisateurs:', error);
+    console.error('Erreur getAllUsers:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération des utilisateurs' });
   }
 };
