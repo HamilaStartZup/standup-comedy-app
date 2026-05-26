@@ -192,31 +192,6 @@ function ApplicationsPage() {
       if (!user?._id) {
         throw new Error("Vous devez être connecté pour voir les candidatures.");
       }
-<<<<<<< HEAD
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-      const query = selectedEventId !== 'all' ? `?eventId=${encodeURIComponent(selectedEventId)}` : '';
-      const res = await api.get<IApplication[]>(`/applications${query}`, config);
-      const list = Array.isArray(res.data)
-        ? res.data
-        : (Array.isArray((res.data as any)?.applications) ? (res.data as any).applications : []);
-      
-      // Log pour déboguer les zones de mobilité
-      console.log('📋 Applications chargées:', list.length);
-      list.forEach((app: IApplication, idx: number) => {
-        if (app.comedian?.profile?.mobilityZone && app.event?.location?.city) {
-          console.log(`  Application ${idx + 1} - Humoriste: ${app.comedian.firstName} ${app.comedian.lastName}`, {
-            mobilityZones: app.comedian.profile.mobilityZone,
-            eventCity: app.event.location.city
-          });
-        }
-      });
-      
-      return list as IApplication[];
-=======
       const params = new URLSearchParams();
       if (isComedianView) {
         params.set('page', String(comedianPage));
@@ -242,7 +217,6 @@ function ApplicationsPage() {
         : (Array.isArray(raw?.applications) ? raw.applications : []);
       const pagination: PaginationMeta | null = raw?.pagination ?? null;
       return { applications: list, pagination };
->>>>>>> dev_brach_env2
     },
     enabled: isQueryEnabled,
   });
@@ -321,12 +295,10 @@ function ApplicationsPage() {
     }
   }, [favoritesData, isOrganizerView]);
 
-  // Extraire les IDs des candidatures favorites (supporte tableau d'objets ou d'IDs)
+  // Extraire les IDs des candidatures favorites
   useEffect(() => {
-    if (applicationFavoritesData?.favorites && Array.isArray(applicationFavoritesData.favorites)) {
-      const favoriteIds = applicationFavoritesData.favorites.map((fav: IApplication | string) =>
-        typeof fav === 'string' ? fav : (fav as IApplication)._id
-      ).filter(Boolean);
+    if (applicationFavoritesData?.favorites) {
+      const favoriteIds = applicationFavoritesData.favorites.map((application: IApplication) => application._id);
       setFavoriteApplicationIds(favoriteIds);
     } else if (!isOrganizerView) {
       setFavoriteApplicationIds([]);
@@ -622,9 +594,9 @@ function ApplicationsPage() {
             app.status === 'ACCEPTED' &&
             app.event?.date &&
             isEventUpcoming(app.event.date) &&
-            app.event?.organizer?.firstName != null
+            app.event?.organizer
           )
-          .map(app => `${app.event!.organizer!._id}::${app.event!.organizer!.firstName} ${app.event!.organizer!.lastName}`)
+          .map(app => `${app.event.organizer._id}::${app.event.organizer.firstName} ${app.event.organizer.lastName}`)
       )
     ).map(str => {
       const [id, name] = str.split('::');
@@ -685,7 +657,7 @@ function ApplicationsPage() {
     let filtered = tabFiltered;
     if (comedianTab === 'accepted' && comedianOrganizerFilter !== 'all') {
       filtered = filtered.filter(app =>
-        app.event?.organizer?._id === comedianOrganizerFilter
+        app.event.organizer._id === comedianOrganizerFilter
       );
     }
 
@@ -1522,25 +1494,15 @@ function ApplicationsPage() {
                           {app.event && <>
                           {/* Ligne 1 : Titre + Date */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: isMobile ? 'wrap' : 'nowrap', marginBottom: '8px' }}>
-<<<<<<< HEAD
-                            <h3 style={{ ...cardTitleStyle, margin: 0, lineHeight: 1.2, ...((app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || app.status === 'WITHDRAWN') ? { color: '#1a1a1a' } : {}) }}>{app.event?.title ?? 'Évènement'}</h3>
-                            <span style={{ ...comedianApplicationDateBadgeStyle, display: 'inline-flex', alignItems: 'center', lineHeight: 1, ...((app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || app.status === 'WITHDRAWN') ? { color: '#1a1a1a', border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)' } : {}) }}>
-=======
                             <h3 style={{ ...cardTitleStyle, margin: 0, lineHeight: 1.2, ...((app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? { color: '#1a1a1a' } : {}) }}>{app.event.title}</h3>
                             <span style={{ ...comedianApplicationDateBadgeStyle, display: 'inline-flex', alignItems: 'center', lineHeight: 1, ...((app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? { color: '#1a1a1a', border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)' } : {}) }}>
->>>>>>> dev_brach_env2
                               {app.event?.date ? new Date(app.event.date).toLocaleDateString() : 'Date non disponible'}
                             </span>
                           </div>
 
                           {/* Ligne 2 : Organisateur */}
-<<<<<<< HEAD
-                          <p style={{ ...cardDetailStyle, margin: 0, marginBottom: '4px', color: (app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || app.status === 'WITHDRAWN') ? '#64748B' : '#9ad7ff' }}>
-                            · Organisateur: {app.event?.organizer?.firstName} {app.event?.organizer?.lastName}
-=======
                           <p style={{ ...cardDetailStyle, margin: 0, marginBottom: '4px', color: (app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? '#64748B' : '#9ad7ff' }}>
                             · Organisateur: {app.event.organizer?.firstName ?? ''} {app.event.organizer?.lastName ?? ''}
->>>>>>> dev_brach_env2
                           </p>
 
                           {/* Heure de l'évènement */}
@@ -1749,17 +1711,13 @@ function ApplicationsPage() {
                     }}
                   >
                     {/* Section gauche - Avatar et info humoriste */}
-                    {user?.role === 'ORGANIZER' && app.comedian && (
+                    {user?.role === 'ORGANIZER' && (
                       <div style={comedianInfoStyle}>
                         <div style={comedianInitialBubbleStyle}>
-                          {app.comedian.avatarUrl ? (
+                          {app.comedian?.avatarUrl ? (
                             <img
                               src={app.comedian.avatarUrl}
-<<<<<<< HEAD
-                              alt={`${app.comedian.firstName ?? ''} ${app.comedian.lastName ?? ''}`}
-=======
                               alt={`${app.comedian?.firstName ?? ''} ${app.comedian?.lastName ?? ''}`}
->>>>>>> dev_brach_env2
                               style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                             />
                           ) : (
@@ -1770,11 +1728,7 @@ function ApplicationsPage() {
                           <p style={{ ...comedianNameTextStyle, ...((app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? { color: '#1a1a1a' } : {}) }}>{app.comedian?.firstName ?? ''} {app.comedian?.lastName ?? ''}</p>
                           <p style={{ ...comedianRoleTextStyle, ...((app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? { color: '#64748B' } : {}) }}>Humoriste</p>
                           <GeographicCompatibilityBadge 
-<<<<<<< HEAD
-                            eventCity={app.event?.location?.city ?? ''} 
-=======
                             eventCity={app.event?.location?.city} 
->>>>>>> dev_brach_env2
                             mobilityZones={app.comedian.profile?.mobilityZone}
                           />
                         </div>
@@ -1782,11 +1736,7 @@ function ApplicationsPage() {
                           style={viewProfileInlineButtonStyle}
                           onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                             e.stopPropagation();
-<<<<<<< HEAD
-                            handleViewComedianProfile(e, app.comedian!._id, app._id);
-=======
                             if (app.comedian?._id) handleViewComedianProfile(e, app.comedian._id, app._id);
->>>>>>> dev_brach_env2
                           }}
                         >
                           👤 Voir le profil
@@ -1796,13 +1746,8 @@ function ApplicationsPage() {
 
                     {/* Section centre - Info évènement */}
                     <div style={eventInfoStyle}>
-<<<<<<< HEAD
-                      <h3 style={{ ...eventTitleStyle, ...((app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || app.status === 'WITHDRAWN') ? { color: '#1a1a1a' } : {}) }}>{app.event?.title ?? 'Évènement'}</h3>
-                      <p style={{ ...eventDateStyle, ...((app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || app.status === 'WITHDRAWN') ? { color: '#64748B' } : {}) }}>
-=======
                       <h3 style={{ ...eventTitleStyle, ...((app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? { color: '#1a1a1a' } : {}) }}>{app.event.title}</h3>
                       <p style={{ ...eventDateStyle, ...((app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? { color: '#64748B' } : {}) }}>
->>>>>>> dev_brach_env2
                         📅 {app.event?.date ? new Date(app.event.date).toLocaleDateString() : 'Date non disponible'}
                       </p>
                     </div>

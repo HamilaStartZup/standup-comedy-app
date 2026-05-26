@@ -326,13 +326,6 @@ function LoginOrganisateur() {
 
             </div>
 
-<<<<<<< HEAD
-            {/* Boutons secondaires - GitHub, Microsoft, Apple */}
-            {/* <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              ...
-            </div> */}
-=======
->>>>>>> dev_brach_env2
           </>
         )}
         <p style={{ marginTop: '15px', marginBottom: '10px' }}>

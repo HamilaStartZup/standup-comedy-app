@@ -308,8 +308,6 @@ export const createEventSchema = z.object({
 }, {
   message: 'Pour un événement unique, fournissez "date". Pour un événement récurrent, fournissez "isRecurring: true" et "dates"',
   path: ['date']
-<<<<<<< HEAD
-=======
 }).refine((data) => {
   const startParts = data.startTime.split(':');
   const endParts = data.endTime.split(':');
@@ -321,7 +319,6 @@ export const createEventSchema = z.object({
 }, {
   message: 'End time must be after start time',
   path: ['endTime']
->>>>>>> dev_brach_env2
 });
 // Note: on n'exige plus endTime > startTime pour autoriser les événements qui dépassent minuit (fin le lendemain)
 
@@ -373,10 +370,6 @@ export const updateEventSchema = z.object({
     .min(1, { message: 'Le nombre de places doit être au moins 1' })
     .max(10000, { message: 'Le nombre de places ne peut pas dépasser 10000' })
     .optional(),
-<<<<<<< HEAD
-}).partial();
-// Note: on n'exige plus endTime > startTime pour autoriser les événements qui dépassent minuit (fin le lendemain)
-=======
   imageUrl: z.string().max(2000).optional().transform((v) => (v && v.trim() ? v.trim() : undefined)).refine((v) => !v || /^https?:\/\//i.test(v), { message: 'L\'URL de l\'image doit commencer par http:// ou https://' }),
 }).partial().refine((data) => {
   // Si les deux heures sont fournies, validez que la fin est après le début
@@ -392,7 +385,6 @@ export const updateEventSchema = z.object({
   message: 'End time must be after start time',
   path: ['endTime']
 });
->>>>>>> dev_brach_env2
 
 // ============================================================================
 // SCHÉMAS D'APPLICATION

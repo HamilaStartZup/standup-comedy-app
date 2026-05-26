@@ -666,11 +666,6 @@ useEffect(() => {
     return map;
   }, [comedianApplications]);
 
-<<<<<<< HEAD
-  // Fonction utilitaire pour comparer les dates : l'événement est-il terminé ?
-  // Si endTime < startTime (ex. 01:00 après 23:00), la fin est le lendemain.
-  const isEventPast = (eventDateString: string, endTime?: string, startTime?: string): boolean => {
-=======
   /** true si l'événement commence dans moins d'1 h ou a déjà commencé → plus de postuler ni désinscrire */
   const isEventWithinOneHour = (event: { date: string; startTime?: string }): boolean => {
     if (!event?.date) return false;
@@ -682,9 +677,8 @@ useEffect(() => {
   };
 
   // Fonction utilitaire pour comparer les dates (ignorer l'heure)
-  const isEventPast = (eventDateString: string, endTime?: string): boolean => {
+  const isEventPast = (eventDateString: string, endTime?: string, startTime?: string): boolean => {
     // Si endTime n'est pas fourni, on considère la fin de la journée
->>>>>>> dev_brach_env2
     const eventDate = new Date(eventDateString);
     let eventEndDateTime: Date;
     if (endTime) {
@@ -848,20 +842,6 @@ useEffect(() => {
             else upcoming.push(event);
           });
         }
-<<<<<<< HEAD
-        // Utilise la nouvelle logique avec endTime
-        const eventIsPast = isEventPast(event.date, event.endTime, event.startTime);
-        const eventDate = new Date(event.date);
-        
-        // Debug logging détaillé pour tracer TOUS les évènements
-        console.log(`\n🎭 Évènement "${event.title}":`, {
-          dateOriginale: event.date,
-          dateParsee: eventDate.toLocaleDateString('fr-FR'),
-          aujourdhuiMidnight: todayMidnight.toLocaleDateString('fr-FR'),
-          status: event.status,
-          estPasse: eventIsPast,
-          estFutur: !eventIsPast
-=======
       } else {
         filteredEvents.forEach((event: IEvent) => {
           // D'abord, isoler les évènements annulés pour qu'ils n'apparaissent pas ailleurs
@@ -877,7 +857,6 @@ useEffect(() => {
           } else {
             upcoming.push(event);
           }
->>>>>>> dev_brach_env2
         });
       }
       
@@ -3931,11 +3910,7 @@ useEffect(() => {
         )}
       </Modal>
 
-<<<<<<< HEAD
-      <Modal isOpen={showCreateEventForm && user?.role === 'ORGANIZER'} onClose={() => { setShowCreateEventForm(false); setEventToDuplicate(null); }} title={eventToDuplicate ? "Dupliquer l'évènement" : "Créer un évènement"} closeOnBackdropClick={false}>
-=======
       <Modal isOpen={showCreateEventForm && user?.role === 'ORGANIZER'} onClose={() => { setShowCreateEventForm(false); setEventToDuplicate(null); }} title={eventToDuplicate ? "Dupliquer l'évènement" : "Créer un évènement"} closeOnOverlayClick={false} transparentOverlay>
->>>>>>> dev_brach_env2
         {showCreateEventForm && user?.role === 'ORGANIZER' && (
           <CreateEventForm 
             onClose={() => { setShowCreateEventForm(false); setEventToDuplicate(null); }} 

@@ -69,8 +69,6 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
 
     // Use full API URL including /api for proper Nginx routing
     const redirectUri = `${config.api.url}/auth/oauth/callback`;
-<<<<<<< HEAD
-=======
 
     // Validation de sécurité du redirect URI
     if (!isValidRedirectUri(redirectUri)) {
@@ -78,7 +76,6 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ error: 'Invalid redirect URI configuration' });
       return;
     }
->>>>>>> dev_brach_env2
 
     // Optional: specify a particular social provider configured in Keycloak
     // via the "provider" query parameter (google, facebook, github, etc.).
@@ -174,14 +171,8 @@ export const callback = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-<<<<<<< HEAD
-    // Build redirect_uri for token exchange — must EXACTLY match the one used in authorize
-    const redirectUri = `${config.api.url}/auth/oauth/callback`;
-    const currentUrl = new URL(`${redirectUri}?code=${code}&state=${state}`);
-=======
     // Build redirect_uri for token exchange - must EXACTLY match the one used in authorize
     const redirectUri = `${config.api.url}/auth/oauth/callback`;
->>>>>>> dev_brach_env2
 
     // Exchange code for tokens
     const tokens = await exchangeCodeForTokens(

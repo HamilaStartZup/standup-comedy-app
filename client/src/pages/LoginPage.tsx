@@ -365,32 +365,7 @@ function LoginPage() {
           </button>
         </form>
 
-<<<<<<< HEAD
-        {/* OAuth Error */}
-        {oauthError && (
-          <div style={{
-            color: '#dc3545',
-            marginTop: '10px',
-            marginBottom: '10px',
-            fontSize: '0.9em',
-            textAlign: 'left',
-            padding: '10px',
-            backgroundColor: 'rgba(220, 53, 69, 0.15)',
-            borderRadius: '5px',
-            border: '1px solid rgba(220, 53, 69, 0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <span>⚠️</span>
-            <span>{oauthError}</span>
-          </div>
-        )}
-
-          {/* Social Login Buttons (via Keycloak Identity Providers) */}
-=======
         {/* Social Login Buttons (via Keycloak Identity Providers) */}
->>>>>>> dev_brach_env2
         {isOAuthEnabled && (
           <>
             <div style={{

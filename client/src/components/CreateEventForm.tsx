@@ -165,11 +165,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
   const timeSlots = generateTimeSlots();
 
-<<<<<<< HEAD
-  // Options de durée en minutes (affichées après sélection de l'heure de début)
-=======
   // Durée pour événement unique (en minutes) — options affichées dans le select
->>>>>>> dev_brach_env2
   const DURATION_OPTIONS = [
     { value: 30, label: '30 min' },
     { value: 60, label: '1 h' },
@@ -177,23 +173,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     { value: 120, label: '2 h' },
     { value: 150, label: '2 h 30' },
     { value: 180, label: '3 h' },
-<<<<<<< HEAD
-    { value: 240, label: '4 h' },
-  ];
-
-  const computeEndTimeFromDuration = (startTime: string, durationMinutes: number): string => {
-    if (!startTime || !durationMinutes) return '';
-    const [h, m] = startTime.split(':').map(Number);
-    const totalMinutes = h * 60 + m + durationMinutes;
-    const endH = Math.floor(totalMinutes / 60) % 24;
-    const endM = totalMinutes % 60;
-    return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-  };
-=======
     { value: 210, label: '3 h 30' },
     { value: 240, label: '4 h' },
   ];
->>>>>>> dev_brach_env2
   
   React.useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -382,8 +364,10 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [openStartTimeDropdown, setOpenStartTimeDropdown] = useState(false);
+  const [openEndTimeDropdown, setOpenEndTimeDropdown] = useState(false);
   const [openDurationDropdown, setOpenDurationDropdown] = useState(false);
   const startTimeRef = useRef<HTMLDivElement>(null);
+  const endTimeRef = useRef<HTMLDivElement>(null);
   const durationRef = useRef<HTMLDivElement>(null);
   const addressSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -686,7 +670,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     setFormData(prev => {
       const next = { ...prev, [field]: timeValue };
       if (field === 'startTime' && prev.durationMinutes > 0) {
-        next.endTime = computeEndTimeFromDuration(timeValue, prev.durationMinutes);
+        next.endTime = computeEndFromDuration(prev.date, timeValue, prev.durationMinutes).endTime;
       }
       return next;
     });
@@ -730,16 +714,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     }
   };
 
-<<<<<<< HEAD
-  const handleDurationSelect = (durationMinutes: number) => {
-    setFormData(prev => ({
-      ...prev,
-      durationMinutes,
-      endTime: computeEndTimeFromDuration(prev.startTime, durationMinutes),
-    }));
-    setOpenDurationDropdown(false);
-    setErrors(prev => ({ ...prev, durationMinutes: '' }));
-=======
   const ALLOWED_EVENT_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
   const handleEventImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -765,7 +739,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   };
   const handleRemoveEventImage = () => {
     setFormData(prev => ({ ...prev, imageUrl: '' }));
->>>>>>> dev_brach_env2
   };
 
   // Fonction pour obtenir les créneaux horaires disponibles pour l'heure de début
@@ -917,11 +890,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
       }
     }
     
-<<<<<<< HEAD
-    // Validation de la durée (après heure de début)
-    if (formData.startTime && !formData.durationMinutes) {
-      newErrors.durationMinutes = 'La durée est requise';
-=======
     // Validation heure de fin / durée
     if (eventType === 'unique') {
       if (!eventDurationMinutes || eventDurationMinutes <= 0) {
@@ -942,7 +910,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           }
         }
       }
->>>>>>> dev_brach_env2
     }
     
     // Validation de l'expérience minimale
@@ -1086,29 +1053,12 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     setIsSubmitting(true);
 
     try {
-<<<<<<< HEAD
-=======
       // Durée en minutes pour l'API (requirements.duration)
->>>>>>> dev_brach_env2
       const parseTime = (timeStr: string) => {
         if (!timeStr) return 0;
         const [hours, minutes] = timeStr.split(':').map(Number);
         return hours * 60 + minutes;
       };
-<<<<<<< HEAD
-
-      // Recalculer l'heure de fin à partir de la durée (peut dépasser minuit → lendemain)
-      const endTimeToSend = formData.startTime && formData.durationMinutes > 0
-        ? computeEndTimeFromDuration(formData.startTime, formData.durationMinutes)
-        : formData.endTime;
-      const startMinutes = parseTime(formData.startTime);
-      const endMinutes = parseTime(endTimeToSend);
-      let durationInMinutes = 0;
-      if (endMinutes >= startMinutes) {
-        durationInMinutes = endMinutes - startMinutes;
-      } else if (startMinutes > 0 || endMinutes > 0) {
-        durationInMinutes = (24 * 60 - startMinutes) + endMinutes;
-=======
       let durationInMinutes: number;
       let effectiveEndTime: string;
       let effectiveEndDate: string | undefined;
@@ -1126,7 +1076,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           durationInMinutes = (24 * 60 - startMinutes) + endMinutes;
         }
         effectiveEndTime = formData.endTime;
->>>>>>> dev_brach_env2
       }
 
       // Extraire le code postal depuis l'adresse s'il n'est pas déjà présent
@@ -1176,11 +1125,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         },
         status: formData.status,
         startTime: formData.startTime,
-<<<<<<< HEAD
-        endTime: endTimeToSend || formData.endTime,
-=======
         endTime: effectiveEndTime,
->>>>>>> dev_brach_env2
         maxSpectators: formData.maxSpectators && formData.maxSpectators.trim() ? parseInt(formData.maxSpectators, 10) : undefined,
         imageUrl: sanitizeEventImageUrl(formData.imageUrl),
       };
@@ -1197,7 +1142,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           .map((d) => {
             const override = dateTimeOverrides[d];
             const start = override?.startTime ?? formData.startTime;
-            const end = override?.endTime ?? (endTimeToSend || formData.endTime);
+            const end = override?.endTime ?? (effectiveEndTime || formData.endTime);
             return { date: d, startTime: start, endTime: end };
           })
           .filter((x) => x.startTime && x.endTime);
@@ -1247,14 +1192,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     left: 0,
     right: 0,
     bottom: 0,
-<<<<<<< HEAD
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
-    backdropFilter: 'blur(4px)',
-=======
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     backdropFilter: 'blur(10px)',
     WebkitBackdropFilter: 'blur(10px)',
->>>>>>> dev_brach_env2
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1264,11 +1204,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   };
 
   const formStyle: CSSProperties = {
-<<<<<<< HEAD
-    background: 'linear-gradient(to bottom, #1a1a2e 0%, #16213e 40%, #331f41 100%)',
-=======
     background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
->>>>>>> dev_brach_env2
     borderRadius: '16px',
     width: '100%',
     maxWidth: isMobile ? '100%' : '800px',
@@ -1304,17 +1240,10 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     width: '100%',
     padding: isMobile ? '14px 16px' : '12px 16px',
     fontSize: isMobile ? '16px' : '14px', // 16px prevents zoom on iOS
-<<<<<<< HEAD
-    border: '1px solid #ccc',
-    borderRadius: '8px',
-    background: '#ffffff',
-    color: '#000000',
-=======
     border: '1px solid #ddd',
     borderRadius: '8px',
     background: 'rgba(255, 255, 255, 1)',
     color: '#1a1a1a',
->>>>>>> dev_brach_env2
     marginBottom: '4px'
   };
 
@@ -1324,11 +1253,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     appearance: 'none', // Supprime le style par défaut du navigateur
     WebkitAppearance: 'none', // Pour Safari/Chrome
     MozAppearance: 'none', // Pour Firefox
-<<<<<<< HEAD
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000000' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-=======
     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231a1a1a' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
->>>>>>> dev_brach_env2
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 12px center',
     backgroundSize: '12px',
@@ -1890,12 +1815,8 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       id="date"
                       value={formData.date}
                       onChange={handleChange}
-<<<<<<< HEAD
-                      style={{ ...inputStyle, borderColor: errors.date ? '#ef4444' : '#ccc' }}
-=======
                       disabled={fieldsLockedByVenueBooking}
                       style={{ ...inputStyle, borderColor: errors.date ? '#ef4444' : '#444' }}
->>>>>>> dev_brach_env2
                     />
                     {errors.date && <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>{errors.date}</p>}
                   </div>
@@ -1913,12 +1834,8 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         type="date"
                         value={recurrenceStartDate}
                         onChange={(e) => setRecurrenceStartDate(e.target.value)}
-<<<<<<< HEAD
-                        style={{ ...inputStyle, borderColor: errors.recurrenceStartDate ? '#ef4444' : '#ccc' }}
-=======
                         disabled={fieldsLockedByVenueBooking}
                         style={{ ...inputStyle, borderColor: errors.recurrenceStartDate ? '#ef4444' : '#444' }}
->>>>>>> dev_brach_env2
                         min={new Date().toISOString().split('T')[0]}
                       />
                       {errors.recurrenceStartDate && (
@@ -2089,15 +2006,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       cursor: 'pointer'
                     }}
                   >
-<<<<<<< HEAD
-<span style={{ color: formData.startTime ? '#000' : '#999' }}>
-                      {formData.startTime
-                        ? timeSlots.find(slot => slot.value === formData.startTime)?.label
-=======
                     <span style={{ color: formData.startTime ? 'rgba(0, 0, 0, 1)' : '#999' }}>
                       {formData.startTime 
                         ? timeSlots.find(slot => slot.value === formData.startTime)?.label 
->>>>>>> dev_brach_env2
                         : 'Sélectionnez une heure'}
                     </span>
                     <ChevronDown 
@@ -2159,85 +2070,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                   )}
                 </div>
 
-<<<<<<< HEAD
-                {/* Durée - Dropdown (affiché après sélection de l'heure de début) */}
-                <div ref={durationRef} style={{ position: 'relative', zIndex: 99 }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
-                    Durée *
-                  </label>
-                  <div
-                    onClick={() => {
-                      if (!formData.startTime) return;
-                      setOpenDurationDropdown(!openDurationDropdown);
-                      setOpenStartTimeDropdown(false);
-                    }}
-                    style={{
-                      ...selectStyle,
-                      borderColor: errors.durationMinutes ? '#ef4444' : '#ccc',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      cursor: formData.startTime ? 'pointer' : 'not-allowed',
-                      opacity: formData.startTime ? 1 : 0.7,
-                    }}
-                  >
-                    <span style={{ color: formData.durationMinutes ? '#000' : '#999' }}>
-                      {formData.durationMinutes
-                        ? DURATION_OPTIONS.find(o => o.value === formData.durationMinutes)?.label
-                        : formData.startTime
-                          ? 'Sélectionnez une durée'
-                          : 'Sélectionnez d\'abord l\'heure de début'}
-                    </span>
-                    <ChevronDown
-                      size={18}
-                      style={{
-                        color: '#666',
-                        transform: openDurationDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s ease',
-                      }}
-                    />
-                  </div>
-                  {openDurationDropdown && formData.startTime && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      marginTop: '4px',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #ccc',
-                      borderRadius: '8px',
-                      maxHeight: '200px',
-                      overflowY: 'auto',
-                      zIndex: 1000,
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                    }}>
-                      {DURATION_OPTIONS.map((opt) => (
-                        <div
-                          key={opt.value}
-                          onClick={() => handleDurationSelect(opt.value)}
-                          style={{
-                            padding: '12px 16px',
-                            cursor: 'pointer',
-                            color: formData.durationMinutes === opt.value ? '#000' : '#333',
-                            backgroundColor: formData.durationMinutes === opt.value ? 'rgba(255, 65, 108, 0.15)' : 'transparent',
-                            borderBottom: '1px solid rgba(0,0,0,0.06)',
-                            transition: 'background-color 0.2s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            if (formData.durationMinutes !== opt.value) {
-                              e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (formData.durationMinutes !== opt.value) {
-                              e.currentTarget.style.backgroundColor = 'transparent';
-                            }
-                          }}
-                        >
-                          {opt.label}
-                        </div>
-=======
                 {/* Événement unique : Durée — Récurrent : Heure de fin */}
                 {eventType === 'unique' ? (
                   <div style={{ position: 'relative', zIndex: 99 }}>
@@ -2258,7 +2090,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         <option key={opt.value} value={opt.value}>
                           {opt.label}
                         </option>
->>>>>>> dev_brach_env2
                       ))}
                     </select>
                     {formData.date && formData.startTime && eventDurationMinutes > 0 && (() => {
@@ -2321,28 +2152,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         }} 
                       />
                     </div>
-<<<<<<< HEAD
-                  )}
-                  {formData.startTime && formData.durationMinutes > 0 && (
-                    <p style={{ color: '#64748B', fontSize: '13px', margin: '8px 0 0' }}>
-                      Heure de fin : {(() => {
-                        const end = computeEndTimeFromDuration(formData.startTime, formData.durationMinutes);
-                        const [h, m] = end.split(':').map(Number);
-                        const [startH, startM] = formData.startTime.split(':').map(Number);
-                        const endMin = h * 60 + m;
-                        const startMin = startH * 60 + startM;
-                        const isNextDay = endMin <= startMin;
-                        return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}${isNextDay ? ' (lendemain)' : ''}`;
-                      })()}
-                    </p>
-                  )}
-                  {errors.durationMinutes && (
-                    <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
-                      {errors.durationMinutes}
-                    </p>
-                  )}
-                </div>
-=======
                     {openEndTimeDropdown && (
                       <div style={{
                         position: 'absolute',
@@ -2393,7 +2202,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     )}
                   </div>
                 )}
->>>>>>> dev_brach_env2
 
                 {/* Type de lieu */}
                 <div>
