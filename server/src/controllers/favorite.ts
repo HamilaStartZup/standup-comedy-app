@@ -49,7 +49,7 @@ export const addFavorite = async (req: AuthRequest, res: Response): Promise<void
     }
 
     if (comedian.role !== 'COMEDIAN') {
-      res.status(400).json({
+      res.status(422).json({
         message: 'L\'utilisateur spécifié n\'est pas un humoriste'
       });
       return;
@@ -57,7 +57,7 @@ export const addFavorite = async (req: AuthRequest, res: Response): Promise<void
 
     // Empêcher l'auto-ajout aux favoris
     if (comedianObjectId.toString() === organizerObjectId.toString()) {
-      res.status(400).json({
+      res.status(422).json({
         message: 'Vous ne pouvez pas vous ajouter à vos propres favoris'
       });
       return;
@@ -199,10 +199,7 @@ export const removeFavorite = async (req: AuthRequest, res: Response): Promise<v
     // Émettre un évènement SSE pour notifier tous les clients
     emitFavoriteComedianRemoved(organizerId, comedianId);
 
-    res.json({
-      message: 'Humoriste retiré des favoris avec succès',
-      favoriteComedians: updatedOrganizer.favoriteComedians || []
-    });
+    res.status(204).send();
   } catch (error: any) {
     console.error('❌ Erreur lors du retrait des favoris:', error);
     console.error('❌ Détails de l\'erreur:', {

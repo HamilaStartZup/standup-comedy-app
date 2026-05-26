@@ -5,6 +5,9 @@ import {
   acknowledgeLateCancellationAlert,
   getComedianLateCancellationHistory
 } from '../services/lateCancellationAlertService';
+import { emitLateCancellationAlertAcknowledged } from '../services/eventEmitter';
+import { getSuperAdminIds } from '../utils/superAdminCache';
+import Logger from '../utils/logger';
 
 /**
  * GET /api/late-cancellation-alerts
@@ -78,6 +81,10 @@ export const acknowledgeAlert = async (req: AuthRequest, res: Response): Promise
       res.status(404).json({ message: 'Alerte non trouvée' });
       return;
     }
+
+    getSuperAdminIds().then(adminIds => {
+      if (adminIds.length > 0) emitLateCancellationAlertAcknowledged(alertId, adminIds);
+    }).catch(err => Logger.error('Erreur alerte superAdmin', { err: String(err) }));
 
     res.status(200).json({
       message: 'Alerte acquittée avec succès'

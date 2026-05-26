@@ -9,19 +9,127 @@ import { sendEventUpdatedNotificationToApplicants, sendEventCancellationToPartic
 import { notifyComediansByMobilityAsync, notifyComediansByMobilityForRecurringGroupAsync } from '../services/mobilityNotificationService';
 import { config } from '../config/env';
 import { AbsenceModel } from '../models/Absence';
-import { emitEventCreated, emitEventUpdated, emitEventDeleted, emitEventCompleted } from '../services/eventEmitter';
+import { emitEventCreated, emitEventUpdated, emitEventDeleted, emitEventCompleted, emitSpectatorRegistered, emitSpectatorUnregistered } from '../services/eventEmitter';
 import { Types } from 'mongoose';
 import { extractPostalCode, getDepartmentFromPostalCode } from '../utils/cityMapping';
 import { getCityCoordinates } from '../utils/cityMapping';
 import { notifySpectatorsInRadius } from '../services/spectatorNotificationService';
+import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
+import { escapeRegex } from '../utils/regex';
+import Logger from '../utils/logger';
+import {
+  assertVenueBookingAvailableForNewEvent,
+  getUsedVenueBookingIdsForOrganizer,
+} from '../utils/venueBookingEventLink';
+import { detectZoneType, FRENCH_REGIONS, normalizeDepartment } from '../utils/geographicMatching';
+
+/** Retourne la liste des modifications entre l'ancien et le nouvel évènement (pour l'email aux candidats) */
+function getEventChanges(oldEvent: any, newEvent: any): string[] {
+  const changes: string[] = [];
+  const old = (oldEvent && typeof oldEvent.toObject === 'function' ? oldEvent.toObject() : oldEvent) || {};
+  const neu = (newEvent && typeof newEvent.toObject === 'function' ? newEvent.toObject() : newEvent) || {};
+  const fmtDate = (d: Date | string | undefined) => (d ? new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) : '');
+  const oldLoc = old.location || {};
+  const newLoc = neu.location || {};
+  const oldReq = old.requirements || {};
+  const newReq = neu.requirements || {};
+
+  const oldTitle = String(old.title ?? '').trim();
+  const newTitle = String(neu.title ?? '').trim();
+  if (oldTitle !== newTitle && newTitle) {
+    changes.push(`Titre : « ${oldTitle || '—' } » → « ${newTitle} »`);
+  }
+  if (fmtDate(old.date) !== fmtDate(neu.date) && neu.date) {
+    changes.push(`Date : ${fmtDate(old.date) || '—'} → ${fmtDate(neu.date)}`);
+  }
+  if (String(old.startTime ?? '') !== String(neu.startTime ?? '')) {
+    changes.push(`Heure de début : ${old.startTime || '—'} → ${neu.startTime || '—'}`);
+  }
+  if (String(old.endTime ?? '') !== String(neu.endTime ?? '')) {
+    changes.push(`Heure de fin : ${old.endTime || '—'} → ${neu.endTime || '—'}`);
+  }
+  const oldAddr = [oldLoc.address, oldLoc.city].filter(Boolean).join(', ') || '—';
+  const newAddr = [newLoc.address, newLoc.city].filter(Boolean).join(', ') || '—';
+  if (oldAddr !== newAddr) {
+    changes.push(`Lieu : ${oldAddr} → ${newAddr}`);
+  }
+  if (String(oldLoc.venue ?? '') !== String(newLoc.venue ?? '')) {
+    changes.push(`Salle / lieu : ${oldLoc.venue || '—'} → ${newLoc.venue || '—'}`);
+  }
+  if (String(old.description ?? '') !== String(neu.description ?? '') && neu.description != null) {
+    changes.push('Description : modifiée');
+  }
+  if (Number(oldReq?.duration) !== Number(newReq?.duration) && newReq?.duration != null) {
+    changes.push(`Durée : ${oldReq?.duration ?? '—'} min → ${newReq.duration} min`);
+  }
+  if (Number(oldReq?.maxPerformers) !== Number(newReq?.maxPerformers) && newReq?.maxPerformers != null) {
+    changes.push(`Nombre max de performeurs : ${oldReq?.maxPerformers ?? '—'} → ${newReq.maxPerformers}`);
+  }
+  if (Number(oldReq?.minExperience) !== Number(newReq?.minExperience) && newReq?.minExperience != null) {
+    changes.push(`Expérience min : ${oldReq?.minExperience ?? '—'} an(s) → ${newReq.minExperience} an(s)`);
+  }
+  return changes;
+}
+
+/** Retourne l'ensemble des userIds à notifier pour un évènement : organisateur + comedians ayant une candidature active */
+async function getEventAudience(eventId: string | mongoose.Types.ObjectId, organizerId: string): Promise<string[]> {
+  const applications = await ApplicationModel.find(
+    { event: eventId, status: { $in: ['PENDING', 'ACCEPTED'] } },
+    { comedian: 1 }
+  );
+  const comedianIds = applications.map((a: any) => a.comedian?.toString()).filter(Boolean) as string[];
+  return [organizerId, ...comedianIds].filter((v, i, arr) => arr.indexOf(v) === i);
+}
+
+/**
+ * Vérifie si l'organisateur a déjà un événement avec le même titre, la même date (jour) et la même heure de début.
+ * Les événements annulés sont exclus (on peut recréer après annulation).
+ */
+async function hasDuplicateEvent(
+  organizerId: string,
+  title: string,
+  dateStr: string,
+  startTime: string
+): Promise<boolean> {
+  const trimmedTitle = String(title ?? '').trim();
+  if (!trimmedTitle || !dateStr || !startTime) return false;
+  const startDay = new Date(dateStr + 'T00:00:00.000Z');
+  const endDay = new Date(startDay.getTime() + 86400000);
+  const existing = await EventModel.findOne({
+    organizer: organizerId,
+    startTime: String(startTime).trim(),
+    date: { $gte: startDay, $lt: endDay },
+    status: { $in: ['draft', 'published', 'completed'] },
+  }).lean();
+  if (!existing) return false;
+  return (existing.title ?? '').trim() === trimmedTitle;
+}
 
 // ============================================================================
 // CREATE EVENT
 // ============================================================================
+/** Réservations de salle déjà utilisées pour un événement (organisateur connecté). */
+export const getVenueBookingIdsInUse = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const organizerId = req.user?.id;
+    if (!organizerId) {
+      res.status(401).json({ message: 'Utilisateur non authentifié' });
+      return;
+    }
+    if (req.user?.role !== 'ORGANIZER') {
+      res.status(403).json({ message: 'Réservé aux organisateurs' });
+      return;
+    }
+    const bookingIds = await getUsedVenueBookingIdsForOrganizer(organizerId);
+    res.status(200).json({ bookingIds });
+  } catch (error) {
+    console.error('getVenueBookingIdsInUse error:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des réservations utilisées' });
+  }
+};
+
 export const createEvent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    console.log('🔍 [DEBUG] createEvent - Données reçues:', req.body);
-
     // Vérifier que l'utilisateur est authentifié
     const organizerId = req.user?.id;
     if (!organizerId) {
@@ -29,7 +137,24 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    const { title, description, date, dates, location, requirements, startTime, endTime, budget, maxPerformers, maxSpectators, isRecurring, dateTimes } = req.body;
+    const { title, description, date, dates, location, requirements, startTime, endTime, endDate, budget, maxPerformers, maxSpectators, isRecurring, dateTimes, imageUrl, venueBookingId } = req.body;
+
+    if (venueBookingId && isRecurring) {
+      res.status(400).json({
+        message: 'Une réservation de salle ne peut être liée qu\'à un événement unique, pas à une série récurrente.',
+      });
+      return;
+    }
+
+    let linkedVenueBookingId: Types.ObjectId | undefined;
+    if (venueBookingId) {
+      const check = await assertVenueBookingAvailableForNewEvent(organizerId, venueBookingId);
+      if (check.ok === false) {
+        res.status(409).json({ message: check.message });
+        return;
+      }
+      linkedVenueBookingId = new Types.ObjectId(venueBookingId);
+    }
 
     // Si c'est un événement récurrent avec plusieurs dates
     if (isRecurring && dates && Array.isArray(dates) && dates.length > 0) {
@@ -52,6 +177,16 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
     console.log('📅 Date reçue:', date, 'Type:', typeof date);
     console.log('📅 Date parsée:', new Date(date));
 
+    // Vérifier qu'il n'existe pas déjà un événement identique (même titre, date, heure de début)
+    const dateStr = typeof date === 'string' ? date.split('T')[0] : new Date(date).toISOString().split('T')[0];
+    const isDuplicate = await hasDuplicateEvent(organizerId, title, dateStr, startTime ?? '');
+    if (isDuplicate) {
+      res.status(409).json({
+        message: 'Un événement avec le même titre, la même date et la même heure de début existe déjà. Modifiez le titre, la date ou l\'heure pour créer un nouvel événement.',
+      });
+      return;
+    }
+
     // Extraire le code postal de l'adresse et calculer le département
     let enhancedLocation = { ...location };
     if (location?.address) {
@@ -61,7 +196,6 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
         const department = getDepartmentFromPostalCode(postalCode);
         if (department) {
           enhancedLocation.department = department;
-          console.log(`📍 [DEBUG] Code postal extrait: ${postalCode} → Département: ${department}`);
         }
       }
     }
@@ -77,14 +211,16 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
       applications: [],
       startTime,
       endTime,
+      endDate: endDate || undefined,
       venue: location.venue,
       budget,
       maxPerformers,
       maxSpectators: maxSpectators != null ? Number(maxSpectators) : undefined,
+      imageUrl: imageUrl && typeof imageUrl === 'string' && imageUrl.trim() ? imageUrl.trim() : undefined,
+      venueBookingId: linkedVenueBookingId,
     });
 
     await event.save();
-    console.log('✅ Évènement sauvegardé avec succès:', event._id);
 
     // Géocoder l'événement pour le rayon spectateurs (async, non bloquant)
     const loc = event.location;
@@ -100,56 +236,38 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
     }
 
     // Émettre un évènement SSE pour notifier tous les clients
-    emitEventCreated(event._id.toString());
+    emitEventCreated(event._id.toString(), [organizerId]);
 
     // Récupérer les informations de l'organisateur pour l'email et mise à jour stats
-    console.log('🔍 Récupération des infos organisateur pour email...');
+    Logger.info('Récupération infos organisateur', { organizerId });
     const organizer = await UserModel.findById(organizerId);
     if (!organizer) {
-      console.error('❌ Organisateur non trouvé:', organizerId);
+      Logger.error('Organisateur non trouvé', { organizerId });
       res.status(404).json({ message: 'Organisateur non trouvé' });
       return;
     }
-    console.log('👤 Organisateur trouvé:', `${organizer.firstName} ${organizer.lastName} (${organizer.email})`);
+    Logger.debug('Organisateur chargé', { organizerId });
 
     // Update organizer's totalEvents count et envoi d'emails
     try {
-      console.log('Organisateur trouvé dans events.ts:', organizer.email);
-      console.log('Total events avant incrémentation:', organizer.stats?.totalEvents);
       if (!organizer.stats) {
         organizer.stats = {};
       }
       organizer.stats.totalEvents = (organizer.stats.totalEvents || 0) + 1;
       organizer.markModified('stats');
       await organizer.save();
-      console.log('Total events après incrémentation et sauvegarde:', organizer.stats.totalEvents);
     } catch (statsError) {
       console.error('⚠️ Erreur lors de la mise à jour des stats de l\'organisateur:', statsError);
       // Ne pas faire échouer la création de l'évènement si les stats échouent
     }
 
     // Envoyer les notifications par mobilité aux humoristes dont la zone correspond
-    console.log('📍 [EVENT_UNIQUE] Démarrage envoi notifications par mobilité...');
-    console.log('📋 [EVENT_UNIQUE] Données évènement:', {
-      title: event.title,
-      date: event.date,
-      location: event.location,
-      requirements: event.requirements,
-      eventId: event._id.toString()
-    });
-    console.log('👤 [EVENT_UNIQUE] Organisateur:', {
-      firstName: organizer.firstName,
-      lastName: organizer.lastName,
-      email: organizer.email
-    });
-
     try {
       notifyComediansByMobilityAsync(event, {
         firstName: organizer.firstName,
         lastName: organizer.lastName,
         email: organizer.email
       });
-      console.log('✅ [EVENT_UNIQUE] Notification mobilité lancée avec succès');
     } catch (notifError) {
       console.error('❌ [EVENT_UNIQUE] Erreur lors du lancement de la notification mobilité:', notifError);
       // Ne pas faire échouer la création de l'événement si la notification échoue
@@ -172,7 +290,6 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
       message: 'Event created successfully',
       event: eventResponse
     });
-    console.log('✅ Réponse envoyée avec succès');
   } catch (error) {
     console.error('Create event error:', error);
     res.status(500).json({ message: 'Error creating event' });
@@ -198,6 +315,7 @@ const createRecurringEvents = async (
     budget?: any;
     maxPerformers?: number;
     maxSpectators?: number;
+    imageUrl?: string;
     /** Heures par date (optionnel). Si fourni, utilise startTime/endTime par date au lieu des valeurs globales. */
     dateTimes?: Array<{ date: string; startTime: string; endTime: string }>;
   }
@@ -226,7 +344,7 @@ const createRecurringEvents = async (
       if (eventDate < today) {
         await session.abortTransaction();
         session.endSession();
-        res.status(400).json({ message: `La date ${dateStr} est dans le passé` });
+        res.status(422).json({ message: `La date ${dateStr} est dans le passé` });
         return;
       }
     }
@@ -296,6 +414,23 @@ const createRecurringEvents = async (
       }
     }
 
+    // Vérifier les doublons (même titre + date + heure) pour chaque date avant de créer
+    for (const dateStr of eventData.dates) {
+      const override = dateTimesMap.get(dateStr);
+      const startTime = override?.startTime ?? eventData.startTime;
+      if (startTime) {
+        const isDup = await hasDuplicateEvent(organizerId, eventData.title, dateStr, startTime);
+        if (isDup) {
+          await session.abortTransaction();
+          session.endSession();
+          res.status(409).json({
+            message: `Un événement identique (même titre, date et heure) existe déjà pour le ${new Date(dateStr).toLocaleDateString('fr-FR')}. Modifiez le titre, les dates ou les heures pour créer ces événements.`,
+          });
+          return;
+        }
+      }
+    }
+
     // Extraire le code postal et le département de l'adresse (une seule fois pour tous les événements)
     let enhancedLocation = { ...eventData.location };
     if (eventData.location?.address) {
@@ -338,7 +473,8 @@ const createRecurringEvents = async (
           budget: eventData.budget,
           maxPerformers: eventData.maxPerformers,
           maxSpectators: eventData.maxSpectators != null ? Number(eventData.maxSpectators) : undefined,
-          recurrenceGroupId: recurrenceGroupId
+          recurrenceGroupId: recurrenceGroupId,
+          imageUrl: eventData.imageUrl && typeof eventData.imageUrl === 'string' && eventData.imageUrl.trim() ? eventData.imageUrl.trim() : undefined,
         });
 
         console.log(`🔄 [RECURRENCE] Événement modèle créé, validation...`);
@@ -347,7 +483,7 @@ const createRecurringEvents = async (
         console.log(`✅ [RECURRENCE] Événement créé pour le ${dateStr}:`, savedEvent._id);
 
         // Émettre un évènement SSE pour chaque événement créé
-        emitEventCreated(savedEvent._id.toString());
+        emitEventCreated(savedEvent._id.toString(), [organizerId]);
       } catch (eventError: any) {
         console.error(`❌ [RECURRENCE] Erreur lors de la création de l'événement pour ${dateStr}:`, eventError);
         console.error(`❌ [RECURRENCE] Détails de l'erreur:`, {
@@ -526,6 +662,11 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     const myRegistrations = req.query.myRegistrations === 'true';
     const nearMe = req.query.nearMe === 'true';
     const radiusKmParam = req.query.radiusKm as string; // 5, 10, 20, 50
+    const dateFrom = req.query.dateFrom as string | undefined;
+    const statusFilter = req.query.status as string | undefined;
+    const zone = req.query.zone as string | undefined;
+    const experienceLevel = req.query.experienceLevel as string | undefined;
+    const hasRecurrence = req.query.hasRecurrence === 'true';
     const userRole = req.user?.role;
     const userId = req.user?.id;
 
@@ -534,11 +675,17 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     // If an organizerId is provided, filter events by it
     if (organizerId && mongoose.Types.ObjectId.isValid(organizerId)) {
       query.organizer = organizerId;
+      if (statusFilter && ['published', 'completed', 'cancelled', 'full', 'draft', 'PUBLISHED', 'COMPLETED', 'CANCELLED', 'FULL', 'DRAFT'].includes(statusFilter)) {
+        query.status = statusFilter;
+      }
     } else if (organizerId && !mongoose.Types.ObjectId.isValid(organizerId)) {
       res.status(400).json({ message: 'Invalid organizerId format' });
       return;
     } else if (userRole === 'ORGANIZER') {
       query.organizer = userId;
+      if (statusFilter && ['published', 'completed', 'cancelled', 'full', 'draft', 'PUBLISHED', 'COMPLETED', 'CANCELLED', 'FULL', 'DRAFT'].includes(statusFilter)) {
+        query.status = statusFilter;
+      }
     } else if (userRole === 'COMEDIAN' || userRole === 'SPECTATOR') {
       query.status = { $in: ['published', 'PUBLISHED', 'completed', 'COMPLETED', 'cancelled', 'CANCELLED'] };
     } else if (userRole === 'SUPER_ADMIN') {
@@ -555,14 +702,15 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     // Filtre par ville (lieu) — si cityRadius est fourni, on filtre par distance après la requête
     const cityRadiusKm = [5, 10, 20, 50].includes(Number(cityRadius)) ? Number(cityRadius) : 0;
     if (city && city.trim() && !cityRadiusKm) {
-      query['location.city'] = new RegExp(city.trim(), 'i');
+      query['location.city'] = new RegExp(escapeRegex(city.trim().slice(0, 80)), 'i');
     }
 
     // Filtre par type (mot-clé dans titre ou description)
     if (type && type.trim()) {
+      const safeType = escapeRegex(type.trim().slice(0, 80));
       query.$or = [
-        { title: new RegExp(type.trim(), 'i') },
-        { description: new RegExp(type.trim(), 'i') },
+        { title: new RegExp(safeType, 'i') },
+        { description: new RegExp(safeType, 'i') },
       ];
     }
 
@@ -571,7 +719,82 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
       query['location.venueType'] = venueType.trim();
     }
 
-    let events = await EventModel.find(query).select('+withdrawnComedians').populate('participants').populate('organizer', 'firstName lastName email').populate('spectatorRegistrations', 'firstName lastName');
+    if (dateFrom) {
+      const parsed = new Date(dateFrom);
+      if (!isNaN(parsed.getTime())) {
+        query.date = { ...(query.date ?? {}), $gte: parsed };
+      }
+    }
+
+    if (hasRecurrence) {
+      query.recurrenceGroupId = { $exists: true, $ne: null };
+    }
+
+    const VALID_EXPERIENCE_LEVELS = ['0-50', '50-200', '200+'] as const;
+    if (experienceLevel && (VALID_EXPERIENCE_LEVELS as readonly string[]).includes(experienceLevel)) {
+      // Inclure 'all' et les events sans niveau requis : un event ouvert à tous les niveaux
+      // doit apparaître quand un humoriste filtre par son propre niveau.
+      query['requirements.requiredExperienceLevel'] = { $in: [experienceLevel, 'all', null] };
+    }
+
+    if (zone && zone.trim()) {
+      const searchZone = await detectZoneType(zone.trim());
+      if (searchZone.type === 'ville') {
+        // Match ville/adresse/salle : conserve la flexibilité du search libre antérieur
+        // (nom de salle, bout d'adresse) en plus du match strict sur city.
+        const cityRegex = new RegExp(escapeRegex(searchZone.value), 'i');
+        const zoneOr = [
+          { 'location.city': cityRegex },
+          { 'location.address': cityRegex },
+          { 'location.venue': cityRegex },
+        ];
+        // Combiner avec un éventuel $or préexistant (filtre `type` sur titre/description)
+        // via $and pour ne pas l'écraser.
+        if (query.$or) {
+          query.$and = ([] as Array<Record<string, unknown>>).concat(
+            (query.$and as Array<Record<string, unknown>>) || [],
+            [{ $or: query.$or }, { $or: zoneOr }],
+          );
+          delete query.$or;
+        } else {
+          query.$or = zoneOr;
+        }
+      } else if (searchZone.type === 'departement') {
+        query['location.department'] = normalizeDepartment(searchZone.value);
+      } else if (searchZone.type === 'region' && searchZone.region && FRENCH_REGIONS[searchZone.region]) {
+        query['location.department'] = { $in: FRENCH_REGIONS[searchZone.region] };
+      }
+    }
+
+    const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>);
+    const isGeoFilter = (userRole === 'SPECTATOR' && nearMe) || Boolean(city && city.trim() && cityRadiusKm > 0);
+
+    // P14: filter out events without a valid organizer at DB level.
+    // Ne PAS écraser un filtre organizer déjà posé (ORGANIZER role / organizerId param) :
+    // sans ça le serveur renvoyait tous les events d'un statut, le client filtrait ensuite et
+    // la pagination se retrouvait avec des pages quasi vides.
+    if (!query.organizer) {
+      query.organizer = { $exists: true, $ne: null };
+    }
+
+    if (!isGeoFilter) {
+      const total = await EventModel.countDocuments(query);
+      const events = await EventModel.find(query)
+        .populate('organizer', 'firstName lastName email organizerProfile.companyName')
+        .select('title date endDate startTime endTime status city location isRecurrent recurrenceGroupId imageUrl organizer withdrawnComedians requirements budget description maxSpectators applications venue modifiedByOrganizer cancellationReason')
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean() as any[];
+      res.json({ events, pagination: buildPaginationResult({ page, limit }, total) });
+      return;
+    }
+
+    let events = await EventModel.find(query)
+      .populate('organizer', 'firstName lastName email organizerProfile.companyName')
+      .select('title date endDate startTime endTime status city location isRecurrent recurrenceGroupId imageUrl organizer withdrawnComedians requirements budget description maxSpectators applications venue modifiedByOrganizer cancellationReason')
+      .sort({ date: -1 })
+      .lean() as any[];
 
     // Filtre "près de moi" (rayon en km) pour le spectateur
     if (userRole === 'SPECTATOR' && nearMe && userId) {
@@ -582,13 +805,11 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
         const specCoords = await getSpectatorCoordinates(spectator as any);
         const radiusKm = [5, 10, 20, 50].includes(Number(radiusKmParam)) ? Number(radiusKmParam) : (spectator as any).spectatorPreferences?.radiusKm ?? 20;
         if (specCoords) {
-          const inRadius: typeof events = [];
-          for (const ev of events) {
-            const coords = await getEventCoordinates(ev as any);
-            if (coords && distanceKm(coords.lat, coords.lon, specCoords.lat, specCoords.lon) <= radiusKm) {
-              inRadius.push(ev);
-            }
-          }
+          const coordsArray = await Promise.all(events.map(ev => getEventCoordinates(ev as any)));
+          const inRadius: typeof events = events.filter((_ev, i) => {
+            const coords = coordsArray[i];
+            return coords && distanceKm(coords.lat, coords.lon, specCoords.lat, specCoords.lon) <= radiusKm;
+          });
           events = inRadius;
         }
       }
@@ -600,42 +821,18 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
       const { getCityCoordinates, distanceKm } = await import('../utils/cityMapping');
       const cityCoords = await getCityCoordinates(city.trim());
       if (cityCoords) {
-        const inRadius: typeof events = [];
-        for (const ev of events) {
-          const coords = await getEventCoordinates(ev as any);
-          if (coords && distanceKm(cityCoords.lat, cityCoords.lon, coords.lat, coords.lon) <= cityRadiusKm) {
-            inRadius.push(ev);
-          }
-        }
+        const coordsArray = await Promise.all(events.map(ev => getEventCoordinates(ev as any)));
+        const inRadius: typeof events = events.filter((_ev, i) => {
+          const coords = coordsArray[i];
+          return coords && distanceKm(cityCoords.lat, cityCoords.lon, coords.lat, coords.lon) <= cityRadiusKm;
+        });
         events = inRadius;
       }
     }
 
-    // Filtrer les évènements qui n'ont pas d'organisateur valide
-    const validEvents = events.filter(event => {
-      const hasValidOrganizer = event.organizer &&
-        (typeof event.organizer === 'object' ?
-          (event.organizer as any).firstName || (event.organizer as any)._id :
-          true);
-
-      if (!hasValidOrganizer) {
-        console.warn(`⚠️ [WARNING] Évènement "${event.title}" (${event._id}) a un organisateur invalide/null - sera exclu des résultats`);
-      }
-
-      return hasValidOrganizer;
-    });
-
-    // Debug temporaire pour voir quels évènements sont retournés
-    console.log(`🔍 [DEBUG] Route GET /api/events - Role: ${userRole}, Query:`, JSON.stringify(query, null, 2));
-    console.log(`📊 [DEBUG] Évènements trouvés: ${events.length}, Évènements valides (avec organisateur): ${validEvents.length}`);
-    validEvents.forEach(event => {
-      const organizerName = event.organizer && typeof event.organizer === 'object'
-        ? `${(event.organizer as any).firstName || ''} ${(event.organizer as any).lastName || ''}`.trim()
-        : 'N/A';
-      console.log(`📅 [DEBUG] - "${event.title}" (${new Date(event.date).toLocaleDateString('fr-FR')}) - Statut: ${event.status} - Organisateur: ${organizerName}`);
-    });
-
-    res.json({ events: validEvents });
+    const total = events.length;
+    const pageEvents = events.slice(skip, skip + limit);
+    res.json({ events: pageEvents, pagination: buildPaginationResult({ page, limit }, total) });
   } catch (error) {
     console.error('Get events error:', error);
     res.status(500).json({ message: 'Error fetching events' });
@@ -703,11 +900,6 @@ export const getEventById = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Vérifier que l'organisateur est valide
-    if (!event.organizer || (typeof event.organizer === 'object' && !(event.organizer as any).firstName)) {
-      console.warn(`⚠️ [WARNING] Évènement "${event.title}" (${eventId}) a un organisateur invalide/null`);
-    }
-
     res.json(event);
   } catch (error) {
     console.error('Get event error:', error);
@@ -763,6 +955,10 @@ export const registerSpectator = async (req: AuthRequest, res: Response): Promis
       $addToSet: { spectatorRegistrations: new mongoose.Types.ObjectId(userId) },
     });
 
+    if (event.organizer) {
+      emitSpectatorRegistered(eventId, userId, event.organizer.toString());
+    }
+
     const updated = await EventModel.findById(eventId).populate('organizer', 'firstName lastName email').populate('spectatorRegistrations', 'firstName lastName');
     res.status(201).json({ message: 'Inscription enregistrée', event: updated });
   } catch (error) {
@@ -791,7 +987,12 @@ export const unregisterSpectator = async (req: AuthRequest, res: Response): Prom
       $addToSet: { withdrawnSpectators: new mongoose.Types.ObjectId(userId) },
     });
 
-    res.status(200).json({ message: 'Désinscription enregistrée' });
+    const eventForSSE = await EventModel.findById(eventId).select('organizer').lean();
+    if (eventForSSE?.organizer) {
+      emitSpectatorUnregistered(eventId, userId, eventForSSE.organizer.toString());
+    }
+
+    res.status(204).send();
   } catch (error) {
     console.error('Unregister spectator error:', error);
     res.status(500).json({ message: 'Erreur lors de la désinscription' });
@@ -901,16 +1102,21 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
     }
 
     // Émettre un évènement SSE pour notifier tous les clients
-    emitEventUpdated(updatedEvent._id.toString());
+    const updateAudience = await getEventAudience(updatedEvent._id.toString(), organizerId);
+    emitEventUpdated(updatedEvent._id.toString(), updateAudience);
 
-    // Notifier les humoristes ayant postulé si l'évènement est futur
-    if (updatedEvent && new Date(updatedEvent.date) >= new Date()) {
-      console.log('📧 [DEBUG] Mise à jour évènement futur, préparation envoi emails de mise à jour...');
+    // Notifier les humoristes ayant postulé si l'évènement est aujourd'hui ou futur (comparaison à minuit pour inclure "aujourd'hui")
+    const eventDateAtMidnight = new Date(updatedEvent.date);
+    eventDateAtMidnight.setHours(0, 0, 0, 0);
+    const todayAtMidnight = new Date();
+    todayAtMidnight.setHours(0, 0, 0, 0);
+    const isEventTodayOrFuture = updatedEvent && eventDateAtMidnight >= todayAtMidnight;
+
+    if (isEventTodayOrFuture) {
       const applications = await ApplicationModel.find({ event: updatedEvent._id, status: { $in: ['PENDING', 'ACCEPTED'] } })
         .populate('comedian', 'email firstName lastName');
 
       const organizer = await UserModel.findById(organizerId).select('firstName lastName email');
-      console.log(`📧 [DEBUG] Candidatures ciblées: ${applications.length}`);
       if (organizer && applications.length > 0) {
         // Si l'évènement est annulé, informer les candidats ACCEPTED et PENDING
         if (req.body.status === 'cancelled' || updatedEvent.status === 'cancelled') {
@@ -973,14 +1179,14 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
             }
           }
         } else {
-          // Sinon, envoyer une notification de mise à jour classique
+          // Sinon, envoyer une notification de mise à jour classique (avec détail des champs modifiés)
           try {
+            const changes = getEventChanges(event, updatedEvent);
             await sendEventUpdatedNotificationToApplicants(applications as any, updatedEvent, {
               firstName: organizer.firstName,
               lastName: organizer.lastName,
               email: organizer.email,
-            });
-            console.log(`✅ [DEBUG] Emails de mise à jour envoyés à ${applications.length} humoriste(s)`);
+            }, changes);
             // Créer des notifications in-app pour les humoristes concernés
             try {
               const { createNotification } = await import('./notification');
@@ -1006,8 +1212,6 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
             console.error('❌ Erreur envoi emails maj évènement:', err);
           }
         }
-      } else {
-        console.log('ℹ️ [DEBUG] Aucun destinataire email trouvé ou organisateur introuvable.');
       }
     }
 
@@ -1095,11 +1299,13 @@ export const deleteEvent = async (req: AuthRequest, res: Response): Promise<void
     }
 
     // Notifier les candidats PENDING et ACCEPTED avant suppression
+    let deletedComedianIds: string[] = [];
     try {
       const applications = await ApplicationModel.find({
         event: eventId,
         status: { $in: ['PENDING', 'ACCEPTED'] }
       }).populate('comedian', 'email firstName lastName');
+      deletedComedianIds = applications.map((a: any) => a.comedian?._id?.toString() || a.comedian?.toString()).filter(Boolean);
 
       const participants = applications
         .map((app: any) => app.comedian)
@@ -1131,9 +1337,9 @@ export const deleteEvent = async (req: AuthRequest, res: Response): Promise<void
           if (spectatorId) {
             await createNotification(
               spectatorId,
-              'event_cancelled',
-              'Évènement annulé',
-              `L'évènement "${event.title}" auquel vous étiez inscrit a été annulé par l'organisateur.`,
+              'event_deleted',
+              'Évènement supprimé',
+              `L'évènement "${event.title}" auquel vous étiez inscrit a été supprimé par l'organisateur.`,
               eventId
             );
           }
@@ -1150,7 +1356,7 @@ export const deleteEvent = async (req: AuthRequest, res: Response): Promise<void
     await EventModel.findByIdAndDelete(eventId);
 
     // Émettre un évènement SSE pour notifier tous les clients
-    emitEventDeleted(eventId);
+    emitEventDeleted(eventId, [organizerId, ...deletedComedianIds]);
 
     // Décrémenter le compteur d'évènements créés de l'organisateur
     // Utiliser findByIdAndUpdate avec $inc pour éviter les problèmes de validation
@@ -1166,7 +1372,7 @@ export const deleteEvent = async (req: AuthRequest, res: Response): Promise<void
       // Ne pas faire échouer la suppression si les stats échouent
     }
 
-    res.json({ message: 'Évènement supprimé avec succès' });
+    res.status(204).send();
   } catch (error: any) {
     console.error('❌ Delete event error:', error);
     console.error('❌ Détails de l\'erreur:', {
@@ -1218,53 +1424,11 @@ export const getEventStats = async (req: AuthRequest, res: Response): Promise<an
       return res.status(401).json({ message: 'Utilisateur non authentifié' });
     }
 
-    console.log('🔍 [DEBUG] getEventStats appelé:');
-    console.log('   • User ID:', organizerId);
-    console.log('   • User Role:', userRole);
-    console.log('   • req.user:', req.user);
-
     const now = new Date();
 
     // Si c'est un super admin, récupérer les statistiques globales de toute la plateforme
     if (userRole === 'SUPER_ADMIN') {
-      console.log('🔥 Super Admin - Récupération des statistiques globales');
-
-      // Récupérer TOUS les évènements de la plateforme avec participants peuplés
-      console.log('🔍 Requête MongoDB: EventModel.find({}).populate("participants")');
       const allEvents = await EventModel.find({}).populate('participants');
-      console.log('📊 Évènements trouvés dans la DB:', allEvents.length);
-
-      // Log des premiers évènements pour debug
-      if (allEvents.length > 0) {
-        console.log('📅 Détail des évènements trouvés:');
-        allEvents.forEach((event, index) => {
-          console.log(`   ${index + 1}. "${event.title}" - ${event.date} - Status: "${event.status}" - Organisateur: ${event.organizer}`);
-        });
-      } else {
-        console.log('❌ AUCUN évènement trouvé dans la base !');
-        // Test direct de connexion MongoDB
-        console.log('🔍 Test de connexion MongoDB...');
-        try {
-          if (mongoose.connection.db) {
-            const collections = await mongoose.connection.db.listCollections().toArray();
-            console.log('📚 Collections disponibles:', collections.map(c => c.name));
-
-            // Test direct sur la collection events
-            const rawEvents = await mongoose.connection.db.collection('events').find({}).toArray();
-            console.log('📊 Évènements via collection directe:', rawEvents.length);
-            if (rawEvents.length > 0) {
-              rawEvents.slice(0, 2).forEach((event, index) => {
-                console.log(`   RAW ${index + 1}. "${event.title}" - Status: "${event.status}"`);
-              });
-            }
-          } else {
-            console.log('❌ mongoose.connection.db est undefined');
-          }
-        } catch (dbError) {
-          console.error('❌ Erreur test DB:', dbError);
-        }
-      }
-
       const eventIds = allEvents.map(event => event._id);
 
       // Récupérer TOUTES les candidatures de la plateforme (SAUF WITHDRAWN)
@@ -1272,7 +1436,6 @@ export const getEventStats = async (req: AuthRequest, res: Response): Promise<an
         event: { $in: eventIds },
         status: { $ne: 'WITHDRAWN' }
       });
-      console.log('📊 Candidatures trouvées dans la DB (hors WITHDRAWN):', allApplications.length);
 
       const totalEvents = allEvents.length;
       const pendingApplications = allApplications.filter(app => app.status === 'PENDING').length;
@@ -1306,18 +1469,6 @@ export const getEventStats = async (req: AuthRequest, res: Response): Promise<an
       const organizerCount = await UserModel.countDocuments({ role: 'ORGANIZER' });
       const comedianCount = await UserModel.countDocuments({ role: 'COMEDIAN' });
 
-      console.log('📊 Statistiques globales calculées:', {
-        totalEvents,
-        pendingApplications,
-        acceptedApplications,
-        rejectedApplications,
-        upcomingIncompleteEvents,
-        fullEvents,
-        cancelledEvents,
-        organizerCount,
-        comedianCount
-      });
-
       return res.status(200).json({
         totalEvents,
         upcomingIncompleteEvents,
@@ -1331,31 +1482,24 @@ export const getEventStats = async (req: AuthRequest, res: Response): Promise<an
       });
     }
 
-    console.log('👤 Utilisateur normal (non super admin) - Role:', userRole);
-
     // Logique existante pour les organisateurs normaux
-    let objectOrganizerId;
+    let objectOrganizerId: mongoose.Types.ObjectId;
     try {
       objectOrganizerId = new mongoose.Types.ObjectId(organizerId);
-      console.log('✅ ObjectId créé avec succès:', objectOrganizerId);
     } catch (e) {
-      console.error('❌ Erreur création ObjectId:', e);
+      console.error('Erreur création ObjectId:', e);
       return res.status(400).json({ message: 'ID organisateur invalide' });
     }
 
     // Récupérer tous les évènements de l'organisateur avec participants peuplés
-    console.log('🔍 Recherche évènements pour organisateur:', objectOrganizerId);
     const allEvents = await EventModel.find({ organizer: objectOrganizerId }).populate('participants');
-    console.log('📊 Évènements trouvés:', allEvents.length);
     const eventIds = allEvents.map(event => event._id);
 
     // Récupérer toutes les candidatures liées à ces évènements (SAUF WITHDRAWN)
-    console.log('🔍 Recherche candidatures pour évènements:', eventIds.length);
     const allApplications = await ApplicationModel.find({
       event: { $in: eventIds },
       status: { $ne: 'WITHDRAWN' }
     });
-    console.log('📊 Candidatures trouvées (hors WITHDRAWN):', allApplications.length);
 
     const totalEvents = allEvents.length;
     const pendingApplications = allApplications.filter(app => app.status === 'PENDING').length;
@@ -1386,16 +1530,6 @@ export const getEventStats = async (req: AuthRequest, res: Response): Promise<an
 
     const cancelledEvents = allEvents.filter(event => event.status === 'cancelled').length;
 
-    console.log('📊 Statistiques calculées pour organisateur:', {
-      totalEvents,
-      upcomingIncompleteEvents,
-      fullEvents,
-      cancelledEvents,
-      pendingApplications,
-      acceptedApplications,
-      rejectedApplications
-    });
-
     return res.status(200).json({
       totalEvents,
       upcomingIncompleteEvents,
@@ -1406,7 +1540,7 @@ export const getEventStats = async (req: AuthRequest, res: Response): Promise<an
       rejectedApplications
     });
   } catch (err) {
-    console.error('❌ Error fetching event stats:', err);
+    console.error('Error fetching event stats:', err);
     return res.status(500).json({
       message: 'Erreur lors du chargement des statistiques',
       error: err instanceof Error ? err.message : 'Erreur interne du serveur'
@@ -1651,60 +1785,62 @@ export const processCompletedEvents = async (req: AuthRequest, res: Response): P
 
     const now = new Date();
 
-    // Trouver tous les évènements passés qui ont des participants acceptés
+    // Trouver tous les évènements passés qui ont des participants acceptés (sans populate pour garder des ObjectIds)
     const pastEvents = await EventModel.find({
       date: { $lt: now },
       status: { $in: ['published', 'completed'] }
-    }).populate('participants');
+    });
 
     let totalProcessed = 0;
     let participationsAdded = 0;
 
     for (const event of pastEvents) {
-      // Pour chaque participant de l'évènement
-      for (const participantId of event.participants) {
-        const participant = await UserModel.findById(participantId);
+      const participants = Array.isArray(event.participants) ? event.participants : [];
+      for (const participantIdRef of participants) {
+        if (participantIdRef == null) continue;
+        const participantId = participantIdRef instanceof mongoose.Types.ObjectId
+          ? participantIdRef
+          : (participantIdRef as any)?._id ?? participantIdRef;
+        if (!participantId) continue;
 
-        if (participant && participant.role === 'COMEDIAN') {
-          // Initialiser les stats si nécessaire
-          if (!participant.stats) {
-            participant.stats = {};
-          }
-          if (!participant.stats.processedEvents) {
-            participant.stats.processedEvents = [];
-          }
+        // Ne charger que role, stats et nom pour éviter de déclencher la validation du profil (ex. numberOfScenes invalide)
+        const participant = await UserModel.findById(participantId)
+          .select('role stats firstName lastName')
+          .lean();
 
-          // Vérifier si cet évènement a déjà été traité pour ce participant
-          const eventIdStr = (event._id as mongoose.Types.ObjectId).toString();
-          const alreadyProcessed = participant.stats.processedEvents.includes(eventIdStr);
+        if (!participant || participant.role !== 'COMEDIAN') continue;
 
-          if (!alreadyProcessed) {
-            // Vérifier si ce humoriste a été marqué absent pour cet évènement
-            const absence = await AbsenceModel.findOne({
-              event: event._id,
-              comedian: participantId
-            });
+        const stats = participant.stats || {};
+        const processedEvents = Array.isArray(stats.processedEvents) ? stats.processedEvents : [];
+        const eventIdStr = (event._id && (event._id as any).toString) ? (event._id as any).toString() : String(event._id);
+        const alreadyProcessed = processedEvents.some((id: any) => (id && id.toString ? id.toString() : String(id)) === eventIdStr);
 
-            // Si pas d'absence trouvée, incrémenter totalEvents (participation)
-            if (!absence) {
-              const currentTotalEvents = participant.stats.totalEvents || 0;
-              participant.stats.totalEvents = currentTotalEvents + 1;
-              participant.stats.processedEvents.push(eventIdStr);
-              participant.markModified('stats');
-              await participant.save();
+        if (alreadyProcessed) {
+          console.log(`ℹ️ Évènement "${event.title}" déjà traité pour ${participant.firstName} ${participant.lastName}`);
+          continue;
+        }
 
-              participationsAdded++;
-              console.log(`✅ Participation ajoutée pour ${participant.firstName} ${participant.lastName} à l'évènement "${event.title}"`);
-            } else {
-              // Marquer comme traité même si absent pour éviter de le retraiter
-              participant.stats.processedEvents.push(eventIdStr);
-              participant.markModified('stats');
-              await participant.save();
-              console.log(`⚠️ ${participant.firstName} ${participant.lastName} était absent à l'évènement "${event.title}" - pas de participation ajoutée`);
-            }
-          } else {
-            console.log(`ℹ️ Évènement "${event.title}" déjà traité pour ${participant.firstName} ${participant.lastName}`);
-          }
+        const absence = await AbsenceModel.findOne({
+          event: event._id,
+          comedian: participantId
+        });
+
+        // Mise à jour ciblée des stats uniquement (pas de save() du document → pas de validation profile.numberOfScenes)
+        if (!absence) {
+          await UserModel.updateOne(
+            { _id: participantId },
+            { $inc: { 'stats.totalEvents': 1 }, $push: { 'stats.processedEvents': eventIdStr } },
+            { runValidators: false }
+          );
+          participationsAdded++;
+          console.log(`✅ Participation ajoutée pour ${participant.firstName} ${participant.lastName} à l'évènement "${event.title}"`);
+        } else {
+          await UserModel.updateOne(
+            { _id: participantId },
+            { $push: { 'stats.processedEvents': eventIdStr } },
+            { runValidators: false }
+          );
+          console.log(`⚠️ ${participant.firstName} ${participant.lastName} était absent à l'évènement "${event.title}" - pas de participation ajoutée`);
         }
       }
       totalProcessed++;
@@ -1715,9 +1851,15 @@ export const processCompletedEvents = async (req: AuthRequest, res: Response): P
       eventsProcessed: totalProcessed,
       participationsAdded: participationsAdded
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erreur lors du traitement des évènements terminés:', error);
-    res.status(500).json({ message: 'Erreur lors du traitement des évènements terminés' });
+    const message = error?.message || 'Erreur lors du traitement des évènements terminés';
+    const detail = error?.stack || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+    res.status(500).json({
+      message: 'Erreur lors du traitement des évènements terminés',
+      error: message,
+      ...(process.env.NODE_ENV !== 'production' && { detail })
+    });
   }
 };
 
@@ -1833,7 +1975,8 @@ export const markEventsAsCompletedCron = async (req: Request, res: Response): Pr
           console.log(`✅ Évènement "${event.title}" marqué comme completed`);
 
           // Émettre un évènement SSE pour notifier tous les clients
-          emitEventCompleted(event._id.toString());
+          const completedAudience = await getEventAudience(event._id.toString(), event.organizer.toString());
+          emitEventCompleted(event._id.toString(), completedAudience);
 
           // Expirer les candidatures en attente pour cet évènement
           try {
@@ -1869,5 +2012,39 @@ export const markEventsAsCompletedCron = async (req: Request, res: Response): Pr
       message: 'Erreur lors du marquage des évènements comme completed',
       error: error instanceof Error ? error.message : 'Erreur inconnue'
     });
+  }
+};
+
+// ============================================================================
+// UPLOAD PHOTO ÉVÉNEMENT (organisateur)
+// ============================================================================
+const ALLOWED_EVENT_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+const MAX_EVENT_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+
+export const uploadEventImage = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.role !== 'ORGANIZER') {
+      res.status(403).json({ message: 'Réservé aux organisateurs' });
+      return;
+    }
+    const file = (req as any).file;
+    if (!file) {
+      res.status(400).json({ message: 'Aucun fichier reçu. Formats acceptés: JPG, PNG, GIF (max 5MB).' });
+      return;
+    }
+    if (!ALLOWED_EVENT_IMAGE_TYPES.includes(file.mimetype)) {
+      res.status(400).json({ message: 'Format non accepté. Utilisez JPG, PNG ou GIF.' });
+      return;
+    }
+    if (file.size > MAX_EVENT_IMAGE_SIZE) {
+      res.status(400).json({ message: 'Fichier trop volumineux (max 5MB).' });
+      return;
+    }
+    const baseUrl = config.api.url.replace(/\/$/, '');
+    const imageUrl = `${baseUrl}/uploads/events/${file.filename}`;
+    res.status(200).json({ imageUrl });
+  } catch (error: any) {
+    console.error('Upload event image error:', error);
+    res.status(500).json({ message: error?.message || 'Erreur lors de l\'upload.' });
   }
 };

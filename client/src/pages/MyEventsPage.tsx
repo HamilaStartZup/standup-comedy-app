@@ -1,5 +1,7 @@
 import { type CSSProperties, useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Navbar from '../components/Navbar';
+import Pagination from '../components/Pagination';
+import { useUserEvents } from '../hooks/useUserEvents';
 import Modal from '../components/Modal';
 import CreateEventForm from '../components/CreateEventForm';
 import EditEventForm from '../components/EditEventForm';
@@ -10,7 +12,7 @@ import EventCalendar from '../components/EventCalendar';
 import EventDetailModal from '../components/EventDetailModal';
 import ScorePieChart from '../components/ScorePieChart';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { matchesMobilityZones, normalizeString, FRENCH_REGIONS, FRENCH_DEPARTMENTS, DEPARTMENTS_ORDER } from '../utils/geographicMatching';
+import { FRENCH_REGIONS, FRENCH_DEPARTMENTS, DEPARTMENTS_ORDER } from '../utils/geographicMatching';
 import { getOrganizerName, translateEventStatus } from '../utils/eventHelpers';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
@@ -46,8 +48,94 @@ type OrganizerTab = 'upcoming' | 'full' | 'archived' | 'cancelled' | 'calendar' 
 type EventsSubTab = 'upcoming' | 'full' | 'archived' | 'cancelled' | 'recurringEvents';
 type SuperAdminTab = 'full' | 'upcoming' | 'archived' | 'cancelled';
 
+interface RatingsSummaryData {
+  eventTitle: string;
+  averageEventRating: number | null;
+  totalRatings: number;
+  comedianRatings: Array<{
+    comedianId: string;
+    firstName: string;
+    lastName: string;
+    averageRating: number | null;
+    ratingCount: number;
+  }>;
+}
+
+function RatingsSummaryModal({ event, onClose }: { event: IEvent | null; onClose: () => void }) {
+  const { data, isLoading, error } = useQuery<RatingsSummaryData>({
+    queryKey: ['event-ratings-summary', event?._id],
+    queryFn: async () => {
+      const res = await api.get(`/events/${event!._id}/ratings-summary`);
+      return res.data;
+    },
+    enabled: !!event?._id,
+  });
+
+  if (!event) return null;
+
+  return (
+    <Modal isOpen onClose={onClose}>
+      <div>
+        <h2 style={{ margin: '0 0 16px 0', fontSize: '1.25em', color: '#fff' }}>
+          Notes — {event.title}
+        </h2>
+        {isLoading && <p style={{ color: '#aaa' }}>Chargement des notes…</p>}
+        {error && <p style={{ color: '#dc3545' }}>Impossible de charger les notes.</p>}
+        {data && !isLoading && (
+          <>
+            <div style={{ marginBottom: 20, padding: '16px', background: 'rgba(255,255,255,0.06)', borderRadius: 8 }}>
+              <div style={{ marginBottom: 12, color: '#fff', fontSize: '0.95em' }}>
+                <span style={{ color: '#888' }}>Moyenne par événement</span>
+                <div style={{ color: '#FFD700', fontWeight: 600, fontSize: '1.2em', marginTop: 4 }}>
+                  {data.averageEventRating != null ? `${data.averageEventRating}/5` : '—'}
+                </div>
+              </div>
+              <div style={{ marginBottom: 12, color: '#fff', fontSize: '0.95em' }}>
+                <span style={{ color: '#888' }}>Nombre total d&apos;avis</span>
+                <div style={{ color: '#fff', fontWeight: 600, fontSize: '1.2em', marginTop: 4 }}>
+                  {data.totalRatings}
+                </div>
+              </div>
+            </div>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '1em', color: '#ddd' }}>Moyenne par humoriste</h3>
+            {data.comedianRatings.length > 0 ? (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 260, overflowY: 'auto' }}>
+                {data.comedianRatings.map((cr) => (
+                  <li
+                    key={cr.comedianId}
+                    style={{
+                      padding: '10px 0',
+                      borderBottom: '1px solid rgba(255,255,255,0.08)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 12,
+                    }}
+                  >
+                    <span style={{ color: '#fff' }}>
+                      {cr.firstName} {cr.lastName}
+                    </span>
+                    <span style={{ color: '#FFD700', fontWeight: 600 }}>
+                      {cr.averageRating != null ? `${cr.averageRating}/5` : '—'} ({cr.ratingCount} avis)
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p style={{ color: '#888', margin: 0 }}>Aucun humoriste à afficher.</p>
+            )}
+            {data.totalRatings === 0 && (
+              <p style={{ color: '#888', marginTop: 12 }}>Aucune notation pour cet événement.</p>
+            )}
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function MyEventsPage() {
-  const { token, user, refreshUser, isLoading: authIsLoading } = useAuth();
+  const { user, refreshUser, isLoading: authIsLoading } = useAuth();
   const { showSuccess, showError, showWarning, showInfo } = useAlert();
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -80,21 +168,16 @@ function MyEventsPage() {
     }
   }, [user?.role]);
 
-  // Calculer isQueryEnabled avant son utilisation
-  const isQueryEnabled = !authIsLoading && !!token && !!user?._id;
+  // Calculer isQueryEnabled avant son utilisation (auth par cookie : user suffit, token peut être null)
+  const isQueryEnabled = !authIsLoading && !!user?._id;
 
   // Charger les favoris depuis l'API
   const { data: eventFavoritesData, refetch: refetchEventFavorites } = useQuery<{ favorites: IEvent[] }, Error>({
-    queryKey: ['eventFavorites', user?._id, token],
+    queryKey: ['eventFavorites', user?._id],
     queryFn: async () => {
-      if (!token || !user?._id || user?.role !== 'COMEDIAN') {
+      if (!user?._id || user?.role !== 'COMEDIAN') {
         throw new Error("Informations d'authentification manquantes.");
       }
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
       const response = await getEventFavorites();
       return response;
     },
@@ -115,9 +198,9 @@ function MyEventsPage() {
 
   // Charger les humoristes favoris (pour les organisateurs) avec React Query
   const { data: favoriteComediansData, refetch: refetchFavoriteComedians } = useQuery<{ favorites: any[] }, Error>({
-    queryKey: ['organizerFavoriteComedians', user?._id, token],
+    queryKey: ['organizerFavoriteComedians', user?._id],
     queryFn: async () => {
-      if (!token || !user?._id || user?.role !== 'ORGANIZER') {
+      if (!user?._id || user?.role !== 'ORGANIZER') {
         throw new Error("Informations d'authentification manquantes.");
       }
       const response = await getFavorites();
@@ -167,6 +250,7 @@ function MyEventsPage() {
   const [expandedUpcomingGroupId, setExpandedUpcomingGroupId] = useState<string | null>(null);
   const [openActionsEventId, setOpenActionsEventId] = useState<string | null>(null);
   const [spectatorsModalEvent, setSpectatorsModalEvent] = useState<IEvent | null>(null);
+  const [ratingsModalEvent, setRatingsModalEvent] = useState<IEvent | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [locationSearch, setLocationSearch] = useState(''); // Recherche par lieu pour les humoristes
@@ -190,6 +274,7 @@ function MyEventsPage() {
   const [selectedEventForInvite, setSelectedEventForInvite] = useState<string>('');
   const [isInviting, setIsInviting] = useState(false);
   const [upcomingPage, setUpcomingPage] = useState(1);
+  const [eventsPage] = useState(1);
   const [archivedPage, setArchivedPage] = useState(1);
   const [cancelledPage, setCancelledPage] = useState(1);
   const [completedPage, setCompletedPage] = useState(1);
@@ -281,77 +366,94 @@ useEffect(() => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [openActionsEventId]);
 
-  console.log("MyEventsPage: Initial token", token);
-  console.log("MyEventsPage: Initial user", user);
-  console.log("MyEventsPage: Auth is loading?", authIsLoading);
-  console.log("MyEventsPage: useQuery enabled status", isQueryEnabled, { authIsLoading, token, userId: user?._id, userRole: user?.role });
+  const isOrganizerRole = user?.role === 'ORGANIZER';
+  // 'full' is a capacity-derived view (no DB status), so we don't filter it server-side
+  const activeStatusFilter = (() => {
+    if (!isOrganizerRole) return undefined;
+    switch (organizerTab) {
+      case 'archived': return 'completed';
+      case 'cancelled': return 'cancelled';
+      case 'upcoming': return 'published';
+      default: return undefined;
+    }
+  })();
+  const activePage = (() => {
+    if (!isOrganizerRole) return eventsPage;
+    switch (organizerTab) {
+      case 'archived': return archivedPage;
+      case 'cancelled': return cancelledPage;
+      case 'upcoming': return upcomingPage;
+      default: return eventsPage;
+    }
+  })();
+  const orgServerStatusTab = isOrganizerRole && (organizerTab === 'upcoming' || organizerTab === 'archived' || organizerTab === 'cancelled');
 
-  // Debug supplémentaire pour diagnostiquer le problème
-  console.log("🔧 DEBUG ACTIVATION QUERY:", {
-    authIsLoading,
-    hasToken: !!token,
-    hasUserId: !!user?._id,
-    userRole: user?.role,
-    finalEnabled: isQueryEnabled
-  });
+  const eventsZone = isOrganizerRole
+    ? (organizerEventZoneSearch.trim() || undefined)
+    : (locationSearch.trim() || undefined);
+  const eventsExperienceLevel = isOrganizerRole
+    ? (organizerEventExperienceFilter !== 'all' ? organizerEventExperienceFilter : undefined)
+    : (experienceFilter !== 'all' ? experienceFilter : undefined);
 
-  const { data: fetchedEvents, isLoading: eventsLoading, isError: eventsError, error: eventsErrorMessage, refetch } = useQuery<IEvent[], Error>({
-    queryKey: ['events', user?._id, user?.role, token, location.search],
-    queryFn: async () => {
-      console.log("🚀 MyEventsPage: useQuery queryFn called. Token:", !!token, "User ID:", user?._id, "Role:", user?.role);
-      if (!token || !user?._id) {
-        console.log("❌ Authentification manquante, arrêt de la requête");
-        throw new Error("Informations d'authentification manquantes.");
-      }
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-      // Pour les humoristes, récupérer TOUS les évènements
-      // Pour les organisateurs, récupérer seulement leurs évènements
-      const apiUrl = user?.role === 'ORGANIZER'
-        ? `/events?organizerId=${user._id}`
-        : `/events`; // Pas de filtre organizerId pour les humoristes
-      
-      console.log(`🔗 Requête API: ${apiUrl} (Role: ${user?.role})`);
-      try {
-        const res = await api.get<IEvent[]>(apiUrl, config);
-        const list = Array.isArray(res.data) ? res.data : (Array.isArray((res.data as any)?.events) ? (res.data as any).events : []);
-        console.log("MyEventsPage: Données d'évènements reçues par useQuery:", list);
-        console.log("MyEventsPage: User role:", user?.role);
-        console.log("📅 DÉTAIL DES DATES RÉCUPÉRÉES:", list.map((e: IEvent) => ({
-          title: e.title,
-          status: e.status,
-          dateOriginale: e.date,
-          dateParsee: new Date(e.date).toLocaleDateString('fr-FR'),
-          estPasse: new Date(e.date) < new Date()
-        })));
-        return list as IEvent[];
-      } catch (error: any) {
-        console.error("❌ Erreur lors de la récupération des évènements:", error);
-        console.error("❌ Détails de l'erreur:", error.response?.data || error.message);
-        throw error;
-      }
-    },
-    enabled: isQueryEnabled, // Utiliser isQueryEnabled au lieu de true
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+  const { data: userEventsData, isLoading: eventsLoading, isError: eventsError, error: eventsErrorMessage, refetch } = useUserEvents({
+    page: activePage,
+    limit: isOrganizerRole ? (orgServerStatusTab ? ITEMS_PER_PAGE : 100) : 20,
+    status: activeStatusFilter,
+    zone: eventsZone,
+    experienceLevel: eventsExperienceLevel,
   });
+  const fetchedEvents: IEvent[] = userEventsData?.events ?? [];
+  const serverEventsPagination = userEventsData?.pagination ?? null;
+
+  // Compteurs globaux par statut (organizer + super admin) — limit:1, on lit pagination.total.
+  // Évite que le compteur du tab reflète seulement la page courante.
+  const needsStatusCounts = isOrganizerRole || isSuperAdminView;
+  const { data: upcomingCountData } = useUserEvents({ page: 1, limit: 1, status: 'published', zone: eventsZone, experienceLevel: eventsExperienceLevel, enabled: needsStatusCounts });
+  const { data: archivedCountData } = useUserEvents({ page: 1, limit: 1, status: 'completed', zone: eventsZone, experienceLevel: eventsExperienceLevel, enabled: needsStatusCounts });
+  const { data: cancelledCountData } = useUserEvents({ page: 1, limit: 1, status: 'cancelled', zone: eventsZone, experienceLevel: eventsExperienceLevel, enabled: needsStatusCounts });
+  const upcomingTotal = upcomingCountData?.pagination?.total ?? null;
+  const archivedTotal = archivedCountData?.pagination?.total ?? null;
+  const cancelledTotal = cancelledCountData?.pagination?.total ?? null;
+
+  // Fetch dédié des events récurrents (organizer) — indépendant du tab actif.
+  // Sinon `recurringGroups` n'est rempli que lorsqu'on est sur l'onglet "récurrents"
+  // et le compteur affiche 0 tant qu'on n'y a pas cliqué.
+  const { data: recurringEventsData } = useUserEvents({
+    page: 1,
+    limit: 500,
+    hasRecurrence: true,
+    enabled: isOrganizerRole,
+  });
+  const recurringFetchedEvents: IEvent[] = recurringEventsData?.events ?? [];
+
+  // Scroll + highlight de la carte event ciblée via ?focus= (clic depuis notif)
+  useEffect(() => {
+    const focusId = new URLSearchParams(location.search).get('focus');
+    if (!focusId || eventsLoading || !fetchedEvents?.length) return;
+    const timer = setTimeout(() => {
+      const node = document.querySelector<HTMLElement>(`[data-event-id="${focusId}"]`);
+      if (!node) return;
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const previousOutline = node.style.outline;
+      const previousOffset = node.style.outlineOffset;
+      node.style.outline = '3px solid #ff416c';
+      node.style.outlineOffset = '2px';
+      setTimeout(() => {
+        node.style.outline = previousOutline;
+        node.style.outlineOffset = previousOffset;
+      }, 2000);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [location.search, eventsLoading, fetchedEvents]);
 
   // New useQuery for comedian's applications
   const { data: comedianApplications, isLoading: comedianApplicationsLoading, isError: comedianApplicationsError, error: comedianApplicationsErrorMessage } = useQuery<IApplication[], Error>({
-    queryKey: ['comedianApplications', user?._id, token],
+    queryKey: ['comedianApplications', user?._id],
     queryFn: async () => {
-      if (!token || !user?._id) {
+      if (!user?._id) {
         throw new Error("Informations d'authentification manquantes pour les candidatures.");
       }
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-      const res = await api.get<IApplication[]>(`/applications?comedianId=${user._id}`, config);
+      const res = await api.get<IApplication[]>(`/applications?comedianId=${user._id}`);
       const list = Array.isArray(res.data) ? res.data : (Array.isArray((res.data as any)?.applications) ? (res.data as any).applications : []);
       return list as IApplication[];
     },
@@ -369,9 +471,9 @@ useEffect(() => {
       matchReasons?: string[];
     }>
   }, Error>({
-    queryKey: ['recommendations', user?._id, token],
+    queryKey: ['recommendations', user?._id],
     queryFn: async () => {
-      if (!token || !user?._id || user?.role !== 'COMEDIAN') {
+      if (!user?._id || user?.role !== 'COMEDIAN') {
         throw new Error("Informations d'authentification manquantes.");
       }
       const response = await getRecommendations({ limit: 200 }); // Charger suffisamment d'événements
@@ -384,9 +486,9 @@ useEffect(() => {
 
   // Charger les recommandations intelligentes (basées sur l'historique)
   const { data: smartRecommendationsData, isLoading: smartRecommendationsLoading } = useQuery<SmartRecommendationsResponse, Error>({
-    queryKey: ['smartRecommendations', user?._id, token],
+    queryKey: ['smartRecommendations', user?._id],
     queryFn: async () => {
-      if (!token || !user?._id || user?.role !== 'COMEDIAN') {
+      if (!user?._id || user?.role !== 'COMEDIAN') {
         throw new Error("Informations d'authentification manquantes.");
       }
       const response = await getSmartRecommendations({ limit: 100 });
@@ -454,13 +556,11 @@ useEffect(() => {
     // Délai pour s'assurer que les éléments sont rendus
     const scrollTimeout = setTimeout(() => {
       if (statusFilters.includes('cancelled') && cancelledSectionRef.current) {
-        console.log('🎯 Scroll automatique vers la section "Évènements annulés"');
         cancelledSectionRef.current.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'start' 
         });
       } else if (statusFilters.includes('completed') && archivedSectionRef.current) {
-        console.log('🎯 Scroll automatique vers la section "Évènements archivés"');
         archivedSectionRef.current.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'start' 
@@ -482,7 +582,7 @@ useEffect(() => {
   const favoriteIdsSet = useMemo(() => new Set(favoriteEventIds), [favoriteEventIds]);
 
   const toggleFavoriteEvent = async (eventId: string) => {
-    if (!isComedianView || !token) return;
+    if (!isComedianView || !user?._id) return;
 
     const isCurrentlyFavorite = favoriteIdsSet.has(eventId);
 
@@ -506,7 +606,6 @@ useEffect(() => {
       // Rafraîchir les favoris depuis l'API pour s'assurer de la cohérence
       await refetchEventFavorites();
     } catch (error: any) {
-      console.error('❌ [MyEventsPage] Erreur lors de la modification des favoris:', error);
       // Revert optimistic update en cas d'erreur
       setFavoriteEventIds(prev => {
         const updated = new Set(prev);
@@ -523,7 +622,7 @@ useEffect(() => {
 
   // Toggle favori pour un humoriste (organisateurs)
   const toggleFavoriteComedian = async (comedianId: string) => {
-    if (!isOrganizerView || !token) return;
+    if (!isOrganizerView || !user?._id) return;
 
     const isCurrentlyFavorite = favoriteComedianIds.includes(comedianId);
 
@@ -543,7 +642,6 @@ useEffect(() => {
         await addFavorite(comedianId);
       }
     } catch (error: any) {
-      console.error('Erreur lors de la modification des favoris d\'humoriste:', error);
       // Revert en cas d'erreur
       setFavoriteComedianIds((prev: string[]) => {
         if (isCurrentlyFavorite) {
@@ -568,9 +666,25 @@ useEffect(() => {
     return map;
   }, [comedianApplications]);
 
+<<<<<<< HEAD
   // Fonction utilitaire pour comparer les dates : l'événement est-il terminé ?
   // Si endTime < startTime (ex. 01:00 après 23:00), la fin est le lendemain.
   const isEventPast = (eventDateString: string, endTime?: string, startTime?: string): boolean => {
+=======
+  /** true si l'événement commence dans moins d'1 h ou a déjà commencé → plus de postuler ni désinscrire */
+  const isEventWithinOneHour = (event: { date: string; startTime?: string }): boolean => {
+    if (!event?.date) return false;
+    const dateStr = typeof event.date === 'string' ? event.date.split('T')[0] : new Date(event.date).toISOString().split('T')[0];
+    const startTime = (event.startTime || '00:00').trim();
+    const eventStart = new Date(dateStr + 'T' + startTime + ':00');
+    const oneHourFromNow = Date.now() + 60 * 60 * 1000;
+    return eventStart.getTime() <= oneHourFromNow;
+  };
+
+  // Fonction utilitaire pour comparer les dates (ignorer l'heure)
+  const isEventPast = (eventDateString: string, endTime?: string): boolean => {
+    // Si endTime n'est pas fourni, on considère la fin de la journée
+>>>>>>> dev_brach_env2
     const eventDate = new Date(eventDateString);
     let eventEndDateTime: Date;
     if (endTime) {
@@ -670,13 +784,6 @@ useEffect(() => {
       const organizerFilter = queryParams.get('organizer');
       const keywordFilter = queryParams.get('search');
 
-      console.log('🔄 RECALCUL DES FILTRES:', {
-        totalEvents: eventsToFilter.length,
-        organizerFilter,
-        keywordFilter,
-        userRole: user?.role
-      });
-
       let filteredEvents = eventsToFilter;
 
       if (statusFilters.length > 0) {
@@ -689,11 +796,6 @@ useEffect(() => {
           const organizerId = getOrganizerIdFromEvent(event.organizer);
           const matches = organizerId === user._id;
           if (!matches) {
-            console.warn('🚫 Évènement ignoré car il n’appartient pas à cet organisateur:', {
-              eventTitle: event.title,
-              eventOrganizer: organizerId,
-              currentUser: user._id,
-            });
           }
           return matches;
         });
@@ -701,15 +803,11 @@ useEffect(() => {
 
       // Filtre par organisateur (pour super admin)
       if (user?.role === 'SUPER_ADMIN' && organizerFilter) {
-        console.log(`🔍 Filtrage par organisateur: "${organizerFilter}"`);
-        console.log(`📊 Évènements avant filtrage organisateur: ${filteredEvents.length}`);
         filteredEvents = filteredEvents.filter((event: IEvent) => {
           const eventOrganizerName = getOrganizerName(event.organizer);
           const matches = eventOrganizerName === organizerFilter;
-          console.log(`   - Évènement "${event.title}" (organisateur: "${eventOrganizerName}") → ${matches ? 'INCLUS' : 'EXCLU'}`);
           return matches;
         });
-        console.log(`📊 Évènements après filtrage organisateur: ${filteredEvents.length}`);
       }
 
       // Barre de recherche mots-clés (pour super admin)
@@ -734,16 +832,23 @@ useEffect(() => {
       // Comparaison uniquement par date (ignorer l'heure)
       const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       
-      console.log(`🔍 DEBUG CLASSIFICATION - Aujourd'hui: ${todayMidnight.toLocaleDateString('fr-FR')}`);
-      console.log(`📊 Total évènements récupérés: ${filteredEvents.length}`);
       
-      filteredEvents.forEach((event: IEvent) => {
-        // D'abord, isoler les évènements annulés pour qu'ils n'apparaissent pas ailleurs
-        const isCancelled = (event.status === 'CANCELLED' || event.status === 'cancelled');
-        if (isCancelled) {
-          cancelled.push(event);
-          return;
+      // Sur les tabs server-paginés (organizer upcoming/archived/cancelled), le serveur
+      // a déjà filtré par status — pas de re-classement par date sinon les items disparaissent
+      // (ex: status='completed' mais endTime futur => bascule dans upcoming et trou de pagination).
+      if (isOrganizerRole && orgServerStatusTab) {
+        if (organizerTab === 'archived') {
+          archived.push(...filteredEvents);
+        } else if (organizerTab === 'cancelled') {
+          cancelled.push(...filteredEvents);
+        } else if (organizerTab === 'upcoming') {
+          filteredEvents.forEach((event: IEvent) => {
+            const isCancelled = (event.status === 'CANCELLED' || event.status === 'cancelled');
+            if (isCancelled) cancelled.push(event);
+            else upcoming.push(event);
+          });
         }
+<<<<<<< HEAD
         // Utilise la nouvelle logique avec endTime
         const eventIsPast = isEventPast(event.date, event.endTime, event.startTime);
         const eventDate = new Date(event.date);
@@ -756,22 +861,26 @@ useEffect(() => {
           status: event.status,
           estPasse: eventIsPast,
           estFutur: !eventIsPast
+=======
+      } else {
+        filteredEvents.forEach((event: IEvent) => {
+          // D'abord, isoler les évènements annulés pour qu'ils n'apparaissent pas ailleurs
+          const isCancelled = (event.status === 'CANCELLED' || event.status === 'cancelled');
+          if (isCancelled) {
+            cancelled.push(event);
+            return;
+          }
+          // **LOGIQUE UNIVERSELLE** : TOUS les évènements passés sont archivés
+          const eventIsPast = isEventPast(event.date, event.endTime);
+          if (eventIsPast) {
+            archived.push(event);
+          } else {
+            upcoming.push(event);
+          }
+>>>>>>> dev_brach_env2
         });
-        
-        // **LOGIQUE UNIVERSELLE** : TOUS les évènements passés sont archivés
-        if (eventIsPast) {
-          archived.push(event);
-          console.log(`✅ → ARCHIVÉ: ${event.title} (date passée: ${eventDate.toLocaleDateString('fr-FR')})`);
-        } else {
-          upcoming.push(event);
-          console.log(`📅 → À VENIR: ${event.title} (date future/aujourd'hui: ${eventDate.toLocaleDateString('fr-FR')})`);
-        }
-      });
+      }
       
-      console.log(`\n📈 RÉSULTAT CLASSIFICATION:`);
-      console.log(`   • Évènements à venir: ${upcoming.length}`);
-      console.log(`   • Évènements archivés: ${archived.length}`);
-      console.log(`   • Évènements annulés: ${cancelled.length}`);
 
       if (dateFilter === 'upcoming') {
           archived.length = 0;
@@ -785,13 +894,15 @@ useEffect(() => {
     }
 
     return { upcomingEvents: upcoming, archivedEvents: archived, cancelledEvents: cancelled };
-  }, [fetchedEvents, location.search]);
+  }, [fetchedEvents, location.search, isOrganizerRole, orgServerStatusTab, organizerTab, user?._id, user?.role]);
 
-  // Groupes d'événements récurrents (par recurrenceGroupId) pour l'organisateur
+  // Groupes d'événements récurrents (par recurrenceGroupId) pour l'organisateur.
+  // Basé sur `recurringFetchedEvents` (fetch dédié hasRecurrence=true) et non
+  // `fetchedEvents` qui dépend du tab actif — sinon compteur faussé.
   const recurringGroups = useMemo(() => {
-    if (!fetchedEvents || !Array.isArray(fetchedEvents) || user?.role !== 'ORGANIZER' || !user?._id) return new Map<string, IEvent[]>();
+    if (!Array.isArray(recurringFetchedEvents) || user?.role !== 'ORGANIZER' || !user?._id) return new Map<string, IEvent[]>();
     const map = new Map<string, IEvent[]>();
-    (fetchedEvents as IEvent[]).forEach((event: IEvent) => {
+    recurringFetchedEvents.forEach((event: IEvent) => {
       const groupId = (event as IEvent & { recurrenceGroupId?: string }).recurrenceGroupId;
       if (!groupId) return;
       const organizerId = getOrganizerIdFromEvent(event.organizer);
@@ -802,7 +913,7 @@ useEffect(() => {
     });
     map.forEach((list) => list.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
     return map;
-  }, [fetchedEvents, user?._id, user?.role]);
+  }, [recurringFetchedEvents, user?._id, user?.role]);
 
   // Groupes d'événements récurrents pour le super admin (tous organisateurs)
   const recurringGroupsSuperAdmin = useMemo(() => {
@@ -819,15 +930,19 @@ useEffect(() => {
     return map;
   }, [fetchedEvents, user?.role]);
 
-  const totalCancelledPages = Math.max(1, Math.ceil(cancelledEvents.length / ITEMS_PER_PAGE));
-  const paginatedCancelledEvents = cancelledEvents.slice(
-    (cancelledPage - 1) * ITEMS_PER_PAGE,
-    cancelledPage * ITEMS_PER_PAGE
-  );
+  const totalCancelledPages = (isOrganizerRole && organizerTab === 'cancelled' && serverEventsPagination)
+    ? Math.max(1, serverEventsPagination.totalPages)
+    : Math.max(1, Math.ceil(cancelledEvents.length / ITEMS_PER_PAGE));
+  const paginatedCancelledEvents = (isOrganizerRole && organizerTab === 'cancelled' && serverEventsPagination)
+    ? cancelledEvents
+    : cancelledEvents.slice(
+        (cancelledPage - 1) * ITEMS_PER_PAGE,
+        cancelledPage * ITEMS_PER_PAGE
+      );
 
   useEffect(() => {
-    setCancelledPage(1);
-  }, [cancelledEvents]);
+    if (!(isOrganizerRole && organizerTab === 'cancelled')) setCancelledPage(1);
+  }, [cancelledEvents, isOrganizerRole, organizerTab]);
 
   useEffect(() => {
     if (cancelledPage > totalCancelledPages) {
@@ -843,15 +958,19 @@ useEffect(() => {
     return archivedEvents;
   }, [archivedEvents, appliedEventIds, user?.role]);
 
-  const totalArchivedPages = Math.max(1, Math.ceil(archivedEventsToShow.length / ITEMS_PER_PAGE));
-  const paginatedArchivedEvents = archivedEventsToShow.slice(
-    (archivedPage - 1) * ITEMS_PER_PAGE,
-    archivedPage * ITEMS_PER_PAGE
-  );
+  const totalArchivedPages = (isOrganizerRole && organizerTab === 'archived' && serverEventsPagination)
+    ? Math.max(1, serverEventsPagination.totalPages)
+    : Math.max(1, Math.ceil(archivedEventsToShow.length / ITEMS_PER_PAGE));
+  const paginatedArchivedEvents = (isOrganizerRole && organizerTab === 'archived' && serverEventsPagination)
+    ? archivedEventsToShow
+    : archivedEventsToShow.slice(
+        (archivedPage - 1) * ITEMS_PER_PAGE,
+        archivedPage * ITEMS_PER_PAGE
+      );
 
   useEffect(() => {
-    setArchivedPage(1);
-  }, [archivedEventsToShow]);
+    if (!(isOrganizerRole && organizerTab === 'archived')) setArchivedPage(1);
+  }, [archivedEventsToShow, isOrganizerRole, organizerTab]);
 
   useEffect(() => {
     if (archivedPage > totalArchivedPages) {
@@ -868,38 +987,10 @@ useEffect(() => {
         return app && app.status === 'ACCEPTED';
       });
       
-      // Filtre 1 : par lieu (recherche dans city, address, venue)
-      if (locationSearch.trim()) {
-        const searchLower = locationSearch.toLowerCase().trim();
-        filtered = filtered.filter(event => {
-          const location = event.location;
-          if (!location || typeof location !== 'object') return false;
-          const city = (location.city || '').toLowerCase();
-          const address = (location.address || '').toLowerCase();
-          const venue = (location.venue || '').toLowerCase();
-          return city.includes(searchLower) || address.includes(searchLower) || venue.includes(searchLower);
-        });
-      }
-      
-      // Filtre 2 : par niveau d'expérience requis de l'événement
-      // Ce filtre est appliqué sur les résultats déjà filtrés par lieu
-      if (experienceFilter !== 'all') {
-        filtered = filtered.filter(event => {
-          const eventRequiredLevel = event.requirements?.requiredExperienceLevel || 'all';
-          // Si l'événement accepte tous les niveaux, on l'affiche
-          if (eventRequiredLevel === 'all') {
-            return true;
-          }
-          // Sinon, on vérifie si le niveau requis correspond au filtre sélectionné
-          return eventRequiredLevel === experienceFilter;
-        });
-      }
-      
-      // Retourne les événements acceptés qui satisfont les deux filtres (si les deux sont actifs)
       return filtered;
     }
     return [] as IEvent[];
-  }, [user?.role, comedianApplications, upcomingEvents, locationSearch, experienceFilter]);
+  }, [user?.role, comedianApplications, upcomingEvents]);
 
   // Base des évènements à venir POUR POSTULER (exclut les acceptés pour l'humoriste)
   const upcomingEventsForApply = useMemo(() => {
@@ -950,36 +1041,8 @@ useEffect(() => {
     const favoriteSet = favoriteIdsSet;
     let filtered = comedianVisibleEvents.filter(event => favoriteSet.has(event._id));
     
-    // Filtre 1 : par lieu (recherche dans city, address, venue)
-    if (locationSearch.trim()) {
-      const searchLower = locationSearch.toLowerCase().trim();
-      filtered = filtered.filter(event => {
-        const location = event.location;
-        if (!location || typeof location !== 'object') return false;
-        const city = (location.city || '').toLowerCase();
-        const address = (location.address || '').toLowerCase();
-        const venue = (location.venue || '').toLowerCase();
-        return city.includes(searchLower) || address.includes(searchLower) || venue.includes(searchLower);
-      });
-    }
-    
-    // Filtre 2 : par niveau d'expérience requis de l'événement
-    // Ce filtre est appliqué sur les résultats déjà filtrés par lieu
-    if (experienceFilter !== 'all') {
-      filtered = filtered.filter(event => {
-        const eventRequiredLevel = event.requirements?.requiredExperienceLevel || 'all';
-        // Si l'événement accepte tous les niveaux, on l'affiche
-        if (eventRequiredLevel === 'all') {
-          return true;
-        }
-        // Sinon, on vérifie si le niveau requis correspond au filtre sélectionné
-        return eventRequiredLevel === experienceFilter;
-      });
-    }
-    
-    // Retourne les événements favoris qui satisfont les deux filtres (si les deux sont actifs)
     return filtered;
-  }, [isComedianView, favoriteEventIds, favoriteIdsSet, comedianVisibleEvents, locationSearch, experienceFilter]);
+  }, [isComedianView, favoriteEventIds, favoriteIdsSet, comedianVisibleEvents]);
 
   // Fonction de filtrage pour les humoristes (par lieu ET niveau d'expérience)
   // Utilise les événements de l'API principale avec les scores de l'API recommendations
@@ -989,30 +1052,6 @@ useEffect(() => {
       ...event,
       _recommendationScore: eventRecommendationMap.get(String(event._id))?.score ?? 0
     })) as (IEvent & { _recommendationScore: number })[];
-
-    // Filtre 1 : par lieu (recherche dans city, address, venue)
-    if (locationSearch.trim()) {
-      const searchLower = locationSearch.toLowerCase().trim();
-      base = base.filter(event => {
-        const location = event.location;
-        if (!location || typeof location !== 'object') return false;
-        const city = (location.city || '').toLowerCase();
-        const address = (location.address || '').toLowerCase();
-        const venue = (location.venue || '').toLowerCase();
-        return city.includes(searchLower) || address.includes(searchLower) || venue.includes(searchLower);
-      });
-    }
-
-    // Filtre 2 : par niveau d'expérience requis de l'événement
-    if (experienceFilter !== 'all') {
-      base = base.filter(event => {
-        const eventRequiredLevel = event.requirements?.requiredExperienceLevel || 'all';
-        if (eventRequiredLevel === 'all') {
-          return true;
-        }
-        return eventRequiredLevel === experienceFilter;
-      });
-    }
 
     // Filtre par complétion
     if (completionFilter === 'complete') {
@@ -1039,69 +1078,32 @@ useEffect(() => {
     return upcomingEvents.filter(event => !isEventComplete(event));
   }, [upcomingEvents]);
 
-  // Fonction de filtrage pour les organisateurs (par zone d'événement ET niveau d'expérience)
-  // Les deux filtres sont appliqués ensemble : un événement doit satisfaire les deux conditions
-  const getFilteredOrganizerEvents = (events: IEvent[]): IEvent[] => {
-    let filtered = [...events];
-    
-    // Filtre 1 : par zone d'événement (recherche dans city, address, venue)
-    if (organizerEventZoneSearch.trim()) {
-      const searchLower = organizerEventZoneSearch.toLowerCase().trim();
-      filtered = filtered.filter(event => {
-        const location = event.location;
-        if (!location || typeof location !== 'object') return false;
-        const city = (location.city || '').toLowerCase();
-        const address = (location.address || '').toLowerCase();
-        const venue = (location.venue || '').toLowerCase();
-        return city.includes(searchLower) || address.includes(searchLower) || venue.includes(searchLower);
-      });
-    }
-    
-    // Filtre 2 : par niveau d'expérience requis de l'événement
-    // Ce filtre est appliqué sur les résultats déjà filtrés par zone
-    if (organizerEventExperienceFilter !== 'all') {
-      filtered = filtered.filter(event => {
-        const eventRequiredLevel = event.requirements?.requiredExperienceLevel || 'all';
-        // Si l'événement accepte tous les niveaux, on l'affiche
-        if (eventRequiredLevel === 'all') {
-          return true;
-        }
-        // Sinon, on vérifie si le niveau requis correspond au filtre
-        return eventRequiredLevel === organizerEventExperienceFilter;
-      });
-    }
-    
-    // Retourne les événements qui satisfont les deux filtres (si les deux sont actifs)
-    return filtered;
-  };
-
   // Appliquer les filtres aux événements organisateur
   const filteredOrganizerUpcomingEvents = useMemo(() => {
     if (!isOrganizerView) return upcomingEvents;
     let base = upcomingEvents;
-    // Appliquer le filtre par complétion si nécessaire
     if (completionFilter === 'complete') {
       base = base.filter(event => isEventComplete(event));
     } else if (completionFilter === 'incomplete') {
       base = base.filter(event => !isEventComplete(event));
     }
-    return getFilteredOrganizerEvents(base);
-  }, [isOrganizerView, upcomingEvents, completionFilter, organizerEventZoneSearch, organizerEventExperienceFilter]);
+    return base;
+  }, [isOrganizerView, upcomingEvents, completionFilter]);
 
   const filteredOrganizerCompletedEvents = useMemo(() => {
     if (!isOrganizerView) return completedUpcomingEvents;
-    return getFilteredOrganizerEvents(completedUpcomingEvents);
-  }, [isOrganizerView, completedUpcomingEvents, organizerEventZoneSearch, organizerEventExperienceFilter]);
+    return completedUpcomingEvents;
+  }, [isOrganizerView, completedUpcomingEvents]);
 
   const filteredOrganizerArchivedEvents = useMemo(() => {
     if (!isOrganizerView) return archivedEventsToShow;
-    return getFilteredOrganizerEvents(archivedEventsToShow);
-  }, [isOrganizerView, archivedEventsToShow, organizerEventZoneSearch, organizerEventExperienceFilter]);
+    return archivedEventsToShow;
+  }, [isOrganizerView, archivedEventsToShow]);
 
   const filteredOrganizerCancelledEvents = useMemo(() => {
     if (!isOrganizerView) return cancelledEvents;
-    return getFilteredOrganizerEvents(cancelledEvents);
-  }, [isOrganizerView, cancelledEvents, organizerEventZoneSearch, organizerEventExperienceFilter]);
+    return cancelledEvents;
+  }, [isOrganizerView, cancelledEvents]);
 
   // Liste d'affichage "Évènements à venir" pour l'organisateur : événements uniques + groupes récurrents (un bloc par groupe)
   type UpcomingDisplayItem = { type: 'event'; event: IEvent } | { type: 'group'; groupId: string; events: IEvent[] };
@@ -1251,21 +1253,21 @@ useEffect(() => {
   }), [filteredUpcomingEvents, acceptedUpcomingEvents, favoriteEvents, smartRecommendationEvents]);
 
   const organizerTabCounts: Record<OrganizerTab, number> = useMemo(() => ({
-    upcoming: isOrganizerView ? upcomingDisplayItems.length : filteredUpcomingEvents.length,
+    upcoming: upcomingTotal ?? (isOrganizerView ? upcomingDisplayItems.length : filteredUpcomingEvents.length),
     full: completedUpcomingEvents.length,
-    archived: archivedEventsToShow.length,
-    cancelled: cancelledEvents.length,
-    calendar: upcomingEvents.length + archivedEventsToShow.length + cancelledEvents.length,
+    archived: archivedTotal ?? archivedEventsToShow.length,
+    cancelled: cancelledTotal ?? cancelledEvents.length,
+    calendar: (upcomingTotal ?? upcomingEvents.length) + (archivedTotal ?? archivedEventsToShow.length) + (cancelledTotal ?? cancelledEvents.length),
     favoriteComedians: favoriteComedianIds.length,
     recurringEvents: recurringGroups.size,
-  }), [isOrganizerView, upcomingDisplayItems.length, filteredUpcomingEvents, completedUpcomingEvents, archivedEventsToShow, cancelledEvents, upcomingEvents, favoriteComedianIds, recurringGroups.size]);
+  }), [isOrganizerView, upcomingDisplayItems.length, filteredUpcomingEvents, completedUpcomingEvents, archivedEventsToShow, cancelledEvents, upcomingEvents, favoriteComedianIds, recurringGroups.size, upcomingTotal, archivedTotal, cancelledTotal]);
 
   const superAdminTabCounts: Record<SuperAdminTab, number> = useMemo(() => ({
     full: completedUpcomingEvents.length,
-    upcoming: superAdminUpcomingDisplayItems.length,
-    archived: archivedEventsToShow.length,
-    cancelled: cancelledEvents.length,
-  }), [completedUpcomingEvents, superAdminUpcomingDisplayItems.length, archivedEventsToShow, cancelledEvents]);
+    upcoming: upcomingTotal ?? superAdminUpcomingDisplayItems.length,
+    archived: archivedTotal ?? archivedEventsToShow.length,
+    cancelled: cancelledTotal ?? cancelledEvents.length,
+  }), [completedUpcomingEvents, superAdminUpcomingDisplayItems.length, archivedEventsToShow, cancelledEvents, upcomingTotal, archivedTotal, cancelledTotal]);
 
   const comedianTabTitles: Record<ComedianTab, string> = {
     opportunities: 'Opportunités à venir',
@@ -1403,19 +1405,34 @@ useEffect(() => {
             onClick={(e) => e.stopPropagation()}
           >
             {context === 'archived' ? (
-              <button
-                type="button"
-                style={{ ...menuItemStyle }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenActionsEventId(null);
-                  handleCardClick(event, true);
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-              >
-                Gérer absences
-              </button>
+              <>
+                <button
+                  type="button"
+                  style={{ ...menuItemStyle, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenActionsEventId(null);
+                    handleCardClick(event, true);
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                  Gérer absences
+                </button>
+                <button
+                  type="button"
+                  style={{ ...menuItemStyle }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenActionsEventId(null);
+                    setRatingsModalEvent(event);
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                  Voir les notes
+                </button>
+              </>
             ) : (
               <>
                 <button
@@ -1496,15 +1513,19 @@ useEffect(() => {
     );
   };
 
-  const totalUpcomingPages = Math.max(1, Math.ceil(eventsToDisplay.length / ITEMS_PER_PAGE));
-  const paginatedUpcomingEvents = eventsToDisplay.slice(
-    (upcomingPage - 1) * ITEMS_PER_PAGE,
-    upcomingPage * ITEMS_PER_PAGE
-  );
+  const totalUpcomingPages = (isOrganizerRole && organizerTab === 'upcoming' && serverEventsPagination)
+    ? Math.max(1, serverEventsPagination.totalPages)
+    : Math.max(1, Math.ceil(eventsToDisplay.length / ITEMS_PER_PAGE));
+  const paginatedUpcomingEvents = (isOrganizerRole && organizerTab === 'upcoming' && serverEventsPagination)
+    ? eventsToDisplay
+    : eventsToDisplay.slice(
+        (upcomingPage - 1) * ITEMS_PER_PAGE,
+        upcomingPage * ITEMS_PER_PAGE
+      );
 
   useEffect(() => {
-    setUpcomingPage(1);
-  }, [eventsToDisplay]);
+    if (!(isOrganizerRole && organizerTab === 'upcoming')) setUpcomingPage(1);
+  }, [eventsToDisplay, isOrganizerRole, organizerTab]);
 
   useEffect(() => {
     if (upcomingPage > totalUpcomingPages) {
@@ -1512,15 +1533,19 @@ useEffect(() => {
     }
   }, [upcomingPage, totalUpcomingPages]);
 
-  const totalCompletedPages = Math.max(1, Math.ceil(completedUpcomingEvents.length / ITEMS_PER_PAGE));
-  const paginatedCompletedEvents = completedUpcomingEvents.slice(
-    (completedPage - 1) * ITEMS_PER_PAGE,
-    completedPage * ITEMS_PER_PAGE
-  );
+  const totalCompletedPages = (isOrganizerRole && organizerTab === 'full' && serverEventsPagination)
+    ? Math.max(1, serverEventsPagination.totalPages)
+    : Math.max(1, Math.ceil(completedUpcomingEvents.length / ITEMS_PER_PAGE));
+  const paginatedCompletedEvents = (isOrganizerRole && organizerTab === 'full' && serverEventsPagination)
+    ? completedUpcomingEvents
+    : completedUpcomingEvents.slice(
+        (completedPage - 1) * ITEMS_PER_PAGE,
+        completedPage * ITEMS_PER_PAGE
+      );
 
   useEffect(() => {
-    setCompletedPage(1);
-  }, [completedUpcomingEvents]);
+    if (!(isOrganizerRole && organizerTab === 'full')) setCompletedPage(1);
+  }, [completedUpcomingEvents, isOrganizerRole, organizerTab]);
 
   useEffect(() => {
     if (completedPage > totalCompletedPages) {
@@ -1561,7 +1586,6 @@ useEffect(() => {
       setComedianSearchResults(response.comedians);
       setComedianSearchTotal(response.total);
     } catch (error) {
-      console.error('Erreur lors de la recherche d\'humoristes:', error);
       setComedianSearchError('Erreur lors de la recherche. Veuillez réessayer.');
       setComedianSearchResults([]);
       setComedianSearchTotal(0);
@@ -1586,19 +1610,7 @@ useEffect(() => {
   }, [comedianZoneSearch, comedianExperienceFilter, comedianZoneType]);
 
   const handleEditClick = (event: IEvent) => {
-    console.log('🔍 [MyEventsPage] handleEditClick - Vérification évènement', {
-      eventId: event._id,
-      eventTitle: event.title,
-      eventOrganizer: event.organizer,
-      organizerId: typeof event.organizer === 'object' ? event.organizer._id : event.organizer,
-      userId: user?._id,
-      isOwner: typeof event.organizer === 'object' 
-        ? event.organizer._id === user?._id 
-        : event.organizer === user?._id,
-    });
-    
     if (!event._id) {
-      console.error('❌ [MyEventsPage] Évènement sans ID - impossible de modifier', { event });
       showError(ErrorMessages.EVENT_MISSING_ID);
       return;
     }
@@ -1623,28 +1635,19 @@ useEffect(() => {
   };
 
   const confirmWithdrawApplication = async () => {
-    if (!token || !user?._id || !eventToWithdraw) return;
+    if (!user?._id || !eventToWithdraw) return;
     try {
-      console.log('🔄 Début de la désinscription depuis MyEventsPage pour event:', eventToWithdraw._id);
       const app = comedianApplications?.find(a => a.event && a.event._id === eventToWithdraw._id);
       if (!app) {
-        console.log('❌ Application non trouvée pour cet événement');
         return;
       }
-      const config = {
-        headers: { Authorization: `Bearer ${token}` },
-      };
-      console.log('📡 Appel API de suppression:', `/applications/${app._id}`);
-      await api.delete(`/applications/${app._id}`, config);
-      console.log('✅ API call réussi, affichage de l\'alerte de succès');
+      await api.delete(`/applications/${app._id}`);
       showSuccess(SuccessMessages.APPLICATION_UNSUBSCRIBED);
       refetch();
       refreshUser();
       queryClient.invalidateQueries({ queryKey: ['comedianApplications'] });
       closeWithdrawModal();
     } catch (error: any) {
-      console.error('❌ Erreur lors de la désinscription:', error.response?.status);
-      console.log('📢 Affichage de l\'alerte d\'erreur');
       showError(getErrorMessage(error, ErrorMessages.APPLICATION_DELETE_FAILED));
     }
   };
@@ -1717,12 +1720,7 @@ useEffect(() => {
           isDangerous: true,
           onConfirm: async () => {
             try {
-              const config = {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              } as const;
-              await api.delete(`/events/${event._id}`, config);
+              await api.delete(`/events/${event._id}`);
               showSuccess(SuccessMessages.EVENT_DELETED);
               refetch();
               refreshUser();
@@ -1740,7 +1738,6 @@ useEffect(() => {
       setCancelReason('');
       setShowCancelModal(true);
     } catch (error: any) {
-      console.error('Erreur lors de la suppression de l\'évènement:', error.response?.status);
       showError(getErrorMessage(error, ErrorMessages.EVENT_DELETE_FAILED));
     }
   };
@@ -1773,12 +1770,6 @@ useEffect(() => {
       return;
     }
 
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-
     try {
       let cancelledCount = 0;
       let skippedCount = 0;
@@ -1787,7 +1778,7 @@ useEffect(() => {
         const eventMidnight = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
         const diffDays = Math.ceil((eventMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
         if (diffDays < 10) {
-          await api.put(`/events/${ev._id}`, { status: 'cancelled', cancellationReason: cancelReason }, config);
+          await api.put(`/events/${ev._id}`, { status: 'cancelled', cancellationReason: cancelReason });
           cancelledCount += 1;
         } else {
           skippedCount += 1;
@@ -1803,7 +1794,6 @@ useEffect(() => {
         showInfo(InfoMessages.EVENT_NOT_CANCELLED_OLD);
       }
     } catch (err: any) {
-      console.error("Erreur lors de l'annulation:", err.response?.data || err.message);
       showError(err.response?.data?.message || err.message);
     } finally {
       setShowCancelModal(false);
@@ -1819,7 +1809,7 @@ useEffect(() => {
   };
 
   const handleNotifyHumorists = async (event: IEvent) => {
-    if (!token) {
+    if (!user?._id) {
       showWarning(WarningMessages.AUTH_REQUIRED_SEND_NOTIFICATIONS);
       return;
     }
@@ -1831,16 +1821,10 @@ useEffect(() => {
       onConfirm: async () => {
         setNotifyingEventId(event._id);
         try {
-          const config = {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          };
-          await api.post(`/events/${event._id}/notify`, {}, config);
+          await api.post(`/events/${event._id}/notify`, {});
           showSuccess(SuccessMessages.NOTIFICATIONS_SENT);
           setConfirmDialog({ ...confirmDialog, isOpen: false });
         } catch (error: any) {
-          console.error('Erreur lors de l\'envoi des notifications:', error.response?.status);
           showError(getErrorMessage(error, ErrorMessages.PROFILE_UPDATE_FAILED));
         } finally {
           setNotifyingEventId(null);
@@ -1857,7 +1841,7 @@ useEffect(() => {
   };
 
   const handleInviteComedian = async () => {
-    if (!comedianToInvite || !selectedEventForInvite || !token) {
+    if (!comedianToInvite || !selectedEventForInvite || !user?._id) {
       showWarning(WarningMessages.SELECT_EVENT_REQUIRED);
       return;
     }
@@ -1870,7 +1854,6 @@ useEffect(() => {
       setComedianToInvite(null);
       setSelectedEventForInvite('');
     } catch (error: any) {
-      console.error('Erreur lors de l\'envoi de l\'invitation:', error);
       showError(getErrorMessage(error, ErrorMessages.INVITATION_FAILED));
     } finally {
       setIsInviting(false);
@@ -1894,7 +1877,6 @@ useEffect(() => {
       const absences = await getEventAbsences(eventId);
       setEventAbsences(absences);
     } catch (error) {
-      console.error('Erreur lors du chargement des absences:', error);
       setEventAbsences([]);
     }
   };
@@ -1933,7 +1915,6 @@ useEffect(() => {
       closeAbsenceModal();
       closeModal();
     } catch (error: any) {
-      console.error('Erreur lors du marquage d\'absence:', error.response?.status);
       showError(getErrorMessage(error, ErrorMessages.ABSENCE_MARK_FAILED));
       throw error; // Re-throw pour que AbsenceModal sache que l'opération a échoué
     }
@@ -1972,7 +1953,6 @@ useEffect(() => {
       closeAbsenceModal();
       closeModal();
     } catch (error: any) {
-      console.error('Erreur lors de l\'annulation d\'absence:', error.response?.status);
       showError(getErrorMessage(error, ErrorMessages.ABSENCE_CANCEL_FAILED));
       throw error; // Re-throw pour que AbsenceModal sache que l'opération a échoué
     }
@@ -2333,28 +2313,6 @@ useEffect(() => {
     ...actionButtonStyleSmall,
     backgroundColor: '#6c757d',
     cursor: 'not-allowed',
-  };
-
-  const paginationControlsStyle: CSSProperties = {
-    marginTop: '18px',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: '12px',
-    flexWrap: 'wrap',
-  };
-
-  const paginationButtonStyle: CSSProperties = {
-    ...actionButtonStyleSmall,
-    backgroundColor: '#2d2d44',
-    padding: '8px 14px',
-    minWidth: '90px',
-  };
-
-  const paginationInfoStyle: CSSProperties = {
-    color: '#aaa',
-    fontWeight: 'bold',
-    fontSize: '0.95em',
   };
 
   const organizerMobileButtonAdjustments: CSSProperties = isMobile
@@ -2813,6 +2771,7 @@ useEffect(() => {
             return (
               <div
                 key={event._id}
+                data-event-id={event._id}
                 style={{
                   ...eventCardStyle,
                   ...(isCompleteEvent ? eventCardStyleComplete : {}),
@@ -2901,7 +2860,11 @@ useEffect(() => {
                     return null;
                   })()}
                   <div style={cardActionStackStyle}>
-                    {!appliedEventIds.has(event._id) ? (
+                    {isEventWithinOneHour(event) ? (
+                      <span style={{ fontSize: '12px', color: '#888' }}>
+                        Plus de modification possible (événement dans moins d'1 h)
+                      </span>
+                    ) : !appliedEventIds.has(event._id) ? (
                       <button
                         onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleApplyClick(event); }}
                         style={
@@ -2931,26 +2894,13 @@ useEffect(() => {
               </div>
             );
           })}
-          {filteredUpcomingEvents.length > ITEMS_PER_PAGE && (
-            <div style={paginationControlsStyle}>
-              <button
-                style={paginationButtonStyle}
-                disabled={upcomingPage === 1}
-                onClick={() => setUpcomingPage(prev => Math.max(1, prev - 1))}
-              >
-                Précédent
-              </button>
-              <span style={paginationInfoStyle}>
-                Page {Math.min(upcomingPage, totalUpcomingPages)} / {Math.max(totalUpcomingPages, 1)}
-              </span>
-              <button
-                style={paginationButtonStyle}
-                disabled={upcomingPage >= totalUpcomingPages}
-                onClick={() => setUpcomingPage(prev => Math.min(totalUpcomingPages, prev + 1))}
-              >
-                Suivant
-              </button>
-            </div>
+          {totalUpcomingPages > 1 && (
+            <Pagination
+              page={upcomingPage}
+              totalPages={totalUpcomingPages}
+              onChange={setUpcomingPage}
+              disabled={eventsLoading}
+            />
           )}
         </div>
       ) : (
@@ -3643,14 +3593,16 @@ useEffect(() => {
                               {isOrganizerView ? 'Aucun évènement à venir pour ce filtre.' : 'Aucun évènement à venir (non complet).'}
                             </p>
                           )}
-                          {upcomingSectionItems.slice((upcomingPage - 1) * ITEMS_PER_PAGE, upcomingPage * ITEMS_PER_PAGE).map((item) => {
+                          {((isOrganizerView && organizerTab === 'upcoming' && serverEventsPagination)
+                            ? upcomingSectionItems
+                            : upcomingSectionItems.slice((upcomingPage - 1) * ITEMS_PER_PAGE, upcomingPage * ITEMS_PER_PAGE)).map((item) => {
                     if (item.type === 'event') {
                       const event = item.event;
                       const isCompleteEvent = isEventComplete(event);
                       const participantsRatio = getParticipantsRatio(event);
                       const statusLabel = translateEventStatus(event.status);
                       return (
-                        <div key={event._id} style={{ ...eventCardStyle, ...(isCompleteEvent ? eventCardStyleComplete : {}) }} onClick={() => handleCardClick(event)}>
+                        <div key={event._id} data-event-id={event._id} style={{ ...eventCardStyle, ...(isCompleteEvent ? eventCardStyleComplete : {}) }} onClick={() => handleCardClick(event)}>
                           <div style={cardContentStyle}>
                             <div style={cardHeaderRowStyle}>
                               <div>
@@ -3733,6 +3685,7 @@ useEffect(() => {
                               return (
                                 <div
                                   key={event._id}
+                                  data-event-id={event._id}
                                   onClick={(e) => { e.stopPropagation(); handleCardClick(event); }}
                                   style={{
                                     padding: '12px 16px',
@@ -3763,27 +3716,19 @@ useEffect(() => {
                       </div>
                     );
                   })}
-                          {upcomingSectionItems.length > ITEMS_PER_PAGE && (
-                            <div style={paginationControlsStyle}>
-                              <button
-                                style={paginationButtonStyle}
-                                disabled={upcomingPage === 1}
-                                onClick={() => { setExpandedUpcomingGroupId(null); setUpcomingPage(prev => Math.max(1, prev - 1)); }}
-                              >
-                                Précédent
-                              </button>
-                              <span style={paginationInfoStyle}>
-                                Page {Math.min(upcomingPage, Math.max(1, Math.ceil(upcomingSectionItems.length / ITEMS_PER_PAGE)))} / {Math.max(1, Math.ceil(upcomingSectionItems.length / ITEMS_PER_PAGE))}
-                              </span>
-                              <button
-                                style={paginationButtonStyle}
-                                disabled={upcomingPage >= Math.ceil(upcomingSectionItems.length / ITEMS_PER_PAGE)}
-                                onClick={() => { setExpandedUpcomingGroupId(null); setUpcomingPage(prev => Math.min(Math.ceil(upcomingSectionItems.length / ITEMS_PER_PAGE), prev + 1)); }}
-                              >
-                                Suivant
-                              </button>
-                            </div>
-                          )}
+                          {(() => {
+                            const pages = (isOrganizerView && organizerTab === 'upcoming' && serverEventsPagination)
+                              ? serverEventsPagination.totalPages
+                              : Math.max(1, Math.ceil(upcomingSectionItems.length / ITEMS_PER_PAGE));
+                            return pages > 1 ? (
+                              <Pagination
+                                page={upcomingPage}
+                                totalPages={pages}
+                                onChange={(p) => { setExpandedUpcomingGroupId(null); setUpcomingPage(p); }}
+                                disabled={eventsLoading}
+                              />
+                            ) : null;
+                          })()}
                         </>
                       );
                     })()}
@@ -3801,7 +3746,7 @@ useEffect(() => {
                       const participantsRatio = getParticipantsRatio(event);
                       const statusLabel = translateEventStatus(event.status);
                       return (
-                        <div key={event._id} style={{ ...eventCardStyle, ...(isCompleteEvent ? eventCardStyleComplete : {}) }} onClick={() => handleCardClick(event)}>
+                        <div key={event._id} data-event-id={event._id} style={{ ...eventCardStyle, ...(isCompleteEvent ? eventCardStyleComplete : {}) }} onClick={() => handleCardClick(event)}>
                           <div style={cardContentStyle}>
                             <div style={cardHeaderRowStyle}>
                               <div>
@@ -3838,26 +3783,13 @@ useEffect(() => {
                         </div>
                       );
                     })}
-                    {filteredUpcomingEvents.length > ITEMS_PER_PAGE && (
-                      <div style={paginationControlsStyle}>
-                        <button
-                          style={paginationButtonStyle}
-                          disabled={upcomingPage === 1}
-                          onClick={() => setUpcomingPage(prev => Math.max(1, prev - 1))}
-                        >
-                          Précédent
-                        </button>
-                        <span style={paginationInfoStyle}>
-                          Page {Math.min(upcomingPage, totalUpcomingPages)} / {Math.max(totalUpcomingPages, 1)}
-                        </span>
-                        <button
-                          style={paginationButtonStyle}
-                          disabled={upcomingPage >= totalUpcomingPages}
-                          onClick={() => setUpcomingPage(prev => Math.min(totalUpcomingPages, prev + 1))}
-                        >
-                          Suivant
-                        </button>
-                      </div>
+                    {totalUpcomingPages > 1 && (
+                      <Pagination
+                        page={upcomingPage}
+                        totalPages={totalUpcomingPages}
+                        onChange={setUpcomingPage}
+                        disabled={eventsLoading}
+                      />
                     )}
                   </>
                 )}
@@ -3879,7 +3811,7 @@ useEffect(() => {
                 const statusLabel = translateEventStatus(event.status);
 
                 return (
-                  <div key={event._id} style={{ ...eventCardStyle, ...eventCardStyleComplete }} onClick={() => handleCardClick(event)}>
+                  <div key={event._id} data-event-id={event._id} style={{ ...eventCardStyle, ...eventCardStyleComplete }} onClick={() => handleCardClick(event)}>
                     <div style={cardContentStyle}>
                       <div style={cardHeaderRowStyle}>
                         <div>
@@ -3912,26 +3844,13 @@ useEffect(() => {
                   </div>
                 );
               })}
-              {completedUpcomingEvents.length > ITEMS_PER_PAGE && (
-                <div style={paginationControlsStyle}>
-                  <button
-                    style={paginationButtonStyle}
-                    disabled={completedPage === 1}
-                    onClick={() => setCompletedPage(prev => Math.max(1, prev - 1))}
-                  >
-                    Précédent
-                  </button>
-                  <span style={paginationInfoStyle}>
-                    Page {Math.min(completedPage, totalCompletedPages)} / {Math.max(totalCompletedPages, 1)}
-                  </span>
-                  <button
-                    style={paginationButtonStyle}
-                    disabled={completedPage >= totalCompletedPages}
-                    onClick={() => setCompletedPage(prev => Math.min(totalCompletedPages, prev + 1))}
-                  >
-                    Suivant
-                  </button>
-                </div>
+              {totalCompletedPages > 1 && (
+                <Pagination
+                  page={completedPage}
+                  totalPages={totalCompletedPages}
+                  onChange={setCompletedPage}
+                  disabled={eventsLoading}
+                />
               )}
             </div>
           )}
@@ -3952,7 +3871,7 @@ useEffect(() => {
             const isFutureButArchived = new Date(event.date) >= new Date();
 
             return (
-              <div key={event._id} style={eventCardStyle} onClick={() => handleCardClick(event)}>
+              <div key={event._id} data-event-id={event._id} style={eventCardStyle} onClick={() => handleCardClick(event)}>
                 <div style={cardContentStyle}>
                   <div style={cardHeaderRowStyle}>
                     <div>
@@ -3980,26 +3899,13 @@ useEffect(() => {
               </div>
             );
           })}
-          {archivedEventsToShow.length > ITEMS_PER_PAGE && (
-            <div style={paginationControlsStyle}>
-              <button
-                style={paginationButtonStyle}
-                disabled={archivedPage === 1}
-                onClick={() => setArchivedPage(prev => Math.max(1, prev - 1))}
-              >
-                Précédent
-              </button>
-              <span style={paginationInfoStyle}>
-                Page {Math.min(archivedPage, totalArchivedPages)} / {Math.max(totalArchivedPages, 1)}
-              </span>
-              <button
-                style={paginationButtonStyle}
-                disabled={archivedPage >= totalArchivedPages}
-                onClick={() => setArchivedPage(prev => Math.min(totalArchivedPages, prev + 1))}
-              >
-                Suivant
-              </button>
-            </div>
+          {totalArchivedPages > 1 && (
+            <Pagination
+              page={archivedPage}
+              totalPages={totalArchivedPages}
+              onChange={setArchivedPage}
+              disabled={eventsLoading}
+            />
           )}
         </div>
       )}
@@ -4015,7 +3921,7 @@ useEffect(() => {
         participantsSectionRef={participantsSectionRef}
       />
 
-      <Modal isOpen={showEditEventForm} onClose={() => setShowEditEventForm(false)} title="Modifier l'évènement">
+      <Modal isOpen={showEditEventForm} onClose={() => setShowEditEventForm(false)} title="Modifier l'évènement" closeOnOverlayClick={false}>
         {eventToEdit && (
           <EditEventForm
             eventToEdit={eventToEdit}
@@ -4025,7 +3931,11 @@ useEffect(() => {
         )}
       </Modal>
 
+<<<<<<< HEAD
       <Modal isOpen={showCreateEventForm && user?.role === 'ORGANIZER'} onClose={() => { setShowCreateEventForm(false); setEventToDuplicate(null); }} title={eventToDuplicate ? "Dupliquer l'évènement" : "Créer un évènement"} closeOnBackdropClick={false}>
+=======
+      <Modal isOpen={showCreateEventForm && user?.role === 'ORGANIZER'} onClose={() => { setShowCreateEventForm(false); setEventToDuplicate(null); }} title={eventToDuplicate ? "Dupliquer l'évènement" : "Créer un évènement"} closeOnOverlayClick={false} transparentOverlay>
+>>>>>>> dev_brach_env2
         {showCreateEventForm && user?.role === 'ORGANIZER' && (
           <CreateEventForm 
             onClose={() => { setShowCreateEventForm(false); setEventToDuplicate(null); }} 
@@ -4045,6 +3955,7 @@ useEffect(() => {
               endTime: eventToDuplicate.endTime || '',
               minExperience: eventToDuplicate.requirements?.minExperience,
               maxComedians: eventToDuplicate.requirements?.maxPerformers,
+              imageUrl: eventToDuplicate.imageUrl || '',
             } : undefined}
           />
         )}
@@ -4064,7 +3975,7 @@ useEffect(() => {
             const reason = event.cancellationReason;
 
             return (
-              <div key={event._id} style={{ ...eventCardStyle, ...eventCardStyleCancelled }} onClick={() => handleCardClick(event)}>
+              <div key={event._id} data-event-id={event._id} style={{ ...eventCardStyle, ...eventCardStyleCancelled }} onClick={() => handleCardClick(event)}>
                 <div style={cardContentStyle}>
                   <div style={cardHeaderRowStyle}>
                     <div>
@@ -4094,26 +4005,13 @@ useEffect(() => {
               </div>
             );
           })}
-          {cancelledEvents.length > ITEMS_PER_PAGE && (
-            <div style={paginationControlsStyle}>
-              <button
-                style={paginationButtonStyle}
-                disabled={cancelledPage === 1}
-                onClick={() => setCancelledPage(prev => Math.max(1, prev - 1))}
-              >
-                Précédent
-              </button>
-              <span style={paginationInfoStyle}>
-                Page {Math.min(cancelledPage, totalCancelledPages)} / {Math.max(totalCancelledPages, 1)}
-              </span>
-              <button
-                style={paginationButtonStyle}
-                disabled={cancelledPage >= totalCancelledPages}
-                onClick={() => setCancelledPage(prev => Math.min(totalCancelledPages, prev + 1))}
-              >
-                Suivant
-              </button>
-            </div>
+          {totalCancelledPages > 1 && (
+            <Pagination
+              page={cancelledPage}
+              totalPages={totalCancelledPages}
+              onChange={setCancelledPage}
+              disabled={eventsLoading}
+            />
           )}
         </div>
       )}
@@ -4316,6 +4214,7 @@ useEffect(() => {
                         return (
                           <div
                             key={event._id}
+                            data-event-id={event._id}
                             onClick={() => handleCardClick(event)}
                             style={{
                               ...eventCardStyle,
@@ -4467,6 +4366,12 @@ useEffect(() => {
           </div>
         </div>
       </Modal>
+
+      {/* Modal Voir les notes (organisateur - événements archivés) */}
+      <RatingsSummaryModal
+        event={ratingsModalEvent}
+        onClose={() => setRatingsModalEvent(null)}
+      />
 
       {/* Modal Voir spectateurs */}
       <Modal

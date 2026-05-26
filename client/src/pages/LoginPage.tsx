@@ -2,6 +2,8 @@ import { useState, useEffect, type CSSProperties } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { translateOAuthError } from '../services/oauth';
+import { useAlert } from '../contexts/AlertContext';
 
 interface PendingDeletionInfo {
   deactivatedAt: string;
@@ -11,14 +13,13 @@ interface PendingDeletionInfo {
 
 function LoginPage() {
   const { loginMutation, loginWithKeycloak, isOAuthEnabled, isOAuthLoading } = useAuth();
+  const { showError } = useAlert();
 
   const [loginData, setLoginData] = useState({
     email: '',
     password: '',
   });
   const [passwordError, setPasswordError] = useState('');
-  const [loginError, setLoginError] = useState('');
-  const [oauthError, setOAuthError] = useState('');
   const [passwordValidation, setPasswordValidation] = useState({
     length: false,
     isValid: false
@@ -47,7 +48,6 @@ function LoginPage() {
   const handleSubmitLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError('');
-    setLoginError('');
     setPendingDeletion(null);
 
     // Vérifier la validation du mot de passe
@@ -85,7 +85,7 @@ function LoginPage() {
         }
 
         const errorMessage = responseData?.message || axiosError?.message || 'Une erreur est survenue lors de la connexion';
-        setLoginError(errorMessage);
+        showError(errorMessage);
 
         // Vider seulement le mot de passe, garder l'email
         setLoginData(prev => ({
@@ -98,7 +98,6 @@ function LoginPage() {
 
   const handleReactivateAccount = async () => {
     setIsReactivating(true);
-    setLoginError('');
 
     try {
       await api.post('/auth/reactivate', loginData);
@@ -114,7 +113,7 @@ function LoginPage() {
       }, 2000);
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || 'Erreur lors de la réactivation du compte';
-      setLoginError(errorMessage);
+      showError(errorMessage);
       setPendingDeletion(null);
     } finally {
       setIsReactivating(false);
@@ -141,12 +140,11 @@ function LoginPage() {
   };
 
   const handleKeycloakLogin = async (provider?: string) => {
-    setOAuthError('');
-    setLoginError('');
     try {
       await loginWithKeycloak(provider);
     } catch (error: any) {
-      setOAuthError(error.message || 'Erreur lors de la connexion avec Keycloak');
+      const apiMessage = error?.response?.data?.message;
+      showError(translateOAuthError(apiMessage || error.message));
     }
   };
 
@@ -264,52 +262,35 @@ function LoginPage() {
               </p>
             </div>
           ) : (
-            <>
-              {loginError && (
-                <div style={{
-                  color: '#dc3545',
-                  marginBottom: '15px',
-                  fontSize: '0.9em',
-                  textAlign: 'left',
-                  padding: '10px',
-                  backgroundColor: 'rgba(220, 53, 69, 0.15)',
-                  borderRadius: '5px',
-                  border: '1px solid rgba(220, 53, 69, 0.4)',
-                }}>
-                  ⚠️ {loginError}
-                </div>
-              )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={handleReactivateAccount}
+                disabled={isReactivating}
+                style={{
+                  ...buttonStyle,
+                  margin: 0,
+                  background: 'linear-gradient(135deg, #28a745, #20c997)',
+                  opacity: isReactivating ? 0.7 : 1,
+                  cursor: isReactivating ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isReactivating ? 'Réactivation...' : '✅ Réactiver mon compte'}
+              </button>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <button
-                  onClick={handleReactivateAccount}
-                  disabled={isReactivating}
-                  style={{
-                    ...buttonStyle,
-                    margin: 0,
-                    background: 'linear-gradient(135deg, #28a745, #20c997)',
-                    opacity: isReactivating ? 0.7 : 1,
-                    cursor: isReactivating ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {isReactivating ? 'Réactivation...' : '✅ Réactiver mon compte'}
-                </button>
-
-                <button
-                  onClick={handleCancelReactivation}
-                  disabled={isReactivating}
-                  style={{
-                    ...buttonStyle,
-                    margin: 0,
-                    background: 'transparent',
-                    border: '1px solid #666',
-                    color: '#aaa',
-                  }}
-                >
-                  Annuler
-                </button>
-              </div>
-            </>
+              <button
+                onClick={handleCancelReactivation}
+                disabled={isReactivating}
+                style={{
+                  ...buttonStyle,
+                  margin: 0,
+                  background: 'transparent',
+                  border: '1px solid #666',
+                  color: '#aaa',
+                }}
+              >
+                Annuler
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -330,10 +311,7 @@ function LoginPage() {
             placeholder="Email"
             value={loginData.email}
             onChange={handleChangeLogin}
-            style={{
-              ...inputStyle,
-              borderColor: loginError ? '#dc3545' : '#444'
-            }}
+            style={inputStyle}
             required
           />
           <input
@@ -342,32 +320,9 @@ function LoginPage() {
             placeholder="Mot de passe"
             value={loginData.password}
             onChange={handleChangeLogin}
-            style={{
-              ...inputStyle,
-              borderColor: loginError ? '#dc3545' : '#444'
-            }}
+            style={inputStyle}
             required
           />
-
-          {/* Message d'erreur de connexion */}
-          {loginError && (
-            <div style={{
-              color: '#dc3545',
-              marginBottom: '10px',
-              fontSize: '0.9em',
-              textAlign: 'left',
-              padding: '10px',
-              backgroundColor: 'rgba(220, 53, 69, 0.15)',
-              borderRadius: '5px',
-              border: '1px solid rgba(220, 53, 69, 0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <span>⚠️</span>
-              <span>{loginError}</span>
-            </div>
-          )}
 
           {/* Message d'erreur du mot de passe */}
           {passwordError && (
@@ -410,6 +365,7 @@ function LoginPage() {
           </button>
         </form>
 
+<<<<<<< HEAD
         {/* OAuth Error */}
         {oauthError && (
           <div style={{
@@ -432,6 +388,9 @@ function LoginPage() {
         )}
 
           {/* Social Login Buttons (via Keycloak Identity Providers) */}
+=======
+        {/* Social Login Buttons (via Keycloak Identity Providers) */}
+>>>>>>> dev_brach_env2
         {isOAuthEnabled && (
           <>
             <div style={{
@@ -445,7 +404,7 @@ function LoginPage() {
               <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, #555)' }} />
             </div>
 
-            {/* Boutons principaux - Google & Facebook */}
+            {/* Bouton principal - Google */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px' }}>
               <button
                 type="button"
@@ -489,44 +448,6 @@ function LoginPage() {
                 Continuer avec Google
               </button>
 
-              <button
-                type="button"
-                onClick={() => handleKeycloakLogin('facebook')}
-                disabled={isOAuthLoading}
-                style={{
-                  width: '100%',
-                  padding: '14px 20px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #1877f2 0%, #0c5dc7 100%)',
-                  color: '#ffffff',
-                  fontSize: '0.95em',
-                  fontWeight: '600',
-                  cursor: isOAuthLoading ? 'not-allowed' : 'pointer',
-                  opacity: isOAuthLoading ? 0.7 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '12px',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 8px rgba(24, 119, 242, 0.3)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isOAuthLoading) {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(24, 119, 242, 0.4)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(24, 119, 242, 0.3)';
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-                Continuer avec Facebook
-              </button>
             </div>
 
             {/* Boutons secondaires - GitHub, Microsoft, Apple */}
@@ -544,7 +465,7 @@ function LoginPage() {
           </Link>
         </p>
 
-        <p>Pas encore de compte ? <Link to="/register" style={linkStyle}>Inscris-toi</Link></p>
+        <p>Pas encore de compte ? <Link to="/#roles" style={linkStyle}>Inscris-toi</Link></p>
       </div>
     </div>
   );

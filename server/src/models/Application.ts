@@ -4,7 +4,7 @@ import { Application, PerformanceDetails } from '../types';
 export interface ApplicationDocument extends Document {
   event: Types.ObjectId;
   comedian: Types.ObjectId;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'WITHDRAWN';
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'WITHDRAWN' | 'CANCELLED_BY_PLATFORM';
   performanceDetails?: PerformanceDetails;
   message?: string;
   organizerMessage?: string;
@@ -34,7 +34,7 @@ const applicationSchema = new Schema<ApplicationDocument>({
   },
   status: {
     type: String,
-    enum: ['PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'WITHDRAWN'],
+    enum: ['PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'WITHDRAWN', 'CANCELLED_BY_PLATFORM'],
     default: 'PENDING'
   },
   performanceDetails: {
@@ -62,5 +62,7 @@ const applicationSchema = new Schema<ApplicationDocument>({
 applicationSchema.index({ event: 1, comedian: 1 }, { unique: true });
 applicationSchema.index({ status: 1 });
 applicationSchema.index({ comedian: 1 });
+applicationSchema.index({ event: 1, status: 1 });
+applicationSchema.index({ comedian: 1, status: 1, createdAt: -1 });
 
 export const ApplicationModel = mongoose.model<ApplicationDocument>('Application', applicationSchema); 

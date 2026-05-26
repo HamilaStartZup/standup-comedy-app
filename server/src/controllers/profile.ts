@@ -24,10 +24,8 @@ export const getMyProfile = async (req: AuthRequest, res: Response): Promise<any
   try {
     const user = await UserModel.findById(req.user?.id);
     if (!user) {
-      console.log('Utilisateur non trouvé pour /me avec ID:', req.user?.id);
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
-    console.log('Données utilisateur renvoyées par /api/profile/me:', user.stats?.totalEvents);
 
     // Transform the response to include 'id' instead of just '_id' for consistency with JWT token
     const userObj = user.toObject ? user.toObject() : user;
@@ -179,6 +177,17 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
       }
     }
 
+    // Handle consent update
+    if (updateData.consent) {
+      const existingConsent = (user as any).consent || {};
+      (user as any).consent = {
+        ...existingConsent,
+        ...(updateData.consent.termsAccepted !== undefined && { termsAccepted: updateData.consent.termsAccepted }),
+        ...(updateData.consent.privacyAccepted !== undefined && { privacyAccepted: updateData.consent.privacyAccepted }),
+        ...(updateData.consent.isAdult !== undefined && { isAdult: updateData.consent.isAdult }),
+      };
+    }
+
     // Handle spectatorPreferences updates
     if (user.role === 'SPECTATOR') {
       if (!(user as any).spectatorPreferences) {
@@ -229,6 +238,32 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
       // Handle phone in organizerProfile if provided
       if (updateData.organizerProfile?.phone !== undefined && user.organizerProfile) {
         user.organizerProfile.phone = updateData.organizerProfile.phone;
+      }
+    }
+
+    // Handle lieuProfile updates
+    if (user.role === 'LIEU') {
+      if (!user.lieuProfile) {
+        user.lieuProfile = { companyName: '', socialLinks: {}, invoicingAvailable: false };
+      }
+      if (updateData.lieuProfile) {
+        const lp = updateData.lieuProfile;
+        if (lp.companyName !== undefined) user.lieuProfile.companyName = lp.companyName;
+        if (lp.description !== undefined) user.lieuProfile.description = lp.description;
+        if (lp.website !== undefined) user.lieuProfile.website = lp.website || undefined;
+        if (lp.contactName !== undefined) user.lieuProfile.contactName = lp.contactName;
+        if (lp.contactEmail !== undefined) user.lieuProfile.contactEmail = lp.contactEmail || undefined;
+        if (lp.phone !== undefined) user.lieuProfile.phone = lp.phone;
+        if (lp.legalStatus !== undefined) user.lieuProfile.legalStatus = lp.legalStatus;
+        if (lp.siret !== undefined) user.lieuProfile.siret = lp.siret;
+        if (lp.invoicingAvailable !== undefined) user.lieuProfile.invoicingAvailable = lp.invoicingAvailable;
+        if (lp.socialLinks) {
+          if (!user.lieuProfile.socialLinks) user.lieuProfile.socialLinks = {};
+          if (lp.socialLinks.youtube !== undefined) user.lieuProfile.socialLinks.youtube = lp.socialLinks.youtube || undefined;
+          if (lp.socialLinks.instagram !== undefined) user.lieuProfile.socialLinks.instagram = lp.socialLinks.instagram || undefined;
+          if (lp.socialLinks.facebook !== undefined) user.lieuProfile.socialLinks.facebook = lp.socialLinks.facebook || undefined;
+          if (lp.socialLinks.twitter !== undefined) user.lieuProfile.socialLinks.twitter = lp.socialLinks.twitter || undefined;
+        }
       }
     }
 

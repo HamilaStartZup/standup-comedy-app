@@ -21,13 +21,31 @@ export interface IOrganizerProfile {
   phone?: string;
 }
 
+export interface ILieuProfile {
+  companyName?: string;
+  description?: string;
+  website?: string;
+  socialLinks?: {
+    youtube?: string;
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+  };
+  contactName?: string;
+  contactEmail?: string;
+  phone?: string;
+  legalStatus?: string;
+  siret?: string;
+  invoicingAvailable?: boolean;
+}
+
 export interface IUserData {
   _id: string;
   id: string;
   email: string;
   firstName: string;
   lastName: string;
-  role: 'COMEDIAN' | 'ORGANIZER' | 'SUPER_ADMIN' | 'SPECTATOR';
+  role: 'COMEDIAN' | 'ORGANIZER' | 'SUPER_ADMIN' | 'SPECTATOR' | 'LIEU';
   // Fields from User model that might be directly on the user object
   companyName?: string; // If companyName is directly on User for Organizers
   city?: string; // If city is directly on User for Organizers
@@ -55,7 +73,8 @@ export interface IUserData {
     };
     // Add other user profile fields here if needed
   };
-  organizerProfile?: IOrganizerProfile; // Specific profile for organizer
+  organizerProfile?: IOrganizerProfile;
+  lieuProfile?: ILieuProfile;
   // Add other common user fields like stats, onboardingCompleted, etc.
   stats?: {
     totalEvents?: number;
@@ -73,6 +92,7 @@ export interface IUserData {
   onboardingCompleted?: boolean;
   emailVerified?: boolean;
   avatarUrl?: string | null;
+  canSwitchToLieu?: boolean;
   createdAt?: string;
   lastLoginAt?: string;
   spectatorPreferences?: {

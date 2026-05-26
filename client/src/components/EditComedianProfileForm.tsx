@@ -1,5 +1,4 @@
 import React, { type CSSProperties, useState, useEffect, useRef } from 'react';
-import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import type { IUserData } from '../types/user';
 import Modal from './Modal';
@@ -12,10 +11,10 @@ interface EditComedianProfileFormProps {
   onClose: () => void;
   currentUser: IUserData;
   onSaveSuccess: () => void;
+  scrollToField?: string;
 }
 
-function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }: EditComedianProfileFormProps) {
-  const { token } = useAuth();
+function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scrollToField }: EditComedianProfileFormProps) {
   const { showSuccess, showError, showWarning } = useAlert();
   const [formData, setFormData] = useState<IUserData>(currentUser);
   const [loading, setLoading] = useState(false);
@@ -36,6 +35,19 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }
     setAvatarChanged(false);
   }, [currentUser]);
 
+    useEffect(() => {
+    if (isOpen && scrollToField) {
+      setTimeout(() => {
+        const el =
+          document.querySelector<HTMLElement>(`[name="${scrollToField}"]`) ??
+          document.getElementById(scrollToField);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [isOpen, scrollToField]);
+
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -45,9 +57,9 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }
         return;
       }
 
-      // Vérifier le type de fichier
-      if (!file.type.startsWith('image/')) {
-        showWarning(WarningMessages.IMAGE_REQUIRED);
+      // Formats acceptés: JPG, PNG, GIF uniquement
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        showWarning('Formats acceptés: JPG, PNG, GIF (max 5MB).');
         return;
       }
 
@@ -157,12 +169,6 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }
     e.preventDefault();
     setLoading(true);
     try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
       // Traitement silencieux des zones de mobilité pour Paris
       const processedMobilityZone = formData.profile?.mobilityZone ? [...formData.profile.mobilityZone] : undefined;
       
@@ -207,7 +213,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }
         comedianProfileData.avatarUrl = avatarRemoved ? null : formData.avatarUrl;
       }
 
-      await api.put(`/profile/${currentUser._id}`, comedianProfileData, config);
+      await api.put(`/profile/${currentUser._id}`, comedianProfileData);
       showSuccess(SuccessMessages.PROFILE_UPDATED);
       onSaveSuccess();
     } catch (err: any) {
@@ -263,16 +269,17 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }
         <div style={{ marginBottom: '15px' }}>
           {previewImage && (
             <div style={{ marginBottom: '10px', textAlign: 'center' }}>
-              <img 
-                src={previewImage} 
-                alt="Aperçu" 
-                style={{ 
-                  width: '100px', 
-                  height: '100px', 
-                  borderRadius: '50%', 
+              <img
+                src={previewImage}
+                alt="Aperçu"
+                loading="lazy"
+                style={{
+                  width: '100px',
+                  height: '100px',
+                  borderRadius: '50%',
                   objectFit: 'cover',
                   border: '2px solid #ff416c'
-                }} 
+                }}
               />
             </div>
           )}
@@ -295,7 +302,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }
           )}
           <input
             type="file"
-            accept="image/*"
+            accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif"
             onChange={handleImageChange}
             style={{
               width: '100%',
@@ -421,7 +428,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }
         </select>
         
         
-        <label style={labelStyle}>Style de comédie</label>
+        <label id="section-comedy-style" style={labelStyle}>Style de comédie</label>
         <div style={{ marginBottom: '15px' }}>
           {[
             { value: 'stand-up', label: 'Stand up (solo en interaction avec le public)' },
@@ -429,7 +436,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }
             { value: 'plateau', label: 'Plateau (plusieurs artistes se succèdent lors d\'une soirée)' },
             { value: 'sketch', label: 'Sketch (une scène courte pré écrite)' }
           ].map(style => (
-            <label key={style.value} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', color: '#fff', cursor: 'pointer' }}>
+            <label key={style.value} style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '8px', color: '#fff', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={formData.profile?.comedyStyle?.includes(style.value as any) || false}
@@ -453,14 +460,14 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }
                     }));
                   }
                 }}
-                style={{ marginRight: '10px', width: '18px', height: '18px', cursor: 'pointer' }}
+                style={{ marginRight: '10px', width: '18px', height: '18px', minWidth: '18px', minHeight: '18px', flexShrink: 0 }}
               />
               <span>{style.label}</span>
             </label>
           ))}
         </div>
         
-        <label style={labelStyle}>Langues</label>
+        <label id="section-languages" style={labelStyle}>Langues</label>
         <div style={{ marginBottom: '15px' }}>
           {[
             { value: 'francais', label: 'Français' },
@@ -469,7 +476,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }
             { value: 'italien', label: 'Italien' },
             { value: 'espagnol', label: 'Espagnol' }
           ].map(lang => (
-            <label key={lang.value} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', color: '#fff', cursor: 'pointer' }}>
+            <label key={lang.value} style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '8px', color: '#fff', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={formData.profile?.performanceLanguages?.includes(lang.value as any) || false}
@@ -493,57 +500,85 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }
                     }));
                   }
                 }}
-                style={{ marginRight: '10px', width: '18px', height: '18px', cursor: 'pointer' }}
+                style={{ marginRight: '10px', width: '18px', height: '18px', minWidth: '18px', minHeight: '18px', flexShrink: 0, cursor: 'pointer'}}
               />
               <span>{lang.label}</span>
             </label>
           ))}
         </div>
         
-        <h3 style={{ color: '#ff4b2b', marginTop: '20px', marginBottom: '15px', fontSize: '1.1em' }}>Zone de mobilité</h3>
+        <h3 id="section-mobility" style={{ color: '#ff4b2b', marginTop: '20px', marginBottom: '15px', fontSize: '1.1em' }}>Zone de mobilité</h3>
         <p style={{ fontSize: '0.85em', color: '#aaa', marginBottom: '15px' }}>
           Indiquez les villes, départements ou régions où vous êtes disponible pour des événements.
         </p>
         <div style={{ marginBottom: '20px' }}>
           {(formData.profile?.mobilityZone || []).map((zone, index) => (
             <div key={index} style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px',
               marginBottom: '10px',
               padding: '10px',
               backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '5px'
+              borderRadius: '5px',
             }}>
-              <select
-                value={zone.type}
-                onChange={(e) => {
-                  const updatedZones = [...(formData.profile?.mobilityZone || [])];
-                  updatedZones[index] = { ...updatedZones[index], type: e.target.value as 'ville' | 'departement' | 'region', value: '' };
-                  setFormData(prev => ({
-                    ...prev,
-                    profile: {
-                      ...prev.profile,
-                      mobilityZone: updatedZones,
-                    },
-                  }));
-                  setCitySearchQuery(prev => ({ ...prev, [index]: '' }));
-                  setShowCityDropdown(prev => ({ ...prev, [index]: false }));
-                }}
-                style={{
-                  ...inputStyle,
-                  width: 'auto',
-                  minWidth: '150px',
-                  marginBottom: 0,
-                  flex: '0 0 auto',
-                }}
-              >
-                <option value="ville">Ville</option>
-                <option value="departement">Département</option>
-                <option value="region">Région</option>
-              </select>
-
-              <div style={{ flex: 1, position: 'relative' }}>
+              {/* Ligne 1 : type + supprimer */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+                <select
+                  value={zone.type}
+                  onChange={(e) => {
+                    const updatedZones = [...(formData.profile?.mobilityZone || [])];
+                    updatedZones[index] = { ...updatedZones[index], type: e.target.value as 'ville' | 'departement' | 'region', value: '' };
+                    setFormData(prev => ({
+                      ...prev,
+                      profile: {
+                        ...prev.profile,
+                        mobilityZone: updatedZones,
+                      },
+                    }));
+                    setCitySearchQuery(prev => ({ ...prev, [index]: '' }));
+                    setShowCityDropdown(prev => ({ ...prev, [index]: false }));
+                  }}
+                  style={{
+                    ...inputStyle,
+                    marginBottom: 0,
+                    flex: 1,
+                  }}
+                >
+                  <option value="ville">Ville</option>
+                  <option value="departement">Département</option>
+                  <option value="region">Région</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updatedZones = (formData.profile?.mobilityZone || []).filter((_, i) => i !== index);
+                    setFormData(prev => ({
+                      ...prev,
+                      profile: {
+                        ...prev.profile,
+                        mobilityZone: updatedZones,
+                      },
+                    }));
+                    setCitySearchQuery(prev => {
+                      const newQuery = { ...prev };
+                      delete newQuery[index];
+                      return newQuery;
+                    });
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '5px',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    backgroundColor: 'rgba(220, 53, 69, 0.15)',
+                    color: '#ffb3b3',
+                    cursor: 'pointer',
+                    fontSize: '0.9em',
+                    flexShrink: 0,
+                  }}
+                >
+                  Supprimer
+                </button>
+              </div>
+              {/* Ligne 2 : champ valeur pleine largeur */}
+              <div style={{ position: 'relative' }}>
                 {zone.type === 'region' && (
                   <select
                     value={zone.value}
@@ -658,38 +693,6 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess }
                   </>
                 )}
               </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const updatedZones = (formData.profile?.mobilityZone || []).filter((_, i) => i !== index);
-                  setFormData(prev => ({
-                    ...prev,
-                    profile: {
-                      ...prev.profile,
-                      mobilityZone: updatedZones,
-                    },
-                  }));
-                  setCitySearchQuery(prev => {
-                    const newQuery = { ...prev };
-                    delete newQuery[index];
-                    return newQuery;
-                  });
-                }}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '5px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  backgroundColor: 'rgba(220, 53, 69, 0.15)',
-                  color: '#ffb3b3',
-                  cursor: 'pointer',
-                  fontSize: '0.9em',
-                  flex: '0 0 auto',
-                  marginTop: '2px',
-                }}
-              >
-                Supprimer
-              </button>
             </div>
           ))}
           <button

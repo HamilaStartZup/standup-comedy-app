@@ -11,7 +11,8 @@ import {
   sendApplicationNotificationToOrganizer,
   sendApplicationStatusToComedian,
   sendLateCancellationToOrganizer,
-  sendLateCancellationToComedian
+  sendLateCancellationToComedian,
+  sendWithdrawalNotificationToOrganizer
 } from '../services/emailService';
 import { createLateCancellationAlert } from '../services/lateCancellationAlertService';
 import { notifyComediansOfLateCancellationAsync } from '../services/mobilityNotificationService';
@@ -21,6 +22,11 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/env';
 import { emitApplicationCreated, emitApplicationStatusChanged, emitApplicationWithdrawn, emitLateCancellation } from '../services/eventEmitter';
 import { createNotification } from './notification';
+import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
+import { FilterQuery } from 'mongoose';
+import Logger from '../utils/logger';
+import { detectZoneType, matchesMobilityZone, normalizeDepartment, getRegionByDepartment, FRENCH_REGIONS } from '../utils/geographicMatching';
+import { escapeRegex } from '../utils/regex';
 
 // Fonction pour construire avatarUrl à partir de avatar.data
 const buildAvatarDataUrl = (user: any): string | undefined => {
@@ -31,6 +37,15 @@ const buildAvatarDataUrl = (user: any): string | undefined => {
   }
   return user?.avatarUrl || undefined;
 };
+
+/** Retourne true si l'événement commence dans moins d'1 h ou est déjà passé (humoriste ne peut plus postuler ni se désinscrire). */
+function isEventWithinOneHour(event: { date: Date | string; startTime?: string }): boolean {
+  const dateStr = typeof event.date === 'string' ? event.date.split('T')[0] : new Date(event.date).toISOString().split('T')[0];
+  const startTime = (event.startTime || '00:00').trim();
+  const eventStart = new Date(dateStr + 'T' + startTime + ':00');
+  const oneHourFromNow = Date.now() + 60 * 60 * 1000;
+  return eventStart.getTime() <= oneHourFromNow;
+}
 
 export const createApplication = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -55,6 +70,15 @@ export const createApplication = async (req: AuthRequest, res: Response): Promis
     const eventObjectId = new Types.ObjectId(eventId);
     const comedianObjectId = new Types.ObjectId(comedianId);
 
+    // Vérifier si l'humoriste est restreint (signalement en cours)
+    const comedian = await UserModel.findById(comedianId).select('isRestricted isActive');
+    if (comedian?.isRestricted) {
+      res.status(403).json({
+        message: 'Votre compte est restreint en attendant l\'examen d\'un signalement. Vous ne pouvez pas postuler à de nouveaux événements.'
+      });
+      return;
+    }
+
     // Vérifier si l'évènement existe
     const event = await EventModel.findById(eventObjectId);
     if (!event) {
@@ -66,15 +90,23 @@ export const createApplication = async (req: AuthRequest, res: Response): Promis
 
     // Vérifier le statut de l'évènement
     if (event.status === 'cancelled') {
-      res.status(400).json({
+      res.status(422).json({
         message: 'Impossible de postuler à un évènement annulé'
       });
       return;
     }
 
     if (event.status === 'completed') {
-      res.status(400).json({
+      res.status(422).json({
         message: 'Impossible de postuler à un évènement terminé'
+      });
+      return;
+    }
+
+    // À partir d'1 h avant le début, l'humoriste ne peut plus postuler
+    if (isEventWithinOneHour(event)) {
+      res.status(422).json({
+        message: 'Impossible de postuler : l\'événement commence dans moins d\'une heure ou a déjà commencé.'
       });
       return;
     }
@@ -103,6 +135,37 @@ export const createApplication = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
+    // Vérifier si l'humoriste est déjà accepté à un évènement simultané
+    const targetDateStr = event.date ? new Date(event.date).toISOString().split('T')[0] : '';
+    const targetStart = (event.startTime ?? '00:00').trim();
+    const targetEnd = (event.endTime ?? '23:59').trim();
+
+    if (targetDateStr) {
+      const acceptedApplications = await ApplicationModel.find({
+        comedian: comedianObjectId,
+        event: { $ne: eventObjectId },
+        status: 'ACCEPTED'
+      }).populate<{ event: EventDocument }>('event');
+
+      const hasConflict = acceptedApplications.some(app => {
+        const ev = app.event as EventDocument | null;
+        if (!ev || !ev.date) return false;
+        const otherDateStr = new Date(ev.date).toISOString().split('T')[0];
+        if (otherDateStr !== targetDateStr) return false;
+        const otherStart = (ev.startTime ?? '00:00').trim();
+        const otherEnd = (ev.endTime ?? '23:59').trim();
+        // Overlap si les plages horaires se chevauchent
+        return targetStart < otherEnd && otherStart < targetEnd;
+      });
+
+      if (hasConflict) {
+        res.status(409).json({
+          message: 'Vous êtes déjà accepté à un autre événement qui se déroule au même moment.'
+        });
+        return;
+      }
+    }
+
     // Créer l'application
     const application = new ApplicationModel({
       event: eventObjectId,
@@ -116,7 +179,8 @@ export const createApplication = async (req: AuthRequest, res: Response): Promis
 
     // Émettre un évènement SSE pour notifier tous les clients (non-bloquant)
     try {
-      emitApplicationCreated(application._id.toString(), eventId);
+      const organizerId = event.organizer?.toString() || '';
+      emitApplicationCreated(application._id.toString(), eventId, organizerId);
     } catch (sseError) {
       console.error('⚠️ Erreur lors de l\'émission SSE (non-bloquant):', sseError);
       // Ne pas throw, continuer le flux
@@ -328,7 +392,10 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response): 
     // Émettre un évènement SSE pour notifier tous les clients
     if (updatedApplication) {
       const eventId = (updatedApplication.event as any)?._id?.toString() || updatedApplication.event?.toString() || '';
-      emitApplicationStatusChanged(applicationId, status, eventId);
+      const comedianId = (updatedApplication.comedian as any)?._id?.toString() || updatedApplication.comedian?.toString() || '';
+      const organizerId = (updatedApplication.event as any)?.organizer?._id?.toString() || (updatedApplication.event as any)?.organizer?.toString() || '';
+      const targets = [comedianId, organizerId].filter(Boolean);
+      emitApplicationStatusChanged(applicationId, status, eventId, targets);
     }
 
     // Ajout du participant à l'évènement si la candidature est acceptée
@@ -349,6 +416,46 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response): 
           hasLateCancellation: false,
           lateCancellationAt: null
         });
+      }
+
+      // Annulation par la plateforme des autres candidatures au même créneau (même date + même heure)
+      // sans impacter les statistiques de l'humoriste
+      const acceptedEventIdStr = (event?._id || eventId).toString();
+      const acceptedDateStr = event?.date ? new Date(event.date).toISOString().split('T')[0] : '';
+      const acceptedStartTime = (event?.startTime ?? '00:00').trim();
+
+      if (acceptedDateStr && acceptedStartTime) {
+        const otherApplications = await ApplicationModel.find({
+          comedian: comedianId,
+          _id: { $ne: applicationId },
+          status: { $in: ['PENDING', 'ACCEPTED'] }
+        }).populate<{ event: EventDocument }>('event');
+
+        const overlapping = otherApplications.filter(app => {
+          const ev = app.event as EventDocument | null;
+          if (!ev || !ev.date) return false;
+          const otherId = (ev._id || ev).toString();
+          if (otherId === acceptedEventIdStr) return false;
+          const otherDateStr = new Date(ev.date).toISOString().split('T')[0];
+          const otherStartTime = (ev.startTime || '00:00').trim();
+          return otherDateStr === acceptedDateStr && otherStartTime === acceptedStartTime;
+        });
+
+        for (const app of overlapping) {
+          const wasAccepted = app.status === 'ACCEPTED';
+          const otherEventId = (app.event as any)._id || app.event;
+          await ApplicationModel.findByIdAndUpdate(app._id, { status: 'CANCELLED_BY_PLATFORM' });
+          if (wasAccepted) {
+            await EventModel.findByIdAndUpdate(
+              otherEventId,
+              { $pull: { participants: comedianId } }
+            );
+          }
+          emitApplicationStatusChanged(app._id.toString(), 'CANCELLED_BY_PLATFORM', otherEventId?.toString() || '', [comedianId]);
+        }
+        if (overlapping.length > 0) {
+          console.log(`🔄 [PLATFORM] ${overlapping.length} candidature(s) au même créneau annulée(s) pour le comédien`);
+        }
       }
     }
 
@@ -425,9 +532,9 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response): 
           status,
           organizerMessage || ''
         ).then(() => {
-          console.log(`[EMAIL] Succès de l'envoi à l'humoriste (${(updatedApplication.comedian as any).email}) pour statut ${status}`);
+          Logger.info(`[EMAIL] Succès de l'envoi à l'humoriste pour statut ${status}`, { applicationId: updatedApplication._id });
         }).catch(err => {
-          console.error(`[EMAIL] Erreur lors de l'envoi à l'humoriste (${(updatedApplication.comedian as any).email}) :`, err);
+          Logger.error(`[EMAIL] Erreur lors de l'envoi à l'humoriste`, { applicationId: updatedApplication._id, error: err });
         });
       }
 
@@ -549,68 +656,195 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const { status, eventId } = req.query as { status?: string | string[]; eventId?: string };
+    const { status, eventId, comedianId, sort, tab, zone, experienceLevel } = req.query as Record<string, string | string[] | undefined>;
 
-    // Construire un filtre DB minimal si eventId est fourni
-    const dbFilter: any = {};
-    if (eventId && Types.ObjectId.isValid(eventId)) {
-      dbFilter.event = new Types.ObjectId(eventId);
+    const currentUser = await UserModel.findById(userId).select('role').lean();
+
+    const dbFilter: FilterQuery<ApplicationDocument> = {};
+
+    let ownedEventIds: Types.ObjectId[] | undefined;
+
+    if (currentUser?.role === 'SUPER_ADMIN') {
+      // no role filter
+    } else if (currentUser?.role === 'COMEDIAN') {
+      dbFilter.comedian = new Types.ObjectId(userId);
+      // tab → status mapping for comedians
+      if (tab === 'pending') dbFilter.status = 'PENDING';
+      else if (tab === 'accepted') dbFilter.status = 'ACCEPTED';
+      else if (tab === 'archived') dbFilter.status = { $in: ['REJECTED', 'EXPIRED'] };
+    } else if (currentUser?.role === 'ORGANIZER') {
+      ownedEventIds = (await EventModel.find({ organizer: userId }).distinct('_id')) as Types.ObjectId[];
+      dbFilter.event = { $in: ownedEventIds };
+    } else {
+      res.status(403).json({ error: 'Accès refusé' });
+      return;
     }
 
-    // Récupérer les candidatures (avec filtre éventuel par eventId)
-    const applications = await ApplicationModel.find(dbFilter).select('+performanceDetails +message +organizerMessage')
-      .populate({
-        path: 'event',
-        select: 'title date startTime endTime organizer location updatedAt modifiedByOrganizer status requirements participants',
-        populate: {
-          path: 'organizer',
-          select: 'firstName lastName email'
+    // Optional filters — role-aware guards, never replace ownership constraints
+    if (eventId && !Array.isArray(eventId) && Types.ObjectId.isValid(eventId)) {
+      if (currentUser?.role === 'ORGANIZER') {
+        const eventObjectId = new Types.ObjectId(eventId);
+        if (!ownedEventIds!.some(id => id.equals(eventObjectId))) {
+          res.status(403).json({ error: 'Accès refusé' });
+          return;
         }
-      })
-      .populate({
-        path: 'comedian',
-        select: 'firstName lastName email phone avatarUrl profile'
-      });
-
-    // Récupérer les informations de l'utilisateur pour vérifier son rôle
-    const currentUser = await UserModel.findById(userId);
-    const isSuperAdmin = currentUser && currentUser.role === 'SUPER_ADMIN';
-
-    // Filtrage JS : l'utilisateur est soit le comédien, soit l'organisateur de l'évènement, soit un super admin
-    let filteredApplications = applications.filter(app => {
-      // Super admin peut voir toutes les candidatures
-      if (isSuperAdmin) {
-        return true;
+        dbFilter.event = eventObjectId;
+      } else {
+        // COMEDIAN or SUPER_ADMIN: safe narrowing on own data / admin access
+        dbFilter.event = new Types.ObjectId(eventId);
       }
-
-      const isComedian = app.comedian && (app.comedian as any)._id.toString() === userId;
-      const isOrganizer = app.event && (app.event as any).organizer && (app.event as any).organizer._id.toString() === userId;
-      return isComedian || isOrganizer;
-    });
-
-    // Filtrage par statut si demandé
+    }
     if (status) {
       const statusArray = Array.isArray(status) ? status : [status];
-      filteredApplications = filteredApplications.filter(app => statusArray.includes(app.status));
+      dbFilter.status = { $in: statusArray };
+    }
+    if (comedianId && !Array.isArray(comedianId) && Types.ObjectId.isValid(comedianId)) {
+      if (currentUser?.role === 'COMEDIAN') {
+        if (comedianId !== userId) {
+          res.status(403).json({ error: 'Accès refusé' });
+          return;
+        }
+        // Filter already set to own userId — no override needed
+      } else {
+        // ORGANIZER: narrowing within owned events; SUPER_ADMIN: no restriction
+        dbFilter.comedian = new Types.ObjectId(comedianId);
+      }
     }
 
-    // Transformer les applications pour ajouter avatarUrl à chaque humoriste
-    const transformedApplications = filteredApplications.map(app => {
-      const appObj: any = app.toObject ? app.toObject() : app;
-      if (appObj.comedian) {
-        appObj.comedian = {
-          ...appObj.comedian,
-          avatarUrl: buildAvatarDataUrl(appObj.comedian)
-        };
-        // Supprimer le champ avatar pour ne pas l'envoyer au client
-        if ('avatar' in appObj.comedian) {
-          delete appObj.comedian.avatar;
-        }
+    const VALID_EXPERIENCE_LEVELS = ['0-50', '50-200', '200+'] as const;
+    type ExperienceLevelValue = typeof VALID_EXPERIENCE_LEVELS[number];
+    const isOrganizerOrAdmin = currentUser?.role === 'ORGANIZER' || currentUser?.role === 'SUPER_ADMIN';
+
+    const resolvedExperienceLevel: ExperienceLevelValue | null =
+      isOrganizerOrAdmin &&
+      experienceLevel &&
+      !Array.isArray(experienceLevel) &&
+      (VALID_EXPERIENCE_LEVELS as readonly string[]).includes(experienceLevel)
+        ? (experienceLevel as ExperienceLevelValue)
+        : null;
+
+    if (isOrganizerOrAdmin && zone && !Array.isArray(zone) && zone.trim() && !comedianId) {
+      const searchZone = await detectZoneType(zone.trim());
+
+      // Pré-filtre DB : ne charge que les comédiens dont au moins une mobilityZone
+      // peut potentiellement matcher (superset du match exact via matchesMobilityZone).
+      // Évite un scan complet de la collection users à chaque requête.
+      const candidateDepts = new Set<string>();
+      const candidateRegions = new Set<string>();
+      if (searchZone.type === 'ville') {
+        if (searchZone.department) candidateDepts.add(searchZone.department);
+        if (searchZone.region) candidateRegions.add(searchZone.region);
+      } else if (searchZone.type === 'departement') {
+        candidateDepts.add(normalizeDepartment(searchZone.value));
+        const r = getRegionByDepartment(searchZone.value);
+        if (r) candidateRegions.add(r);
+      } else if (searchZone.type === 'region') {
+        candidateRegions.add(searchZone.value);
+        (FRENCH_REGIONS[searchZone.value] || []).forEach(d => candidateDepts.add(d));
       }
-      return appObj;
+
+      const cityRegex = new RegExp(escapeRegex(searchZone.value), 'i');
+      const orPrefilter: Array<Record<string, unknown>> = [
+        { 'profile.mobilityZone': { $elemMatch: { type: 'ville', value: cityRegex } } },
+      ];
+      if (candidateDepts.size > 0) {
+        orPrefilter.push({ 'profile.mobilityZone': { $elemMatch: { type: 'departement', value: { $in: [...candidateDepts] } } } });
+      }
+      if (candidateRegions.size > 0) {
+        orPrefilter.push({ 'profile.mobilityZone': { $elemMatch: { type: 'region', value: { $in: [...candidateRegions] } } } });
+      }
+
+      const candidates = await UserModel.find({ role: 'COMEDIAN', $or: orPrefilter })
+        .select('_id profile.mobilityZone')
+        .lean();
+
+      const matchingComedianIds = candidates
+        .filter((c: any) => {
+          const mobilityZones = c.profile?.mobilityZone;
+          if (!mobilityZones || mobilityZones.length === 0) return false;
+          return mobilityZones.some((mz: any) => matchesMobilityZone(mz, searchZone));
+        })
+        .map((c: any) => c._id as Types.ObjectId);
+      dbFilter.comedian = { $in: matchingComedianIds };
+    }
+
+    const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>);
+
+    const sortMap: Record<string, Record<string, 1 | -1>> = {
+      dateAsc: { createdAt: 1 },
+      dateDesc: { createdAt: -1 },
+      statusAsc: { status: 1 },
+      statusDesc: { status: -1 },
+    };
+    const dbSort: Record<string, 1 | -1> = (sort && !Array.isArray(sort) && sortMap[sort]) ? sortMap[sort] : { createdAt: -1 };
+
+    // Exclure les candidatures orphelines (comedian/event supprimé) au niveau DB.
+    // Sinon le count gonfle et la pagination affiche moins d'items que le compteur (cf. UI).
+    const orphanFilterPipeline = [
+      { $match: dbFilter },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'comedian',
+          foreignField: '_id',
+          as: 'comedianDoc',
+          pipeline: [{ $project: { _id: 1, 'profile.numberOfScenes': 1 } }],
+        },
+      },
+      { $match: { 'comedianDoc.0': { $exists: true } } },
+      ...(resolvedExperienceLevel ? [{ $match: { 'comedianDoc.0.profile.numberOfScenes': resolvedExperienceLevel } }] : []),
+      {
+        $lookup: {
+          from: 'events',
+          localField: 'event',
+          foreignField: '_id',
+          as: 'eventDoc',
+          pipeline: [{ $project: { _id: 1 } }],
+        },
+      },
+      { $match: { 'eventDoc.0': { $exists: true } } },
+      { $project: { _id: 1, createdAt: 1, status: 1 } },
+    ];
+
+    const [validRefs, totalArr] = await Promise.all([
+      ApplicationModel.aggregate([
+        ...orphanFilterPipeline,
+        { $sort: dbSort },
+        { $skip: skip },
+        { $limit: limit },
+      ]),
+      ApplicationModel.aggregate([
+        ...orphanFilterPipeline,
+        { $count: 'total' },
+      ]),
+    ]);
+    const total: number = totalArr[0]?.total ?? 0;
+    const pageIds = validRefs.map((d: any) => d._id);
+
+    const rawApplications = pageIds.length === 0 ? [] : await (async () => {
+      const docs = await ApplicationModel.find({ _id: { $in: pageIds } })
+        .select('+performanceDetails +message +organizerMessage')
+        .populate({
+          path: 'event',
+          select: 'title date startTime endTime organizer location updatedAt modifiedByOrganizer status requirements participants',
+          populate: { path: 'organizer', select: 'firstName lastName email' }
+        })
+        .populate({ path: 'comedian', select: 'firstName lastName email phone avatarUrl profile avatar' })
+        .lean();
+      // Préserver l'ordre du tri
+      const byId = new Map(docs.map((d: any) => [String(d._id), d]));
+      return pageIds.map((id) => byId.get(String(id))).filter(Boolean) as any[];
+    })();
+
+    const applications = (rawApplications as any[]).map(app => {
+      if (app.comedian) {
+        app.comedian = { ...app.comedian, avatarUrl: buildAvatarDataUrl(app.comedian) };
+        delete app.comedian.avatar;
+      }
+      return app;
     });
 
-    res.json(transformedApplications);
+    res.json({ applications, pagination: buildPaginationResult({ page, limit }, total) });
   } catch (error) {
     console.error('Erreur lors de la récupération des candidatures:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération des candidatures' });
@@ -709,10 +943,10 @@ export const confirmParticipation = async (req: AuthRequest, res: Response): Pro
       message: 'Participation confirmée'
     });
   } catch (error) {
-    console.error('❌ ERREUR:', error);
+    Logger.error('Erreur dans confirmParticipation', { error });
     res.status(500).json({
-      message: 'Erreur serveur',
-      error: error instanceof Error ? error.message : 'Erreur inconnue'
+      message: 'Something went wrong!',
+      ...(process.env.NODE_ENV === 'development' && { error: error instanceof Error ? error.message : String(error) }),
     });
   }
 };
@@ -737,6 +971,14 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
 
     if (!isComedian && !isOrganizer) {
       res.status(403).json({ message: 'Non autorisé à retirer cette candidature' });
+      return;
+    }
+
+    // Pour l'humoriste : à partir d'1 h avant le début, plus de désinscription possible
+    if (isComedian && application.event && isEventWithinOneHour(application.event as any)) {
+      res.status(400).json({
+        message: 'Impossible de vous désinscrire : l\'événement commence dans moins d\'une heure ou a déjà commencé.'
+      });
       return;
     }
 
@@ -776,7 +1018,7 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
         comedian.stats = {};
       }
 
-      console.log(`📊 [STATS UPDATE - WITHDRAWN] ${comedian.firstName} ${comedian.lastName}: ${oldStatus} → WITHDRAWN`);
+      Logger.info(`[STATS UPDATE - WITHDRAWN] userId=${comedian._id}: ${oldStatus} → WITHDRAWN`);
 
       // Décrémenter le compteur approprié selon le statut actuel
       if (oldStatus === 'PENDING') {
@@ -794,19 +1036,19 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
 
         if (hoursUntilEvent > 0 && hoursUntilEvent < 72) {
           isLateCancellation = true;
-          console.log(`🚨 ANNULATION TARDIVE DÉTECTÉE: ${comedian.firstName} ${comedian.lastName} - ${hoursUntilEvent.toFixed(1)}h avant l'événement`);
+          Logger.info(`[ANNULATION TARDIVE] userId=${comedian._id} - ${hoursUntilEvent.toFixed(1)}h avant l'événement`);
 
           // Incrémenter le compteur d'annulations tardives AVANT la sauvegarde
           comedian.stats.lateCancellations = (comedian.stats.lateCancellations || 0) + 1;
           totalLateCancellations = comedian.stats.lateCancellations;
-          console.log(`📊 Compteur lateCancellations incrémenté: ${totalLateCancellations}`);
+          Logger.info(`[STATS] lateCancellations incrémenté: ${totalLateCancellations}`, { userId: comedian._id });
         }
       }
 
       // Sauvegarder TOUTES les stats (y compris lateCancellations si applicable)
       comedian.markModified('stats');
       await comedian.save();
-      console.log(`💾 Stats sauvegardées après retrait pour ${comedian.firstName} ${comedian.lastName}`);
+      Logger.info(`[STATS] Stats sauvegardées après retrait`, { userId: comedian._id });
 
       // 🚨 TRAITEMENT ANNULATION TARDIVE (notifications, emails, etc.)
       if (isLateCancellation && oldStatus === 'ACCEPTED') {
@@ -871,10 +1113,12 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
           );
 
           // 9. Émettre événement SSE pour temps réel
+          const lateCancelOrgId = (organizer as any)?._id?.toString() || (event.organizer as any)?._id?.toString() || (event.organizer as any)?.toString() || '';
           emitLateCancellation(
             eventId.toString(),
             comedian._id.toString(),
-            (application._id as any).toString()
+            (application._id as any).toString(),
+            lateCancelOrgId
           );
 
           // 10. Notifier les humoristes de la place disponible
@@ -898,6 +1142,15 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
           }
 
           console.log(`✅ Gestion de l'annulation tardive terminée pour ${comedian.firstName} ${comedian.lastName}`);
+      } else if (oldStatus === 'ACCEPTED') {
+        // Désistement « normal » (participant qui se désinscrit, hors cas tardif) → notifier l'organisateur par email
+        const event = application.event as IPopulatedEvent;
+        const organizer = await UserModel.findById(event.organizer._id || event.organizer)
+          .select('firstName lastName email')
+          .lean();
+        if (organizer) {
+          await sendWithdrawalNotificationToOrganizer(event, comedian, organizer);
+        }
       }
     }
 
@@ -906,9 +1159,10 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
 
     // Émettre un évènement SSE pour notifier tous les clients
     const eventId = (application.event as any)?._id?.toString() || application.event?.toString() || '';
-    emitApplicationWithdrawn(applicationId, eventId);
+    const organizerId = (application.event as any)?.organizer?._id?.toString() || (application.event as any)?.organizer?.toString() || '';
+    emitApplicationWithdrawn(applicationId, eventId, organizerId);
 
-    res.json({ message: 'Candidature retirée avec succès' });
+    res.status(204).send();
   } catch (error) {
     console.error('Erreur lors du retrait de la candidature:', error);
     res.status(500).json({ message: 'Erreur lors du retrait de la candidature' });
@@ -944,7 +1198,7 @@ export const expirePendingApplicationsForEvent = async (eventId: Types.ObjectId)
           comedian.stats.applicationsPending = Math.max(0, (comedian.stats.applicationsPending || 0) - 1);
           comedian.markModified('stats');
           await comedian.save();
-          console.log(`📊 applicationsPending décrementé pour ${comedian.firstName} ${comedian.lastName}`);
+          Logger.info(`[STATS] applicationsPending décrementé`, { userId: comedian._id, applicationId: application._id });
         }
       }
 

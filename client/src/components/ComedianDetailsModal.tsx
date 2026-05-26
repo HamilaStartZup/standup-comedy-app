@@ -2,7 +2,6 @@ import { type CSSProperties, useState, useEffect } from 'react';
 import Modal from './Modal';
 import type { IUserData } from '../types/user';
 import api from '../services/api';
-import { useAuth } from '../hooks/useAuth';
 
 interface ComedianDetailsModalProps {
   isOpen: boolean;
@@ -28,7 +27,6 @@ interface Absence {
 }
 
 function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModalProps) {
-  const { token } = useAuth();
   const [applicationStats, setApplicationStats] = useState<{
     total: number;
     accepted: number;
@@ -49,15 +47,13 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
 
   // Récupérer les vraies statistiques des candidatures ET les stats fraîches de l'humoriste
   useEffect(() => {
-    if (isOpen && comedian?._id && token) {
+    if (isOpen && comedian?._id) {
       setLoading(true);
       const fetchData = async () => {
         try {
           // 1. Récupérer les stats fraîches de l'humoriste depuis l'API
           console.log('🔄 Récupération des stats fraîches pour:', comedian._id);
-          const userResponse = await api.get(`/auth/users`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const userResponse = await api.get(`/auth/users`);
           
           const userData = userResponse.data;
           const users = Array.isArray(userData) ? userData : (userData.users || []);
@@ -78,9 +74,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
           });
 
           // Pour un super admin, récupérer toutes les candidatures et filtrer côté client
-          const response = await api.get('/applications', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const response = await api.get('/applications');
           
           const allApplications = Array.isArray(response.data) ? response.data : (Array.isArray((response.data as any)?.applications) ? (response.data as any).applications : []);
           console.log('📊 Toutes les applications reçues:', allApplications);
@@ -126,11 +120,11 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
 
       fetchData();
     }
-  }, [isOpen, comedian?._id, token]);
+  }, [isOpen, comedian?._id]);
 
   // Récupérer les absences du humoriste
   useEffect(() => {
-    if (isOpen && comedian?._id && token) {
+    if (isOpen && comedian?._id) {
       setLoadingAbsences(true);
       const fetchAbsences = async () => {
         try {
@@ -139,9 +133,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
             comedianName: `${comedian.firstName} ${comedian.lastName}`
           });
 
-          const response = await api.get(`/absences/comedian/${comedian._id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const response = await api.get(`/absences/comedian/${comedian._id}`);
           
           console.log('📊 Absences reçues:', response.data);
           setAbsences(response.data);
@@ -156,7 +148,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
 
       fetchAbsences();
     }
-  }, [isOpen, comedian?._id, token]);
+  }, [isOpen, comedian?._id]);
 
   if (!comedian) return null;
 

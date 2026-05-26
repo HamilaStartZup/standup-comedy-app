@@ -1,0 +1,142 @@
+/* ============================================================
+   Aides.Humour — feuille de style portable (Tailwind v3 friendly)
+   À importer dans le projet cible (ex. dans main.tsx ou index.css)
+   Toutes les variables CSS sont préfixées --ah-* pour éviter
+   tout conflit avec un design-system existant.
+   ============================================================ */
+
+:root {
+  --ah-bg: #0b0f1e;
+  --ah-bg-elev: #141a2e;
+  --ah-bg-elev-2: #1b223a;
+  --ah-accent: #ff5c7a;
+  --ah-accent-hover: #ff7790;
+  --ah-accent-2: #5bc8e6;
+  --ah-accent-3: #b07ac9;
+  --ah-text: #f5f7fb;
+  --ah-text-muted: #9aa3b8;
+  --ah-border: rgba(255, 255, 255, 0.08);
+  --ah-border-strong: rgba(255, 255, 255, 0.16);
+}
+
+/* Enveloppe pleine page (layout Aides.Humour + navbar) — fond identique partout */
+.ah-page {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--ah-bg);
+  color: var(--ah-text);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(1200px 600px at 80% -10%, rgba(255, 92, 122, 0.12), transparent 60%),
+    radial-gradient(900px 500px at -10% 30%, rgba(91, 200, 230, 0.08), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Aligner la navbar app sur le même rendu que les autres pages (évite décalage Tailwind sur h2) */
+.ah-page > nav h2 {
+  margin: 0;
+}
+
+/* Wrapper racine — contenu principal (souvent à l’intérieur de .ah-page) */
+.ah-root {
+  background: var(--ah-bg);
+  color: var(--ah-text);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(1200px 600px at 80% -10%, rgba(255, 92, 122, 0.12), transparent 60%),
+    radial-gradient(900px 500px at -10% 30%, rgba(91, 200, 230, 0.08), transparent 60%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.ah-gradient-text {
+  background: linear-gradient(90deg, #ff5c7a 0%, #b07ac9 50%, #5bc8e6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ah-btn-primary {
+  display: inline-block;
+  background: var(--ah-accent);
+  color: #fff;
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+.ah-btn-primary:hover { background: var(--ah-accent-hover); }
+
+.ah-btn-outline {
+  display: inline-block;
+  border: 1px solid var(--ah-border-strong);
+  color: #fff;
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.ah-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+/* Carte blanche (par défaut) */
+.ah-card {
+  background: #ffffff;
+  color: #0b0f1e;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.ah-card:hover {
+  border-color: rgba(255, 92, 122, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+}
+
+/* Adapter le texte interne sur fond blanc */
+.ah-card .text-white { color: #0b0f1e; }
+.ah-card [class*="text-[var(--ah-text-muted)]"] { color: #5b6478; }
+.ah-card [class*="border-[var(--ah-border)]"] { border-color: rgba(0, 0, 0, 0.08); }
+
+/* Panel sombre (pour groupes de filtres / formulaires) */
+.ah-panel {
+  background: var(--ah-bg-elev);
+  border: 1px solid var(--ah-border);
+  border-radius: 1rem;
+}
+
+/* Carte CTA — fond dégradé sombre */
+.ah-card.ah-card-cta {
+  background: linear-gradient(135deg, #1a2042 0%, #141a2e 100%);
+  color: var(--ah-text);
+  border-color: var(--ah-border);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+.ah-card.ah-card-cta .text-white { color: var(--ah-text); }
+.ah-card.ah-card-cta [class*="text-[var(--ah-text-muted)]"] { color: var(--ah-text-muted); }
+.ah-card.ah-card-cta [class*="border-[var(--ah-border)]"] { border-color: var(--ah-border); }
+
+/* Badges */
+.ah-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  background: rgba(255, 92, 122, 0.12);
+  color: #ffb3c1;
+  border: 1px solid rgba(255, 92, 122, 0.25);
+}
+.ah-badge-muted {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ah-text-muted);
+  border-color: var(--ah-border);
+}

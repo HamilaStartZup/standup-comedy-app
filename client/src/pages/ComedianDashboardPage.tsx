@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 function ComedianDashboardPage() {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const { showInfo } = useAlert();
   const location = useLocation();
   const navigate = useNavigate();
@@ -24,17 +24,16 @@ function ComedianDashboardPage() {
     }
   }, [location.search, showInfo]);
 
-  // Récupère les candidatures de l'humoriste
+  // Récupère les candidatures de l'humoriste (auth via cookie HttpOnly)
   const { data: applications } = useQuery({
-    queryKey: ['comedianApplications', user?._id, token],
+    queryKey: ['comedianApplications', user?._id],
     queryFn: async () => {
-      if (!token || !user?._id) return [];
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const res = await api.get('/applications?comedianId=' + user._id, config);
+      if (!user?._id) return [];
+      const res = await api.get('/applications?comedianId=' + user._id);
       const list = Array.isArray(res.data) ? res.data : (Array.isArray((res.data as any)?.applications) ? (res.data as any).applications : []);
       return list;
     },
-    enabled: !!token && !!user?._id,
+    enabled: !!user?._id,
     staleTime: 0,
     gcTime: 10 * 60 * 1000,
   });

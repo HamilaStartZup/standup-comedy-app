@@ -1,8 +1,9 @@
-import { type CSSProperties, useEffect, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
+import { useUserEvents } from '../hooks/useUserEvents';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { getErrorMessage, WarningMessages } from '../services/systemMessages';
@@ -26,17 +27,19 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const isSuperAdmin = (user as any)?.role === 'SUPER_ADMIN';
 
+  // Préchauffe le cache des événements du mois courant + futurs pour un affichage instantané sur /calendar
+  const startOfMonth = useMemo(
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
+    []
+  );
+  useUserEvents({ dateFrom: startOfMonth });
+
   // Récupérer les statistiques avec React Query
   const { data: eventStats, isLoading: loading, error: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['events', 'stats'],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Vous devez être connecté pour voir les statistiques d'évènements.");
-      }
+      // Auth is handled via HttpOnly cookie — no need to check localStorage
       const response = await api.get('/events/stats');
-      console.log('📊 Statistiques reçues du serveur:', response.data);
-      console.log('👤 Rôle utilisateur:', (user as any)?.role);
       return response.data as EventStats;
     },
     enabled: !!user,
@@ -107,11 +110,6 @@ const Dashboard = () => {
 
     setIsProcessing(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Token d\'authentification manquant');
-      }
-
       const response = await api.post('/events/process-completed-events', {});
 
       const result = response.data;
@@ -120,8 +118,10 @@ const Dashboard = () => {
       // Recharger les statistiques après traitement
       await refetchStats();
     } catch (error: any) {
-      console.error('Erreur lors du traitement:', error.response?.status);
-      showError(getErrorMessage(error, 'Impossible de traiter les événements'));
+      console.error('Erreur lors du traitement:', error.response?.status, error.response?.data);
+      const serverError = error?.response?.data?.error;
+      const msg = typeof serverError === 'string' ? serverError : getErrorMessage(error, 'Impossible de traiter les événements');
+      showError(msg);
     } finally {
       setIsProcessing(false);
     }
@@ -650,6 +650,28 @@ const Dashboard = () => {
                 variant: 'superAdmin',
                 onClick: () => navigate('/events?tab=cancelled')
               })}
+              {/* Card Salles — ORGANIZER uniquement */}
+              <div
+                style={{
+                  ...cardStyle,
+                  ...superAdminCardLayoutStyle,
+                  cursor: 'pointer',
+                  background: 'linear-gradient(135deg, rgba(255,65,108,0.15), rgba(255,75,43,0.1))',
+                  border: '1px solid rgba(255,65,108,0.3)',
+                }}
+                onClick={() => navigate('/my-venues')}
+              >
+                <div>
+                  <p style={superAdminCardTitleStyle}>Mes salles</p>
+                  <p style={{ ...superAdminCardValueStyle, fontSize: '1.1rem', color: '#fff', marginTop: 6 }}>
+                    Louer & gérer
+                  </p>
+                  <p style={{ fontSize: '0.85rem', color: '#aaa', marginTop: 8, lineHeight: 1.4 }}>
+                    Mettez vos salles en location et gérez les demandes de réservation.
+                  </p>
+                </div>
+                <span style={superAdminCardIconStyle}>🏢</span>
+              </div>
             </>
           )}
         </div>

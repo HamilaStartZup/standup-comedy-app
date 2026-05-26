@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { IVenue, IVenueBooking, IVenueBlockedDate } from '../types/venue';
 
 // Configuration automatique de l'URL de base selon l'environnement
 const baseURL =
@@ -10,49 +11,41 @@ const baseURL =
       : 'http://localhost:3001/api');
 const api = axios.create({
   baseURL,
+  withCredentials: true, // Send HttpOnly cookies with every request
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Intercepteur pour ajouter le token d'authentification
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-
 // Intercepteur pour gérer les erreurs
+// La redirection 401 est gérée par AuthContext (séparation des responsabilités)
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Ne rediriger que si :
-      // 1. On a un token (donc c'était une session authentifiée)
-      // 2. On n'est PAS déjà sur une page de login
-      const currentPath = window.location.pathname;
-      const isLoginPage = currentPath === '/login' || currentPath === '/organisateur';
-      const hadToken = localStorage.getItem('token');
-
-      // Toujours supprimer le token s'il existe
-      if (hadToken) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-
-      // Ne rediriger que si on n'est pas déjà sur une page de login
-      // et qu'on avait un token (session expirée)
-      if (!isLoginPage && hadToken) {
-        window.location.href = '/login';
-      }
-    }
-
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
+
+export const upgradeToOrganizer = async (payload: {
+  companyName?: string;
+  description?: string;
+  website?: string;
+  venueTypes?: string[];
+  eventFrequency?: string;
+  averageBudget?: { min: number; max: number };
+  postalCode: string;
+}) => {
+  const response = await api.post('/auth/upgrade-to-organizer', payload);
+  return response.data;
+};
+
+export const switchToLieu = async () => {
+  const response = await api.post('/auth/switch-to-lieu');
+  return response.data;
+};
+
+export const switchToOrganizer = async () => {
+  const response = await api.post('/auth/switch-to-organizer');
+  return response.data;
+};
 
 // Fonctions pour gérer les absences
 export const markAbsence = async (eventId: string, comedianId: string, reason?: string) => {
@@ -102,8 +95,52 @@ export const registerSpectatorToEvent = async (eventId: string) => {
   return response.data;
 };
 
+/** Crée une session Stripe Checkout pour acheter une place à 1€. Rediriger vers data.url */
+export const createStripeCheckoutSession = async (eventId: string): Promise<{ url: string }> => {
+  const response = await api.post<{ url: string }>('/stripe/create-checkout-session', { eventId });
+  return response.data;
+};
+
+/** Confirme l'inscription après retour de Stripe (si webhook pas encore traité). */
+export const confirmStripeRegistration = async (sessionId: string) => {
+  const response = await api.get('/stripe/confirm-registration', { params: { session_id: sessionId } });
+  return response.data;
+};
+
+/** Crée une session Stripe Checkout pour le paiement d'une réservation de salle. */
+export const createVenueCheckoutSession = async (bookingId: string): Promise<{ url: string }> => {
+  const response = await api.post<{ url: string }>('/stripe/create-venue-checkout', { bookingId });
+  return response.data;
+};
+
+/** Confirme le paiement d'une réservation de salle après retour de Stripe. */
+export const confirmVenuePayment = async (sessionId: string) => {
+  const response = await api.get('/stripe/confirm-venue-payment', { params: { session_id: sessionId } });
+  return response.data;
+};
+
+/** Upload photo de l'événement (organisateur). JPG, PNG, GIF max 5MB. Retourne { imageUrl }. */
+export const uploadEventImage = async (file: File): Promise<{ imageUrl: string }> => {
+  const formData = new FormData();
+  formData.append('image', file);
+  const response = await api.post<{ imageUrl: string }>('/events/upload-image', formData, {
+    headers: { 'Content-Type': undefined } as any,
+  });
+  return response.data;
+};
+
 export const unregisterSpectatorFromEvent = async (eventId: string) => {
   const response = await api.delete(`/events/${eventId}/spectator-register`);
+  return response.data;
+};
+
+// Statut de notation d'un évènement pour le spectateur connecté
+export const getSpectatorEventRatingStatus = async (
+  eventId: string
+): Promise<{ alreadyRated: boolean; ratingWindowClosed?: boolean; eventRating?: number | null }> => {
+  const response = await api.get<{ alreadyRated: boolean; ratingWindowClosed?: boolean; eventRating?: number | null }>(
+    `/events/${eventId}/rating-status`,
+  );
   return response.data;
 };
 
@@ -342,5 +379,211 @@ export const deleteUser = async (userId: string) => {
   const response = await api.delete(`/auth/users/${userId}`);
   return response.data;
 };
+
+// ===== Salles (Venues) =====
+
+export const createVenue = async (data: Partial<IVenue> & { name: string; description: string; address: string; city: string; postalCode: string; country: string; capacity: number; pricePerEvent: number; venueType: IVenue['venueType'] }): Promise<IVenue> => {
+  const response = await api.post<{ venue: IVenue }>('/venues', data);
+  return response.data.venue;
+};
+
+export const listVenues = async (filters?: {
+  city?: string;
+  venueType?: string;
+  minCapacity?: number;
+  owner?: 'me';
+  region?: string;
+  department?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ venues: IVenue[]; pagination: { page: number; limit: number; total: number; totalPages: number; hasMore: boolean } }> => {
+  const params = new URLSearchParams();
+  if (filters?.city) params.append('city', filters.city);
+  if (filters?.venueType) params.append('venueType', filters.venueType);
+  if (filters?.minCapacity) params.append('minCapacity', filters.minCapacity.toString());
+  if (filters?.owner) params.append('owner', filters.owner);
+  // department is more specific than region — send only one
+  if (filters?.department) {
+    params.append('department', filters.department);
+  } else if (filters?.region) {
+    params.append('region', filters.region);
+  }
+  if (filters?.page) params.append('page', filters.page.toString());
+  if (filters?.limit) params.append('limit', filters.limit.toString());
+  const query = params.toString();
+  const response = await api.get<{ venues: IVenue[]; pagination: { page: number; limit: number; total: number; totalPages: number; hasMore: boolean } }>(
+    `/venues${query ? `?${query}` : ''}`
+  );
+  return response.data;
+};
+
+export const listMyVenues = async (filters?: { page?: number; limit?: number }): Promise<{ venues: IVenue[]; total: number; page: number; limit: number }> => {
+  const params = new URLSearchParams();
+  if (filters?.page) params.append('page', filters.page.toString());
+  if (filters?.limit) params.append('limit', filters.limit.toString());
+  const query = params.toString();
+  const response = await api.get<{ venues: IVenue[]; total: number; page: number; limit: number }>(`/venues/mine${query ? `?${query}` : ''}`);
+  return response.data;
+};
+
+export const getVenue = async (venueId: string): Promise<IVenue> => {
+  const response = await api.get<{ venue: IVenue }>(`/venues/${venueId}`);
+  return response.data.venue;
+};
+
+export const updateVenue = async (venueId: string, data: Partial<IVenue>): Promise<IVenue> => {
+  const response = await api.put<{ venue: IVenue }>(`/venues/${venueId}`, data);
+  return response.data.venue;
+};
+
+export const deleteVenue = async (venueId: string): Promise<void> => {
+  await api.delete(`/venues/${venueId}`);
+};
+
+// ===== Réservations de salles (Venue Bookings) =====
+
+export const createBooking = async (venueId: string, data: {
+  requestedDate: string;
+  startTime?: string;
+  endTime?: string;
+  message?: string;
+}): Promise<{ booking: IVenueBooking }> => {
+  const response = await api.post<{ booking: IVenueBooking }>(`/venues/${venueId}/bookings`, data);
+  return response.data;
+};
+
+export const listVenueBookings = async (venueId: string): Promise<IVenueBooking[]> => {
+  const response = await api.get<{ bookings: IVenueBooking[] }>(`/venues/${venueId}/bookings`);
+  return response.data.bookings;
+};
+
+export const myBookings = async (): Promise<IVenueBooking[]> => {
+  const response = await api.get<{ bookings: IVenueBooking[] }>('/venues/bookings/mine');
+  return response.data.bookings;
+};
+
+/** Réservations confirmées déjà utilisées pour créer un événement (organisateur). */
+export const getVenueBookingIdsInUse = async (): Promise<string[]> => {
+  const response = await api.get<{ bookingIds: string[] }>('/events/venue-bookings-in-use');
+  return response.data.bookingIds ?? [];
+};
+
+export const getMyVenueBookings = async (venueId: string): Promise<IVenueBooking[]> => {
+  const response = await api.get<{ bookings: IVenueBooking[] }>(`/venues/${venueId}/my-bookings`);
+  return response.data.bookings;
+};
+
+export const updateBookingStatus = async (bookingId: string, status: 'ACCEPTED' | 'REFUSED', ownerResponse?: string): Promise<{ booking: IVenueBooking }> => {
+  const response = await api.patch<{ booking: IVenueBooking }>(`/venues/bookings/${bookingId}`, { status, ownerResponse });
+  return response.data;
+};
+
+export const cancelBooking = async (bookingId: string): Promise<void> => {
+  await api.delete(`/venues/bookings/${bookingId}`);
+};
+
+export const cancelBookingByOwner = async (bookingId: string): Promise<void> => {
+  await api.patch(`/venues/bookings/${bookingId}/cancel`);
+};
+
+export const getRefundEstimate = async (bookingId: string): Promise<{ refundAmount: number; refundPercent: 0 | 50 | 100; reason: string }> => {
+  const response = await api.get(`/venues/bookings/${bookingId}/refund-estimate`);
+  return response.data;
+};
+
+// ===== Dates bloquées =====
+
+export const blockDate = async (venueId: string, data: {
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  reason?: string;
+}): Promise<{ blockedDate: IVenueBlockedDate; cancelledBookings: number; failedCancellations: number }> => {
+  const response = await api.post<{ blockedDate: IVenueBlockedDate; cancelledBookings: number; failedCancellations: number }>(`/venues/${venueId}/blocked-dates`, data);
+  return response.data;
+};
+
+export const listBlockedDates = async (venueId: string): Promise<IVenueBlockedDate[]> => {
+  const response = await api.get<{ blockedDates: IVenueBlockedDate[] }>(`/venues/${venueId}/blocked-dates`);
+  return response.data.blockedDates;
+};
+
+export const getTakenSlots = async (venueId: string, date: string): Promise<{ startTime: string; endTime: string }[]> => {
+  const response = await api.get(`/venues/${venueId}/taken-slots`, { params: { date } });
+  return response.data.slots;
+};
+
+export const getBookedDates = async (venueId: string): Promise<string[]> => {
+  const response = await api.get<{ dates: string[] }>(`/venues/${venueId}/taken-slots`);
+  return response.data.dates;
+};
+
+export const getFullDates = async (venueId: string): Promise<string[]> => {
+  const response = await api.get<{ dates: string[] }>(`/venues/${venueId}/full-dates`);
+  return response.data.dates;
+};
+
+export const unblockDate = async (venueId: string, blockedDateId: string): Promise<void> => {
+  await api.delete(`/venues/${venueId}/blocked-dates/${blockedDateId}`);
+};
+
+// ===== Géocodage =====
+
+export type GeocodeFailureReason = 'no_results' | 'network_error';
+export type GeocodeResult = { lat: number; lng: number } | { error: GeocodeFailureReason };
+
+export async function geocodeAddress(
+  address: string,
+  city: string,
+  postalCode: string,
+  _country: string
+): Promise<GeocodeResult> {
+  const banFetch = async (query: string, type?: string) => {
+    const params = new URLSearchParams({ q: query, limit: '1', ...(type && { type }) });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      const res = await fetch(`https://api-adresse.data.gouv.fr/search/?${params}`, {
+        signal: controller.signal,
+        cache: 'no-store',
+      });
+      clearTimeout(timeout);
+      if (!res.ok) return { status: 'error' as const, data: null };
+      return { status: 'success' as const, data: await res.json() };
+    } catch (err) {
+      clearTimeout(timeout);
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          console.warn('geocodeAddress: timeout atteint (5s)', { query });
+        } else {
+          console.warn('geocodeAddress: erreur réseau ou réponse invalide', err, { query });
+        }
+      }
+      return { status: 'error' as const, data: null };
+    }
+  };
+
+  const streetOnly = address.replace(/^\d+\s*(bis|ter|quater)?\s+/i, '').trim();
+
+  let result = await banFetch(`${address} ${postalCode} ${city}`, 'housenumber');
+  if (!result.data?.features?.length)
+    result = await banFetch(`${streetOnly} ${postalCode} ${city}`, 'street');
+  if (!result.data?.features?.length)
+    result = await banFetch(`${address} ${postalCode} ${city}`);
+
+  const data = result.data;
+  const feature = data?.features?.[0];
+  if (!feature) {
+    console.warn('geocodeAddress: aucun résultat pour toutes les stratégies', { address, city, postalCode });
+    return { error: 'no_results' };
+  }
+  if (result.status === 'error') {
+    return { error: 'network_error' };
+  }
+  const coordinates = feature?.geometry?.coordinates;
+  if (!coordinates) return { error: 'no_results' };
+  const [lng, lat] = coordinates;
+  return { lat, lng };
+}
 
 export default api;

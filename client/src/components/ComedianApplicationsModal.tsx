@@ -1,6 +1,5 @@
 import { type CSSProperties, useState, useEffect } from 'react';
 import Modal from './Modal';
-import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 
 interface ComedianApplicationsModalProps {
@@ -16,7 +15,7 @@ interface ComedianApplicationsModalProps {
 
 interface Application {
   _id: string;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'WITHDRAWN' | 'CANCELLED_BY_PLATFORM';
   message?: string;
   organizerMessage?: string;
   createdAt: string;
@@ -42,27 +41,24 @@ interface Application {
 }
 
 function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplicationsModalProps) {
-  const { token } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
-    if (isOpen && comedian?.id && token) {
+    if (isOpen && comedian?.id) {
       fetchApplications();
     }
-  }, [isOpen, comedian?.id, token]);
+  }, [isOpen, comedian?.id]);
 
   const fetchApplications = async () => {
-    if (!comedian?.id || !token) return;
+    if (!comedian?.id) return;
     
     setLoading(true);
     try {
       console.log('🔍 Récupération des candidatures pour:', comedian.firstName, comedian.lastName);
       
-      const response = await api.get('/applications', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/applications');
       
       const allApplications = Array.isArray(response.data) ? response.data : (Array.isArray((response.data as any)?.applications) ? (response.data as any).applications : []);
       console.log('📊 Toutes les applications:', allApplications);
@@ -89,6 +85,7 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
       case 'PENDING': return 'En attente';
       case 'EXPIRED': return 'Expirée';
       case 'WITHDRAWN': return 'Retirée';
+      case 'CANCELLED_BY_PLATFORM': return 'Annulée par la plateforme';
       default: return status;
     }
   };
@@ -99,6 +96,8 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
       case 'REJECTED': return '#dc3545';
       case 'PENDING': return '#ffc107';
       case 'EXPIRED': return '#6c757d';
+      case 'WITHDRAWN': return '#6c757d';
+      case 'CANCELLED_BY_PLATFORM': return '#6c757d';
       default: return '#6c757d';
     }
   };
@@ -109,6 +108,8 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
       case 'REJECTED': return '❌';
       case 'PENDING': return '⏳';
       case 'EXPIRED': return '⏰';
+      case 'WITHDRAWN': return '↩';
+      case 'CANCELLED_BY_PLATFORM': return '🚫';
       default: return '❓';
     }
   };

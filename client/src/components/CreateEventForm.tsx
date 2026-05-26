@@ -1,10 +1,79 @@
-import React, { type CSSProperties, useState, useRef, useEffect } from 'react';
+import React, { type CSSProperties, useState, useRef, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { usePostalCodeValidation } from '../hooks/usePostalCodeValidation';
+import { useMyBookings } from '../hooks/useMyBookings';
 import { X, ChevronDown, MapPin, Calendar, Users } from 'lucide-react';
-import api from '../services/api';
+import api, { getVenueBookingIdsInUse, uploadEventImage } from '../services/api';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages } from '../services/systemMessages';
+import type { IVenueBooking } from '../types/venue';
+
+/** Types de lieu (salles) → valeurs acceptées par le schéma évènement */
+function mapVenueTypeToEventVenueType(vt: string | undefined): string {
+  const m: Record<string, string> = {
+    theatre: 'theatre',
+    salle_polyvalente: 'salle_polyvalente',
+    bar: 'cafe',
+    cafe_theatre: 'cafe',
+    comedy_club: 'cafe',
+    cinema: 'autre',
+    salle_municipale: 'salle_polyvalente',
+    salle_des_fetes: 'salle_polyvalente',
+    autre: 'autre',
+  };
+  return m[vt || ''] || 'autre';
+}
+
+function bookingDateLocalYMD(requestedDate: string): string {
+  const d = new Date(requestedDate);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function normalizeHHMM(t: string): string {
+  const parts = (t || '0:0').split(':');
+  const h = Number(parts[0]);
+  const m = Number(parts[1] ?? 0);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function minutesBetweenStartEnd(start: string, end: string): number {
+  const a = normalizeHHMM(start);
+  const b = normalizeHHMM(end);
+  const [sh, sm] = a.split(':').map(Number);
+  const [eh, em] = b.split(':').map(Number);
+  let s = sh * 60 + sm;
+  let e = eh * 60 + em;
+  let diff = e - s;
+  if (diff <= 0) diff += 24 * 60;
+  return diff;
+}
+
+/** Libellé français pour une durée arbitraire (ex. hors grille 30 min–4 h). */
+function formatDurationMinutesLabel(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h > 0 && m > 0) return `${h} h ${m} min`;
+  if (h > 0) return `${h} h`;
+  return `${m} min`;
+}
+
+/** 00:00–23:59 (1439 min) ou 24 h (1440) : libellé explicite pour le select Durée. */
+const FULL_DAY_RESERVATION_MINUTES = [23 * 60 + 59, 24 * 60];
+
+function formatDurationSelectOptionLabel(totalMinutes: number): string {
+  if (FULL_DAY_RESERVATION_MINUTES.includes(totalMinutes)) {
+    return 'Réservation journée';
+  }
+  return formatDurationMinutesLabel(totalMinutes);
+}
+
+/** L'API évènements n'accepte que des URLs absolues http(s) ; pas les chemins relatifs type /uploads/... */
+function sanitizeEventImageUrl(url: string | undefined): string | undefined {
+  const u = url?.trim();
+  if (!u || !/^https?:\/\//i.test(u)) return undefined;
+  return u;
+}
 
 interface CreateEventFormProps {
   onClose: () => void;
@@ -25,13 +94,61 @@ interface CreateEventFormProps {
       minExperience?: number;
       maxComedians?: number;
       requiredExperienceLevel?: 'all' | '0-50' | '50-200' | '200+';
+      imageUrl?: string;
     };
 }
 
 function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFormProps) {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { showSuccess, showError, showWarning } = useAlert();
+  const { data: myVenueBookings = [], isLoading: loadingVenueBookings } = useMyBookings({
+    enabled: user?.role === 'ORGANIZER',
+  });
+
+  const { data: usedVenueBookingIds = [], isLoading: loadingUsedVenueBookings } = useQuery({
+    queryKey: ['venue-bookings-in-use', user?._id],
+    queryFn: getVenueBookingIdsInUse,
+    enabled: user?.role === 'ORGANIZER',
+    staleTime: 30_000,
+  });
+
+  const usedVenueBookingIdSet = useMemo(
+    () => new Set(usedVenueBookingIds),
+    [usedVenueBookingIds]
+  );
+
+  const confirmedVenueBookings = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return (myVenueBookings as IVenueBooking[]).filter((b) => {
+      if (b.status !== 'CONFIRMED' || !b.venue || b.venue.isDeleted) return false;
+      if (usedVenueBookingIdSet.has(b._id)) return false;
+      const rd = new Date(b.requestedDate);
+      rd.setHours(0, 0, 0, 0);
+      return rd >= today;
+    }).sort((a, b) => new Date(a.requestedDate).getTime() - new Date(b.requestedDate).getTime());
+  }, [myVenueBookings, usedVenueBookingIdSet]);
+
+  const availableVenueBookingsCount = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return (myVenueBookings as IVenueBooking[]).filter((b) => {
+      if (b.status !== 'CONFIRMED' || !b.venue || b.venue.isDeleted) return false;
+      const rd = new Date(b.requestedDate);
+      rd.setHours(0, 0, 0, 0);
+      return rd >= today;
+    }).length;
+  }, [myVenueBookings]);
+
+  const [selectedVenueBookingId, setSelectedVenueBookingId] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (selectedVenueBookingId && usedVenueBookingIdSet.has(selectedVenueBookingId)) {
+      setSelectedVenueBookingId('');
+    }
+  }, [selectedVenueBookingId, usedVenueBookingIdSet]);
 
   // Fonction pour générer les créneaux de 30 minutes
   const generateTimeSlots = () => {
@@ -48,7 +165,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
   const timeSlots = generateTimeSlots();
 
+<<<<<<< HEAD
   // Options de durée en minutes (affichées après sélection de l'heure de début)
+=======
+  // Durée pour événement unique (en minutes) — options affichées dans le select
+>>>>>>> dev_brach_env2
   const DURATION_OPTIONS = [
     { value: 30, label: '30 min' },
     { value: 60, label: '1 h' },
@@ -56,6 +177,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     { value: 120, label: '2 h' },
     { value: 150, label: '2 h 30' },
     { value: 180, label: '3 h' },
+<<<<<<< HEAD
     { value: 240, label: '4 h' },
   ];
 
@@ -67,6 +189,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     const endM = totalMinutes % 60;
     return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
   };
+=======
+    { value: 210, label: '3 h 30' },
+    { value: 240, label: '4 h' },
+  ];
+>>>>>>> dev_brach_env2
   
   React.useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -104,6 +231,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     maxComedians: initialData?.maxComedians?.toString() || '',
     requiredExperienceLevel: initialData?.requiredExperienceLevel || 'all',
     status: 'PUBLISHED',
+    imageUrl: initialData?.imageUrl || '',
   });
 
   // Type d'événement : unique ou récurrent
@@ -116,10 +244,48 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   const [recurringDates, setRecurringDates] = useState<string[]>([]);
   // Heures personnalisées par date (clé = date YYYY-MM-DD, valeur = { startTime, endTime })
   const [dateTimeOverrides, setDateTimeOverrides] = useState<Record<string, { startTime: string; endTime: string }>>({});
+  /** Durée en minutes pour événement unique (0 = non sélectionné). Remplace "Heure de fin" en mode unique. */
+  const [eventDurationMinutes, setEventDurationMinutes] = useState<number>(120);
+  const [uploadingEventImage, setUploadingEventImage] = useState(false);
+
+  /** Inclut la durée courante si elle n'est pas dans la grille (ex. journée 00:00–23:59 → 1439 min). */
+  const durationSelectOptions = useMemo(() => {
+    const base = [...DURATION_OPTIONS];
+    if (
+      eventDurationMinutes > 0 &&
+      !base.some((o) => o.value === eventDurationMinutes)
+    ) {
+      base.push({
+        value: eventDurationMinutes,
+        label: formatDurationSelectOptionLabel(eventDurationMinutes),
+      });
+    }
+    return base.sort((a, b) => a.value - b.value);
+  }, [eventDurationMinutes]);
 
   // Formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC qui affichait le jour précédent)
   const toLocalDateString = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  /** Calcule l'heure et la date de fin à partir de la date de début, l'heure de début et la durée (événement unique). */
+  const computeEndFromDuration = (
+    dateStr: string,
+    startTimeStr: string,
+    durationMinutes: number
+  ): { endTime: string; endDate?: string } => {
+    if (!dateStr || !startTimeStr || durationMinutes <= 0) {
+      return { endTime: '' };
+    }
+    const start = new Date(dateStr + 'T' + startTimeStr + ':00');
+    const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+    const endTime = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+    const endDateStr = toLocalDateString(end);
+    const startDateStr = toLocalDateString(start);
+    if (endDateStr !== startDateStr) {
+      return { endTime, endDate: endDateStr };
+    }
+    return { endTime };
+  };
 
   // Recalculer les dates récurrentes quand les options changent
   useEffect(() => {
@@ -186,9 +352,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         maxComedians: initialData.maxComedians?.toString() || '',
         requiredExperienceLevel: initialData?.requiredExperienceLevel || 'all',
         status: 'PUBLISHED',
+        imageUrl: initialData.imageUrl || '',
       });
     } else {
-      // Réinitialiser à vide si pas de données initiales
       setFormData({
         title: '',
         description: '',
@@ -207,8 +373,10 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         maxComedians: '',
         requiredExperienceLevel: 'all',
         status: 'PUBLISHED',
+        imageUrl: '',
       });
     }
+    setSelectedVenueBookingId('');
   }, [initialData]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -562,6 +730,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     }
   };
 
+<<<<<<< HEAD
   const handleDurationSelect = (durationMinutes: number) => {
     setFormData(prev => ({
       ...prev,
@@ -570,6 +739,33 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     }));
     setOpenDurationDropdown(false);
     setErrors(prev => ({ ...prev, durationMinutes: '' }));
+=======
+  const ALLOWED_EVENT_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+  const handleEventImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showWarning('Fichier trop volumineux. Formats acceptés: JPG, PNG, GIF (max 5MB).');
+      return;
+    }
+    if (!ALLOWED_EVENT_IMAGE_TYPES.includes(file.type)) {
+      showWarning('Formats acceptés: JPG, PNG, GIF (max 5MB).');
+      return;
+    }
+    setUploadingEventImage(true);
+    try {
+      const { imageUrl } = await uploadEventImage(file);
+      setFormData(prev => ({ ...prev, imageUrl }));
+    } catch (err: any) {
+      showWarning(err?.response?.data?.message || 'Erreur lors de l\'upload.');
+    } finally {
+      setUploadingEventImage(false);
+      e.target.value = '';
+    }
+  };
+  const handleRemoveEventImage = () => {
+    setFormData(prev => ({ ...prev, imageUrl: '' }));
+>>>>>>> dev_brach_env2
   };
 
   // Fonction pour obtenir les créneaux horaires disponibles pour l'heure de début
@@ -721,9 +917,32 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
       }
     }
     
+<<<<<<< HEAD
     // Validation de la durée (après heure de début)
     if (formData.startTime && !formData.durationMinutes) {
       newErrors.durationMinutes = 'La durée est requise';
+=======
+    // Validation heure de fin / durée
+    if (eventType === 'unique') {
+      if (!eventDurationMinutes || eventDurationMinutes <= 0) {
+        newErrors.duration = 'La durée est requise';
+      }
+    } else {
+      if (!formData.endTime) {
+        newErrors.endTime = 'L\'heure de fin est requise';
+      } else {
+        const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(formData.endTime)) {
+          newErrors.endTime = 'Format d\'heure invalide (HH:MM)';
+        } else if (formData.startTime && formData.endTime) {
+          const startTime = new Date(`2000-01-01T${formData.startTime}`);
+          const endTime = new Date(`2000-01-01T${formData.endTime}`);
+          if (endTime <= startTime) {
+            newErrors.endTime = 'L\'heure de fin doit être après l\'heure de début';
+          }
+        }
+      }
+>>>>>>> dev_brach_env2
     }
     
     // Validation de l'expérience minimale
@@ -781,11 +1000,53 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     }
   };
 
+  const applyVenueBookingToForm = (booking: IVenueBooking) => {
+    const v = booking.venue;
+    if (!v) return;
+    const dateStr = bookingDateLocalYMD(booking.requestedDate);
+    const st = normalizeHHMM(booking.startTime);
+    const et = normalizeHHMM(booking.endTime);
+    let dur = minutesBetweenStartEnd(booking.startTime, booking.endTime);
+    if (!dur || dur < 30) dur = 120;
+
+    setEventType('unique');
+    setRecurrenceStartDate(dateStr);
+    setEventDurationMinutes(dur);
+    setFormData((prev) => ({
+      ...prev,
+      city: v.city || '',
+      postalCode: v.postalCode || '',
+      address: v.address || '',
+      country: v.country || 'France',
+      date: dateStr,
+      venue: v.name || '',
+      venueType: mapVenueTypeToEventVenueType(v.venueType),
+      maxSpectators: v.capacity != null ? String(v.capacity) : prev.maxSpectators,
+      startTime: st,
+      endTime: et,
+      minExperience: prev.minExperience || '0',
+      maxComedians: prev.maxComedians || '5',
+      imageUrl: sanitizeEventImageUrl(v.photos?.[0]) ?? sanitizeEventImageUrl(prev.imageUrl) ?? '',
+    }));
+    setSelectedVenueBookingId(booking._id);
+    setErrors({});
+  };
+
+  const handleVenueBookingSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = e.target.value;
+    if (!id) {
+      setSelectedVenueBookingId('');
+      return;
+    }
+    const booking = confirmedVenueBookings.find((x) => x._id === id);
+    if (booking) applyVenueBookingToForm(booking);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('🔍 [CreateEventForm] handleSubmit appelé', { initialData, formData, eventType, recurringDates });
 
-    if (!user || !token) {
+    if (!user) {
       showWarning(WarningMessages.AUTH_REQUIRED_CREATE_EVENT);
       return;
     }
@@ -825,11 +1086,16 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     setIsSubmitting(true);
 
     try {
+<<<<<<< HEAD
+=======
+      // Durée en minutes pour l'API (requirements.duration)
+>>>>>>> dev_brach_env2
       const parseTime = (timeStr: string) => {
         if (!timeStr) return 0;
         const [hours, minutes] = timeStr.split(':').map(Number);
         return hours * 60 + minutes;
       };
+<<<<<<< HEAD
 
       // Recalculer l'heure de fin à partir de la durée (peut dépasser minuit → lendemain)
       const endTimeToSend = formData.startTime && formData.durationMinutes > 0
@@ -842,6 +1108,25 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         durationInMinutes = endMinutes - startMinutes;
       } else if (startMinutes > 0 || endMinutes > 0) {
         durationInMinutes = (24 * 60 - startMinutes) + endMinutes;
+=======
+      let durationInMinutes: number;
+      let effectiveEndTime: string;
+      let effectiveEndDate: string | undefined;
+      if (eventType === 'unique') {
+        durationInMinutes = eventDurationMinutes;
+        const computed = computeEndFromDuration(formData.date, formData.startTime, eventDurationMinutes);
+        effectiveEndTime = computed.endTime;
+        effectiveEndDate = computed.endDate;
+      } else {
+        const startMinutes = parseTime(formData.startTime);
+        const endMinutes = parseTime(formData.endTime);
+        if (endMinutes >= startMinutes) {
+          durationInMinutes = endMinutes - startMinutes;
+        } else {
+          durationInMinutes = (24 * 60 - startMinutes) + endMinutes;
+        }
+        effectiveEndTime = formData.endTime;
+>>>>>>> dev_brach_env2
       }
 
       // Extraire le code postal depuis l'adresse s'il n'est pas déjà présent
@@ -891,14 +1176,18 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         },
         status: formData.status,
         startTime: formData.startTime,
+<<<<<<< HEAD
         endTime: endTimeToSend || formData.endTime,
+=======
+        endTime: effectiveEndTime,
+>>>>>>> dev_brach_env2
         maxSpectators: formData.maxSpectators && formData.maxSpectators.trim() ? parseInt(formData.maxSpectators, 10) : undefined,
+        imageUrl: sanitizeEventImageUrl(formData.imageUrl),
       };
 
       const config = {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
       };
 
@@ -918,24 +1207,35 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           dates: recurringDates,
           dateTimes: dateTimes.length > 0 ? dateTimes : undefined,
         };
-        response = await api.post('/events', eventData, config);
+        response = await api.post('/events', eventData);
         console.log('✅ Réponse serveur (récurrent):', response.data);
         showSuccess(`${response.data.count || recurringDates.length} événements récurrents créés avec succès !`);
       } else {
         const eventData = {
           ...baseEventData,
           date: eventType === 'unique' ? formData.date : formData.date,
+          ...(eventType === 'unique' && effectiveEndDate && { endDate: effectiveEndDate }),
+          ...(selectedVenueBookingId && { venueBookingId: selectedVenueBookingId }),
         };
-        response = await api.post('/events', eventData, config);
+        response = await api.post('/events', eventData);
         console.log('✅ Réponse serveur:', response.data);
         showSuccess(SuccessMessages.EVENT_CREATED);
       }
 
+      queryClient.invalidateQueries({ queryKey: ['venue-bookings-in-use'] });
       onEventCreated();
       onClose();
     } catch (error: any) {
       console.error('Erreur lors de la création de l\'évènement:', error.response?.status);
-      showError(getErrorMessage(error, ErrorMessages.EVENT_CREATE_FAILED));
+      const status = error?.response?.status;
+      const serverMsg = error?.response?.data?.message as string | undefined;
+      const message =
+        status === 409 && serverMsg?.includes('réservation')
+          ? serverMsg
+          : status === 409
+            ? ErrorMessages.EVENT_DUPLICATE
+            : getErrorMessage(error, ErrorMessages.EVENT_CREATE_FAILED);
+      showError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -947,8 +1247,14 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     left: 0,
     right: 0,
     bottom: 0,
+<<<<<<< HEAD
     backgroundColor: 'rgba(0, 0, 0, 0.25)',
     backdropFilter: 'blur(4px)',
+=======
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+>>>>>>> dev_brach_env2
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -958,7 +1264,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   };
 
   const formStyle: CSSProperties = {
+<<<<<<< HEAD
     background: 'linear-gradient(to bottom, #1a1a2e 0%, #16213e 40%, #331f41 100%)',
+=======
+    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+>>>>>>> dev_brach_env2
     borderRadius: '16px',
     width: '100%',
     maxWidth: isMobile ? '100%' : '800px',
@@ -985,17 +1295,26 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
   const contentStyle: CSSProperties = {
     padding: isMobile ? '16px' : '24px',
-    color: '#fff'
+    color: '#fff',
+    background: 'linear-gradient(to bottom, #1a1a2e 0%, #16213e 40%, #331f41 100%)',
+    boxShadow: '0px 4px 12px 0px rgba(0, 0, 0, 0.15), 0px 4px 12px 0px rgba(0, 0, 0, 0.15)',
   };
 
   const inputStyle: CSSProperties = {
     width: '100%',
     padding: isMobile ? '14px 16px' : '12px 16px',
     fontSize: isMobile ? '16px' : '14px', // 16px prevents zoom on iOS
+<<<<<<< HEAD
     border: '1px solid #ccc',
     borderRadius: '8px',
     background: '#ffffff',
     color: '#000000',
+=======
+    border: '1px solid #ddd',
+    borderRadius: '8px',
+    background: 'rgba(255, 255, 255, 1)',
+    color: '#1a1a1a',
+>>>>>>> dev_brach_env2
     marginBottom: '4px'
   };
 
@@ -1005,7 +1324,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     appearance: 'none', // Supprime le style par défaut du navigateur
     WebkitAppearance: 'none', // Pour Safari/Chrome
     MozAppearance: 'none', // Pour Firefox
+<<<<<<< HEAD
     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000000' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+=======
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231a1a1a' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+>>>>>>> dev_brach_env2
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 12px center',
     backgroundSize: '12px',
@@ -1076,6 +1399,15 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     gap: '20px',
   };
 
+  const fieldsLockedByVenueBooking = Boolean(selectedVenueBookingId);
+  const lockedFromReservationStyle: CSSProperties = fieldsLockedByVenueBooking
+    ? {
+        opacity: 0.55,
+        pointerEvents: 'none',
+        filter: 'grayscale(0.2)',
+      }
+    : {};
+
   return (
     <div style={modalStyle}>
       <div style={formStyle}>
@@ -1110,6 +1442,70 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         {/* Content */}
         <div style={contentStyle}>
           <form onSubmit={handleSubmit}>
+            {user?.role === 'ORGANIZER' && (
+              <div
+                style={{
+                  marginBottom: 24,
+                  padding: 16,
+                  backgroundColor: 'rgba(232, 93, 117, 0.08)',
+                  borderRadius: 12,
+                  border: '1px solid rgba(232, 93, 117, 0.25)',
+                }}
+              >
+                <label style={{ display: 'block', marginBottom: 8, fontWeight: 600, color: '#ffb3c1', fontSize: 14 }}>
+                  Remplir depuis une réservation confirmée (Salles → Mes réservations)
+                </label>
+                <select
+                  value={selectedVenueBookingId}
+                  onChange={handleVenueBookingSelect}
+                  disabled={loadingVenueBookings || loadingUsedVenueBookings}
+                  style={{
+                    width: '100%',
+                    padding: isMobile ? '14px 16px' : '12px 16px',
+                    fontSize: isMobile ? '16px' : '14px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: 8,
+                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    color: '#1a1a1a',
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231a1a1a' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 12px center',
+                    backgroundSize: '12px',
+                  }}
+                >
+                  <option value="">— Choisir une réservation —</option>
+                  {confirmedVenueBookings.map((b) => {
+                    const label = `${b.venue?.name || 'Salle'} · ${new Date(b.requestedDate).toLocaleDateString('fr-FR')} · ${normalizeHHMM(b.startTime)}–${normalizeHHMM(b.endTime)}`;
+                    return (
+                      <option key={b._id} value={b._id}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+                {(loadingVenueBookings || loadingUsedVenueBookings) && (
+                  <p style={{ margin: '8px 0 0', fontSize: 12, color: '#888' }}>Chargement des réservations…</p>
+                )}
+                {!loadingVenueBookings && !loadingUsedVenueBookings && confirmedVenueBookings.length === 0 && (
+                  <p style={{ margin: '8px 0 0', fontSize: 12, color: '#888', lineHeight: 1.4 }}>
+                    {availableVenueBookingsCount > 0 ? (
+                      <>
+                        Toutes vos réservations confirmées à venir sont déjà liées à un événement. Une réservation de salle ne
+                        peut servir qu&apos;à un seul événement.
+                      </>
+                    ) : (
+                      <>
+                        Aucune réservation confirmée à venir. Les réservations au statut « Confirmée » (paiement effectué ou
+                        salle gratuite) apparaissent dans <strong>Salles</strong> → <strong>Mes réservations</strong>.
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Titre et Description en haut */}
             <div style={{ marginBottom: '32px' }}>
               {/* Titre */}
@@ -1158,6 +1554,62 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                   </p>
                 )}
               </div>
+
+              {/* Photo de l'événement */}
+              <div style={{ marginTop: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  Photo de l'événement
+                </label>
+                {formData.imageUrl && (
+                  <div style={{ marginBottom: '10px' }}>
+                    <img
+                      src={formData.imageUrl}
+                      alt="Aperçu"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: 160,
+                        objectFit: 'cover',
+                        borderRadius: 8,
+                        border: '1px solid #444',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveEventImage}
+                      style={{
+                        marginTop: '8px',
+                        padding: '8px 12px',
+                        borderRadius: 6,
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        background: 'rgba(220, 53, 69, 0.15)',
+                        color: '#ffb3b3',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                      }}
+                    >
+                      Supprimer la photo
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif"
+                  onChange={handleEventImageChange}
+                  disabled={uploadingEventImage}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    borderRadius: 5,
+                    border: '1px solid #444',
+                    backgroundColor: '#333',
+                    color: '#fff',
+                    cursor: uploadingEventImage ? 'wait' : 'pointer',
+                  }}
+                />
+                <p style={{ fontSize: '0.85em', color: '#aaa', marginTop: '5px' }}>
+                  Formats acceptés: JPG, PNG, GIF (max 5MB)
+                </p>
+              </div>
             </div>
 
             {/* Section Localisation */}
@@ -1166,7 +1618,13 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                 <MapPin size={20} style={{ color: '#ff416c' }} />
                 <span>Localisation</span>
               </div>
-              <div style={sectionGridStyle}>
+              {fieldsLockedByVenueBooking && (
+                <p style={{ margin: '0 0 16px', fontSize: 13, color: '#aaa', lineHeight: 1.45 }}>
+                  Ces champs reprennent votre réservation de salle et ne sont pas modifiables ici. Retirez la réservation
+                  sélectionnée en haut du formulaire pour les modifier.
+                </p>
+              )}
+              <div style={{ ...sectionGridStyle, ...lockedFromReservationStyle }}>
                 {/* Lieu/Bar */}
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
@@ -1177,6 +1635,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     id="venue"
                     value={formData.venue}
                     onChange={handleChange}
+                    disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
                       borderColor: errors.venue ? '#ef4444' : '#ccc'
@@ -1200,6 +1659,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     id="address"
                     value={formData.address}
                     onChange={handleChange}
+                    disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
                       borderColor: errors.address ? '#ef4444' : '#ccc'
@@ -1249,7 +1709,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     }}
                     placeholder="Ex: 75001"
                     maxLength={5}
-                    disabled={isValidatingPostalCode}
+                    disabled={isValidatingPostalCode || fieldsLockedByVenueBooking}
                   />
                   {(errors.postalCode || postalCodeError) && (
                     <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
@@ -1307,6 +1767,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     id="city"
                     value={formData.city}
                     onChange={handleChange}
+                    disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
                       borderColor: errors.city ? '#ef4444' : '#ccc'
@@ -1330,6 +1791,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     id="country"
                     value={formData.country}
                     onChange={handleChange}
+                    disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
                       borderColor: errors.country ? '#ef4444' : '#ccc'
@@ -1351,6 +1813,13 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                 <Calendar size={20} style={{ color: '#ff416c' }} />
                 <span>Informations d'évènement</span>
               </div>
+              {fieldsLockedByVenueBooking && (
+                <p style={{ margin: '0 0 16px', fontSize: 13, color: '#aaa', lineHeight: 1.45 }}>
+                  Ces informations reprennent votre réservation de salle et ne sont pas modifiables ici. Retirez la
+                  réservation sélectionnée en haut du formulaire pour les modifier.
+                </p>
+              )}
+              <div style={lockedFromReservationStyle}>
               {/* Choix : Événement unique ou récurrent — deux blocs séparés */}
               <label style={{ display: 'block', marginBottom: '12px', fontWeight: '500', color: '#ccc' }}>
                 Type d'événement
@@ -1374,6 +1843,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     type="radio"
                     name="eventType"
                     checked={eventType === 'unique'}
+                    disabled={fieldsLockedByVenueBooking}
                     onChange={() => setEventType('unique')}
                     style={{ width: '18px', height: '18px', accentColor: '#ff416c', flexShrink: 0 }}
                   />
@@ -1397,6 +1867,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     type="radio"
                     name="eventType"
                     checked={eventType === 'recurring'}
+                    disabled={fieldsLockedByVenueBooking}
                     onChange={() => {
                       setEventType('recurring');
                       setRecurrenceStartDate(formData.date);
@@ -1419,7 +1890,12 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       id="date"
                       value={formData.date}
                       onChange={handleChange}
+<<<<<<< HEAD
                       style={{ ...inputStyle, borderColor: errors.date ? '#ef4444' : '#ccc' }}
+=======
+                      disabled={fieldsLockedByVenueBooking}
+                      style={{ ...inputStyle, borderColor: errors.date ? '#ef4444' : '#444' }}
+>>>>>>> dev_brach_env2
                     />
                     {errors.date && <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>{errors.date}</p>}
                   </div>
@@ -1437,7 +1913,12 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         type="date"
                         value={recurrenceStartDate}
                         onChange={(e) => setRecurrenceStartDate(e.target.value)}
+<<<<<<< HEAD
                         style={{ ...inputStyle, borderColor: errors.recurrenceStartDate ? '#ef4444' : '#ccc' }}
+=======
+                        disabled={fieldsLockedByVenueBooking}
+                        style={{ ...inputStyle, borderColor: errors.recurrenceStartDate ? '#ef4444' : '#444' }}
+>>>>>>> dev_brach_env2
                         min={new Date().toISOString().split('T')[0]}
                       />
                       {errors.recurrenceStartDate && (
@@ -1454,6 +1935,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                           type="date"
                           value={recurrenceEndDate}
                           onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                          disabled={fieldsLockedByVenueBooking}
                           style={{
                             ...inputStyle,
                             flex: 1,
@@ -1477,6 +1959,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     <select
                       value={recurrenceType}
                       onChange={(e) => setRecurrenceType(e.target.value as 'daily' | 'weekly' | 'monthly')}
+                      disabled={fieldsLockedByVenueBooking}
                       style={{ ...selectStyle, maxWidth: '220px' }}
                     >
                       <option value="daily">Quotidien</option>
@@ -1495,6 +1978,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                           <button
                             key={value}
                             type="button"
+                            disabled={fieldsLockedByVenueBooking}
                             onClick={() => toggleRecurrenceWeeklyDay(value)}
                             style={{
                               padding: '10px 14px',
@@ -1556,6 +2040,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                                 <select
                                   value={startVal}
                                   onChange={(e) => setDateTimeForDate(dateStr, e.target.value, endVal)}
+                                  disabled={fieldsLockedByVenueBooking}
                                   style={{ ...inputStyle, padding: '8px 10px', marginBottom: 0, minWidth: '90px' }}
                                 >
                                   {timeSlots.map((s) => (
@@ -1566,6 +2051,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                                 <select
                                   value={endVal}
                                   onChange={(e) => setDateTimeForDate(dateStr, startVal, e.target.value)}
+                                  disabled={fieldsLockedByVenueBooking}
                                   style={{ ...inputStyle, padding: '8px 10px', marginBottom: 0, minWidth: '90px' }}
                                 >
                                   {timeSlots.map((s) => (
@@ -1603,9 +2089,15 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       cursor: 'pointer'
                     }}
                   >
+<<<<<<< HEAD
 <span style={{ color: formData.startTime ? '#000' : '#999' }}>
                       {formData.startTime
                         ? timeSlots.find(slot => slot.value === formData.startTime)?.label
+=======
+                    <span style={{ color: formData.startTime ? 'rgba(0, 0, 0, 1)' : '#999' }}>
+                      {formData.startTime 
+                        ? timeSlots.find(slot => slot.value === formData.startTime)?.label 
+>>>>>>> dev_brach_env2
                         : 'Sélectionnez une heure'}
                     </span>
                     <ChevronDown 
@@ -1667,6 +2159,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                   )}
                 </div>
 
+<<<<<<< HEAD
                 {/* Durée - Dropdown (affiché après sélection de l'heure de début) */}
                 <div ref={durationRef} style={{ position: 'relative', zIndex: 99 }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
@@ -1744,8 +2237,91 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         >
                           {opt.label}
                         </div>
+=======
+                {/* Événement unique : Durée — Récurrent : Heure de fin */}
+                {eventType === 'unique' ? (
+                  <div style={{ position: 'relative', zIndex: 99 }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                      Durée *
+                    </label>
+                    <select
+                      value={eventDurationMinutes}
+                      onChange={(e) => setEventDurationMinutes(Number(e.target.value))}
+                      disabled={fieldsLockedByVenueBooking}
+                      style={{
+                        ...selectStyle,
+                        borderColor: errors.duration ? '#ef4444' : '#444',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {durationSelectOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+>>>>>>> dev_brach_env2
                       ))}
+                    </select>
+                    {formData.date && formData.startTime && eventDurationMinutes > 0 && (() => {
+                      const { endTime, endDate } = computeEndFromDuration(formData.date, formData.startTime, eventDurationMinutes);
+                      const timePart = endTime.replace(':', 'h');
+                      const isFullDayReservation =
+                        FULL_DAY_RESERVATION_MINUTES.includes(eventDurationMinutes) && !endDate;
+                      let label: string;
+                      if (isFullDayReservation) {
+                        label = `réservation journée — jusqu'à ${timePart}`;
+                      } else if (endDate) {
+                        const endDateObj = new Date(endDate + 'T' + endTime + ':00');
+                        label =
+                          endDateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' à ' + timePart;
+                      } else {
+                        label = 'à ' + timePart;
+                      }
+                      return (
+                        <p style={{ fontSize: '12px', color: '#aaa', marginTop: '6px' }}>
+                          Fin : {label}
+                        </p>
+                      );
+                    })()}
+                    {errors.duration && (
+                      <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                        {errors.duration}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div ref={endTimeRef} style={{ position: 'relative', zIndex: 99 }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                      Heure de fin *
+                    </label>
+                    <div
+                      onClick={() => {
+                        setOpenEndTimeDropdown(!openEndTimeDropdown);
+                        setOpenStartTimeDropdown(false);
+                      }}
+                      style={{
+                        ...selectStyle,
+                        borderColor: errors.endTime ? '#ef4444' : '#444',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <span style={{ color: formData.endTime ? 'rgba(0, 0, 0, 1)' : '#999' }}>
+                        {formData.endTime 
+                          ? timeSlots.find(slot => slot.value === formData.endTime)?.label 
+                          : 'Sélectionnez une heure'}
+                      </span>
+                      <ChevronDown 
+                        size={18} 
+                        style={{ 
+                          color: '#fff', 
+                          transform: openEndTimeDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s ease'
+                        }} 
+                      />
                     </div>
+<<<<<<< HEAD
                   )}
                   {formData.startTime && formData.durationMinutes > 0 && (
                     <p style={{ color: '#64748B', fontSize: '13px', margin: '8px 0 0' }}>
@@ -1766,6 +2342,58 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     </p>
                   )}
                 </div>
+=======
+                    {openEndTimeDropdown && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: '4px',
+                        backgroundColor: '#1a1a2e',
+                        border: '1px solid #444',
+                        borderRadius: '8px',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        zIndex: 1000,
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
+                      }}>
+                        {timeSlots.map((slot) => (
+                          <div
+                            key={slot.value}
+                            onClick={() => handleTimeSelect(slot.value, 'endTime')}
+                            style={{
+                              padding: '12px 16px',
+                              cursor: 'pointer',
+                              color: '#fff',
+                              backgroundColor: formData.endTime === slot.value ? 'rgba(255, 65, 108, 0.3)' : 'transparent',
+                              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                              transition: 'background-color 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (formData.endTime !== slot.value) {
+                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (formData.endTime !== slot.value) {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                              }
+                            }}
+                          >
+                            {slot.label}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {errors.endTime && (
+                      <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                        {errors.endTime}
+                      </p>
+                    )}
+                  </div>
+                )}
+>>>>>>> dev_brach_env2
 
                 {/* Type de lieu */}
                 <div>
@@ -1776,6 +2404,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     id="venueType"
                     value={formData.venueType}
                     onChange={handleChange}
+                    disabled={fieldsLockedByVenueBooking}
                     style={selectStyle}
                   >
                     <option value="">-- Sélectionnez --</option>
@@ -1797,6 +2426,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     id="maxSpectators"
                     value={formData.maxSpectators}
                     onChange={handleChange}
+                    disabled={fieldsLockedByVenueBooking}
                     min={1}
                     max={10000}
                     placeholder="Nombre de places pour spectateur"
@@ -1811,6 +2441,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     </p>
                   )}
                 </div>
+              </div>
               </div>
             </div>
 

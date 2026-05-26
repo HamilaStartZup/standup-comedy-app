@@ -51,7 +51,7 @@ export const addEventFavorite = async (req: AuthRequest, res: Response): Promise
 
     // Empêcher un comédien d'ajouter ses propres évènements (si jamais il est aussi organizer)
     if (event.organizer.toString() === comedianObjectId.toString()) {
-      res.status(400).json({
+      res.status(422).json({
         message: 'Vous ne pouvez pas ajouter vos propres évènements aux favoris'
       });
       return;
@@ -191,10 +191,7 @@ export const removeEventFavorite = async (req: AuthRequest, res: Response): Prom
     // Émettre un évènement SSE pour notifier tous les clients
     emitEventFavoriteRemoved(comedianId, eventId);
 
-    res.json({
-      message: 'Évènement retiré des favoris avec succès',
-      favoriteEvents: updatedComedian.favoriteEvents || []
-    });
+    res.status(204).send();
   } catch (error: any) {
     console.error('❌ [FAVORIS_EVENT] Erreur lors du retrait des favoris:', error);
     console.error('❌ [FAVORIS_EVENT] Détails de l\'erreur:', {

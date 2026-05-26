@@ -203,10 +203,7 @@ export const removeApplicationFavorite = async (req: AuthRequest, res: Response)
     // Émettre un évènement SSE pour notifier tous les clients
     emitApplicationFavoriteRemoved(organizerId, applicationId);
 
-    res.json({
-      message: 'Candidature retirée des favoris avec succès',
-      favoriteApplications: updatedOrganizer.favoriteApplications || []
-    });
+    res.status(204).send();
   } catch (error: any) {
     console.error('❌ [FAVORIS_APP] Erreur lors du retrait des favoris:', error);
     console.error('❌ [FAVORIS_APP] Détails de l\'erreur:', {

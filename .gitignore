@@ -1,70 +1,173 @@
-# Variables d'environnement (CRITIQUE pour la sécurité)
+# ======================
+
+# 🔐 ENVIRONNEMENT (TRÈS IMPORTANT)
+
+# ======================
+
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 
-# Variables d'environnement du client (Vite)
+# Client env
+
 client/.env
-client/.env.local
-client/.env.development
-client/.env.development.local
-client/.env.production
-client/.env.production.local
-client/.env.test
-client/.env.test.local
+client/.env.*
+!client/.env.example
 
-# Fichiers de configuration avec secrets
-# Note: env.ts est maintenant versionné car il ne contient pas de secrets,
-# il lit uniquement les variables d'environnement
-**/config/env.js
-server/dist/config/env.js
+# Server env
 
-# Fichiers de debug avec credentials
-server/debug-events.js
+server/.env
+server/.env.*
+!server/.env.example
 
-# Fichiers de base de données locaux
+# ======================
+
+# 📦 DEPENDENCIES
+
+# ======================
+
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# ======================
+
+# 🏗️ BUILD / DIST
+
+# ======================
+
+dist/
+build/
+
+# Client build (Vite)
+
+client/dist/
+client/build/
+
+# Server build
+
+server/dist/
+server/build/
+
+# Vite cache
+
+client/.vite/
+
+# ======================
+
+# 📁 UPLOADS & FILES UTILISATEUR
+
+# ======================
+
+server/uploads/
+uploads/
+
+# ======================
+
+# 🗄️ DATABASE LOCALE
+
+# ======================
+
 *.db
 *.sqlite
 *.sqlite3
 
-# Logs détaillés
-logs
+# ======================
+
+# 🧪 TESTS & COVERAGE
+
+# ======================
+
+coverage/
+*.lcov
+
+# ======================
+
+# 📝 LOGS
+
+# ======================
+
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-# Coverage des tests
-coverage/
-*.lcov
+# ======================
 
-# Cache et fichiers temporaires
+# ⚙️ CACHE & TEMP
+
+# ======================
+
 .cache/
-*.tsbuildinfo
 .tmp/
 tmp/
+*.tsbuildinfo
 
-# Fichiers de déploiement
-.vercel
-.netlify
+# ======================
 
-# Dependencies
-node_modules
-dist
-dist-ssr
-*.local
+# 🚀 DEPLOYMENT
 
-# Editor directories and files
+# ======================
+
+.vercel/
+.netlify/
+
+# ======================
+
+# 🧑‍💻 IDE / ÉDITEUR
+
+# ======================
+
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
+Thumbs.db
+
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# ======================
+
+# 🔒 CONFIG SENSIBLE
+
+# ======================
+
+**/config/env.js
+server/dist/config/env.js
+
+# Debug files
+
+server/debug-events.js
+
+# ======================
+
+# 📦 PACKAGE MANAGERS
+
+# ======================
+
+.pnpm-store/
+.npm/
+
+# ======================
+
+# 🔑 CLÉS & CERTIFICATS
+
+# ======================
+
+*.pem
+*.key
+*.crt
+
+# ======================
+
+# 📁 AUTRES
+
+# ======================
+
+*.local

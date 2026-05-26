@@ -2,11 +2,13 @@ import { type CSSProperties, useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useAlert } from '../hooks/useAlert';
 import api, { markNotificationAsRead, markAllNotificationsAsRead, deleteNotification } from '../services/api';
+import { getRedirectPath, type NotificationType } from '../utils/notificationRedirect';
 
 interface Notification {
   _id: string;
-  type: 'new_application' | 'application_accepted' | 'application_rejected' | 'event_updated' | 'absence_marked' | 'event_cancelled' | 'new_event';
+  type: NotificationType;
   title: string;
   message: string;
   relatedEvent?: {
@@ -23,6 +25,13 @@ interface Notification {
     firstName: string;
     lastName: string;
   };
+  relatedVenue?: {
+    _id: string;
+    name: string;
+  };
+  relatedBooking?: {
+    _id: string;
+  };
   read: boolean;
   readAt?: string;
   createdAt: string;
@@ -30,6 +39,7 @@ interface Notification {
 
 const NotificationDropdown = () => {
   const { user } = useAuth();
+  const { showError, showInfo } = useAlert();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
@@ -37,10 +47,11 @@ const NotificationDropdown = () => {
   const isOrganizer = user?.role === 'ORGANIZER';
   const isComedian = user?.role === 'COMEDIAN';
   const isSpectator = user?.role === 'SPECTATOR';
-  const shouldShowNotifications = isOrganizer || isComedian || isSpectator;
+  const isLieu = user?.role === 'LIEU';
+  const shouldShowNotifications = isOrganizer || isComedian || isSpectator || isLieu;
 
   // Récupérer les notifications
-  const { data: notificationsData, refetch } = useQuery({
+  const { data: notificationsData, isError: isNotifError } = useQuery({
     queryKey: ['notifications', user?._id],
     queryFn: async () => {
       const response = await api.get('/notifications?read=false&limit=10');
@@ -50,8 +61,8 @@ const NotificationDropdown = () => {
     refetchInterval: 30000, // Rafraîchir toutes les 30 secondes
   });
 
-  const notifications: Notification[] = notificationsData?.notifications || [];
-  const unreadCount = notificationsData?.unreadCount || 0;
+  const notifications: Notification[] = isNotifError ? [] : (notificationsData?.notifications || []);
+  const unreadCount = isNotifError ? 0 : (notificationsData?.unreadCount || 0);
 
   // Fermer le dropdown si on clique en dehors
   useEffect(() => {
@@ -78,25 +89,17 @@ const NotificationDropdown = () => {
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
       } catch (error) {
         console.error('Erreur lors du marquage de la notification:', error);
+        showError('Impossible de marquer la notification comme lue');
       }
     }
 
-    // Naviguer vers la page appropriée
-    if (notification.type === 'new_event' && notification.relatedEvent?._id) {
-      navigate('/spectateur');
-      setIsOpen(false);
-      return;
+    // Naviguer ou afficher un toast selon le résultat de redirection
+    const result = getRedirectPath(notification, user?.role);
+    if (result.path) {
+      navigate(result.path);
+    } else if (result.toast) {
+      showInfo(result.toast);
     }
-    if (notification.relatedEvent?._id) {
-      if (notification.type === 'new_application' || notification.relatedApplication) {
-        navigate(`/applications?eventId=${notification.relatedEvent._id}`);
-      } else {
-        navigate(`/events`);
-      }
-    } else {
-      navigate('/applications');
-    }
-
     setIsOpen(false);
   };
 
@@ -106,6 +109,7 @@ const NotificationDropdown = () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
       console.error('Erreur lors du marquage de toutes les notifications:', error);
+      showError('Impossible de marquer toutes les notifications comme lues');
     }
   };
 
@@ -116,6 +120,7 @@ const NotificationDropdown = () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
       console.error('Erreur lors de la suppression de la notification:', error);
+      showError('Impossible de supprimer la notification');
     }
   };
 
@@ -133,8 +138,35 @@ const NotificationDropdown = () => {
         return '🚫';
       case 'event_cancelled':
         return '🛑';
+      case 'event_deleted':
+        return '🗑️';
       case 'new_event':
         return '📅';
+      case 'venue_booking_request':
+        return '🏛️';
+      case 'venue_booking_response':
+        return '🏛️';
+      case 'venue_booking_cancelled_by_owner':
+        return '🏛️';
+      case 'venue_booking_cancelled_by_requester':
+        return '🏛️';
+      case 'venue_date_blocked':
+        return '🔒';
+      case 'venue_booking_payment_required':
+        return '💳';
+      case 'venue_booking_confirmed':
+        return '✅';
+      case 'venue_booking_payment_reminder':
+        return '⏰';
+      case 'venue_booking_payment_expired':
+        return '⏳';
+      case 'venue_booking_refunded':
+        return '💰';
+      case 'venue_deleted_refund':
+        return '🗑️';
+      case 'late_cancellation_organizer':
+      case 'late_cancellation_comedian':
+        return '⚠️';
       default:
         return '🔔';
     }
@@ -204,6 +236,16 @@ const NotificationDropdown = () => {
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .notification-dropdown {
+            left: 0 !important;
+            right: auto !important;
+            width: 240px !important;
+            max-width: 240px !important;
+          }
+        }
+      `}</style>
       <div
         style={badgeStyle}
         onClick={() => setIsOpen(!isOpen)}
@@ -247,7 +289,7 @@ const NotificationDropdown = () => {
       </div>
 
       {isOpen && (
-        <div style={dropdownStyle}>
+        <div className="notification-dropdown" style={dropdownStyle}>
           {/* En-tête */}
           <div style={{
             padding: '12px 14px',
@@ -290,7 +332,9 @@ const NotificationDropdown = () => {
                 textAlign: 'center',
                 color: '#aaa',
               }}>
-                <p style={{ margin: 0, fontSize: '0.9em' }}>Aucune notification</p>
+                <p style={{ margin: 0, fontSize: '0.9em' }}>
+                  {isNotifError ? 'Impossible de charger les notifications' : 'Aucune notification'}
+                </p>
               </div>
             ) : (
               notifications.map((notification) => (
@@ -375,39 +419,6 @@ const NotificationDropdown = () => {
             )}
           </div>
 
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div style={{
-              padding: '10px 12px',
-              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-              textAlign: 'center',
-              backgroundColor: 'rgba(0, 0, 0, 0.2)',
-            }}>
-              <button
-                onClick={() => {
-                  if (isOrganizer) {
-                    navigate('/applications');
-                  } else if (isComedian) {
-                    navigate('/applications');
-                  }
-                  setIsOpen(false);
-                }}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '4px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  background: 'rgba(255, 65, 108, 0.2)',
-                  color: '#ff416c',
-                  fontSize: '0.85em',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  width: '100%',
-                }}
-              >
-                {isOrganizer ? 'Voir toutes les candidatures' : 'Voir mes candidatures'}
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>

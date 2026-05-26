@@ -54,6 +54,24 @@ export interface IOrganisateurProfile {
   phone?: string;
 }
 
+export interface ILieuProfile {
+  companyName?: string;
+  description?: string;
+  website?: string;
+  socialLinks?: {
+    youtube?: string;
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+  };
+  contactName?: string;
+  contactEmail?: string;
+  phone?: string;
+  legalStatus?: string;
+  siret?: string;
+  invoicingAvailable?: boolean;
+}
+
 export interface User {
   email: string;
   password?: string;
@@ -68,9 +86,10 @@ export interface User {
     dailyRecapEmail?: boolean;
     lastDailyRecapAt?: Date;
   };
-  role: 'COMEDIAN' | 'ORGANIZER' | 'SUPER_ADMIN' | 'SPECTATOR';
+  role: 'COMEDIAN' | 'ORGANIZER' | 'SUPER_ADMIN' | 'SPECTATOR' | 'LIEU';
   profile?: UserProfile;
   organizerProfile?: IOrganisateurProfile;
+  lieuProfile?: ILieuProfile;
   stats?: any;
   onboardingCompleted?: boolean;
   emailVerified?: boolean;
@@ -100,6 +119,11 @@ export interface User {
   deactivatedAt?: Date;
   deactivatedBy?: Types.ObjectId;
   deactivationReason?: string;
+  // Restriction temporaire (ex: signalement en cours)
+  isRestricted?: boolean;
+  restrictedAt?: Date;
+  // Permet d'afficher le switch retour vers le compte LIEU
+  canSwitchToLieu?: boolean;
   // Consentement RGPD
   consent?: {
     termsAccepted?: boolean;
@@ -118,10 +142,11 @@ export interface IPopulatedUser {
   firstName: string;
   lastName: string;
   email: string;
-  role: 'COMEDIAN' | 'ORGANIZER' | 'SUPER_ADMIN' | 'SPECTATOR';
+  role: 'COMEDIAN' | 'ORGANIZER' | 'SUPER_ADMIN' | 'SPECTATOR' | 'LIEU';
   // Add other fields that might be populated and needed, e.g., companyName, city
   companyName?: string;
   city?: string;
   organizerProfile?: IOrganisateurProfile;
+  lieuProfile?: ILieuProfile;
   profile?: UserProfile;
-} 
+}

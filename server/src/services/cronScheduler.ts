@@ -58,6 +58,12 @@ const cronJobs: CronJob[] = [
     schedule: config.cron.dailySpectatorRecapSchedule,
     endpoint: '/api/email/jobs/daily-spectator-recap',
     enabled: config.cron.enabled
+  },
+  {
+    name: 'Expiration réservations impayées (72h)',
+    schedule: config.cron.paymentTimeoutSchedule,
+    endpoint: '/api/venues/jobs/check-payment-timeouts',
+    enabled: config.cron.enabled
   }
 ];
 

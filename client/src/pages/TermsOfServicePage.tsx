@@ -262,7 +262,7 @@ function TermsOfServicePage() {
 
         <h2 id="contact" style={sectionTitleStyle}>15. Contact</h2>
         <p style={textStyle}>
-          Pour toute question concernant ces CGU, vous pouvez nous contacter à : <strong>contact.standupconnect@gmail.com</strong>
+          Pour toute question concernant ces CGU, vous pouvez nous contacter à : <strong>contact@connectcomedyclub.com</strong>
         </p>
 
         {/* <p style={{ ...textStyle, marginTop: '40px', fontStyle: 'italic', color: 'rgba(255,255,255,0.6)' }}>

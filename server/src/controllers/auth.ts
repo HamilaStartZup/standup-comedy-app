@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { UserModel } from '../models/User';
+import { VenueModel } from '../models/Venue';
 import { PasswordResetRequestModel } from '../models/PasswordResetRequest';
 import { ApplicationModel } from '../models/Application';
 import { AbsenceModel } from '../models/Absence';
@@ -14,6 +15,17 @@ import { config } from '../config/env';
 import { AuthRequest } from '../middleware/auth';
 import sgMail from '@sendgrid/mail';
 import { emitUserRegistered, emitPasswordReset } from '../services/eventEmitter';
+import { getAuthCookieOptions, AUTH_COOKIE_MAX_AGE } from '../utils/cookieOptions';
+import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
+
+/**
+ * POST /api/auth/logout
+ * Clears the HttpOnly auth_token cookie (works for email/password and OAuth sessions)
+ */
+export const logoutClassic = async (_req: Request, res: Response) => {
+  res.clearCookie('auth_token', getAuthCookieOptions());
+  res.status(204).send();
+};
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -22,6 +34,13 @@ export const register = async (req: Request, res: Response) => {
 
     console.log('📝 [REGISTER] Rôle:', role);
     console.log('📝 [REGISTER] Profile data:', profileData);
+
+    // Téléphone obligatoire pour humoristes, organisateurs et lieux
+    if ((role === 'COMEDIAN' || role === 'ORGANIZER' || role === 'LIEU') && (!phone || typeof phone !== 'string' || !phone.trim())) {
+      return res.status(400).json({ message: 'Le numéro de téléphone est requis' });
+    }
+
+    // La vérification SMS n'est plus requise à l'inscription.
 
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await UserModel.findOne({ email });
@@ -68,6 +87,19 @@ export const register = async (req: Request, res: Response) => {
       phone: phone || '',
     } : undefined;
 
+    const lieuProfile = role === 'LIEU' ? {
+      companyName: '',
+      description: '',
+      website: '',
+      socialLinks: {},
+      contactName: firstName && lastName ? `${firstName} ${lastName}` : '',
+      contactEmail: email || '',
+      phone: phone || '',
+      legalStatus: '',
+      siret: '',
+      invoicingAvailable: false,
+    } : undefined;
+
     // Créer un nouvel utilisateur
     const userData: any = {
       email,
@@ -96,7 +128,10 @@ export const register = async (req: Request, res: Response) => {
     if (organizerProfile) {
       userData.organizerProfile = organizerProfile;
     }
-    
+    if (lieuProfile) {
+      userData.lieuProfile = lieuProfile;
+    }
+
     console.log('📝 [REGISTER] Données utilisateur à créer:', JSON.stringify({ ...userData, password: '***' }, null, 2));
     
     const user = new UserModel(userData);
@@ -144,7 +179,14 @@ export const register = async (req: Request, res: Response) => {
       userResponse.profile = user.profile;
     } else if (role === 'ORGANIZER' && user.organizerProfile) {
       userResponse.organizerProfile = user.organizerProfile;
+    } else if (role === 'LIEU' && user.lieuProfile) {
+      userResponse.lieuProfile = user.lieuProfile;
     }
+
+    res.cookie('auth_token', token, {
+      ...getAuthCookieOptions(),
+      maxAge: AUTH_COOKIE_MAX_AGE,
+    });
 
     res.status(201).json({
       message: 'Utilisateur enregistré avec succès',
@@ -155,20 +197,20 @@ export const register = async (req: Request, res: Response) => {
     console.error('❌ [REGISTER] Erreur lors de l\'enregistrement:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     // Logs détaillés pour le debugging
-    console.error('❌ [REGISTER] Détails de l\'erreur:', { 
-      errorMessage, 
+    console.error('❌ [REGISTER] Détails de l\'erreur:', {
+      errorMessage,
       errorStack,
       errorName: error instanceof Error ? error.name : 'Unknown',
       body: JSON.stringify(req.body, null, 2)
     });
-    
+
     // Si c'est une erreur de validation Mongoose, donner plus de détails
     if (error && typeof error === 'object' && 'errors' in error) {
       const mongooseError = error as any;
       console.error('❌ [REGISTER] Erreurs de validation Mongoose:', mongooseError.errors);
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Erreur de validation des données',
         errors: Object.keys(mongooseError.errors || {}).map(key => ({
           field: key,
@@ -176,8 +218,8 @@ export const register = async (req: Request, res: Response) => {
         }))
       });
     }
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       message: 'Erreur lors de l\'enregistrement de l\'utilisateur',
       error: process.env.NODE_ENV === 'production' ? 'Erreur serveur' : errorMessage // Cacher les détails en production
     });
@@ -267,7 +309,14 @@ export const login = async (req: Request, res: Response) => {
       userResponse.profile = user.profile;
     } else if (user.role === 'ORGANIZER' && user.organizerProfile) {
       userResponse.organizerProfile = user.organizerProfile;
+    } else if (user.role === 'LIEU' && user.lieuProfile) {
+      userResponse.lieuProfile = user.lieuProfile;
     }
+
+    res.cookie('auth_token', token, {
+      ...getAuthCookieOptions(),
+      maxAge: AUTH_COOKIE_MAX_AGE,
+    });
 
     res.status(200).json({
       message: 'Connexion réussie',
@@ -305,7 +354,7 @@ export const reactivateAccount = async (req: Request, res: Response) => {
 
     // Vérifier que le compte est bien en attente de suppression RGPD
     if ((user as any).isActive !== false) {
-      return res.status(400).json({
+      return res.status(422).json({
         message: 'Ce compte est déjà actif'
       });
     }
@@ -400,6 +449,8 @@ export const getProfile = async (req: Request, res: Response) => {
         totalApplicants: 0,
         acceptedApplications: 0,
       };
+    } else if (user.role === 'LIEU' && user.lieuProfile) {
+      userResponse.lieuProfile = user.lieuProfile;
     } else if (user.role === 'SUPER_ADMIN') {
       userResponse.stats = user.stats;
     }
@@ -414,34 +465,42 @@ export const getProfile = async (req: Request, res: Response) => {
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const userRole = (req as any).user?.role;
-    const userId = (req as any).user?.id;
-
-    // Vérifier l'accès super administrateur
     if (userRole !== 'SUPER_ADMIN') {
-      return res.status(403).json({
-        message: 'Seuls les super administrateurs peuvent accéder à cette ressource'
-      });
+      return res.status(403).json({ message: 'Seuls les super administrateurs peuvent accéder à cette ressource' });
     }
 
-    // Récupérer tous les utilisateurs non administrateurs
-    const users = await UserModel.find({
-      role: { $in: ['COMEDIAN', 'ORGANIZER'] }
-    })
-      .select('firstName lastName email phone role city createdAt stats profile organizerProfile isActive deactivatedAt deactivationReason')
-      .populate('profile')
-      .populate('organizerProfile')
-      .sort({ createdAt: -1 });
+    const { role, search } = req.query as Record<string, string | undefined>;
+    const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>, 10, 100);
 
-    // Formater les données utilisateur pour la réponse
-    const formattedUsers = users.map(user => {
+    const filter: Record<string, unknown> = { role: { $in: ['COMEDIAN', 'ORGANIZER'] } };
+    if (role && ['COMEDIAN', 'ORGANIZER'].includes(role)) {
+      filter.role = role;
+    }
+    if (search && typeof search === 'string' && search.trim()) {
+      const escaped = search.trim().slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(escaped, 'i');
+      filter.$or = [{ firstName: re }, { lastName: re }, { email: re }];
+    }
+
+    const [users, total] = await Promise.all([
+      UserModel.find(filter)
+        .select('firstName lastName email phone role city createdAt stats profile organizerProfile isActive deactivatedAt deactivationReason')
+        .populate('profile')
+        .populate('organizerProfile')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      UserModel.countDocuments(filter),
+    ]);
+
+    const formattedUsers = (users as any[]).map(user => {
       const baseData = {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        phone: user.role === 'ORGANIZER'
-          ? (user.organizerProfile?.phone || null)
-          : (user.phone || null),
+        phone: user.role === 'ORGANIZER' ? (user.organizerProfile?.phone || null) : (user.phone || null),
         role: user.role,
         city: user.role === 'ORGANIZER'
           ? (user.organizerProfile?.location?.city || user.city || null)
@@ -449,40 +508,26 @@ export const getAllUsers = async (req: Request, res: Response) => {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
         stats: user.stats || {},
-        isActive: (user as any).isActive !== false, // Par defaut true si non defini
-        deactivatedAt: (user as any).deactivatedAt || null,
-        deactivationReason: (user as any).deactivationReason || null,
+        isActive: user.isActive !== false,
+        deactivatedAt: user.deactivatedAt || null,
+        deactivationReason: user.deactivationReason || null,
       };
-
-      // Ajouter des données spécifiques au rôle
       if (user.role === 'COMEDIAN' && user.profile) {
-        return {
-          ...baseData,
-          bio: (user.profile as any).bio || '',
-          experience: (user.profile as any).experience || 0,
-          numberOfScenes: (user.profile as any).numberOfScenes || '0-50',
-        };
+        return { ...baseData, bio: user.profile.bio || '', experience: user.profile.experience || 0, numberOfScenes: user.profile.numberOfScenes || '0-50' };
       }
-
       if (user.role === 'ORGANIZER' && user.organizerProfile) {
-        return {
-          ...baseData,
-          companyName: (user.organizerProfile as any).companyName || null,
-          description: (user.organizerProfile as any).description || null,
-          website: (user.organizerProfile as any).website || null,
-        };
+        return { ...baseData, companyName: user.organizerProfile.companyName || null, description: user.organizerProfile.description || null, website: user.organizerProfile.website || null };
       }
-
       return baseData;
     });
 
     res.status(200).json({
       success: true,
-      count: formattedUsers.length,
-      users: formattedUsers
+      users: formattedUsers,
+      pagination: buildPaginationResult({ page, limit }, total),
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des utilisateurs:', error);
+    console.error('Erreur getAllUsers:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération des utilisateurs' });
   }
 };
@@ -910,12 +955,191 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
 
     console.log(`✅ Compte supprimé: ${user.firstName} ${user.lastName} (${user.email})`);
 
-    res.status(200).json({
-      message: `Compte de ${user.firstName} ${user.lastName} supprimé définitivement`,
-      userId,
-    });
+    res.status(204).send();
   } catch (error) {
     console.error('Erreur lors de la suppression du compte:', error);
     res.status(500).json({ message: 'Erreur lors de la suppression du compte' });
+  }
+};
+
+export const upgradeToOrganizer = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.role !== 'LIEU') {
+      return res.status(403).json({ message: 'Seuls les lieux peuvent être convertis en organisateur' });
+    }
+
+    const { companyName, description, website, venueTypes,
+            eventFrequency, averageBudget, postalCode } = req.body;
+
+    if (!postalCode) {
+      return res.status(400).json({ message: 'Le code postal est requis' });
+    }
+
+    const user = await UserModel.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
+
+    // organizerProfile AVANT role pour éviter l'écrasement par le pre-save middleware
+    user.organizerProfile = {
+      companyName: companyName || '',
+      description: description || '',
+      website: website || '',
+      venueTypes: Array.isArray(venueTypes) ? venueTypes : [],
+      eventFrequency: eventFrequency || 'monthly',
+      averageBudget: averageBudget && typeof averageBudget === 'object'
+        ? { min: Number(averageBudget.min) || 0, max: Number(averageBudget.max) || 0 }
+        : undefined,
+      location: {
+        city: user.city || '',
+        postalCode: String(postalCode).trim(),
+        address: user.address || '',
+      },
+      phone: user.phone || '',
+    };
+    (user as any).canSwitchToLieu = true;
+    user.role = 'ORGANIZER';
+    await user.save();
+
+    if (!config.jwt.secret) {
+      return res.status(500).json({ message: 'Erreur de configuration du serveur' });
+    }
+
+    const tokenOptions: SignOptions = { expiresIn: '24h' };
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      config.jwt.secret,
+      tokenOptions
+    );
+    res.cookie('auth_token', token, {
+      ...getAuthCookieOptions(),
+      maxAge: AUTH_COOKIE_MAX_AGE,
+    });
+
+    return res.status(200).json({
+      message: 'Compte converti en organisateur',
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        phone: user.phone,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        canSwitchToLieu: (user as any).canSwitchToLieu,
+        city: user.city,
+        organizerProfile: user.organizerProfile,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur lors de la conversion en organisateur:', error);
+    res.status(500).json({ message: 'Erreur lors de la conversion en organisateur' });
+  }
+};
+
+export const switchToLieu = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.role !== 'ORGANIZER') {
+      return res.status(403).json({ message: 'Seuls les organisateurs peuvent utiliser ce switch' });
+    }
+
+    const user = await UserModel.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur introuvable' });
+    }
+
+    if (!(user as any).canSwitchToLieu) {
+      return res.status(403).json({ message: 'Compte organisateur standard : switch vers Lieu non autorisé' });
+    }
+
+    user.role = 'LIEU';
+    await user.save();
+
+    if (!config.jwt.secret) {
+      return res.status(500).json({ message: 'Erreur de configuration du serveur' });
+    }
+
+    const tokenOptions: SignOptions = { expiresIn: '24h' };
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      config.jwt.secret,
+      tokenOptions
+    );
+
+    res.cookie('auth_token', token, {
+      ...getAuthCookieOptions(),
+      maxAge: AUTH_COOKIE_MAX_AGE,
+    });
+
+    return res.status(200).json({
+      message: 'Retour au compte Lieu effectué',
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        phone: user.phone,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        city: user.city,
+        canSwitchToLieu: (user as any).canSwitchToLieu,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur lors du switch Organisateur -> Lieu:', error);
+    res.status(500).json({ message: 'Erreur lors du switch vers le compte Lieu' });
+  }
+};
+
+export const switchToOrganizer = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.role !== 'LIEU') {
+      return res.status(403).json({ message: 'Seuls les comptes Lieu peuvent utiliser ce switch' });
+    }
+
+    const user = await UserModel.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur introuvable' });
+    }
+
+    if (!(user as any).canSwitchToLieu || !user.organizerProfile) {
+      return res.status(403).json({ message: 'Veuillez d’abord compléter "Devenir Organisateur"' });
+    }
+
+    user.role = 'ORGANIZER';
+    await user.save();
+
+    if (!config.jwt.secret) {
+      return res.status(500).json({ message: 'Erreur de configuration du serveur' });
+    }
+
+    const tokenOptions: SignOptions = { expiresIn: '24h' };
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      config.jwt.secret,
+      tokenOptions
+    );
+
+    res.cookie('auth_token', token, {
+      ...getAuthCookieOptions(),
+      maxAge: AUTH_COOKIE_MAX_AGE,
+    });
+
+    return res.status(200).json({
+      message: 'Passage au compte Organisateur effectué',
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        phone: user.phone,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        city: user.city,
+        canSwitchToLieu: (user as any).canSwitchToLieu,
+        organizerProfile: user.organizerProfile,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur lors du switch Lieu -> Organisateur:', error);
+    res.status(500).json({ message: 'Erreur lors du switch vers le compte Organisateur' });
   }
 };

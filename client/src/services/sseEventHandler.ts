@@ -166,6 +166,145 @@ export const handleSSEEvent = (queryClient: QueryClient, event: SSEEvent): void 
       }
       break;
 
+    // === RÉSERVATIONS DE SALLES ===
+    case 'VENUE_BOOKING_STATUS_CHANGED':
+      console.log('🏢 [SSE] Statut de réservation salle modifié:', event.data.id, event.data.status);
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'], exact: false });
+      if (event.data.venueId) {
+        queryClient.invalidateQueries({ queryKey: ['venue-bookings', event.data.venueId], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['venue', event.data.venueId], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['blocked-dates', event.data.venueId], exact: false });
+      }
+      queryClient.invalidateQueries({ queryKey: ['notifications'], exact: false });
+      break;
+
+    case 'VENUE_BOOKING_PAYMENT_UPDATED':
+      console.log('💳 [SSE] Paiement réservation salle mis à jour:', event.data.id, event.data.paymentStatus);
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'], exact: false });
+      if (event.data.venueId) {
+        queryClient.invalidateQueries({ queryKey: ['venue-bookings', event.data.venueId], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['venue', event.data.venueId], exact: false });
+      }
+      queryClient.invalidateQueries({ queryKey: ['notifications'], exact: false });
+      break;
+
+    // === NOTIFICATIONS ===
+    case 'NOTIFICATION_CREATED':
+      console.log('🔔 [SSE] Notification créée:', event.data.notificationId);
+      queryClient.invalidateQueries({ queryKey: ['notifications'], exact: false });
+      break;
+
+    case 'NOTIFICATION_READ':
+      console.log('✅ [SSE] Notification lue:', event.data.notificationId);
+      queryClient.invalidateQueries({ queryKey: ['notifications'], exact: false });
+      break;
+
+    case 'NOTIFICATION_ALL_READ':
+      console.log('✅ [SSE] Toutes les notifications lues:', event.data.userId);
+      queryClient.invalidateQueries({ queryKey: ['notifications'], exact: false });
+      break;
+
+    // === SALLES ===
+    case 'VENUE_CREATED':
+      console.log('🏢 [SSE] Salle créée:', event.data.venueId);
+      queryClient.invalidateQueries({ queryKey: ['venues'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['my-venues'], exact: false });
+      break;
+
+    case 'VENUE_UPDATED':
+      console.log('🏢 [SSE] Salle mise à jour:', event.data.venueId);
+      queryClient.invalidateQueries({ queryKey: ['venues'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['my-venues'], exact: false });
+      if (event.data.venueId) {
+        queryClient.invalidateQueries({ queryKey: ['venue', event.data.venueId], exact: false });
+      }
+      break;
+
+    case 'VENUE_DELETED':
+      console.log('🗑️ [SSE] Salle supprimée:', event.data.venueId);
+      queryClient.invalidateQueries({ queryKey: ['venues'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['my-venues'], exact: false });
+      if (event.data.venueId) {
+        queryClient.cancelQueries({ queryKey: ['venue', event.data.venueId] });
+        queryClient.removeQueries({ queryKey: ['venue', event.data.venueId] });
+        queryClient.removeQueries({ queryKey: ['venue-bookings', event.data.venueId] });
+        queryClient.removeQueries({ queryKey: ['my-venue-bookings', event.data.venueId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['notifications'], exact: false });
+      break;
+
+    // === SIGNALEMENTS COMÉDIENS ===
+    case 'COMEDIAN_REPORT_CREATED':
+      console.log('🚨 [SSE] Signalement comédien créé:', event.data.reportId);
+      queryClient.invalidateQueries({ queryKey: ['comedian-reports'], exact: false });
+      break;
+
+    case 'COMEDIAN_REPORT_UPDATED':
+      console.log('🚨 [SSE] Signalement comédien mis à jour:', event.data.reportId);
+      queryClient.invalidateQueries({ queryKey: ['comedian-reports'], exact: false });
+      break;
+
+    // === SPECTATEURS ===
+    case 'SPECTATOR_REGISTERED':
+      console.log('🎟️ [SSE] Spectateur inscrit:', event.data.eventId, event.data.userId);
+      queryClient.invalidateQueries({ queryKey: ['events'], exact: false });
+      if (event.data.eventId) {
+        queryClient.invalidateQueries({ queryKey: ['event', event.data.eventId], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['spectators', event.data.eventId], exact: false });
+      }
+      break;
+
+    case 'SPECTATOR_UNREGISTERED':
+      console.log('🎟️ [SSE] Spectateur désinscrit:', event.data.eventId, event.data.userId);
+      queryClient.invalidateQueries({ queryKey: ['events'], exact: false });
+      if (event.data.eventId) {
+        queryClient.invalidateQueries({ queryKey: ['event', event.data.eventId], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['spectators', event.data.eventId], exact: false });
+      }
+      break;
+
+    case 'SPECTATOR_RATING_SUBMITTED':
+      console.log('⭐ [SSE] Notation spectateur soumise:', event.data.eventId);
+      if (event.data.eventId) {
+        queryClient.invalidateQueries({ queryKey: ['event-ratings', event.data.eventId], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['ratings-summary', event.data.eventId], exact: false });
+      }
+      break;
+
+    // === FAVORIS CANDIDATURES ===
+    case 'APPLICATION_FAVORITE_ADDED':
+      console.log('⭐ [SSE] Candidature ajoutée aux favoris:', event.data.applicationId);
+      queryClient.invalidateQueries({ queryKey: ['favorite-applications'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['applicationFavorites'], exact: false });
+      break;
+
+    case 'APPLICATION_FAVORITE_REMOVED':
+      console.log('⭐ [SSE] Candidature retirée des favoris:', event.data.applicationId);
+      queryClient.invalidateQueries({ queryKey: ['favorite-applications'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['applicationFavorites'], exact: false });
+      break;
+
+    // === ANNULATION TARDIVE ===
+    case 'LATE_CANCELLATION':
+      console.log('⏰ [SSE] Annulation tardive:', event.data.eventId);
+      queryClient.invalidateQueries({ queryKey: ['applications'], exact: false });
+      if (event.data.eventId) {
+        queryClient.invalidateQueries({ queryKey: ['event', event.data.eventId], exact: false });
+      }
+      break;
+
+    // === ALERTES ===
+    case 'PRESENCE_ALERT_ACKNOWLEDGED':
+      console.log('✅ [SSE] Alerte de présence acquittée:', event.data.alertId);
+      queryClient.invalidateQueries({ queryKey: ['presence-alerts'], exact: false });
+      break;
+
+    case 'LATE_CANCELLATION_ALERT_ACKNOWLEDGED':
+      console.log('✅ [SSE] Alerte annulation tardive acquittée:', event.data.alertId);
+      queryClient.invalidateQueries({ queryKey: ['late-cancellation-alerts'], exact: false });
+      break;
+
     // === ÉVÈNEMENT DE CONNEXION ===
     case 'CONNECTED':
       console.log('🔌 [SSE] Connexion SSE établie');

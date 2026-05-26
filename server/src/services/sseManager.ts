@@ -21,6 +21,7 @@ class SSEManager {
   private clients: Map<string, SSEClient>;
   private heartbeatInterval: NodeJS.Timeout | null;
   private cleanupInterval: NodeJS.Timeout | null;
+  private readonly handleSSEEvent: (payload: SSEEventPayload) => void;
 
   // Limites de sécurité
   private readonly MAX_CONNECTIONS_PER_USER = 5;
@@ -34,10 +35,12 @@ class SSEManager {
     this.heartbeatInterval = null;
     this.cleanupInterval = null;
 
-    // Écouter les évènements de l'EventEmitter
-    appEventEmitter.on('sse-event', (payload: SSEEventPayload) => {
+    this.handleSSEEvent = (payload: SSEEventPayload) => {
       this.broadcast(payload);
-    });
+    };
+
+    // Écouter les évènements de l'EventEmitter
+    appEventEmitter.on('sse-event', this.handleSSEEvent);
 
     // Démarrer le heartbeat et le cleanup
     this.startHeartbeat();
@@ -73,13 +76,7 @@ class SSEManager {
 
     if (userConnections.length >= this.MAX_CONNECTIONS_PER_USER) {
       console.warn(`⚠️ Limite de connexions atteinte pour l'utilisateur ${userId} (${this.MAX_CONNECTIONS_PER_USER})`);
-
-      // Fermer la connexion la plus ancienne pour cet utilisateur
-      const oldestConnection = userConnections.sort((a, b) =>
-        a.connectedAt.getTime() - b.connectedAt.getTime()
-      )[0];
-
-      this.removeClient(oldestConnection.id);
+      return false;
     }
 
     // Ajouter le client
@@ -125,19 +122,17 @@ class SSEManager {
    */
   private sendToClient(clientId: string, payload: SSEEventPayload): void {
     const client = this.clients.get(clientId);
-    if (!client) {
-      return;
-    }
+    if (!client) return;
 
     try {
       const eventType = payload.type;
-      const data = JSON.stringify(payload);
+      // Strip server-only routing field before sending to client
+      const { targetUserIds: _ignored, ...payloadForClient } = payload as any;
+      const data = JSON.stringify(payloadForClient);
 
-      // Format SSE standard
       client.response.write(`event: ${eventType}\n`);
       client.response.write(`data: ${data}\n\n`);
 
-      // Mettre à jour le dernier heartbeat
       client.lastHeartbeat = new Date();
     } catch (error) {
       console.error(`❌ Erreur lors de l'envoi à ${clientId}:`, error);
@@ -149,12 +144,36 @@ class SSEManager {
    * Broadcaster un évènement à tous les clients connectés
    */
   public broadcast(payload: SSEEventPayload): void {
+    const targetUserIds: string[] | undefined = (payload as any).targetUserIds;
+
+    if (targetUserIds !== undefined) {
+      if (targetUserIds.length === 0) {
+        console.warn(`⚠️ broadcast ${payload.type} ignoré: targetUserIds défini mais vide`);
+        return;
+      }
+      this.broadcastToUsers(targetUserIds, payload);
+      return;
+    }
+
     const clientIds = Array.from(this.clients.keys());
-
-    console.log(`📢 Broadcasting évènement ${payload.type} à ${clientIds.length} client(s)`);
-
+    console.log(`📢 Broadcasting ${payload.type} à ${clientIds.length} client(s)`);
     clientIds.forEach(clientId => {
       this.sendToClient(clientId, payload);
+    });
+  }
+
+  /**
+   * Broadcaster un évènement à un ensemble ciblé d'utilisateurs
+   */
+  public broadcastToUsers(userIds: string[], payload: SSEEventPayload): void {
+    const targetClients = Array.from(this.clients.values()).filter(
+      client => userIds.includes(client.userId)
+    );
+
+    console.log(`🎯 Targeted broadcast ${payload.type} → ${userIds.length} user(s) ciblé(s), ${targetClients.length} client(s) actif(s)`);
+
+    targetClients.forEach(client => {
+      this.sendToClient(client.id, payload);
     });
   }
 
@@ -177,10 +196,6 @@ class SSEManager {
         }
       }
     });
-
-    if (clientIds.length > 0) {
-      console.log(`💓 Heartbeat envoyé à ${clientIds.length} client(s)`);
-    }
   }
 
   /**
@@ -253,6 +268,9 @@ class SSEManager {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
     }
+
+    // Désenregistrer le listener EventEmitter pour éviter les fuites mémoire
+    appEventEmitter.off('sse-event', this.handleSSEEvent);
 
     // Fermer toutes les connexions
     const clientIds = Array.from(this.clients.keys());

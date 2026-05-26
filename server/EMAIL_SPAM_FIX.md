@@ -34,7 +34,7 @@ DMARC: PASS ou FAIL
 
 ## ⚠️ Pourquoi cela arrive avec Single Sender Verification ?
 
-Avec `contact.standupconnect@gmail.com` (Single Sender Verification) :
+Avec `contact@connectcomedyclub.com` (Single Sender Verification) :
 - ❌ Pas de SPF pour votre domaine
 - ❌ Pas de DKIM pour votre domaine  
 - ❌ Pas de DMARC
@@ -100,7 +100,7 @@ Cela aide à améliorer la réputation progressivement.
    - Ajoutez les enregistrements DNS fournis par SendGrid
 
 3. **Mettre à jour SMTP_USER**
-   - Changez de `contact.standupconnect@gmail.com`
+   - Changez de `contact@connectcomedyclub.com`
    - Vers `noreply@mail.standup-comedy-app.com` (ou votre domaine)
 
 4. **Tester**

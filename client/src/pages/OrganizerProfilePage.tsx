@@ -6,15 +6,31 @@ import EditOrganizerProfileForm from '../components/EditOrganizerProfileForm';
 import EmailPreferences from '../components/EmailPreferences';
 import DeleteAccountSection from '../components/DeleteAccountSection';
 import ExportDataSection from '../components/ExportDataSection';
+const ACCENT = '#e85d75';
+const ACCENT_GRADIENT = 'linear-gradient(135deg, #e85d75, #c13057)';
+const CARD_BG = '#1a1d27';
+const BORDER = '#2a2d3a';
+const SEPARATOR = '#22253a';
+const LABEL_COLOR = '#777';
+const VALUE_COLOR = '#e0e0e0';
 
 function OrganizerProfilePage() {
   const { user: authUser, refreshUser } = useAuth();
   const [user, setUser] = useState<IUserData | null>(authUser);
   const [isEditing, setIsEditing] = useState(false);
+  const [scrollToField, setScrollToField] = useState<string | undefined>(undefined);
+  const [activeTab, setActiveTab] = useState<'info' | 'profil'>('info');
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
     setUser(authUser);
   }, [authUser]);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleSaveSuccess = () => {
     refreshUser();
@@ -23,244 +39,430 @@ function OrganizerProfilePage() {
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#ffffff',
+    color: '#fff',
     padding: '20px',
     background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
   };
 
-  const pageHeaderStyle: CSSProperties = {
-    padding: '20px',
-    maxWidth: '1200px',
+  const wrapperStyle: CSSProperties = {
+    width: '100%',
+    maxWidth: 700,
     margin: '0 auto',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '30px',
+    fontFamily: "'Inter', sans-serif",
   };
 
-  const titleStyle: CSSProperties = {
-    fontSize: '2.5em',
-    color: '#ff416c',
-  };
-
-  const subtitleStyle: CSSProperties = {
-    fontSize: '1.1em',
-    color: '#aaa',
-    marginBottom: '20px',
-  };
-
-  const sectionContainerStyle: CSSProperties = {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    display: 'grid',
-    gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '340px 1fr',
-    gap: '20px',
-    alignItems: 'flex-start',
-  };
-
-  const cardStyle: CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: '8px',
-    padding: '18px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
-  };
-
-  const cardTitleStyle: CSSProperties = {
-    fontSize: '1.3em',
-    color: '#ff4b2b',
-    marginBottom: '15px',
+  const headerCardStyle: CSSProperties = {
+    background: CARD_BG,
+    borderRadius: 16,
+    padding: 24,
     display: 'flex',
     alignItems: 'center',
-  };
-
-  const infoRowStyle: CSSProperties = {
-    display: 'flex',
     justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: '8px',
+    marginBottom: 16,
+    border: `1px solid ${BORDER}`,
     flexWrap: 'wrap',
-  };
-
-  const infoLabelStyle: CSSProperties = {
-    fontWeight: 'bold',
-    color: '#ccc',
-    fontSize: '0.95em',
-  };
-
-  const infoValueStyle: CSSProperties = {
-    color: '#fff',
-    fontSize: '0.95em',
-    textAlign: 'right',
-    maxWidth: '60%',
-  };
-
-  const profileCardStyle: CSSProperties = {
-    ...cardStyle,
-    textAlign: 'center',
+    gap: 16,
   };
 
   const avatarStyle: CSSProperties = {
-    width: '100px',
-    height: '100px',
+    width: 64,
+    height: 64,
     borderRadius: '50%',
-    backgroundColor: '#ff416c',
+    background: ACCENT_GRADIENT,
     display: 'flex',
-    justifyContent: 'center',
     alignItems: 'center',
-    fontSize: '3em',
-    fontWeight: 'bold',
-    margin: '0 auto 15px auto',
-  };
-
-  const statsValueStyle: CSSProperties = {
-    fontSize: '1.2em',
-    color: '#ff416c',
-    fontWeight: 'bold',
-  };
-
-  const editButtonStyle: CSSProperties = {
-    padding: '8px 15px',
-    borderRadius: '8px',
-    border: 'none',
-    background: 'linear-gradient(to right, #ff416c, #ff4b2b)',
+    justifyContent: 'center',
+    fontWeight: 700,
+    fontSize: 22,
     color: 'white',
-    fontSize: '0.9em',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    transition: 'background 0.3s ease',
-    marginLeft: '10px',
+    flexShrink: 0,
+    backgroundImage: user?.avatarUrl ? `url(${user.avatarUrl})` : undefined,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
   };
+
+  const badgeStyle: CSSProperties = {
+    background: 'rgba(232,93,117,0.15)',
+    color: ACCENT,
+    border: '1px solid rgba(232,93,117,0.4)',
+    borderRadius: 20,
+    padding: '2px 10px',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: '0.06em',
+  };
+
+  const statBoxStyle: CSSProperties = {
+    background: 'rgba(232,93,117,0.1)',
+    border: '1px solid rgba(232,93,117,0.25)',
+    borderRadius: 12,
+    padding: '12px 20px',
+    textAlign: 'center',
+    minWidth: 90,
+  };
+
+  const tabsContainerStyle: CSSProperties = {
+    background: CARD_BG,
+    borderRadius: 50,
+    padding: 4,
+    display: 'flex',
+    marginBottom: 16,
+    border: `1px solid ${BORDER}`,
+  };
+
+  const tabButtonStyle = (active: boolean): CSSProperties => ({
+    flex: 1,
+    padding: '10px 16px',
+    borderRadius: 50,
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: 14,
+    transition: 'all 0.2s',
+    background: active ? ACCENT_GRADIENT : 'transparent',
+    color: active ? '#fff' : '#777',
+  });
+
+  const contentCardStyle: CSSProperties = {
+    background: CARD_BG,
+    borderRadius: 16,
+    padding: 24,
+    border: `1px solid ${BORDER}`,
+    marginBottom: 16,
+  };
+
+  const sectionBarStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 20,
+  };
+
+  const sectionTitleStyle: CSSProperties = {
+    color: ACCENT,
+    fontWeight: 700,
+    fontSize: 12,
+    letterSpacing: '0.1em',
+  };
+
+  const rowStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '10px 0',
+    gap: 12,
+  };
+
+  const labelValueGroupStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 16,
+    flex: 1,
+    minWidth: 0,
+  };
+
+  const labelStyle: CSSProperties = {
+    color: LABEL_COLOR,
+    fontSize: 13,
+    fontWeight: 500,
+    minWidth: 140,
+    flexShrink: 0,
+  };
+
+  const valueStyle: CSSProperties = {
+    color: VALUE_COLOR,
+    fontSize: 14,
+    fontWeight: 500,
+    flex: 1,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  };
+
+  const modifierButtonStyle: CSSProperties = {
+    background: 'transparent',
+    border: `1px solid ${BORDER}`,
+    borderRadius: 12,
+    padding: '12px 20px',
+    color: '#666',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  };
+
+  const infoFields = [
+    { key: 'firstName', label: 'Prénom', value: user?.firstName || 'Non défini', fieldId: 'firstName' },
+    { key: 'lastName', label: 'Nom', value: user?.lastName || 'Non défini', fieldId: 'lastName' },
+    { key: 'email', label: 'Email', value: user?.email || 'Non défini', isEmail: true, fieldId: 'email' },
+    { key: 'phone', label: 'Téléphone', value: user?.organizerProfile?.phone || 'Non défini', fieldId: 'organizerProfile.phone' },
+    { key: 'city', label: 'Ville', value: user?.city || 'Non défini', fieldId: 'city' },
+    { key: 'address', label: 'Adresse', value: user?.address || 'Non défini', fieldId: 'address' },
+    { key: 'gender', label: 'Genre', value: user?.gender === 'femme' ? 'Femme' : user?.gender === 'homme' ? 'Homme' : 'Non défini', fieldId: 'gender' },
+  ];
+
+  const profilFields = [
+    { label: "Nom de l'entreprise", value: user?.organizerProfile?.companyName || 'Non défini', fieldId: 'organizerProfile.companyName' },
+    { label: 'Ville', value: user?.organizerProfile?.location?.city || 'Non défini', fieldId: 'organizerProfile.location.city' },
+    { label: 'Code postal', value: user?.organizerProfile?.location?.postalCode || 'Non défini', fieldId: 'organizerProfile.location.postalCode' },
+    { label: 'Adresse', value: user?.organizerProfile?.location?.address || 'Non défini', fieldId: 'organizerProfile.location.address' },
+    { label: 'Description', value: user?.organizerProfile?.description || 'Non spécifié', fieldId: 'organizerProfile.description' },
+    { label: 'Site web', value: user?.organizerProfile?.website || 'Non spécifié', fieldId: 'organizerProfile.website' },
+    { label: 'Types de lieux', value: user?.organizerProfile?.venueTypes?.join(', ') || 'Non spécifié', fieldId: 'organizerProfile.venueTypes' },
+    {
+      label: 'Fréquence des évènements',
+      value:
+        user?.organizerProfile?.eventFrequency === 'weekly'
+          ? 'Hebdomadaire'
+          : user?.organizerProfile?.eventFrequency === 'monthly'
+            ? 'Mensuel'
+            : user?.organizerProfile?.eventFrequency === 'occasional'
+              ? 'Occasionnel'
+              : 'Non spécifié',
+      fieldId: 'organizerProfile.eventFrequency',
+    },
+  ];
 
   return (
     <div style={mainContainerStyle}>
       <Navbar />
-
-      <div style={pageHeaderStyle}>
-        <div>
-          <h1 style={titleStyle}>Mon Profil</h1>
-          <p style={subtitleStyle}>Gère tes informations et préférences</p>
-        </div>
-        <button style={editButtonStyle} onClick={() => setIsEditing(true)}>Modifier</button>
-      </div>
-
-      {isEditing && user ? (
-        <EditOrganizerProfileForm
-          isOpen={isEditing}
-          onClose={() => setIsEditing(false)}
-          currentUser={user}
-          onSaveSuccess={handleSaveSuccess}
-        />
-      ) : (
-        <div style={sectionContainerStyle}>
-          {/* Profil principal (avatar et rôle) */}
-          <div style={profileCardStyle}>
-            <div style={{
-              ...avatarStyle,
-              backgroundImage: user?.avatarUrl ? `url(${user.avatarUrl})` : undefined,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundColor: user?.avatarUrl ? 'transparent' : '#ff416c',
-            }}>
+      <div style={wrapperStyle}>
+        {/* Header Card */}
+        <div style={{ ...headerCardStyle, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={avatarStyle}>
               {!user?.avatarUrl && (user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : 'DA')}
             </div>
-            <h3 style={{ color: '#ffffff', marginBottom: '5px' }}>{user ? `${user.firstName} ${user.lastName}` : 'Dahmane Aissa'}</h3>
-            <p style={{ color: '#ff4b2b', fontSize: '1.1em', fontWeight: 'bold' }}>{user?.role === 'ORGANIZER' ? 'Organisateur' : user?.role || 'Organisateur'}</p>
-
-            {/* Stats rapides */}
-            <h4 style={{ color: '#ff4b2b', marginTop: '30px', marginBottom: '15px' }}>Stats rapides</h4>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Évènements créés</span>
-              <span style={statsValueStyle}>{user?.stats?.totalEvents || 0}</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 20, color: '#fff', marginBottom: 6 }}>
+                {user ? `${user.firstName} ${user.lastName}` : '—'}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span style={badgeStyle}>ORGANISATEUR</span>
+                <span style={{ color: '#888', fontSize: 14 }}>
+                  {user?.organizerProfile?.companyName || '—'}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Informations personnelles */}
-          <div style={{ ...cardStyle, minHeight: '100%' }}>
-            <h2 style={cardTitleStyle}>
-              <i className="fas fa-user-circle" style={{ marginRight: '10px' }}></i> Informations personnelles
-            </h2>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Prénom</span>
-              <span style={infoValueStyle}>{user?.firstName || 'Non défini'}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
+            <div style={statBoxStyle}>
+              <div style={{ color: ACCENT, fontSize: 26, fontWeight: 700 }}>
+                {user?.stats?.totalEvents ?? 0}
+              </div>
+              <div style={{ color: '#888', fontSize: 12, marginTop: 2 }}>Évènements créés</div>
             </div>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Nom</span>
-              <span style={infoValueStyle}>{user?.lastName || 'Non défini'}</span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Email</span>
-              <span style={infoValueStyle}>{user?.email || 'Non défini'}</span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Nom de l'entreprise</span>
-              <span style={infoValueStyle}>{user?.organizerProfile?.companyName || 'Non défini'}</span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Ville</span>
-              <span style={infoValueStyle}>{user?.organizerProfile?.location?.city || 'Non défini'}</span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Téléphone</span>
-              <span style={infoValueStyle}>{user?.organizerProfile?.phone || 'Non défini'}</span>
-            </div>
-          </div>
-
-          {/* Profil Organisateur (si applicable) */}
-          <div style={{ ...cardStyle, gridColumn: window.innerWidth < 768 ? 'span 1' : 'span 2' }}>
-            <h2 style={cardTitleStyle}>Profil Organisateur</h2>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Nom de l'entreprise:</span>
-              <span style={infoValueStyle}>{user?.organizerProfile?.companyName || 'Non défini'}</span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Description:</span>
-              <span style={infoValueStyle}>{user?.organizerProfile?.description || 'Non spécifié'}</span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Site web:</span>
-              <span style={infoValueStyle}>{user?.organizerProfile?.website || 'Non spécifié'}</span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Types de lieux:</span>
-              <span style={infoValueStyle}>{user?.organizerProfile?.venueTypes?.join(', ') || 'Non spécifié'}</span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Budget moyen:</span>
-              <span style={infoValueStyle}>
-                {user?.organizerProfile?.averageBudget?.min !== undefined && user?.organizerProfile?.averageBudget?.max !== undefined
-                  ? `${user.organizerProfile.averageBudget.min} - ${user.organizerProfile.averageBudget.max}€`
-                  : 'Non spécifié'}
-              </span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={infoLabelStyle}>Fréquence des évènements:</span>
-              <span style={infoValueStyle}>
-                {user?.organizerProfile?.eventFrequency === 'weekly' ? 'Hebdomadaire' :
-                 user?.organizerProfile?.eventFrequency === 'monthly' ? 'Mensuel' :
-                 user?.organizerProfile?.eventFrequency === 'occasional' ? 'Occasionnel' :
-                 'Non spécifié'}
-              </span>
-            </div>
-          </div>
-
-          {/* Préférences Email */}
-          <div style={{ gridColumn: window.innerWidth < 768 ? 'span 1' : 'span 2' }}>
-            <EmailPreferences />
-          </div>
-
-          {/* Export des données (RGPD) */}
-          <div style={{ gridColumn: window.innerWidth < 768 ? 'span 1' : 'span 2', marginTop: '20px' }}>
-            <ExportDataSection />
-          </div>
-
-          {/* Suppression de compte */}
-          <div style={{ gridColumn: window.innerWidth < 768 ? 'span 1' : 'span 2' }}>
-            <DeleteAccountSection />
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              style={modifierButtonStyle}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = ACCENT;
+                e.currentTarget.style.color = ACCENT;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = BORDER;
+                e.currentTarget.style.color = '#666';
+              }}
+            >
+              Modifier
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Tabs */}
+        <div style={tabsContainerStyle}>
+          {[
+            { id: 'info' as const, label: 'Informations personnelles' },
+            { id: 'profil' as const, label: 'Profil Organisateur' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              style={tabButtonStyle(activeTab === tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {isEditing && user ? (
+          <EditOrganizerProfileForm
+            isOpen={isEditing}
+            onClose={() => setIsEditing(false)}
+            currentUser={user}
+            onSaveSuccess={handleSaveSuccess}
+            scrollToField={scrollToField}
+          />
+        ) : (
+          <>
+            {/* Tab: Informations personnelles */}
+            {activeTab === 'info' && (
+              <div style={contentCardStyle}>
+                <div style={sectionBarStyle}>
+                  <div style={{ width: 28, height: 2, background: ACCENT, borderRadius: 2 }} />
+                  <span style={sectionTitleStyle}>INFORMATIONS PERSONNELLES</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  {infoFields.map((field, i) => (
+                    <div key={field.key}>
+                      {isMobile ? (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', gap: 12 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 0 }}>
+                            <span style={{ ...labelStyle, minWidth: 'auto' }}>{field.label}</span>
+                            <span style={{ ...valueStyle, color: field.isEmail ? ACCENT : VALUE_COLOR, whiteSpace: 'normal' }}>
+                              {field.value}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setScrollToField(field.fieldId); setIsEditing(true); }}
+                            style={{ ...modifierButtonStyle, padding: '5px 12px', flexShrink: 0 }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = ACCENT;
+                              e.currentTarget.style.color = ACCENT;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = BORDER;
+                              e.currentTarget.style.color = '#666';
+                            }}
+                          >
+                            Modifier
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={rowStyle}>
+                          <div style={labelValueGroupStyle}>
+                            <span style={labelStyle}>{field.label}</span>
+                            <span
+                              style={{
+                                ...valueStyle,
+                                color: field.isEmail ? ACCENT : VALUE_COLOR,
+                              }}
+                            >
+                              {field.value}
+                            </span>
+                          </div>
+                          <div style={{ flexShrink: 0 }}>
+                            <button
+                              type="button"
+                              onClick={() => { setScrollToField(field.fieldId); setIsEditing(true); }}
+                              style={modifierButtonStyle}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = ACCENT;
+                                e.currentTarget.style.color = ACCENT;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = BORDER;
+                                e.currentTarget.style.color = '#666';
+                              }}
+                            >
+                              Modifier
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {i < infoFields.length - 1 && (
+                        <div style={{ height: 1, background: SEPARATOR }} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Profil Organisateur */}
+            {activeTab === 'profil' && (
+              <div style={contentCardStyle}>
+                <div style={sectionBarStyle}>
+                  <div style={{ width: 28, height: 2, background: ACCENT, borderRadius: 2 }} />
+                  <span style={sectionTitleStyle}>PROFIL ORGANISATEUR</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  {profilFields.map((field, i) => (
+                    <div key={field.label}>
+                      {isMobile ? (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', gap: 12 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 0 }}>
+                            <span style={{ ...labelStyle, minWidth: 'auto' }}>{field.label}</span>
+                            <span style={{ ...valueStyle, whiteSpace: 'normal' }}>{field.value}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setScrollToField(field.fieldId); setIsEditing(true); }}
+                            style={{ ...modifierButtonStyle, padding: '5px 12px', flexShrink: 0 }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = ACCENT;
+                              e.currentTarget.style.color = ACCENT;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = BORDER;
+                              e.currentTarget.style.color = '#666';
+                            }}
+                          >
+                            Modifier
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={rowStyle}>
+                          <div style={labelValueGroupStyle}>
+                            <span style={labelStyle}>{field.label}</span>
+                            <span style={valueStyle}>{field.value}</span>
+                          </div>
+                          <div style={{ flexShrink: 0 }}>
+                            <button
+                              type="button"
+                              onClick={() => { setScrollToField(field.fieldId); setIsEditing(true); }}
+                              style={modifierButtonStyle}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = ACCENT;
+                                e.currentTarget.style.color = ACCENT;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = BORDER;
+                                e.currentTarget.style.color = '#666';
+                              }}
+                            >
+                              Modifier
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {i < profilFields.length - 1 && (
+                        <div style={{ height: 1, background: SEPARATOR }} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Paramètres et confidentialité */}
+            <div
+              style={{
+                marginTop: 32,
+                paddingTop: 32,
+                borderTop: `1px solid ${BORDER}`,
+              }}
+            >
+              <div style={sectionBarStyle}>
+                <div style={{ width: 28, height: 2, background: ACCENT, borderRadius: 2 }} />
+                <span style={sectionTitleStyle}>PARAMÈTRES ET CONFIDENTIALITÉ</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <EmailPreferences />
+                <ExportDataSection />
+                <DeleteAccountSection />
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
     </div>
   );
 }
 
-export default OrganizerProfilePage; 
+export default OrganizerProfilePage;

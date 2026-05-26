@@ -37,6 +37,22 @@ export const SuccessMessages = {
   // Absences
   ABSENCE_MARKED: 'Absence marquée avec succès.',
   ABSENCE_CANCELLED: 'Présence confirmée avec succès.',
+
+  // Salles
+  VENUE_CREATED: 'Salle créée avec succès !',
+  VENUE_UPDATED: 'Salle mise à jour avec succès !',
+  VENUE_DELETED: 'Salle supprimée avec succès.',
+
+  // Réservations de salles
+  BOOKING_CREATED: 'Demande de réservation envoyée avec succès !',
+  BOOKING_CANCELLED: 'Réservation annulée avec succès.',
+  BOOKING_ACCEPTED: 'Réservation acceptée avec succès.',
+  BOOKING_REFUSED: 'Réservation refusée.',
+  BOOKING_PAYMENT_SUCCESS: 'Paiement effectué ! Votre réservation est confirmée.',
+
+  // Dates bloquées
+  DATE_BLOCKED: 'Date bloquée avec succès.',
+  DATE_UNBLOCKED: 'Date débloquée avec succès.',
 };
 
 /**
@@ -50,6 +66,7 @@ export const ErrorMessages = {
 
   // Events
   EVENT_CREATE_FAILED: "Impossible de créer l'événement.",
+  EVENT_DUPLICATE: "Un événement avec le même titre, la même date et la même heure existe déjà. Modifiez le titre, la date ou l'heure pour créer un nouvel événement.",
   EVENT_UPDATE_FAILED: "Impossible de mettre à jour l'événement.",
   EVENT_DELETE_FAILED: "Impossible de supprimer l'événement.",
   EVENT_NOT_FOUND: "Cet événement n'a pas été trouvé ou vous n'êtes pas autorisé à y accéder.",
@@ -77,6 +94,22 @@ export const ErrorMessages = {
   // Absences
   ABSENCE_MARK_FAILED: "Impossible de marquer l'absence.",
   ABSENCE_CANCEL_FAILED: "Impossible d'annuler l'absence.",
+
+  // Salles
+  VENUE_CREATE_FAILED: "Impossible de créer la salle.",
+  VENUE_UPDATE_FAILED: "Impossible de mettre à jour la salle.",
+  VENUE_DELETE_FAILED: "Impossible de supprimer la salle.",
+  VENUE_NOT_FOUND: "Cette salle n'a pas été trouvée.",
+
+  // Réservations de salles
+  BOOKING_CREATE_FAILED: "Impossible d'envoyer la demande de réservation.",
+  BOOKING_CANCEL_FAILED: "Impossible d'annuler la réservation.",
+  BOOKING_UPDATE_FAILED: "Impossible de mettre à jour la réservation.",
+  BOOKING_PAYMENT_FAILED: "Erreur lors du paiement de la réservation.",
+
+  // Dates bloquées
+  DATE_BLOCK_FAILED: "Impossible de bloquer cette date.",
+  DATE_UNBLOCK_FAILED: "Impossible de débloquer cette date.",
 
   // Network & General
   NETWORK_ERROR: 'Erreur réseau. Vérifiez votre connexion Internet.',
@@ -159,6 +192,8 @@ const SAFE_SERVER_MESSAGES = new Set([
   "Impossible de postuler a un evenement annule",
   "Impossible de postuler a un evenement termine",
   "Vous ne pouvez pas postuler a nouveau apres vous etre retire de cet evenement",
+  "Impossible de postuler : l'événement commence dans moins d'une heure ou a déjà commencé.",
+  "Impossible de vous désinscrire : l'événement commence dans moins d'une heure ou a déjà commencé.",
 
   // Permission-related
   "Seuls les organisateurs peuvent signaler des humoristes",
@@ -171,6 +206,21 @@ const SAFE_SERVER_MESSAGES = new Set([
   "Cet humoriste est deja dans vos favoris",
   "Cet evenement est deja dans vos favoris",
   "Ce humoriste n'est pas participant a cet evenement.",
+
+  // SMS verification
+  "La vérification SMS n'est pas configurée",
+  "Numéro de téléphone invalide",
+  "Erreur lors de l'envoi du SMS. Réessayez dans quelques instants.",
+
+  // Venue bookings
+  "La salle est indisponible à cette date ou sur ce créneau",
+  "Vous ne pouvez pas réserver votre propre salle",
+  "Cette réservation a déjà été traitée",
+  "Un conflit de plage horaire existe pour cette date",
+  "Seules les réservations en attente peuvent être annulées",
+  "Seules les réservations acceptées peuvent être annulées par le propriétaire",
+  "Date de réservation invalide",
+  "Salle introuvable ou indisponible",
 ]);
 
 /**

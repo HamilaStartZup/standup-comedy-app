@@ -3,11 +3,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import Navbar from '../components/Navbar';
+import Pagination from '../components/Pagination';
 import ComedianApplicationsModal from '../components/ComedianApplicationsModal';
 import ComedianDetailsModal from '../components/ComedianDetailsModal';
 import OrganizerDetailsModal from '../components/OrganizerDetailsModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import type { IUserData } from '../types/user';
+import type { PaginationMeta } from '../types/pagination';
 import api, { deactivateUser as apiDeactivateUser, reactivateUser as apiReactivateUser, deleteUser as apiDeleteUser } from '../services/api';
 
 interface UserStats {
@@ -45,7 +47,6 @@ interface User {
 }
 
 const DirectoryPage: React.FC = () => {
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -71,24 +72,43 @@ const DirectoryPage: React.FC = () => {
     isDangerous?: boolean;
     isLoading?: boolean;
   }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const { showError, showWarning, showSuccess } = useAlert();
   const queryClient = useQueryClient();
 
-  // Charger les utilisateurs avec React Query
+  const [currentPage, setCurrentPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roleFilter]);
+
+  // Charger les utilisateurs avec React Query (pagination serveur)
   const { data: usersData, isLoading: loading, refetch: refetchUsers } = useQuery({
-    queryKey: ['users'],
+    queryKey: ['users', currentPage, debouncedSearch, roleFilter],
     queryFn: async () => {
-      console.log('🔍 Chargement des utilisateurs...');
-      console.log('👤 Utilisateur actuel:', user);
-      const response = await api.get('/auth/users');
-      console.log('📊 Réponse API reçue:', response.data);
-      return (response.data.users || []) as User[];
+      const params = new URLSearchParams();
+      params.set('page', String(currentPage));
+      params.set('limit', '10');
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
+      if (roleFilter !== 'all') params.set('role', roleFilter);
+      const response = await api.get(`/auth/users?${params.toString()}`);
+      return {
+        users: (response.data.users || []) as User[],
+        pagination: (response.data.pagination ?? null) as PaginationMeta | null,
+      };
     },
     enabled: !!user && user.role === 'SUPER_ADMIN',
   });
 
-  const users = usersData || [];
+  const users = usersData?.users || [];
+  const usersPagination = usersData?.pagination ?? null;
+  const filteredUsers = users;
 
   // Styles
   const mainContainerStyle = {
@@ -135,6 +155,7 @@ const DirectoryPage: React.FC = () => {
     fontSize: '14px',
     minWidth: '250px',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    color: '#000',
   };
 
   const selectStyle = {
@@ -190,32 +211,6 @@ const DirectoryPage: React.FC = () => {
     backgroundColor: role === 'COMEDIAN' ? '#9c27b0' : '#2196f3',
   });
 
-  useEffect(() => {
-    filterUsers();
-  }, [users, searchTerm, roleFilter]);
-
-  const filterUsers = () => {
-    let filtered = users;
-
-    // Filtrer par terme de recherche
-    if (searchTerm) {
-      filtered = filtered.filter(user =>
-        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.stageName && user.stageName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    // Filtrer par rôle
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(user => user.role === roleFilter);
-    }
-
-    setFilteredUsers(filtered);
-  };
-
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'COMEDIAN':
@@ -230,16 +225,7 @@ const DirectoryPage: React.FC = () => {
   const handleViewComedianProfile = async (e: React.MouseEvent, comedianId: string) => {
     e.stopPropagation();
     try {
-      if (!token) {
-        showWarning('Vous devez être connecté pour voir le profil');
-        return;
-      }
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-      const response = await api.get<IUserData>(`/profile/${comedianId}`, config);
+      const response = await api.get<IUserData>(`/profile/${comedianId}`);
       setSelectedComedianProfile(response.data);
       setIsComedianProfileModalOpen(true);
     } catch (err: any) {
@@ -251,16 +237,7 @@ const DirectoryPage: React.FC = () => {
   const handleViewOrganizerProfile = async (e: React.MouseEvent, organizerId: string) => {
     e.stopPropagation();
     try {
-      if (!token) {
-        showWarning('Vous devez être connecté pour voir le profil');
-        return;
-      }
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-      const response = await api.get<IUserData>(`/profile/${organizerId}`, config);
+      const response = await api.get<IUserData>(`/profile/${organizerId}`);
       setSelectedOrganizerProfile(response.data);
       setIsOrganizerProfileModalOpen(true);
     } catch (err: any) {
@@ -438,6 +415,9 @@ const DirectoryPage: React.FC = () => {
             border-color: #9c27b0 !important;
             box-shadow: 0 6px 20px rgba(156, 39, 176, 0.2);
           }
+          .directory-search-input::placeholder {
+            color: #000;
+          }
         `}
       </style>
       <Navbar />
@@ -479,6 +459,7 @@ const DirectoryPage: React.FC = () => {
             value={searchTerm}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
             style={inputStyle}
+            className="directory-search-input"
           />
           <select
             value={roleFilter}
@@ -516,7 +497,7 @@ const DirectoryPage: React.FC = () => {
             fontWeight: 'bold',
             color: '#333'
           }}>
-            Affichage: {filteredUsers.length} / {users.length} utilisateurs
+            {usersPagination ? `${usersPagination.total} utilisateurs` : `${filteredUsers.length} utilisateurs`}
           </span>
         </div>
 
@@ -661,6 +642,16 @@ const DirectoryPage: React.FC = () => {
                 </div>
               </div>
             ))}
+            {usersPagination && usersPagination.totalPages > 1 && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <Pagination
+                  page={currentPage}
+                  totalPages={usersPagination.totalPages}
+                  onChange={setCurrentPage}
+                  disabled={loading}
+                />
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -725,6 +716,7 @@ const DirectoryPage: React.FC = () => {
         }}>
           <div style={{
             backgroundColor: 'white',
+            color: '#333',
             borderRadius: '12px',
             padding: '30px',
             maxWidth: '900px',

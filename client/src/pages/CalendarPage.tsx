@@ -1,4 +1,4 @@
-import { type CSSProperties, useState, useEffect } from 'react';
+import { type CSSProperties, useState, useEffect, useMemo } from 'react';
 import Navbar from '../components/Navbar';
 import EventCalendar from '../components/EventCalendar';
 import AbsenceModal from '../components/AbsenceModal';
@@ -7,10 +7,11 @@ import api, { markAbsence, cancelAbsence } from '../services/api';
 import type { IEvent } from '../types/event';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
+import { useUserEvents } from '../hooks/useUserEvents';
 import { ErrorMessages, SuccessMessages } from '../services/systemMessages';
 
 const CalendarPage = () => {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const { showSuccess, showError } = useAlert();
   const queryClient = useQueryClient();
   const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
@@ -47,62 +48,48 @@ const CalendarPage = () => {
     return desktop;
   };
 
-  const isQueryEnabled = !!token && !!user?._id;
+  const startOfMonth = useMemo(
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
+    []
+  );
 
-  const { data: fetchedEvents = [], isLoading, isError } = useQuery<IEvent[], Error>({
-    queryKey: ['events', user?._id, token],
-    queryFn: async () => {
-      if (!token || !user?._id) throw new Error('Authentification manquante');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const apiUrl = user?.role === 'ORGANIZER' ? `/events?organizerId=${user._id}` : `/events`;
-      const res = await api.get(apiUrl, config);
+  // Cache hit instantané depuis le Dashboard (événements du mois courant + futurs)
+  const upcomingQuery = useUserEvents({ dateFrom: startOfMonth });
+  // Fetch complet en arrière-plan pour permettre la navigation vers les mois passés
+  const fullQuery = useUserEvents();
 
-      // Forcer un tableau sécurisé
-      let list: IEvent[] = [];
-      const data = res.data;
-      if (Array.isArray(data)) list = data;
-      else if (Array.isArray(data?.events)) list = data.events;
-      else if (typeof data === 'string') {
-        try {
-          const parsed = JSON.parse(data);
-          list = Array.isArray(parsed) ? parsed : [];
-        } catch (err) {
-          console.error("Impossible de parser la réponse :", data);
-        }
-      }
-      return list;
-    },
-    enabled: isQueryEnabled,
-  });
+  const fetchedEvents = fullQuery.data?.events ?? upcomingQuery.data?.events ?? [];
+  const isLoading = !fullQuery.data && !upcomingQuery.data && (fullQuery.isLoading || upcomingQuery.isLoading);
+  const isError = fullQuery.isError && upcomingQuery.isError;
 
   // Séparer les événements et éviter doublons pour les annulés
-  const now = new Date();
+  const { upcomingEvents, archivedEvents, cancelledEvents, allEvents } = useMemo(() => {
+    const now = new Date();
 
-  const upcomingEvents = fetchedEvents
-    .filter(e => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const upcomingEvents = fetchedEvents
+      .filter(e => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const archivedEvents = fetchedEvents
-    .filter(e => new Date(e.date) < now && e.status?.toLowerCase() !== 'cancelled')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const archivedEvents = fetchedEvents
+      .filter(e => new Date(e.date) < now && e.status?.toLowerCase() !== 'cancelled')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const cancelledEvents = fetchedEvents
-    .filter(e => e.status?.toLowerCase() === 'cancelled')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const cancelledEvents = fetchedEvents
+      .filter(e => e.status?.toLowerCase() === 'cancelled')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const allEvents = [...upcomingEvents, ...archivedEvents, ...cancelledEvents];
+    return { upcomingEvents, archivedEvents, cancelledEvents, allEvents: [...upcomingEvents, ...archivedEvents, ...cancelledEvents] };
+  }, [fetchedEvents]);
 
   // Récupérer les absences pour tous les événements affichés
   const { data: eventAbsences = [] } = useQuery({
     queryKey: ['event-absences', allEvents.map(e => e._id)],
     queryFn: async () => {
-      if (!token || allEvents.length === 0) return [];
+      if (allEvents.length === 0) return [];
       const allAbsences: any[] = [];
       for (const event of allEvents) {
         try {
-          const res = await api.get(`/absences/event/${event._id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const res = await api.get(`/absences/event/${event._id}`);
           if (Array.isArray(res.data)) {
             allAbsences.push(...res.data);
           }
@@ -112,7 +99,7 @@ const CalendarPage = () => {
       }
       return allAbsences;
     },
-    enabled: !!token && (user?.role === 'ORGANIZER' || user?.role === 'SUPER_ADMIN') && allEvents.length > 0,
+    enabled: !!user?._id && (user?.role === 'ORGANIZER' || user?.role === 'SUPER_ADMIN') && allEvents.length > 0,
   });
 
   // Mutation pour marquer absent
@@ -121,8 +108,8 @@ const CalendarPage = () => {
       return await markAbsence(eventId, comedianId, reason);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['event-absences', token] });
-      queryClient.invalidateQueries({ queryKey: ['events', user?._id, token] });
+      queryClient.invalidateQueries({ queryKey: ['event-absences'] });
+      queryClient.invalidateQueries({ queryKey: ['events', user?._id] });
     },
   });
 
@@ -132,13 +119,12 @@ const CalendarPage = () => {
       return await cancelAbsence(eventId, comedianId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['event-absences', token] });
-      queryClient.invalidateQueries({ queryKey: ['events', user?._id, token] });
+      queryClient.invalidateQueries({ queryKey: ['event-absences'] });
+      queryClient.invalidateQueries({ queryKey: ['events', user?._id] });
     },
   });
 
-  const handleEventClick = (event: IEvent) => {
-    console.log('Événement cliqué :', event);
+  const handleEventClick = (_event: IEvent) => {
   };
 
   const handleAbsenceClick = (participant: any, event: IEvent) => {
@@ -200,8 +186,11 @@ const CalendarPage = () => {
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
     color: '#ffffff',
-    padding: getResponsiveValue('16px', '24px', '32px'),
+    padding: '20px',
     background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+  };
+
+  const contentWrapperStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     gap: getResponsiveValue('16px', '24px', '32px'),
@@ -210,6 +199,7 @@ const CalendarPage = () => {
   return (
     <div style={mainContainerStyle}>
       <Navbar />
+      <div style={contentWrapperStyle}>
 
       {isLoading && (
         <p style={{ textAlign:'center', marginTop:'50px', color:'#ff416c' }}>
@@ -257,6 +247,7 @@ const CalendarPage = () => {
           }
         />
       )}
+      </div>
     </div>
   );
 };

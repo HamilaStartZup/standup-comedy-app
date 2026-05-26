@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { User, UserProfile, Performance } from '../types/user';
+import { User, UserProfile, Performance, ILieuProfile } from '../types/user';
 
 // 1. Interfaces pour les types de données
 
@@ -93,7 +93,7 @@ const UserStatsSchema = new Schema<IUserStats>({
   netPromoterScore: { type: Number, default: 0 },
   absences: { type: Number, default: 0 },
   lateCancellations: { type: Number, default: 0 },
-  processedEvents: [{ type: Schema.Types.ObjectId, ref: 'Event' }]
+  processedEvents: [{ type: String }]
 });
 
 const HumoristeProfileSchema = new Schema<IHumoristeProfile>({
@@ -130,6 +130,24 @@ const OrganisateurProfileSchema = new Schema<IOrganisateurProfile>({
   },
   eventFrequency: { type: String, enum: ['weekly', 'monthly', 'occasional'] },
   phone: { type: String },
+});
+
+const LieuProfileSchema = new Schema<ILieuProfile>({
+  companyName: { type: String },
+  description: { type: String },
+  website: { type: String },
+  socialLinks: {
+    youtube: { type: String },
+    instagram: { type: String },
+    facebook: { type: String },
+    twitter: { type: String },
+  },
+  contactName: { type: String },
+  contactEmail: { type: String },
+  phone: { type: String },
+  legalStatus: { type: String },
+  siret: { type: String },
+  invoicingAvailable: { type: Boolean },
 });
 
 const performanceSchema = new Schema<Performance>({
@@ -273,7 +291,7 @@ const userSchema = new Schema<UserDocument>({
   },
   role: {
     type: String,
-    enum: ['COMEDIAN', 'ORGANIZER', 'SUPER_ADMIN', 'SPECTATOR'],
+    enum: ['COMEDIAN', 'ORGANIZER', 'SUPER_ADMIN', 'SPECTATOR', 'LIEU'],
     required: true
   },
   profile: {
@@ -284,6 +302,7 @@ const userSchema = new Schema<UserDocument>({
     type: OrganisateurProfileSchema,
     required: false,
   },
+  lieuProfile: { type: LieuProfileSchema, required: false },
   stats: { type: UserStatsSchema, default: {} },
   onboardingCompleted: { type: Boolean, default: false },
   emailVerified: { type: Boolean, default: false },
@@ -327,6 +346,19 @@ const userSchema = new Schema<UserDocument>({
     type: String,
     trim: true
   },
+  // Restriction temporaire (ex: signalement en cours d'examen)
+  isRestricted: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  restrictedAt: {
+    type: Date
+  },
+  canSwitchToLieu: {
+    type: Boolean,
+    default: false
+  },
   // Consentement RGPD
   consent: {
     termsAccepted: {
@@ -364,7 +396,7 @@ const userSchema = new Schema<UserDocument>({
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
-  const doc = this as UserDocument;
+  const doc = this as unknown as UserDocument;
   if (!doc.isModified('password')) return next();
   try {
     doc.password = await bcrypt.hash(doc.password!, 10);
@@ -376,13 +408,13 @@ userSchema.pre('save', async function(next) {
 
 // Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  const user = this as UserDocument;
+  const user = this as unknown as UserDocument;
   return bcrypt.compare(candidatePassword, user.password!);
 };
 
 // Middleware pour gérer les profils en fonction du userType avant la sauvegarde
 userSchema.pre('save', function(next) {
-  const doc = this as UserDocument;
+  const doc = this as unknown as UserDocument;
   if (doc.isModified('role') || doc.isNew) {
     if (doc.role === 'COMEDIAN' && !doc.profile) {
       doc.profile = {
@@ -408,7 +440,12 @@ userSchema.pre('save', function(next) {
       doc.organizerProfile = { companyName: '', location: { city: '', postalCode: '' }, venueTypes: [] };
     }
   }
+  if (doc.role === 'LIEU' && !doc.lieuProfile) {
+    doc.lieuProfile = { companyName: '', socialLinks: {}, invoicingAvailable: false };
+  }
   next();
 });
+
+userSchema.index({ role: 1, isActive: 1 });
 
 export const UserModel = mongoose.model<UserDocument>('User', userSchema); 
