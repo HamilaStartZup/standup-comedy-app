@@ -58,26 +58,28 @@ const CalendarPage = () => {
   // Fetch complet en arrière-plan pour permettre la navigation vers les mois passés
   const fullQuery = useUserEvents();
 
-  const fetchedEvents = fullQuery.data ?? upcomingQuery.data ?? [];
+  const fetchedEvents = fullQuery.data?.events ?? upcomingQuery.data?.events ?? [];
   const isLoading = !fullQuery.data && !upcomingQuery.data && (fullQuery.isLoading || upcomingQuery.isLoading);
   const isError = fullQuery.isError && upcomingQuery.isError;
 
   // Séparer les événements et éviter doublons pour les annulés
-  const now = new Date();
+  const { upcomingEvents, archivedEvents, cancelledEvents, allEvents } = useMemo(() => {
+    const now = new Date();
 
-  const upcomingEvents = fetchedEvents
-    .filter(e => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const upcomingEvents = fetchedEvents
+      .filter(e => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const archivedEvents = fetchedEvents
-    .filter(e => new Date(e.date) < now && e.status?.toLowerCase() !== 'cancelled')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const archivedEvents = fetchedEvents
+      .filter(e => new Date(e.date) < now && e.status?.toLowerCase() !== 'cancelled')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const cancelledEvents = fetchedEvents
-    .filter(e => e.status?.toLowerCase() === 'cancelled')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const cancelledEvents = fetchedEvents
+      .filter(e => e.status?.toLowerCase() === 'cancelled')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const allEvents = [...upcomingEvents, ...archivedEvents, ...cancelledEvents];
+    return { upcomingEvents, archivedEvents, cancelledEvents, allEvents: [...upcomingEvents, ...archivedEvents, ...cancelledEvents] };
+  }, [fetchedEvents]);
 
   // Récupérer les absences pour tous les événements affichés
   const { data: eventAbsences = [] } = useQuery({
@@ -122,8 +124,7 @@ const CalendarPage = () => {
     },
   });
 
-  const handleEventClick = (event: IEvent) => {
-    console.log('Événement cliqué :', event);
+  const handleEventClick = (_event: IEvent) => {
   };
 
   const handleAbsenceClick = (participant: any, event: IEvent) => {

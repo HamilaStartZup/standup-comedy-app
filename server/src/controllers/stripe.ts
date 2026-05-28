@@ -8,6 +8,7 @@ import { NotificationModel } from '../models/Notification';
 import mongoose from 'mongoose';
 import { emitVenueBookingPaymentUpdated } from '../services/eventEmitter';
 import { computeBookingAmount } from '../utils/venuePricing';
+import { ProcessedStripeEventModel } from '../models/ProcessedStripeEvent';
 
 const stripe = config.stripe.secretKey ? new Stripe(config.stripe.secretKey) : null;
 
@@ -133,6 +134,21 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
     return;
   }
 
+  try {
+    await ProcessedStripeEventModel.create({ stripeEventId: event.id });
+  } catch (dedupErr: unknown) {
+    // Clé dupliquée = événement déjà traité
+    if (
+      typeof dedupErr === 'object' &&
+      dedupErr !== null &&
+      (dedupErr as any).code === 11000
+    ) {
+      res.status(200).json({ received: true });
+      return;
+    }
+    throw dedupErr;
+  }
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
 
@@ -197,6 +213,7 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
               title: 'Réservation confirmée',
               message: `Votre paiement pour "${booking.venue.name}" a été reçu. Réservation confirmée !`,
               relatedVenue: booking.venue._id,
+              relatedBooking: booking._id,
               read: false,
             },
             {
@@ -205,6 +222,7 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
               title: 'Paiement reçu',
               message: `Le paiement pour la réservation de "${booking.venue.name}" a été reçu. Réservation confirmée !`,
               relatedVenue: booking.venue._id,
+              relatedBooking: booking._id,
               read: false,
             },
           ]);
@@ -217,7 +235,8 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
             booking._id.toString(),
             (booking.venue as { _id: mongoose.Types.ObjectId })._id.toString(),
             booking.status,
-            booking.paymentStatus
+            booking.paymentStatus,
+            [booking.requester.toString(), (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId }).owner.toString()]
           );
         }
 
@@ -225,6 +244,11 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
       } catch (e) {
         // Return 500 so Stripe retries the webhook instead of silently losing the confirmation
         console.error('[Stripe] Erreur confirmation réservation après webhook:', e);
+        try {
+          await ProcessedStripeEventModel.deleteOne({ stripeEventId: event.id });
+        } catch (cleanupErr) {
+          console.error('[Stripe] Erreur nettoyage dedup record:', cleanupErr);
+        }
         res.status(500).send('Internal error');
         return;
       }
@@ -312,7 +336,8 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
             booking._id.toString(),
             (booking.venue as { _id: mongoose.Types.ObjectId })._id.toString(),
             booking.status,
-            booking.paymentStatus
+            booking.paymentStatus,
+            [booking.requester.toString(), (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId }).owner.toString()]
           );
 
           try {
@@ -322,6 +347,7 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
               title: 'Remboursement effectué',
               message: `Votre remboursement de ${booking.refundedAmount}€ pour "${booking.venue.name}" a été traité.`,
               relatedVenue: booking.venue._id,
+              relatedBooking: booking._id,
               read: false,
             });
           } catch (notifError) {
@@ -417,10 +443,9 @@ export const createVenueBookingCheckoutSession = async (req: AuthRequest, res: R
     }
 
     const userId = req.user?.id;
-    const userRole = req.user?.role;
 
-    if (!userId || userRole !== 'ORGANIZER') {
-      res.status(403).json({ message: 'Non autorisé' });
+    if (!userId) {
+      res.status(401).json({ message: 'Non authentifié' });
       return;
     }
 
@@ -521,9 +546,8 @@ export const confirmVenueBookingPayment = async (req: AuthRequest, res: Response
     }
 
     const userId = req.user?.id;
-    const userRole = req.user?.role;
-    if (!userId || userRole !== 'ORGANIZER') {
-      res.status(403).json({ message: 'Non autorisé' });
+    if (!userId) {
+      res.status(401).json({ message: 'Non authentifié' });
       return;
     }
 
@@ -597,6 +621,7 @@ export const confirmVenueBookingPayment = async (req: AuthRequest, res: Response
           title: 'Réservation confirmée',
           message: `Votre paiement pour "${booking.venue.name}" a été reçu. Réservation confirmée !`,
           relatedVenue: booking.venue._id,
+          relatedBooking: booking._id,
           read: false,
         },
         {
@@ -605,6 +630,7 @@ export const confirmVenueBookingPayment = async (req: AuthRequest, res: Response
           title: 'Paiement reçu',
           message: `Le paiement pour la réservation de "${booking.venue.name}" a été reçu. Réservation confirmée !`,
           relatedVenue: booking.venue._id,
+          relatedBooking: booking._id,
           read: false,
         },
       ]);
@@ -617,7 +643,8 @@ export const confirmVenueBookingPayment = async (req: AuthRequest, res: Response
         booking._id.toString(),
         (booking.venue as { _id: mongoose.Types.ObjectId })._id.toString(),
         booking.status,
-        booking.paymentStatus
+        booking.paymentStatus,
+        [booking.requester.toString(), (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId }).owner.toString()]
       );
     }
 

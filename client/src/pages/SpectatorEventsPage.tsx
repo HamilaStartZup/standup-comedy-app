@@ -6,6 +6,7 @@ import api from '../services/api';
 import type { IEvent } from '../types/event';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
+import { useNow } from '../hooks/useNow';
 import {
   getEventFavorites,
   removeEventFavorite,
@@ -25,12 +26,19 @@ function parseEventsResponse(data: any): IEvent[] {
 
 type EventsFilterTab = 'inscrits' | 'archives' | 'annules' | 'favoris';
 
+const VALID_TABS: EventsFilterTab[] = ['inscrits', 'archives', 'annules', 'favoris'];
+
 export default function SpectatorEventsPage() {
   const { token, user } = useAuth();
   const { showSuccess, showError } = useAlert();
+  const now = useNow();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [eventFilter, setEventFilter] = useState<EventsFilterTab>('inscrits');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [eventFilter, setEventFilter] = useState<EventsFilterTab>(() => {
+    const tab = searchParams.get('tab');
+    return VALID_TABS.includes(tab as EventsFilterTab) ? (tab as EventsFilterTab) : 'inscrits';
+  });
   const [selectedEvent, setSelectedEvent] = useState<IEvent | null>(null);
   const [unregisterConfirm, setUnregisterConfirm] = useState<{ isOpen: boolean; event: IEvent | null }>({ isOpen: false, event: null });
   const [ratedEvents, setRatedEvents] = useState<Record<string, boolean>>({});
@@ -74,7 +82,6 @@ export default function SpectatorEventsPage() {
     onError: (e: any) => showError(e?.response?.data?.message || 'Erreur de paiement'),
   });
 
-  const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     const payment = searchParams.get('payment');
     const sessionId = searchParams.get('session_id');
@@ -97,6 +104,32 @@ export default function SpectatorEventsPage() {
       setSearchParams({}, { replace: true });
     }
   }, [searchParams]);
+
+  // Synchronise l'onglet filtre quand le param ?tab= change (ex: clic depuis notif)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && VALID_TABS.includes(tab as EventsFilterTab)) {
+      setEventFilter(tab as EventsFilterTab);
+    }
+  }, [searchParams]);
+
+  // Scroll et highlight de la carte ciblée via ?focus=
+  useEffect(() => {
+    const focusId = searchParams.get('focus');
+    if (!focusId || loadingRegistrations || loadingFavorites) return;
+    const timer = setTimeout(() => {
+      const node = document.querySelector<HTMLElement>(`[data-event-id="${focusId}"]`);
+      if (!node) return;
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      node.style.outline = '3px solid #ff416c';
+      node.style.outlineOffset = '2px';
+      setTimeout(() => {
+        node.style.outline = '';
+        node.style.outlineOffset = '';
+      }, 2000);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchParams, loadingRegistrations, loadingFavorites, eventFilter]);
 
   // Build a Set of event IDs the user is registered to (from myRegistrationsList)
   // This is reliable regardless of whether spectatorRegistrations is populated on the event
@@ -125,21 +158,32 @@ export default function SpectatorEventsPage() {
     }
   };
 
-  const now = new Date();
-  const registeredUpcoming = myRegistrationsList
-    .filter((e) => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const registeredArchived = myRegistrationsList
-    .filter((e) => (new Date(e.date) < now) && e.status?.toLowerCase() !== 'cancelled')
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const registeredUpcoming = useMemo(() => {
+    const ref = now;
+    return myRegistrationsList
+      .filter((e) => new Date(e.date).getTime() >= ref && e.status?.toLowerCase() !== 'cancelled')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [myRegistrationsList, now]);
 
-  const registeredCancelled = myRegistrationsList
-    .filter((e) => e.status?.toLowerCase() === 'cancelled')
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const registeredArchived = useMemo(() => {
+    const ref = now;
+    return myRegistrationsList
+      .filter((e) => new Date(e.date).getTime() < ref && e.status?.toLowerCase() !== 'cancelled')
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [myRegistrationsList, now]);
 
-  const favoritesUpcoming = favoritesList
-    .filter((e) => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled' && !isUserWithdrawn(e))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const registeredCancelled = useMemo(() => {
+    return myRegistrationsList
+      .filter((e) => e.status?.toLowerCase() === 'cancelled')
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [myRegistrationsList]);
+
+  const favoritesUpcoming = useMemo(() => {
+    const ref = now;
+    return favoritesList
+      .filter((e) => new Date(e.date).getTime() >= ref && e.status?.toLowerCase() !== 'cancelled' && !isUserWithdrawn(e))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [favoritesList, user?._id, now]);
 
   const isLoading = loadingRegistrations || loadingFavorites;
 
@@ -307,6 +351,7 @@ export default function SpectatorEventsPage() {
                   {registeredCancelled.map((event) => (
                     <div
                       key={event._id}
+                      data-event-id={event._id}
                       role="button"
                       tabIndex={0}
                       onClick={() => setSelectedEvent(event)}
@@ -521,6 +566,7 @@ function EventCard({
 
   return (
     <div
+      data-event-id={event._id}
       style={{
         position: 'relative',
         background: hasBg ? undefined : '#fff',

@@ -40,8 +40,6 @@ const Dashboard = () => {
     queryFn: async () => {
       // Auth is handled via HttpOnly cookie — no need to check localStorage
       const response = await api.get('/events/stats');
-      console.log('📊 Statistiques reçues du serveur:', response.data);
-      console.log('👤 Rôle utilisateur:', (user as any)?.role);
       return response.data as EventStats;
     },
     enabled: !!user,

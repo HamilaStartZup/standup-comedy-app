@@ -32,6 +32,11 @@ export const useSSE = (
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);
   const isUnmountingRef = useRef<boolean>(false);
+  const onEventRef = useRef<SSEEventHandler | undefined>(onEvent);
+
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  }, [onEvent]);
 
   // Constantes de reconnexion
   const MAX_RECONNECT_DELAY = 30000; // 30 secondes max
@@ -117,8 +122,8 @@ export const useSSE = (
         try {
           const event: SSEEvent = JSON.parse(e.data);
           console.log('📨 [SSE] Évènement reçu:', event.type, event.data);
-          if (onEvent) {
-            onEvent(event);
+          if (onEventRef.current) {
+            onEventRef.current(event);
           }
         } catch (error) {
           console.error('❌ [SSE] Erreur de parsing:', error);
@@ -131,9 +136,16 @@ export const useSSE = (
         'APPLICATION_CREATED', 'APPLICATION_STATUS_CHANGED', 'APPLICATION_WITHDRAWN',
         'ABSENCE_MARKED', 'ABSENCE_CANCELLED',
         'FAVORITE_COMEDIAN_ADDED', 'FAVORITE_COMEDIAN_REMOVED',
+        'APPLICATION_FAVORITE_ADDED', 'APPLICATION_FAVORITE_REMOVED',
         'EVENT_FAVORITE_ADDED', 'EVENT_FAVORITE_REMOVED',
         'PROFILE_UPDATED', 'USER_REGISTERED', 'PASSWORD_RESET',
-        'VENUE_BOOKING_STATUS_CHANGED', 'VENUE_BOOKING_PAYMENT_UPDATED'
+        'LATE_CANCELLATION',
+        'VENUE_BOOKING_STATUS_CHANGED', 'VENUE_BOOKING_PAYMENT_UPDATED',
+        'NOTIFICATION_CREATED', 'NOTIFICATION_READ', 'NOTIFICATION_ALL_READ',
+        'VENUE_CREATED', 'VENUE_UPDATED', 'VENUE_DELETED',
+        'COMEDIAN_REPORT_CREATED', 'COMEDIAN_REPORT_UPDATED',
+        'SPECTATOR_REGISTERED', 'SPECTATOR_UNREGISTERED', 'SPECTATOR_RATING_SUBMITTED',
+        'PRESENCE_ALERT_ACKNOWLEDGED', 'LATE_CANCELLATION_ALERT_ACKNOWLEDGED',
       ];
 
       eventTypes.forEach(eventType => {
@@ -142,8 +154,8 @@ export const useSSE = (
             const messageEvent = e as MessageEvent;
             const event: SSEEvent = JSON.parse(messageEvent.data);
             console.log(`📨 [SSE] ${eventType}:`, event.data);
-            if (onEvent) {
-              onEvent(event);
+            if (onEventRef.current) {
+              onEventRef.current(event);
             }
           } catch (error) {
             console.error(`❌ [SSE] Erreur de parsing pour ${eventType}:`, error);
@@ -179,7 +191,7 @@ export const useSSE = (
       console.error('❌ [SSE] Erreur lors de la création de EventSource:', error);
       setStatus('error');
     }
-  }, [enabled, onEvent, getReconnectDelay]);
+  }, [enabled, getReconnectDelay]);
 
   // Effet principal : gérer la connexion
   useEffect(() => {

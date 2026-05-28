@@ -4,10 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import api, { markNotificationAsRead, markAllNotificationsAsRead, deleteNotification } from '../services/api';
+import { getRedirectPath, type NotificationType } from '../utils/notificationRedirect';
 
 interface Notification {
   _id: string;
-  type: 'new_application' | 'application_accepted' | 'application_rejected' | 'event_updated' | 'absence_marked' | 'event_cancelled' | 'new_event' | 'venue_booking_request' | 'venue_booking_response' | 'venue_booking_cancelled_by_owner' | 'venue_date_blocked' | 'venue_booking_payment_required' | 'venue_booking_confirmed' | 'venue_booking_payment_reminder' | 'venue_booking_payment_expired';
+  type: NotificationType;
   title: string;
   message: string;
   relatedEvent?: {
@@ -28,6 +29,9 @@ interface Notification {
     _id: string;
     name: string;
   };
+  relatedBooking?: {
+    _id: string;
+  };
   read: boolean;
   readAt?: string;
   createdAt: string;
@@ -35,7 +39,7 @@ interface Notification {
 
 const NotificationDropdown = () => {
   const { user } = useAuth();
-  const { showError } = useAlert();
+  const { showError, showInfo } = useAlert();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
@@ -89,45 +93,13 @@ const NotificationDropdown = () => {
       }
     }
 
-    // Naviguer vers la page appropriée
-    if (notification.type === 'new_event' && notification.relatedEvent?._id) {
-      navigate('/spectateur');
-      setIsOpen(false);
-      return;
+    // Naviguer ou afficher un toast selon le résultat de redirection
+    const result = getRedirectPath(notification, user?.role);
+    if (result.path) {
+      navigate(result.path);
+    } else if (result.toast) {
+      showInfo(result.toast);
     }
-
-    // Notifications de réservation de salle
-    if (notification.type === 'venue_booking_request' && notification.relatedVenue?._id) {
-      // Redirection centralisée vers la gestion des salles/réservations
-      navigate('/my-venues-management?tab=reservations');
-      setIsOpen(false);
-      return;
-    }
-    if (
-      notification.type === 'venue_booking_response' ||
-      notification.type === 'venue_booking_cancelled_by_owner' ||
-      notification.type === 'venue_date_blocked' ||
-      notification.type === 'venue_booking_payment_required' ||
-      notification.type === 'venue_booking_confirmed' ||
-      notification.type === 'venue_booking_payment_reminder' ||
-      notification.type === 'venue_booking_payment_expired'
-    ) {
-      // Redirection centralisée vers la gestion des salles/réservations
-      navigate('/my-venues-management?tab=reservations');
-      setIsOpen(false);
-      return;
-    }
-
-    if (notification.relatedEvent?._id) {
-      if (notification.type === 'new_application' || notification.relatedApplication) {
-        navigate(`/applications?eventId=${notification.relatedEvent._id}`);
-      } else {
-        navigate(`/events`);
-      }
-    } else {
-      navigate('/applications');
-    }
-
     setIsOpen(false);
   };
 
@@ -166,6 +138,8 @@ const NotificationDropdown = () => {
         return '🚫';
       case 'event_cancelled':
         return '🛑';
+      case 'event_deleted':
+        return '🗑️';
       case 'new_event':
         return '📅';
       case 'venue_booking_request':
@@ -173,6 +147,8 @@ const NotificationDropdown = () => {
       case 'venue_booking_response':
         return '🏛️';
       case 'venue_booking_cancelled_by_owner':
+        return '🏛️';
+      case 'venue_booking_cancelled_by_requester':
         return '🏛️';
       case 'venue_date_blocked':
         return '🔒';
@@ -184,6 +160,13 @@ const NotificationDropdown = () => {
         return '⏰';
       case 'venue_booking_payment_expired':
         return '⏳';
+      case 'venue_booking_refunded':
+        return '💰';
+      case 'venue_deleted_refund':
+        return '🗑️';
+      case 'late_cancellation_organizer':
+      case 'late_cancellation_comedian':
+        return '⚠️';
       default:
         return '🔔';
     }

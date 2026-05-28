@@ -269,16 +269,17 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
         <div style={{ marginBottom: '15px' }}>
           {previewImage && (
             <div style={{ marginBottom: '10px', textAlign: 'center' }}>
-              <img 
-                src={previewImage} 
-                alt="Aperçu" 
-                style={{ 
-                  width: '100px', 
-                  height: '100px', 
-                  borderRadius: '50%', 
+              <img
+                src={previewImage}
+                alt="Aperçu"
+                loading="lazy"
+                style={{
+                  width: '100px',
+                  height: '100px',
+                  borderRadius: '50%',
                   objectFit: 'cover',
                   border: '2px solid #ff416c'
-                }} 
+                }}
               />
             </div>
           )}

@@ -5,9 +5,11 @@ import { VenueModel } from '../models/Venue';
 import { VenueBookingModel } from '../models/VenueBooking';
 import { VenueBlockedDateModel } from '../models/VenueBlockedDate';
 import { refundVenueBookings } from './venueBooking';
-import { updateVenueSchema } from '../validation/schemas';
+import { createVenueSchema, updateVenueSchema } from '../validation/schemas';
+import { escapeRegex } from '../utils/regex';
 import { getDepartmentFromPostalCode } from '../utils/cityMapping';
 import { DEPARTMENT_TO_REGION, getDepartmentsByRegion, normalizeDepartment } from '../utils/geographicMatching';
+import { emitVenueCreated, emitVenueUpdated, emitVenueDeleted } from '../services/eventEmitter';
 // ─── CRUD Venues ─────────────────────────────────────────────────────────────
 
 export const createVenue = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -18,7 +20,19 @@ export const createVenue = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    const venue = await VenueModel.create({ ...req.body, owner: ownerId });
+    let validated: ReturnType<typeof createVenueSchema.parse>;
+    try {
+      validated = createVenueSchema.parse(req.body);
+    } catch (zodErr: unknown) {
+      const { ZodError } = await import('zod');
+      if (zodErr instanceof ZodError) {
+        res.status(400).json({ message: zodErr.errors.map(e => e.message).join(', ') });
+        return;
+      }
+      throw zodErr;
+    }
+    const venue = await VenueModel.create({ ...validated, owner: ownerId });
+    emitVenueCreated(venue._id.toString(), ownerId);
     res.status(201).json({ venue });
   } catch (error) {
     if (error instanceof mongoose.Error.ValidationError) {
@@ -46,7 +60,7 @@ export const listVenues = async (req: AuthRequest, res: Response): Promise<void>
     }
     const safeLimit = Math.min(limitNum, 50);
 
-    const filter: Record<string, unknown> = { isActive: true };
+    const filter: Record<string, unknown> = { isActive: true, isDeleted: { $ne: true } };
     if (req.query.owner === 'me' && req.user?.id) {
       filter.owner = req.user.id;
     } else if (req.user?.role === 'LIEU') {
@@ -62,9 +76,10 @@ export const listVenues = async (req: AuthRequest, res: Response): Promise<void>
       filter.capacity = { $gte: capacityNum };
     }
     if (city) {
-      const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      filter.city = new RegExp(escaped, 'i');
+      filter.city = new RegExp(`^${escapeRegex(city.trim().slice(0, 80))}`, 'i');
     }
+    // region + department combinés : on garde l'intersection (le département doit appartenir
+    // à la région). Avant : department écrasait region sans valider l'appartenance.
     if (region) {
       const depts = getDepartmentsByRegion(region);
       if (depts.length === 0) {
@@ -75,6 +90,13 @@ export const listVenues = async (req: AuthRequest, res: Response): Promise<void>
     }
     if (department) {
       const normalizedDept = normalizeDepartment(department);
+      if (region) {
+        const depts = getDepartmentsByRegion(region);
+        if (!depts.includes(normalizedDept)) {
+          res.status(400).json({ message: `Département "${department}" hors de la région "${region}"` });
+          return;
+        }
+      }
       filter.department = normalizedDept;
     }
 
@@ -84,14 +106,19 @@ export const listVenues = async (req: AuthRequest, res: Response): Promise<void>
     const [venues, total] = await Promise.all([
       VenueModel.find(filter)
         .collation(collation)
-        .populate('owner', 'firstName lastName organizerProfile.companyName')
+        .select('name city address capacity venueType pricePerEvent pricingType photos isActive')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(safeLimit),
+        .limit(safeLimit)
+        .lean(),
       VenueModel.countDocuments(filter).collation(collation),
     ]);
 
-    res.status(200).json({ venues, total, page: pageNum, limit: safeLimit });
+    const totalPages = Math.ceil(total / safeLimit);
+    res.status(200).json({
+      venues,
+      pagination: { page: pageNum, limit: safeLimit, total, totalPages, hasMore: pageNum < totalPages },
+    });
   } catch (error) {
     console.error('Erreur listVenues:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });
@@ -129,9 +156,11 @@ export const listMyVenues = async (req: AuthRequest, res: Response): Promise<voi
       VenueModel.find(filter)
         .collation(collation)
         .populate('owner', 'firstName lastName organizerProfile.companyName')
+        .select('name city address capacity venueType pricePerEvent photos isActive owner')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(safeLimit),
+        .limit(safeLimit)
+        .lean(),
       VenueModel.countDocuments(filter).collation(collation),
     ]);
 
@@ -223,6 +252,7 @@ export const updateVenue = async (req: AuthRequest, res: Response): Promise<void
       res.status(exists ? 403 : 404).json({ message: exists ? 'Non autorisé à modifier cette salle' : 'Salle introuvable' });
       return;
     }
+    emitVenueUpdated(venueId, ownerId);
     res.status(200).json({ venue: updated });
   } catch (error) {
     if (error instanceof mongoose.Error.ValidationError) {
@@ -255,6 +285,13 @@ export const deleteVenue = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    const activeBookings = await VenueBookingModel.find({
+      venue: venueId,
+      status: { $in: ['PENDING', 'ACCEPTED', 'CONFIRMED'] }
+    }).select('requester').lean();
+    const bookerIds = activeBookings.map(b => b.requester.toString());
+    const allTargets = [ownerId, ...bookerIds].filter((id, i, arr) => arr.indexOf(id) === i);
+
     // Soft delete first: mark venue as deleted so no new bookings can be created
     // while refunds are in progress. Bookings are preserved so requesters can
     // still see them in "mes réservations".
@@ -263,6 +300,8 @@ export const deleteVenue = async (req: AuthRequest, res: Response): Promise<void
     await VenueBlockedDateModel.deleteMany({ venue: venueId });
     // Rembourser tous les bookings payés après suppression (salle déjà invisible)
     await refundVenueBookings(venueId);
+
+    emitVenueDeleted(venueId, allTargets);
     res.status(204).send();
   } catch (error) {
     console.error('Erreur deleteVenue:', error);

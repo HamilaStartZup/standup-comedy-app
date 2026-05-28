@@ -30,4 +30,6 @@ export interface IEvent {
   recurrenceGroupId?: string;
   /** URL de l'image de l'événement (carte spectateur) */
   imageUrl?: string;
+  /** Réservation de salle liée (création depuis Mes réservations) */
+  venueBookingId?: string;
 } 

@@ -26,6 +26,7 @@ import { getAuthCookieOptions } from '../utils/cookieOptions';
 // ══════════════════════════════════════════════════════════
 const ALLOWED_REDIRECT_URI_PATTERNS = [
   /^https:\/\/dev\.connectcomedyclub\.com\/api\/auth\/oauth\/callback$/,
+  /^https:\/\/test\.connectcomedyclub\.com\/api\/auth\/oauth\/callback$/,
   /^https:\/\/connectcomedyclub\.com\/api\/auth\/oauth\/callback$/,
   /^http:\/\/localhost:\d+\/api\/auth\/oauth\/callback$/,
 ];
@@ -67,8 +68,9 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Use full API URL including /api for proper Nginx routing
-    const redirectUri = `${config.api.url}/auth/oauth/callback`;
+    // Build redirect URI with /api prefix regardless of API_URL format
+    const apiBase = config.api.url.replace(/\/api\/?$/, '');
+    const redirectUri = `${apiBase}/api/auth/oauth/callback`;
 
     // Validation de sécurité du redirect URI
     if (!isValidRedirectUri(redirectUri)) {
@@ -171,8 +173,9 @@ export const callback = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Build redirect_uri for token exchange - must EXACTLY match the one used in authorize
-    const redirectUri = `${config.api.url}/auth/oauth/callback`;
+    // Build redirect_uri - must EXACTLY match the one used in authorize
+    const apiBase = config.api.url.replace(/\/api\/?$/, '');
+    const redirectUri = `${apiBase}/api/auth/oauth/callback`;
 
     // Exchange code for tokens
     const tokens = await exchangeCodeForTokens(

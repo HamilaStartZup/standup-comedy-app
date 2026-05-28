@@ -19,7 +19,7 @@ interface EventFormData {
   maxPerformers?: number;
 }
 
-export const MyEventsPage: React.FC = () => {
+const MyEventsPage: React.FC = () => {
   const { user } = useAuth();
   const { events, createEvent, updateEvent } = useEvents();
   const [isCreating, setIsCreating] = useState(false);
@@ -514,4 +514,7 @@ export const MyEventsPage: React.FC = () => {
       )}
     </div>
   );
-}; 
+};
+
+export { MyEventsPage };
+export default MyEventsPage;

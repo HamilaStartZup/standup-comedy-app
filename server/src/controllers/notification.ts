@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { NotificationModel, NotificationDocument } from '../models/Notification';
 import { Types } from 'mongoose';
+import { emitNotificationCreated, emitNotificationRead, emitNotificationAllRead } from '../services/eventEmitter';
+import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 
 /**
  * GET /api/notifications
@@ -16,29 +18,30 @@ export const getNotifications = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const { read, limit } = req.query;
-    const query: any = { user: userId };
+    const { read } = req.query;
+    const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>, 50, 100);
 
-    // Filtrer par statut de lecture si fourni
+    const query: any = { user: userId };
     if (read !== undefined) {
       query.read = read === 'true';
     }
 
-    const notifications = await NotificationModel.find(query)
-      .populate('relatedEvent', 'title date')
-      .populate('relatedApplication', 'status')
-      .populate('relatedUser', 'firstName lastName')
-      .populate('relatedVenue', 'name')
-      .sort({ createdAt: -1 })
-      .limit(limit ? (isNaN(parseInt(limit as string, 10)) ? 50 : Math.max(1, parseInt(limit as string, 10))) : 50);
+    const [notifications, total, unreadCount] = await Promise.all([
+      NotificationModel.find(query)
+        .populate('relatedEvent', 'title date')
+        .populate('relatedApplication', 'status')
+        .populate('relatedUser', 'firstName lastName')
+        .populate('relatedVenue', 'name')
+        .populate('relatedBooking', '_id')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      NotificationModel.countDocuments(query),
+      NotificationModel.countDocuments({ user: userId, read: false }),
+    ]);
 
-    const unreadCount = await NotificationModel.countDocuments({ user: userId, read: false });
-
-    res.status(200).json({
-      notifications,
-      unreadCount,
-      total: notifications.length
-    });
+    res.status(200).json({ notifications, unreadCount, pagination: buildPaginationResult({ page, limit }, total) });
   } catch (error) {
     console.error('Erreur lors de la récupération des notifications:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération des notifications' });
@@ -75,6 +78,7 @@ export const markNotificationAsRead = async (req: AuthRequest, res: Response): P
     notification.read = true;
     notification.readAt = new Date();
     await notification.save();
+    emitNotificationRead(userId, notificationId);
 
     res.status(200).json({
       message: 'Notification marquée comme lue',
@@ -103,6 +107,7 @@ export const markAllNotificationsAsRead = async (req: AuthRequest, res: Response
       { user: userId, read: false },
       { read: true, readAt: new Date() }
     );
+    emitNotificationAllRead(userId);
 
     res.status(200).json({
       message: 'Toutes les notifications ont été marquées comme lues',
@@ -161,10 +166,11 @@ export const createNotification = async (
   relatedEventId?: string,
   relatedApplicationId?: string,
   relatedUserId?: string,
-  relatedVenueId?: string
+  relatedVenueId?: string,
+  relatedBookingId?: string
 ): Promise<void> => {
   try {
-    await NotificationModel.create({
+    const notification = await NotificationModel.create({
       user: new Types.ObjectId(userId),
       type,
       title,
@@ -173,8 +179,10 @@ export const createNotification = async (
       relatedApplication: relatedApplicationId ? new Types.ObjectId(relatedApplicationId) : undefined,
       relatedUser: relatedUserId ? new Types.ObjectId(relatedUserId) : undefined,
       relatedVenue: relatedVenueId ? new Types.ObjectId(relatedVenueId) : undefined,
+      relatedBooking: relatedBookingId ? new Types.ObjectId(relatedBookingId) : undefined,
       read: false
     });
+    emitNotificationCreated(userId, notification._id.toString());
   } catch (error) {
     console.error('Erreur lors de la création de la notification:', { userId, type }, error);
     // Ne pas faire échouer l'opération principale si la notification échoue

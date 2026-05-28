@@ -12,6 +12,7 @@ import {
   emitVenueBookingPaymentUpdated,
 } from '../services/eventEmitter';
 import { computeBookingAmount } from '../utils/venuePricing';
+import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 
 // Vérifie si deux plages horaires se chevauchent (même date)
 function timesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean {
@@ -140,6 +141,11 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
 
     if (isNaN(date.getTime())) {
       res.status(400).json({ message: 'Date de réservation invalide' });
+      return;
+    }
+
+    if (venue.disabledWeekdays && venue.disabledWeekdays.includes(date.getDay())) {
+      res.status(400).json({ message: 'Cette salle n\'est pas disponible ce jour-là.' });
       return;
     }
 
@@ -295,7 +301,8 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
       booking._id.toString(),
       venueId,
       booking.status,
-      booking.paymentStatus
+      booking.paymentStatus,
+      [requesterId, venue.owner.toString()]
     );
 
     // Notifications selon le mode de réservation
@@ -308,6 +315,7 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
           title: 'Nouvelle demande de réservation',
           message: `Une demande de réservation a été faite pour votre salle "${venue.name}".`,
           relatedVenue: venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
       } else if (initialStatus === 'CONFIRMED') {
@@ -318,6 +326,7 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
           title: 'Réservation confirmée',
           message: `Votre réservation pour "${venue.name}" a été confirmée automatiquement (aucun paiement requis).`,
           relatedVenue: venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
       } else {
@@ -328,6 +337,7 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
           title: 'Réservation acceptée — paiement requis',
           message: `Votre réservation pour "${venue.name}" a été acceptée automatiquement. Vous avez 72h pour effectuer le paiement.`,
           relatedVenue: venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
       }
@@ -370,14 +380,15 @@ export const listVenueBookings = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
+    const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>);
+    const total = await VenueBookingModel.countDocuments({ venue: venueId });
     const bookings = await VenueBookingModel.find({ venue: venueId })
-      .populate(
-        'requester',
-        'firstName lastName email phone avatarUrl role organizerProfile.companyName organizerProfile.phone'
-      )
-      .sort({ requestedDate: 1 });
-
-    res.status(200).json({ bookings });
+      .populate('requester', 'firstName lastName email phone avatarUrl role organizerProfile.companyName organizerProfile.phone')
+      .sort({ requestedDate: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+    res.status(200).json({ bookings, pagination: buildPaginationResult({ page, limit }, total) });
   } catch (error) {
     console.error('Erreur listVenueBookings:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });
@@ -427,7 +438,10 @@ export const myBookings = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     const bookings = await VenueBookingModel.find(findFilter)
-      .populate('venue', 'name city address venueType pricePerEvent cancellationPolicy isDeleted pricingType deposit extraFees currency')
+      .populate(
+        'venue',
+        'name city address postalCode country venueType capacity description shortDescription pricePerEvent cancellationPolicy isDeleted pricingType deposit extraFees currency latitude longitude photos'
+      )
       .populate('requester', requesterFields)
       .sort({ createdAt: -1 });
 
@@ -574,7 +588,8 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
       booking._id.toString(),
       (booking.venue as { _id: mongoose.Types.ObjectId })._id.toString(),
       booking.status,
-      booking.paymentStatus
+      booking.paymentStatus,
+      [booking.requester.toString(), ownerId]
     );
 
     // Notifier le demandeur (découplé : un échec de notif ne doit pas faire échouer la réponse)
@@ -586,6 +601,7 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
           title: 'Réservation refusée',
           message: `Votre demande de réservation pour "${booking.venue.name}" a été refusée.`,
           relatedVenue: booking.venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
       } else if (booking.status === 'CONFIRMED') {
@@ -596,6 +612,7 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
           title: 'Réservation confirmée',
           message: `Votre réservation pour "${booking.venue.name}" a été confirmée (aucun paiement requis).`,
           relatedVenue: booking.venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
       } else {
@@ -608,6 +625,7 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
           title: 'Réservation acceptée — paiement requis',
           message: `Votre réservation pour "${booking.venue.name}" a été acceptée. Prix : ${price}€. Vous avez 72h pour effectuer le paiement.`,
           relatedVenue: booking.venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
       }
@@ -640,7 +658,7 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     const booking = await VenueBookingModel.findById(bookingId)
-      .populate<{ venue: { _id: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy } }>('venue', 'cancellationPolicy');
+      .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy } }>('venue', 'cancellationPolicy owner');
     if (!booking) {
       res.status(404).json({ message: 'Réservation introuvable' });
       return;
@@ -699,6 +717,7 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
           type: 'venue_booking_cancelled_by_requester',
           title: 'Réservation annulée — remboursement effectué',
           message: `Votre réservation a été annulée. Remboursement de ${booking.refundedAmount ?? booking.paidAmount}€ en cours.`,
+          relatedBooking: booking._id,
           read: false,
         });
       } catch (notifError) {
@@ -708,9 +727,10 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
 
     emitVenueBookingStatusChanged(
       booking._id.toString(),
-      booking.venue.toString(),
+      (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy })._id.toString(),
       booking.status,
-      booking.paymentStatus
+      booking.paymentStatus,
+      [requesterId, (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy }).owner?.toString() || ''].filter(Boolean)
     );
 
     res.status(200).json({
@@ -778,7 +798,8 @@ export const cancelBookingByOwner = async (req: AuthRequest, res: Response): Pro
       booking._id.toString(),
       (booking.venue as { _id: mongoose.Types.ObjectId })._id.toString(),
       booking.status,
-      booking.paymentStatus
+      booking.paymentStatus,
+      [booking.requester.toString(), ownerId]
     );
 
     try {
@@ -795,6 +816,7 @@ export const cancelBookingByOwner = async (req: AuthRequest, res: Response): Pro
           ? `Votre réservation pour "${booking.venue.name}" a été annulée par le propriétaire. Motif : ${reason}.${refundInfo}`
           : `Votre réservation pour "${booking.venue.name}" a été annulée par le propriétaire.${refundInfo}`,
         relatedVenue: booking.venue._id,
+        relatedBooking: booking._id,
         read: false,
       });
     } catch (notifError) {
@@ -899,7 +921,8 @@ export const blockDate = async (req: AuthRequest, res: Response): Promise<void> 
         b._id.toString(),
         venueId,
         b.status,
-        b.paymentStatus
+        b.paymentStatus,
+        [b.requester.toString(), ownerId]
       );
     });
 
@@ -923,6 +946,7 @@ export const blockDate = async (req: AuthRequest, res: Response): Promise<void> 
             ? `Votre réservation pour "${venue.name}" a été annulée car la salle est indisponible ce jour-là. Motif : ${reason}`
             : `Votre réservation pour "${venue.name}" a été annulée car la salle est indisponible ce jour-là.`,
           relatedVenue: venue._id,
+          relatedBooking: booking._id,
           read: false,
         }).catch((notifError) => {
           console.error('blockDate — échec notification:', notifError, { bookingId: booking._id });
@@ -1065,6 +1089,83 @@ export const takenSlots = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
+// ─── Dates où tous les créneaux horaires sont complets ───────────────────────
+
+export const fullDates = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { venueId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(venueId)) {
+      res.status(400).json({ message: 'ID de salle invalide' });
+      return;
+    }
+
+    const venue = await VenueModel.findById(venueId).select('timeRestrictions pricingType disabledWeekdays').lean();
+    if (!venue) {
+      res.status(404).json({ message: 'Salle introuvable' });
+      return;
+    }
+
+    const openMin = venue.timeRestrictions?.openTime
+      ? parseInt(venue.timeRestrictions.openTime.split(':')[0]) * 60 + parseInt(venue.timeRestrictions.openTime.split(':')[1])
+      : 0;
+    const closeMin = venue.timeRestrictions?.closeTime
+      ? parseInt(venue.timeRestrictions.closeTime.split(':')[0]) * 60 + parseInt(venue.timeRestrictions.closeTime.split(':')[1])
+      : 24 * 60;
+
+    const totalSlots = Math.floor((closeMin - openMin) / 60);
+    if (totalSlots <= 0) {
+      res.status(200).json({ dates: [] });
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const horizon = new Date(today);
+    horizon.setDate(horizon.getDate() + 365);
+
+    const bookings = await VenueBookingModel.find({
+      venue: venueId,
+      status: { $in: ['ACCEPTED', 'CONFIRMED'] },
+      requestedDate: { $gte: today, $lte: horizon },
+    }).select('requestedDate startTime endTime').lean();
+
+    const slotsByDate = new Map<string, { startTime: string; endTime: string }[]>();
+    for (const b of bookings) {
+      const d = new Date(b.requestedDate);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (!slotsByDate.has(key)) slotsByDate.set(key, []);
+      if (b.startTime && b.endTime) slotsByDate.get(key)!.push({ startTime: b.startTime, endTime: b.endTime });
+    }
+
+    const toMin = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+    const overlaps = (s1: string, e1: string, s2: string, e2: string) =>
+      toMin(s1) < toMin(e2) && toMin(e1) > toMin(s2);
+
+    const fullDatesList: string[] = [];
+    for (const [dateStr, taken] of slotsByDate.entries()) {
+      let availableCount = 0;
+      for (let m = openMin; m + 60 <= closeMin; m += 60) {
+        const h = Math.floor(m / 60).toString().padStart(2, '0');
+        const start = `${h}:00`;
+        const endH = Math.floor((m + 60) / 60).toString().padStart(2, '0');
+        const end = `${endH}:00`;
+        const blocked = taken.some(t => overlaps(start, end, t.startTime, t.endTime));
+        if (!blocked) availableCount++;
+      }
+      if (availableCount === 0) fullDatesList.push(dateStr);
+    }
+
+    res.status(200).json({ dates: fullDatesList });
+  } catch (error) {
+    console.error('Erreur fullDates:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+};
+
 // ─── Estimation du remboursement avant annulation (lecture seule) ────────────
 
 export const getRefundEstimate = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -1138,7 +1239,8 @@ export const refundVenueBookings = async (venueId: string): Promise<{ refunded: 
           booking._id.toString(),
           venueId,
           booking.status,
-          booking.paymentStatus
+          booking.paymentStatus,
+          [booking.requester._id.toString(), venue?.owner?.toString() || ''].filter(Boolean)
         );
 
         try {
@@ -1148,6 +1250,7 @@ export const refundVenueBookings = async (venueId: string): Promise<{ refunded: 
             title: 'Salle supprimée — remboursement effectué',
             message: `La salle "${venueName}" a été supprimée. Votre paiement de ${refundAmount}€ sera remboursé intégralement.`,
             relatedVenue: venueId as any,
+            relatedBooking: booking._id,
             read: false,
           });
         } catch (notifErr) {
@@ -1222,9 +1325,10 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
 
         emitVenueBookingPaymentUpdated(
           booking._id.toString(),
-          booking.venue._id.toString(),
+          (booking.venue as any)._id.toString(),
           'EXPIRED',
-          booking.paymentStatus
+          booking.paymentStatus,
+          [(booking.requester as any)._id?.toString() || booking.requester.toString(), (booking.venue as any)?.owner?.toString() || ''].filter(Boolean)
         );
 
         const d = booking.requestedDate;
@@ -1238,6 +1342,7 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
             title: 'Réservation expirée',
             message: `Votre réservation pour "${booking.venue.name}" le ${eventDate} a expiré car le paiement n'a pas été effectué dans les 72h.`,
             relatedVenue: booking.venue._id,
+            relatedBooking: booking._id,
             read: false,
           });
         } catch (notifError) {
@@ -1255,6 +1360,7 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
             title: 'Réservation expirée — créneau disponible',
             message: `La réservation de "${requesterName}" pour "${booking.venue.name}" le ${eventDate} a expiré faute de paiement. Le créneau est de nouveau disponible.`,
             relatedVenue: booking.venue._id,
+            relatedBooking: booking._id,
             read: false,
           });
         } catch (notifError) {
@@ -1294,15 +1400,17 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
           title: 'Rappel — paiement requis',
           message: `Rappel : votre réservation pour "${booking.venue.name}" le ${eventDate} expire dans 24h. Effectuez le paiement pour confirmer.`,
           relatedVenue: booking.venue._id,
+          relatedBooking: booking._id,
           read: false,
         });
         reminderCount++;
 
         emitVenueBookingPaymentUpdated(
           booking._id.toString(),
-          booking.venue._id.toString(),
+          (booking.venue as any)._id.toString(),
           booking.status,
-          booking.paymentStatus
+          booking.paymentStatus,
+          [booking.requester.toString(), (booking.venue as any)?.owner?.toString() || ''].filter(Boolean)
         );
       } catch (reminderErr) {
         console.error('[PaymentTimeout] Erreur reminder booking:', reminderErr, { bookingId: booking._id });

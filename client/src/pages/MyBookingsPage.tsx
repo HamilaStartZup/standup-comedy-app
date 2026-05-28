@@ -18,6 +18,9 @@ const isDatePast = (dateStr: string): boolean => {
   return new Date(dateStr) < today;
 };
 
+const getVenueCoverPhoto = (venue: IVenueBooking['venue']): string | undefined =>
+  venue?.photos?.[0] || venue?.mainPhoto;
+
 const MyBookingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { showSuccess, showError } = useAlert();
@@ -36,6 +39,10 @@ const MyBookingsPage: React.FC = () => {
 
   // useRef guard prevents double-fire in React Strict Mode
   const paymentHandledRef = useRef(false);
+
+  // Gestion du highlight — ?bookingId= (notifs) ou ?highlight= (legacy)
+  const highlightId = searchParams.get('bookingId') ?? searchParams.get('highlight');
+  const highlightIdRef = useRef(highlightId);
 
   // Gestion du retour Stripe
   useEffect(() => {
@@ -70,6 +77,18 @@ const MyBookingsPage: React.FC = () => {
   }, []);
 
   const { data, isLoading, error } = useMyBookings();
+
+  // Highlight scroll effect
+  useEffect(() => {
+    const id = highlightIdRef.current;
+    if (id && data) {
+      setSearchParams({}, { replace: true });
+      const el = document.querySelector(`[data-booking-id="${id}"]`) as HTMLElement | null;
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
+      }
+    }
+  }, [data, setSearchParams]);
 
   const handleCancelClick = (booking: IVenueBooking) => {
     setCancelConfirmBooking(booking);
@@ -109,6 +128,7 @@ const MyBookingsPage: React.FC = () => {
 
   const isArchived = (b: IVenueBooking) =>
     isDatePast(b.requestedDate) ||
+    b.venue?.isDeleted === true ||
     ['EXPIRED', 'REFUSED', 'CANCELLED_BY_OWNER', 'CANCELLED_BY_REQUESTER'].includes(b.status);
 
   const statusPriority = (booking: IVenueBooking) => {
@@ -131,9 +151,32 @@ const MyBookingsPage: React.FC = () => {
   };
 
   const sortFn = (a: IVenueBooking, b: IVenueBooking) => {
-    if (sortBy === 'status') return statusPriority(a) - statusPriority(b);
-    if (sortBy === 'date-asc') return new Date(a.requestedDate).getTime() - new Date(b.requestedDate).getTime();
-    if (sortBy === 'date-desc') return new Date(b.requestedDate).getTime() - new Date(a.requestedDate).getTime();
+    if (sortBy === 'status') {
+      const statusDiff = statusPriority(a) - statusPriority(b);
+      if (statusDiff !== 0) return statusDiff;
+      const dateA = new Date(a.requestedDate).getTime();
+      const dateB = new Date(b.requestedDate).getTime();
+      if (dateA !== dateB) return dateA - dateB;
+      const timeA = a.startTime?.split(':').map(Number) ?? [0, 0];
+      const timeB = b.startTime?.split(':').map(Number) ?? [0, 0];
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    }
+    if (sortBy === 'date-asc') {
+      const dateA = new Date(a.requestedDate).getTime();
+      const dateB = new Date(b.requestedDate).getTime();
+      if (dateA !== dateB) return dateA - dateB;
+      const timeA = a.startTime?.split(':').map(Number) ?? [0, 0];
+      const timeB = b.startTime?.split(':').map(Number) ?? [0, 0];
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    }
+    if (sortBy === 'date-desc') {
+      const dateA = new Date(a.requestedDate).getTime();
+      const dateB = new Date(b.requestedDate).getTime();
+      if (dateA !== dateB) return dateB - dateA;
+      const timeA = a.startTime?.split(':').map(Number) ?? [0, 0];
+      const timeB = b.startTime?.split(':').map(Number) ?? [0, 0];
+      return (timeB[0] * 60 + timeB[1]) - (timeA[0] * 60 + timeA[1]);
+    }
     if (sortBy === 'created-desc') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     return 0;
   };
@@ -142,7 +185,14 @@ const MyBookingsPage: React.FC = () => {
 
   const activeBookings = (data ?? []).filter((b) => !isArchived(b) && matchesSearch(b) && matchesStatus(b)).sort(sortFn);
   const archivedBookings = (data ?? []).filter((b) => isArchived(b) && matchesSearch(b) && matchesStatus(b))
-    .sort((a, b) => new Date(b.requestedDate).getTime() - new Date(a.requestedDate).getTime());
+    .sort((a, b) => {
+      const dateA = new Date(a.requestedDate).getTime();
+      const dateB = new Date(b.requestedDate).getTime();
+      if (dateA !== dateB) return dateB - dateA;
+      const timeA = a.startTime?.split(':').map(Number) ?? [0, 0];
+      const timeB = b.startTime?.split(':').map(Number) ?? [0, 0];
+      return (timeB[0] * 60 + timeB[1]) - (timeA[0] * 60 + timeA[1]);
+    });
 
   const filtered = [...activeBookings, ...archivedBookings];
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
@@ -229,6 +279,11 @@ const MyBookingsPage: React.FC = () => {
       <style>{`
         @media (max-width: 640px) {
           .my-bookings-header h1 { font-size: 1.8em !important; }
+          .booking-card-layout { flex-direction: column !important; }
+          .booking-card-image {
+            width: 100% !important;
+            min-height: 180px !important;
+          }
           .booking-card-header { flex-direction: column; align-items: flex-start !important; }
           .booking-card-actions { flex-direction: column; }
           .booking-card-actions button { width: 100%; }
@@ -346,8 +401,8 @@ const MyBookingsPage: React.FC = () => {
                   }}
                 >
                   <option value="status">Trier par statut</option>
-                  <option value="date-desc">Date ↓ (récente)</option>
                   <option value="date-asc">Date ↑ (ancienne)</option>
+                  <option value="date-desc">Date ↓ (récente)</option>
                   <option value="created-desc">Demande récente</option>
                 </select>
               </div>
@@ -379,20 +434,79 @@ const MyBookingsPage: React.FC = () => {
                         : venuePricePerEvent;
                       const displayAmount = baseAmount + venueDeposit + venueExtraFeesTotal;
 
+                      const effectiveHighlight = highlightId ?? highlightIdRef.current;
+                      const isHighlighted = booking._id === effectiveHighlight;
+                      const coverPhoto = getVenueCoverPhoto(booking.venue);
+
                       return (
               <div
                 key={booking._id}
+                data-booking-id={booking._id}
+                className="booking-card-layout"
                 style={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'stretch',
                   backgroundColor: '#ffffff',
-                  border: `1px solid ${isUrgent ? '#f97316' : 'rgba(0,0,0,0.08)'}`,
+                  border: isHighlighted
+                    ? '2px solid #ff416c'
+                    : `1px solid ${isUrgent ? '#f97316' : 'rgba(0,0,0,0.08)'}`,
                   borderRadius: 20,
-                  padding: 24,
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
+                  overflow: 'hidden',
+                  boxShadow: isHighlighted
+                    ? '0 0 20px rgba(255,65,108,0.4)'
+                    : '0 10px 40px rgba(0,0,0,0.12)',
                   transition: 'border-color 0.2s',
                   opacity: venueDeleted || archived ? 0.6 : 1,
                   filter: venueDeleted ? 'grayscale(0.4)' : undefined,
                 }}
               >
+                <div
+                  className="booking-card-image"
+                  style={{
+                    width: '25%',
+                    flexShrink: 0,
+                    minHeight: 200,
+                    position: 'relative',
+                    background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+                  }}
+                >
+                  {coverPhoto ? (
+                    <img
+                      src={coverPhoto}
+                      alt={booking.venue?.name || 'Salle'}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'linear-gradient(135deg, #1a1a2e 0%, #331f41 100%)',
+                      }}
+                    >
+                      <span style={{ fontSize: 48 }}>🏛️</span>
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  className="booking-card-content"
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: 24,
+                  }}
+                >
                 <div
                   className="booking-card-header"
                   style={{
@@ -747,6 +861,7 @@ const MyBookingsPage: React.FC = () => {
                       {cancellingId === booking._id ? 'Annulation...' : 'Annuler la réservation'}
                     </button>
                   )}
+                </div>
                 </div>
               </div>
                       );

@@ -394,7 +394,9 @@ export const listVenues = async (filters?: {
   owner?: 'me';
   region?: string;
   department?: string;
-}): Promise<{ venues: IVenue[]; total: number; page: number; limit: number }> => {
+  page?: number;
+  limit?: number;
+}): Promise<{ venues: IVenue[]; pagination: { page: number; limit: number; total: number; totalPages: number; hasMore: boolean } }> => {
   const params = new URLSearchParams();
   if (filters?.city) params.append('city', filters.city);
   if (filters?.venueType) params.append('venueType', filters.venueType);
@@ -406,8 +408,10 @@ export const listVenues = async (filters?: {
   } else if (filters?.region) {
     params.append('region', filters.region);
   }
+  if (filters?.page) params.append('page', filters.page.toString());
+  if (filters?.limit) params.append('limit', filters.limit.toString());
   const query = params.toString();
-  const response = await api.get<{ venues: IVenue[]; total: number; page: number; limit: number }>(
+  const response = await api.get<{ venues: IVenue[]; pagination: { page: number; limit: number; total: number; totalPages: number; hasMore: boolean } }>(
     `/venues${query ? `?${query}` : ''}`
   );
   return response.data;
@@ -458,6 +462,12 @@ export const myBookings = async (): Promise<IVenueBooking[]> => {
   return response.data.bookings;
 };
 
+/** Réservations confirmées déjà utilisées pour créer un événement (organisateur). */
+export const getVenueBookingIdsInUse = async (): Promise<string[]> => {
+  const response = await api.get<{ bookingIds: string[] }>('/events/venue-bookings-in-use');
+  return response.data.bookingIds ?? [];
+};
+
 export const getMyVenueBookings = async (venueId: string): Promise<IVenueBooking[]> => {
   const response = await api.get<{ bookings: IVenueBooking[] }>(`/venues/${venueId}/my-bookings`);
   return response.data.bookings;
@@ -505,6 +515,11 @@ export const getTakenSlots = async (venueId: string, date: string): Promise<{ st
 
 export const getBookedDates = async (venueId: string): Promise<string[]> => {
   const response = await api.get<{ dates: string[] }>(`/venues/${venueId}/taken-slots`);
+  return response.data.dates;
+};
+
+export const getFullDates = async (venueId: string): Promise<string[]> => {
+  const response = await api.get<{ dates: string[] }>(`/venues/${venueId}/full-dates`);
   return response.data.dates;
 };
 

@@ -54,6 +54,24 @@ export interface IOrganisateurProfile {
   phone?: string;
 }
 
+export interface ILieuProfile {
+  companyName?: string;
+  description?: string;
+  website?: string;
+  socialLinks?: {
+    youtube?: string;
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+  };
+  contactName?: string;
+  contactEmail?: string;
+  phone?: string;
+  legalStatus?: string;
+  siret?: string;
+  invoicingAvailable?: boolean;
+}
+
 export interface User {
   email: string;
   password?: string;
@@ -71,6 +89,7 @@ export interface User {
   role: 'COMEDIAN' | 'ORGANIZER' | 'SUPER_ADMIN' | 'SPECTATOR' | 'LIEU';
   profile?: UserProfile;
   organizerProfile?: IOrganisateurProfile;
+  lieuProfile?: ILieuProfile;
   stats?: any;
   onboardingCompleted?: boolean;
   emailVerified?: boolean;
@@ -128,5 +147,6 @@ export interface IPopulatedUser {
   companyName?: string;
   city?: string;
   organizerProfile?: IOrganisateurProfile;
+  lieuProfile?: ILieuProfile;
   profile?: UserProfile;
 }

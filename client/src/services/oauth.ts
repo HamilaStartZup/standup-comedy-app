@@ -47,7 +47,7 @@ export const loginWithKeycloak = (provider?: string, userType?: string): Promise
       const response = await api.get('/auth/oauth/authorize', {
         params: Object.keys(params).length > 0 ? params : undefined,
       });
-      const { authorizationUrl, state } = response.data;
+      const { authorizationUrl } = response.data;
 
       // Calculate popup position (centered)
       const left = window.screenX + (window.outerWidth - POPUP_WIDTH) / 2;

@@ -15,6 +15,7 @@ import {
   getEventById,
   deleteEvent,
   getOrganizerEvents,
+  getVenueBookingIdsInUse,
   notifyHumorists,
   inviteComedian,
   processCompletedEvents,
@@ -57,7 +58,6 @@ const router = express.Router();
 // ============================================================================
 const asyncHandler = (fn: (req: Request | AuthRequest, res: Response) => Promise<any>) => {
   return (req: Request | AuthRequest, res: Response, next: NextFunction) => {
-    console.log('🔀 AsyncHandler appelé pour:', req.method, req.path);
     Promise.resolve(fn(req, res))
       .catch((error) => {
         console.error('❌ AsyncHandler caught error:', error);
@@ -96,6 +96,9 @@ router.get('/', authMiddleware, asyncHandler(getEventsList));
 
 // GET /api/events/user/my-events - Récupérer les évènements de l'organisateur connecté
 router.get('/user/my-events', authMiddleware, asyncHandler(getOrganizerEvents));
+
+// GET /api/events/venue-bookings-in-use — réservations de salle déjà liées à un événement
+router.get('/venue-bookings-in-use', authMiddleware, asyncHandler(getVenueBookingIdsInUse));
 
 // POST /api/events/:eventId/spectator-register - Inscription spectateur
 router.post('/:eventId/spectator-register', authMiddleware, asyncHandler(registerSpectator));

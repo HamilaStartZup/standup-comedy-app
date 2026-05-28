@@ -194,7 +194,7 @@ export const requirementsSchema = z.object({
     .optional(),
   duration: z.number()
     .min(1, { message: 'Invalid event requirements' })
-    .max(480, { message: 'Invalid event requirements' })
+    .max(1440, { message: 'Invalid event requirements' })
     .optional(),
   requiredExperienceLevel: z.enum(['all', '0-50', '50-200', '200+']).optional()
 });
@@ -259,7 +259,7 @@ export const createEventSchema = z.object({
       message: 'Invalid start time'
     }),
   endTime: z.string()
-    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^24:00$/, {
       message: 'Invalid end time'
     }),
   /** Date de fin (événement unique qui dépasse minuit, ex. 22h → 1h lendemain) */
@@ -285,9 +285,10 @@ export const createEventSchema = z.object({
   dateTimes: z.array(z.object({
     date: z.string(),
     startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
-    endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
+    endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^24:00$/),
   })).optional(),
   imageUrl: z.string().max(2000).optional().transform((v) => (v && v.trim() ? v.trim() : undefined)).refine((v) => !v || /^https?:\/\//i.test(v), { message: 'L\'URL de l\'image doit commencer par http:// ou https://' }),
+  venueBookingId: z.string().regex(/^[a-fA-F0-9]{24}$/, { message: 'Identifiant de réservation invalide' }).optional(),
 }).refine((data) => {
   // Validation : si isRecurring est true, dates doit être présent et date ne doit pas l'être
   if (data.isRecurring === true) {
@@ -353,7 +354,7 @@ export const updateEventSchema = z.object({
     })
     .optional(),
   endTime: z.string()
-    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^24:00$/, {
       message: 'Invalid end time'
     })
     .optional(),
@@ -490,6 +491,23 @@ export const updateProfileSchema = z.object({
     location: updateLocationSchema.optional(),
     phone: z.string().optional(),
   }).optional(),
+  lieuProfile: z.object({
+    companyName: z.string().optional(),
+    description: z.string().max(500).optional(),
+    website: z.string().url('URL du site invalide').optional().or(z.string().length(0)),
+    socialLinks: z.object({
+      youtube: z.string().url().optional().or(z.string().length(0)),
+      instagram: z.string().url().optional().or(z.string().length(0)),
+      facebook: z.string().url().optional().or(z.string().length(0)),
+      twitter: z.string().url().optional().or(z.string().length(0)),
+    }).optional(),
+    contactName: z.string().optional(),
+    contactEmail: z.string().email().optional().or(z.string().length(0)),
+    phone: z.string().optional(),
+    legalStatus: z.string().optional(),
+    siret: z.string().regex(/^\d{14}$/, 'SIRET invalide (14 chiffres requis)').optional().or(z.string().length(0)),
+    invoicingAvailable: z.boolean().optional(),
+  }).optional(),
   spectatorPreferences: z.object({
     radiusKm: z.number().refine((n) => [5, 10, 20, 50].includes(n), { message: 'Rayon invalide (5, 10, 20 ou 50 km)' }).optional(),
     dailyRecapEmail: z.boolean().optional(),
@@ -521,7 +539,7 @@ export const getSmartRecommendationsQuerySchema = z.object({
 // SCHÉMAS VENUES (SALLES)
 // ============================================================================
 
-const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$|^24:00$/;
 
 const photoArraySchema = z.array(
   z.string().refine(
@@ -588,13 +606,22 @@ export const createVenueSchema = z.object({
   cancellationConditions: z.string().optional(),
   houseRules: z.string().optional(),
   timeRestrictions: timeRestrictionsSchema,
+  disabledWeekdays: z.array(z.number().int().min(0).max(6)).optional().default([]),
   // Étape 6
   contactName: z.string().optional(),
   contactEmail: z.string().email().optional(),
   contactPhone: z.string().optional(),
   legalStatus: z.string().optional(),
-  siret: z.string().optional(),
+  siret: z.string().regex(/^\d{14}$/, 'SIRET invalide (14 chiffres requis)').optional().or(z.string().length(0)),
   invoicingAvailable: z.boolean().optional(),
+  companyName: z.string().optional(),
+  website: z.string().url('URL du site invalide').optional().or(z.string().length(0)),
+  socialLinks: z.object({
+    youtube: z.string().url().optional().or(z.string().length(0)),
+    instagram: z.string().url().optional().or(z.string().length(0)),
+    facebook: z.string().url().optional().or(z.string().length(0)),
+    twitter: z.string().url().optional().or(z.string().length(0)),
+  }).optional(),
 });
 
 export const updateVenueSchema = createVenueSchema.partial();

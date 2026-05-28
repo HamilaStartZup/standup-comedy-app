@@ -166,6 +166,7 @@ export interface IVenue {
   cancellationConditions?: string;
   houseRules?: string;
   timeRestrictions?: IVenueTimeRestrictions;
+  disabledWeekdays?: number[];
   // Étape 6
   contactName?: string;
   contactEmail?: string;
@@ -173,6 +174,14 @@ export interface IVenue {
   legalStatus?: string;
   siret?: string;
   invoicingAvailable?: boolean;
+  companyName?: string;
+  website?: string;
+  socialLinks?: {
+    youtube?: string;
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+  };
 }
 
 export type VenueBookingStatus =

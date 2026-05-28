@@ -40,6 +40,29 @@ export enum SSEEventType {
   // Réservations de salles
   VENUE_BOOKING_STATUS_CHANGED = 'VENUE_BOOKING_STATUS_CHANGED',
   VENUE_BOOKING_PAYMENT_UPDATED = 'VENUE_BOOKING_PAYMENT_UPDATED',
+
+  // Notifications
+  NOTIFICATION_CREATED = 'NOTIFICATION_CREATED',
+  NOTIFICATION_READ = 'NOTIFICATION_READ',
+  NOTIFICATION_ALL_READ = 'NOTIFICATION_ALL_READ',
+
+  // Salles (Venue CRUD)
+  VENUE_CREATED = 'VENUE_CREATED',
+  VENUE_UPDATED = 'VENUE_UPDATED',
+  VENUE_DELETED = 'VENUE_DELETED',
+
+  // Signalements comédiens
+  COMEDIAN_REPORT_CREATED = 'COMEDIAN_REPORT_CREATED',
+  COMEDIAN_REPORT_UPDATED = 'COMEDIAN_REPORT_UPDATED',
+
+  // Spectateurs
+  SPECTATOR_REGISTERED = 'SPECTATOR_REGISTERED',
+  SPECTATOR_UNREGISTERED = 'SPECTATOR_UNREGISTERED',
+  SPECTATOR_RATING_SUBMITTED = 'SPECTATOR_RATING_SUBMITTED',
+
+  // Alertes admin
+  PRESENCE_ALERT_ACKNOWLEDGED = 'PRESENCE_ALERT_ACKNOWLEDGED',
+  LATE_CANCELLATION_ALERT_ACKNOWLEDGED = 'LATE_CANCELLATION_ALERT_ACKNOWLEDGED',
 }
 
 // Interface pour le payload des évènements SSE
@@ -55,6 +78,7 @@ export interface SSEEventPayload {
     [key: string]: any;
   };
   timestamp: string;
+  targetUserIds?: string[];
 }
 
 /**
@@ -93,6 +117,17 @@ class AppEventEmitter extends EventEmitter {
     this.emit('sse-event', payload);
     console.log(`📡 Évènement SSE émis: ${type}`, data);
   }
+
+  public emitTargetedSSEEvent(type: SSEEventType, data: Record<string, any>, targetUserIds: string[]): void {
+    const payload: SSEEventPayload = {
+      type,
+      data,
+      timestamp: new Date().toISOString(),
+      targetUserIds,
+    };
+    this.emit('sse-event', payload);
+    console.log(`📡 Targeted SSE ${type} → [${targetUserIds.join(', ')}]`, data);
+  }
 }
 
 // Exporter l'instance singleton
@@ -100,106 +135,155 @@ export const appEventEmitter = AppEventEmitter.getInstance();
 
 // Fonctions helpers typées pour émettre des évènements spécifiques
 
-export const emitEventCreated = (id: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.EVENT_CREATED, { id });
+export const emitEventCreated = (id: string, targetUserIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.EVENT_CREATED, { id }, targetUserIds);
 };
 
-export const emitEventUpdated = (id: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.EVENT_UPDATED, { id });
+export const emitEventUpdated = (id: string, targetUserIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.EVENT_UPDATED, { id }, targetUserIds);
 };
 
-export const emitEventDeleted = (id: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.EVENT_DELETED, { id });
+export const emitEventDeleted = (id: string, targetUserIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.EVENT_DELETED, { id }, targetUserIds);
 };
 
-export const emitEventCompleted = (id: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.EVENT_COMPLETED, { id });
+export const emitEventCompleted = (id: string, targetUserIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.EVENT_COMPLETED, { id }, targetUserIds);
 };
 
-export const emitApplicationCreated = (id: string, eventId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.APPLICATION_CREATED, { id, eventId });
+export const emitApplicationCreated = (id: string, eventId: string, organizerId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.APPLICATION_CREATED, { id, eventId, organizerId }, [organizerId]);
 };
 
-export const emitApplicationStatusChanged = (id: string, status: string, eventId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.APPLICATION_STATUS_CHANGED, { id, status, eventId });
+export const emitApplicationStatusChanged = (id: string, status: string, eventId: string, targetUserIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.APPLICATION_STATUS_CHANGED, { id, status, eventId }, targetUserIds);
 };
 
-export const emitApplicationWithdrawn = (id: string, eventId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.APPLICATION_WITHDRAWN, { id, eventId });
+export const emitApplicationWithdrawn = (id: string, eventId: string, organizerId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.APPLICATION_WITHDRAWN, { id, eventId, organizerId }, [organizerId]);
 };
 
-export const emitAbsenceMarked = (eventId: string, comedianId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.ABSENCE_MARKED, { eventId, comedianId });
+export const emitAbsenceMarked = (eventId: string, comedianId: string, organizerId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.ABSENCE_MARKED, { eventId, comedianId }, [organizerId, comedianId]);
 };
 
-export const emitAbsenceCancelled = (eventId: string, comedianId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.ABSENCE_CANCELLED, { eventId, comedianId });
+export const emitAbsenceCancelled = (eventId: string, comedianId: string, organizerId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.ABSENCE_CANCELLED, { eventId, comedianId }, [organizerId, comedianId]);
 };
 
-export const emitLateCancellation = (eventId: string, comedianId: string, applicationId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.LATE_CANCELLATION, { eventId, comedianId, applicationId });
+export const emitLateCancellation = (eventId: string, comedianId: string, applicationId: string, organizerId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.LATE_CANCELLATION, { eventId, comedianId, applicationId }, [organizerId]);
 };
 
 export const emitFavoriteComedianAdded = (organizerId: string, comedianId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.FAVORITE_COMEDIAN_ADDED, { organizerId, comedianId });
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.FAVORITE_COMEDIAN_ADDED, { organizerId, comedianId }, [organizerId]);
 };
 
 export const emitFavoriteComedianRemoved = (organizerId: string, comedianId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.FAVORITE_COMEDIAN_REMOVED, { organizerId, comedianId });
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.FAVORITE_COMEDIAN_REMOVED, { organizerId, comedianId }, [organizerId]);
 };
 
 export const emitEventFavoriteAdded = (comedianId: string, eventId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.EVENT_FAVORITE_ADDED, { comedianId, eventId });
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.EVENT_FAVORITE_ADDED, { comedianId, eventId }, [comedianId]);
 };
 
 export const emitEventFavoriteRemoved = (comedianId: string, eventId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.EVENT_FAVORITE_REMOVED, { comedianId, eventId });
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.EVENT_FAVORITE_REMOVED, { comedianId, eventId }, [comedianId]);
 };
 
 export const emitApplicationFavoriteAdded = (organizerId: string, applicationId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.APPLICATION_FAVORITE_ADDED, { organizerId, applicationId });
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.APPLICATION_FAVORITE_ADDED, { organizerId, applicationId }, [organizerId]);
 };
 
 export const emitApplicationFavoriteRemoved = (organizerId: string, applicationId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.APPLICATION_FAVORITE_REMOVED, { organizerId, applicationId });
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.APPLICATION_FAVORITE_REMOVED, { organizerId, applicationId }, [organizerId]);
 };
 
 export const emitProfileUpdated = (userId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.PROFILE_UPDATED, { userId });
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.PROFILE_UPDATED, { userId }, [userId]);
 };
 
 export const emitUserRegistered = (userId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.USER_REGISTERED, { userId });
+  appEventEmitter.emitSSEEvent(SSEEventType.USER_REGISTERED, { userId }); // reste global
 };
 
 export const emitPasswordReset = (userId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.PASSWORD_RESET, { userId });
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.PASSWORD_RESET, { userId }, [userId]);
 };
 
 export const emitVenueBookingStatusChanged = (
   id: string,
   venueId: string,
   status: string,
-  paymentStatus: string
+  paymentStatus: string,
+  targetUserIds: string[]
 ) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.VENUE_BOOKING_STATUS_CHANGED, {
-    id,
-    venueId,
-    status,
-    paymentStatus,
-  });
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_BOOKING_STATUS_CHANGED, { id, venueId, status, paymentStatus }, targetUserIds);
 };
 
 export const emitVenueBookingPaymentUpdated = (
   id: string,
   venueId: string,
   status: string,
-  paymentStatus: string
+  paymentStatus: string,
+  targetUserIds: string[]
 ) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.VENUE_BOOKING_PAYMENT_UPDATED, {
-    id,
-    venueId,
-    status,
-    paymentStatus,
-  });
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_BOOKING_PAYMENT_UPDATED, { id, venueId, status, paymentStatus }, targetUserIds);
+};
+
+// === NOTIFICATIONS ===
+export const emitNotificationCreated = (userId: string, notificationId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.NOTIFICATION_CREATED, { notificationId }, [userId]);
+};
+
+export const emitNotificationRead = (userId: string, notificationId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.NOTIFICATION_READ, { notificationId }, [userId]);
+};
+
+export const emitNotificationAllRead = (userId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.NOTIFICATION_ALL_READ, {}, [userId]);
+};
+
+// === VENUES ===
+export const emitVenueCreated = (venueId: string, ownerId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_CREATED, { venueId }, [ownerId]);
+};
+
+export const emitVenueUpdated = (venueId: string, ownerId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_UPDATED, { venueId }, [ownerId]);
+};
+
+export const emitVenueDeleted = (venueId: string, targetUserIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.VENUE_DELETED, { venueId }, targetUserIds);
+};
+
+// === SIGNALEMENTS ===
+export const emitComedianReportCreated = (reportId: string, adminIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.COMEDIAN_REPORT_CREATED, { reportId }, adminIds);
+};
+
+export const emitComedianReportUpdated = (reportId: string, comedianId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.COMEDIAN_REPORT_UPDATED, { reportId, comedianId }, [comedianId]);
+};
+
+// === SPECTATEURS ===
+export const emitSpectatorRegistered = (eventId: string, spectatorId: string, organizerId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.SPECTATOR_REGISTERED, { eventId, spectatorId }, [organizerId]);
+};
+
+export const emitSpectatorUnregistered = (eventId: string, spectatorId: string, organizerId: string) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.SPECTATOR_UNREGISTERED, { eventId, spectatorId }, [organizerId]);
+};
+
+export const emitSpectatorRatingSubmitted = (eventId: string, targetUserIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.SPECTATOR_RATING_SUBMITTED, { eventId }, targetUserIds);
+};
+
+// === ALERTES ADMIN ===
+export const emitPresenceAlertAcknowledged = (alertId: string, adminIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.PRESENCE_ALERT_ACKNOWLEDGED, { alertId }, adminIds);
+};
+
+export const emitLateCancellationAlertAcknowledged = (alertId: string, adminIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.LATE_CANCELLATION_ALERT_ACKNOWLEDGED, { alertId }, adminIds);
 };

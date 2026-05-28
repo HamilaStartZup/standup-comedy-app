@@ -1,17 +1,65 @@
-import { type CSSProperties, useState, useEffect } from 'react';
+import { type CSSProperties, useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
+import { listVenues } from '../services/api';
+import { normalizeFilters } from '../hooks/useVenues';
 import NotificationDropdown from './NotificationDropdown';
+
+function getProfilePathForRole(role: string | undefined): string | null {
+  switch (role) {
+    case 'ORGANIZER':
+    case 'SUPER_ADMIN':
+      return '/profile/organizer';
+    case 'COMEDIAN':
+      return '/profile/comedian';
+    case 'SPECTATOR':
+      return '/spectateur/profile';
+    case 'LIEU':
+      return '/profile/lieu';
+    default:
+      return null;
+  }
+}
 
 function Navbar() {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const queryClient = useQueryClient();
 
-  // Fermer le menu mobile quand on change de page
+  const prefetchVenues = useCallback(() => {
+    const filters = { page: 1, limit: 20 };
+    queryClient.prefetchQuery({
+      queryKey: ['venues', normalizeFilters(filters)],
+      queryFn: () => listVenues(filters),
+      staleTime: 60_000,
+    });
+  }, [queryClient]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Fermer les menus quand on change de page
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setIsUserMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+    const onPointerDown = (e: MouseEvent | TouchEvent) => {
+      const el = userMenuRef.current;
+      if (!el) return;
+      const target = e.target as Node;
+      if (!el.contains(target)) setIsUserMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
+    };
+  }, [isUserMenuOpen]);
 
   // Empêcher le scroll en arrière-plan quand le menu est ouvert
   useEffect(() => {
@@ -114,22 +162,25 @@ function Navbar() {
 
   const roleStyles = getRoleStyles();
 
+  const aidesEntryPath = '/aides/accueil';
+  const isAidesNavActive = location.pathname.startsWith('/aides');
+
   // Navigation items pour le menu mobile
   const getNavigationItems = () => {
-    // LIEU : Mes Salles, Profil
+    // LIEU : Mes Salles, Aides
     if (user?.role === 'LIEU') {
       return [
         { to: '/my-venues-management', label: 'Mes Salles', icon: '🏠', show: true },
-        { to: '/profile/lieu', label: 'Profil', icon: '👤', show: true },
+        { to: aidesEntryPath, label: 'Aides', icon: '📚', show: true },
       ];
     }
 
-    // Spectateur : uniquement Accueil et Évènements
+    // Spectateur
     if (user?.role === 'SPECTATOR') {
       return [
         { to: '/spectateur', label: 'Accueil', icon: '🏠', show: true },
         { to: '/spectateur/events', label: 'Mes évènements', icon: '📅', show: true },
-        { to: '/spectateur/profile', label: 'Profil', icon: '👤', show: true },
+        { to: aidesEntryPath, label: 'Aides', icon: '📚', show: true },
       ];
     }
 
@@ -176,23 +227,32 @@ function Navbar() {
       to: "/venues",
       label: "Salles",
       icon: "🏛️",
-      show: user?.role === 'ORGANIZER' || (user?.role as string) === 'LIEU'
+      show: user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || (user?.role as string) === 'LIEU'
     });
 
     if (user?.role === 'ORGANIZER') {
       items.push({
-        to: "/profile/organizer",
-        label: "Profil",
-        icon: "👤",
+        to: aidesEntryPath,
+        label: "Aides",
+        icon: "📚",
         show: true
       });
     }
 
     if (user?.role === 'COMEDIAN') {
       items.push({
-        to: "/profile/comedian",
-        label: "Profil",
-        icon: "👤",
+        to: aidesEntryPath,
+        label: "Aides",
+        icon: "📚",
+        show: true
+      });
+    }
+
+    if (user?.role === 'SUPER_ADMIN') {
+      items.push({
+        to: aidesEntryPath,
+        label: "Aides",
+        icon: "📚",
         show: true
       });
     }
@@ -201,6 +261,7 @@ function Navbar() {
   };
 
   const navigationItems = getNavigationItems();
+  const profilePath = getProfilePathForRole(user?.role);
 
   return (
     <>
@@ -226,12 +287,12 @@ function Navbar() {
               <>
                 <Link to="/spectateur" style={{ ...navLinkBaseStyle, ...(location.pathname === '/spectateur' ? activeLinkStyle : {}) }}>Accueil</Link>
                 <Link to="/spectateur/events" style={{ ...navLinkBaseStyle, ...(location.pathname === '/spectateur/events' ? activeLinkStyle : {}) }}>Mes'événements</Link>
-                <Link to="/spectateur/profile" style={{ ...navLinkBaseStyle, ...(location.pathname === '/spectateur/profile' ? activeLinkStyle : {}) }}>Profil</Link>
+                <Link to={aidesEntryPath} style={{ ...navLinkBaseStyle, ...(isAidesNavActive ? activeLinkStyle : {}) }}>Aides</Link>
               </>
             ) : user?.role === 'LIEU' ? (
               <>
                 <Link to="/my-venues-management" style={{ ...navLinkBaseStyle, ...(location.pathname === '/my-venues-management' ? activeLinkStyle : {}) }}>Mes Salles</Link>
-                <Link to="/profile/lieu" style={{ ...navLinkBaseStyle, ...(location.pathname === '/profile/lieu' ? activeLinkStyle : {}) }}>Profil</Link>
+                <Link to={aidesEntryPath} style={{ ...navLinkBaseStyle, ...(isAidesNavActive ? activeLinkStyle : {}) }}>Aides</Link>
               </>
             ) : (
               <>
@@ -249,13 +310,13 @@ function Navbar() {
               <Link to="/directory" style={{ ...navLinkBaseStyle, ...(location.pathname === '/directory' ? activeLinkStyle : {}) }}>Répertoire</Link>
             )}
             {user?.role === 'ORGANIZER' && (
-              <Link to="/venues" style={{ ...navLinkBaseStyle, ...(location.pathname.startsWith('/venues') || location.pathname === '/my-venues' || location.pathname === '/my-bookings' ? activeLinkStyle : {}) }}>Salles</Link>
-            )}
-            {user?.role === 'ORGANIZER' && (
-              <Link to="/profile/organizer" style={{ ...navLinkBaseStyle, ...(location.pathname === '/profile/organizer' ? activeLinkStyle : {}) }}>Profil</Link>
+              <Link to="/venues" onMouseEnter={prefetchVenues} style={{ ...navLinkBaseStyle, ...(location.pathname.startsWith('/venues') || location.pathname === '/my-venues' || location.pathname === '/my-bookings' ? activeLinkStyle : {}) }}>Salles</Link>
             )}
             {user?.role === 'COMEDIAN' && (
-              <Link to="/profile/comedian" style={{ ...navLinkBaseStyle, ...(location.pathname === '/profile/comedian' ? activeLinkStyle : {}) }}>Profil</Link>
+              <Link to="/venues" onMouseEnter={prefetchVenues} style={{ ...navLinkBaseStyle, ...(location.pathname.startsWith('/venues') || location.pathname === '/my-bookings' ? activeLinkStyle : {}) }}>Salles</Link>
+            )}
+            {(user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || user?.role === 'SUPER_ADMIN') && (
+              <Link to={aidesEntryPath} style={{ ...navLinkBaseStyle, ...(isAidesNavActive ? activeLinkStyle : {}) }}>Aides</Link>
             )}
               </>
             )}
@@ -295,33 +356,105 @@ function Navbar() {
         </div>
 
         {/* Info utilisateur Desktop - Masqué sur mobile */}
-        <div id="desktop-user" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-          {/* Ligne du rôle et nom */}
+        <div id="desktop-user" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', position: 'relative' }}>
           {user && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              background: roleStyles.badgeBg,
-              color: roleStyles.badgeColor,
-              fontSize: '0.85rem',
-              fontWeight: 'bold',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-            }}>
-              <span style={{ fontSize: '1rem' }}>{roleStyles.badgeIcon}</span>
-              <span>{roleStyles.badgeText}</span>
-              <span style={{ color: '#aaa', margin: '0 4px' }}>|</span>
-              <span style={{ color: '#ffffff' }}>{`${user.firstName} ${user.lastName}`}</span>
+            <div ref={userMenuRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setIsUserMenuOpen((open) => !open)}
+                aria-expanded={isUserMenuOpen}
+                aria-haspopup="menu"
+                aria-label="Menu compte utilisateur"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  background: roleStyles.badgeBg,
+                  color: roleStyles.badgeColor,
+                  fontSize: '0.85rem',
+                  fontWeight: 'bold',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <span style={{ fontSize: '1rem' }}>{roleStyles.badgeIcon}</span>
+                <span>{roleStyles.badgeText}</span>
+                <span style={{ color: '#aaa', margin: '0 4px' }}>|</span>
+                <span style={{ color: '#ffffff' }}>{`${user.firstName} ${user.lastName}`}</span>
+                <span style={{ fontSize: '0.65rem', marginLeft: '4px', opacity: 0.85 }} aria-hidden>▼</span>
+              </button>
+              {isUserMenuOpen && (
+                <div
+                  role="menu"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    right: 0,
+                    minWidth: '220px',
+                    background: '#1a1d27',
+                    border: '1px solid rgba(255, 255, 255, 0.18)',
+                    borderRadius: '12px',
+                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
+                    zIndex: 2000,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {profilePath && (
+                    <Link
+                      to={profilePath}
+                      role="menuitem"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      style={{
+                        display: 'block',
+                        padding: '14px 16px',
+                        color: '#ffffff',
+                        textDecoration: 'none',
+                        fontWeight: 'bold',
+                        fontSize: '0.95rem',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                      }}
+                    >
+                      Profil
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      logout();
+                    }}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '14px 16px',
+                      color: '#ff416c',
+                      fontWeight: 'bold',
+                      fontSize: '0.95rem',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Déconnexion
+                  </button>
+                </div>
+              )}
             </div>
           )}
-          {/* Ligne avec cloche et déconnexion */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Badge de notifications pour les organisateurs et humoristes */}
             {(user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || user?.role === 'SPECTATOR' || user?.role === 'LIEU') && <NotificationDropdown />}
             {!user && <span style={userNameStyle}>Invité</span>}
-            <button onClick={logout} style={rightLinkStyle}>Déconnexion</button>
+            {!user && (
+              <button type="button" onClick={logout} style={rightLinkStyle}>
+                Déconnexion
+              </button>
+            )}
           </div>
         </div>
       </nav>
@@ -471,7 +604,10 @@ function Navbar() {
             {/* Navigation */}
             <nav style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}>
               {navigationItems.map((item) => {
-                const isActive = location.pathname === item.to;
+                const isActive =
+                  item.to === aidesEntryPath
+                    ? isAidesNavActive
+                    : location.pathname === item.to;
                 return (
                   <Link
                     key={item.to}
@@ -543,7 +679,7 @@ function Navbar() {
         @media (min-width: 768px) {
           #mobile-nav { display: none !important; }
           #desktop-nav { display: flex !important; }
-          #desktop-user { display: block !important; }
+          #desktop-user { display: flex !important; flex-direction: row; align-items: center; justify-content: flex-end; gap: 12px; }
         }
         @media (max-width: 767px) {
           #desktop-nav { display: none !important; }

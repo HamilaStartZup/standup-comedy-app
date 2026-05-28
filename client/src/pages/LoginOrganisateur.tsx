@@ -328,7 +328,10 @@ function LoginOrganisateur() {
 
           </>
         )}
+<<<<<<< HEAD
 
+=======
+>>>>>>> test
         <p style={{ marginTop: '15px', marginBottom: '10px' }}>
           <Link
             to="/forgot-password"

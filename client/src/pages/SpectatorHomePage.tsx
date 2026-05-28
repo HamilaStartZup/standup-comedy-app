@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
@@ -8,7 +9,7 @@ import { useAlert } from '../hooks/useAlert';
 import {
   addEventFavorite,
   removeEventFavorite,
-  checkIsEventFavorite,
+  getEventFavorites,
   createStripeCheckoutSession,
   unregisterSpectatorFromEvent,
 } from '../services/api';
@@ -25,14 +26,17 @@ const RADII = [5, 10, 20, 50] as const;
 
 export default function SpectatorHomePage() {
   const { token, user } = useAuth();
-  const { showSuccess, showError } = useAlert();
+  const { showSuccess, showError, showInfo } = useAlert();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [searchLieuInput, setSearchLieuInput] = useState('');
   const [searchLieu, setSearchLieu] = useState('');
   const [searchVenueType, setSearchVenueType] = useState('');
   const [searchRadius, setSearchRadius] = useState<number>(20);
   const [selectedEvent, setSelectedEvent] = useState<IEvent | null>(null);
   const [unregisterConfirm, setUnregisterConfirm] = useState<{ isOpen: boolean; eventId: string | null }>({ isOpen: false, eventId: null });
+  const focusId = searchParams.get('focus');
+  const processedFocusIdRef = useRef<string | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?._id],
@@ -101,6 +105,18 @@ export default function SpectatorHomePage() {
     enabled: !!user && !!user?.city?.trim(),
   });
 
+  const { data: favoritesData } = useQuery({
+    queryKey: ['event-favorites'],
+    queryFn: getEventFavorites,
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const favoriteEventIds = useMemo(() => {
+    const favorites: IEvent[] = favoritesData?.favorites ?? [];
+    return new Set(favorites.map((e) => e._id));
+  }, [favoritesData]);
+
   const updateRadiusMutation = useMutation({
     mutationFn: async (km: number) => {
       if (!user?._id) throw new Error('Non connecté');
@@ -120,7 +136,6 @@ export default function SpectatorHomePage() {
   const invalidateEvents = () => {
     queryClient.invalidateQueries({ queryKey: ['events'], exact: false });
     queryClient.invalidateQueries({ queryKey: ['event-favorites'], exact: false });
-    queryClient.invalidateQueries({ queryKey: ['event-favorites-check'], exact: false });
   };
 
   const addFavoriteMutation = useMutation({
@@ -143,6 +158,23 @@ export default function SpectatorHomePage() {
     onSuccess: () => { invalidateEvents(); showSuccess('Désinscription enregistrée'); },
     onError: (e: any) => showError(e?.response?.data?.message || 'Erreur'),
   });
+
+  // Ouvre le modal ciblé quand ?focus=<eventId> est présent en URL
+  useEffect(() => {
+    if (!focusId || processedFocusIdRef.current === focusId) return;
+    if (loadingAroundMe || loadingRegistrations) return;
+
+    const allLoaded = [...aroundMeEvents, ...myRegistrationsList];
+    const found = allLoaded.find((e) => e._id === focusId);
+
+    processedFocusIdRef.current = focusId;
+
+    if (found) {
+      setSelectedEvent(found);
+    } else {
+      showInfo("Cet événement n'est pas dans votre périmètre actuel. Élargissez le rayon de recherche pour le voir.");
+    }
+  }, [focusId, aroundMeEvents, myRegistrationsList, loadingAroundMe, loadingRegistrations, showInfo]);
 
   const now = new Date();
   const allEvents = eventsData || [];
@@ -321,6 +353,7 @@ export default function SpectatorHomePage() {
                       key={event._id}
                       event={event}
                       isRegistered={isUserRegistered(event)}
+                      isFavorite={favoriteEventIds.has(event._id)}
                       onEventClick={() => setSelectedEvent(event)}
                       onRegister={() => stripeCheckoutMutation.mutate(event._id)}
                       onToggleFavorite={(isFav: boolean) =>
@@ -354,6 +387,7 @@ export default function SpectatorHomePage() {
                       key={event._id}
                       event={event}
                       isRegistered={true}
+                      isFavorite={favoriteEventIds.has(event._id)}
                       onEventClick={() => setSelectedEvent(event)}
                       onRegister={() => {}}
                       onToggleFavorite={(isFav: boolean) =>
@@ -413,6 +447,7 @@ export default function SpectatorHomePage() {
                       key={event._id}
                       event={event}
                       isRegistered={isUserRegistered(event)}
+                      isFavorite={favoriteEventIds.has(event._id)}
                       onEventClick={() => setSelectedEvent(event)}
                       onRegister={() => stripeCheckoutMutation.mutate(event._id)}
                       onToggleFavorite={(isFav: boolean) =>
@@ -450,6 +485,7 @@ export default function SpectatorHomePage() {
 function EventCard({
   event,
   isRegistered,
+  isFavorite,
   onEventClick,
   onRegister,
   onUnregister,
@@ -458,18 +494,13 @@ function EventCard({
 }: {
   event: IEvent;
   isRegistered: boolean;
+  isFavorite: boolean;
   onEventClick?: () => void;
   onRegister: () => void;
   onUnregister?: () => void;
   onToggleFavorite: (currentlyFavorite: boolean) => void;
   isRegistering: boolean;
 }) {
-  const queryClient = useQueryClient();
-  const { data: favData } = useQuery({
-    queryKey: ['event-favorites-check', event._id],
-    queryFn: () => checkIsEventFavorite(event._id),
-  });
-  const isFavorite = favData?.isFavorite ?? false;
   const dateStr = new Date(event.date).toLocaleDateString('fr-FR', {
     weekday: 'short',
     day: 'numeric',

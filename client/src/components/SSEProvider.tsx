@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSSE, type SSEConnectionStatus } from '../hooks/useSSE';
 import { createSSEEventHandler } from '../services/sseEventHandler';
@@ -30,7 +31,7 @@ export const SSEProvider: React.FC<SSEProviderProps> = ({
   );
 
   // Désactiver SSE sur les pages publiques (login, register, forgot-password, etc.)
-  const currentPath = window.location.pathname;
+  const { pathname: currentPath } = useLocation();
   const isPublicPage = ['/login', '/register', '/register/spectateur', '/organisateur', '/forgot-password', '/reset-password', '/'].includes(currentPath);
   const shouldEnableSSE = !!user && !isPublicPage;
 

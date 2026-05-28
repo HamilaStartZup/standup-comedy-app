@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
 import { EventModel } from '../models/Event';
 import { SpectatorEventRatingModel } from '../models/SpectatorEventRating';
-import { UserModel } from '../models/User';
+import { emitSpectatorRatingSubmitted } from '../services/eventEmitter';
 
 /**
  * GET /api/events/:eventId/rating-form
@@ -152,7 +152,7 @@ export const submitRatings = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     const event = await EventModel.findById(eventId)
-      .select('title date status spectatorRegistrations participants endTime');
+      .select('title date status spectatorRegistrations participants endTime organizer');
     if (!event) {
       res.status(404).json({ message: 'Événement non trouvé' });
       return;
@@ -202,6 +202,13 @@ export const submitRatings = async (req: AuthRequest, res: Response): Promise<vo
       },
       { upsert: true, new: true, runValidators: true }
     );
+
+    const ratedComedianIds = validatedComedianRatings.map((r: any) => r.comedian.toString());
+    const ratingTargets = [
+      (event.organizer as any)?.toString?.() ?? event.organizer?.toString(),
+      ...ratedComedianIds
+    ].filter((id): id is string => !!id);
+    emitSpectatorRatingSubmitted(eventId, ratingTargets);
 
     res.status(201).json({ message: 'Merci, votre notation a bien été enregistrée.' });
   } catch (error) {

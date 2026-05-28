@@ -11,7 +11,7 @@ interface VenueMapProps {
 
 const VenueMap: React.FC<VenueMapProps> = ({ lat, lng, name }) => {
   return (
-    <div style={{ marginBottom: 24 }}>
+    <div style={{ marginBottom: 24, isolation: 'isolate', position: 'relative', zIndex: 0 }}>
       <h3 style={{ margin: '0 0 12px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>
         Localisation
       </h3>

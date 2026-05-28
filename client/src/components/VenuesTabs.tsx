@@ -42,7 +42,7 @@ const VenuesTabs: React.FC = () => {
           📋 Mes réservations
         </button>
       )}
-      {(user?.role === 'ORGANIZER' || user?.role === 'LIEU') && (
+      {user?.role === 'LIEU' && (
         <button style={tabStyle(isActive('/my-venues'))} onClick={() => navigate('/my-venues')}>
           🏢 Mes salles
         </button>

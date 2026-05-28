@@ -1,48 +1,52 @@
-import React, { useEffect } from 'react'
+import React, { lazy, Suspense, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import './index.css';
-import Dashboard from './pages/Dashboard'
-import LoginPage from './pages/LoginPage'
-import Organisateur from './pages/LoginOrganisateur'
-import RegisterPage from './pages/RegisterPage'
-import RegisterSpectatorPage from './pages/RegisterSpectatorPage'
-import RegisterOrganizerPage from './pages/RegisterOrganizerPage'
-import MyEventsPage from './pages/MyEventsPage'
-import OrganizerProfilePage from './pages/OrganizerProfilePage'
-import ApplicationsPage from './pages/ApplicationsPage'
-import ComedianProfilePage from './pages/ComedianProfilePage'
-import ComedianDashboardPage from './pages/ComedianDashboardPage'
-import DirectoryPage from './pages/DirectoryPage'
-import ForgotPasswordPage from './pages/ForgotPasswordPage'
-import ResetPasswordPage from './pages/ResetPasswordPage'
-import PasswordResetManagementPage from './pages/PasswordResetManagementPage'
-import PresenceAlertsPage from './pages/PresenceAlertsPage'
-import LateCancellationAlertsPage from './pages/LateCancellationAlertsPage'
-import ComedianReportsPage from './pages/ComedianReportsPage'
+import './tailwind.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { AlertProvider } from './contexts/AlertContext'
 // import type { IUserData } from './types/user.ts'
-import LandingPage from './pages/LandingPage'
-import OAuthCallback from './pages/OAuthCallback'
 import { SSEProvider } from './components/SSEProvider'
-import CalendarPage from './pages/CalendarPage';
-import SpectatorHomePage from './pages/SpectatorHomePage';
-import SpectatorEventsPage from './pages/SpectatorEventsPage';
-import SpectatorRateEventPage from './pages/SpectatorRateEventPage';
-import SpectatorProfilePage from './pages/SpectatorProfilePage';
-import LegalMentionsPage from './pages/LegalMentionsPage';
-import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
-import TermsOfServicePage from './pages/TermsOfServicePage';
-import AboutPage from './pages/AboutPage';
-import VenuesPage from './pages/VenuesPage';
-import VenueDetailPage from './pages/VenueDetailPage';
-import CreateVenuePage from './pages/CreateVenuePage';
-import MyVenuesPage from './pages/MyVenuesPage';
-import MyBookingsPage from './pages/MyBookingsPage';
-import MesSallesPage from './pages/MesSallesPage';
-import LieuProfilePage from './pages/LieuProfilePage';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const Organisateur = lazy(() => import('./pages/LoginOrganisateur'))
+const RegisterPage = lazy(() => import('./pages/RegisterPage'))
+const RegisterSpectatorPage = lazy(() => import('./pages/RegisterSpectatorPage'))
+const RegisterOrganizerPage = lazy(() => import('./pages/RegisterOrganizerPage'))
+const MyEventsPage = lazy(() => import('./pages/MyEventsPage'))
+const OrganizerProfilePage = lazy(() => import('./pages/OrganizerProfilePage'))
+const ApplicationsPage = lazy(() => import('./pages/ApplicationsPage'))
+const ComedianProfilePage = lazy(() => import('./pages/ComedianProfilePage'))
+const ComedianDashboardPage = lazy(() => import('./pages/ComedianDashboardPage'))
+const DirectoryPage = lazy(() => import('./pages/DirectoryPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
+const PasswordResetManagementPage = lazy(() => import('./pages/PasswordResetManagementPage'))
+const PresenceAlertsPage = lazy(() => import('./pages/PresenceAlertsPage'))
+const LateCancellationAlertsPage = lazy(() => import('./pages/LateCancellationAlertsPage'))
+const ComedianReportsPage = lazy(() => import('./pages/ComedianReportsPage'))
+import LandingPage from './pages/LandingPage'
+const OAuthCallback = lazy(() => import('./pages/OAuthCallback'))
+const CalendarPage = lazy(() => import('./pages/CalendarPage'))
+const SpectatorHomePage = lazy(() => import('./pages/SpectatorHomePage'))
+const SpectatorEventsPage = lazy(() => import('./pages/SpectatorEventsPage'))
+const SpectatorRateEventPage = lazy(() => import('./pages/SpectatorRateEventPage'))
+const SpectatorProfilePage = lazy(() => import('./pages/SpectatorProfilePage'))
+const LegalMentionsPage = lazy(() => import('./pages/LegalMentionsPage'))
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
+const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
+const AboutPage = lazy(() => import('./pages/AboutPage'))
+const VenuesPage = lazy(() => import('./pages/VenuesPage'))
+const VenueDetailPage = lazy(() => import('./pages/VenueDetailPage'))
+const CreateVenuePage = lazy(() => import('./pages/CreateVenuePage'))
+const MyVenuesPage = lazy(() => import('./pages/MyVenuesPage'))
+const MyBookingsPage = lazy(() => import('./pages/MyBookingsPage'))
+const MesSallesPage = lazy(() => import('./pages/MesSallesPage'))
+const LieuProfilePage = lazy(() => import('./pages/LieuProfilePage'))
+const AidesHumourPage = lazy(() => import('./pages/AidesHumourPage'))
+const AidesHumourAccueilPage = lazy(() => import('./pages/AidesHumourAccueilPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +64,15 @@ const RedirectSpectatorEvents: React.FC = () => {
   return <Navigate to={`/spectateur/events${search}`} replace />;
 };
 
+const VenueAccessRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (user?.role !== 'ORGANIZER' && user?.role !== 'LIEU' && user?.role !== 'COMEDIAN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <>{children}</>;
+};
+
 const VenueOwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
@@ -68,14 +81,24 @@ const VenueOwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) 
 };
 
 const ScrollToTop: React.FC = () => {
-  const { pathname } = useLocation();
+  const location = useLocation();
   useEffect(() => {
+    const { pathname, hash } = location;
+    if (hash && hash.length > 1) {
+      const id = decodeURIComponent(hash.slice(1));
+      requestAnimationFrame(() => {
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        else window.scrollTo(0, 0);
+      });
+      return;
+    }
     window.scrollTo(0, 0);
-  }, [pathname]);
+  }, [location.pathname, location.hash]);
   return null;
 };
 
-const LIEU_ALLOWED_PATHS = ['/my-venues-management', '/my-bookings', '/venues/new', '/dashboard', '/profile/lieu'];
+const LIEU_ALLOWED_PATHS = ['/my-venues-management', '/my-bookings', '/venues/new', '/dashboard', '/profile/lieu', '/aides', '/aides/accueil'];
 const PUBLIC_PATHS = ['/', '/login', '/register', '/organisateur', '/forgot-password',
   '/reset-password', '/auth/callback', '/mentions-legales', '/politique-confidentialite',
   '/cgu', '/a-propos'];
@@ -99,6 +122,11 @@ const AppRouter: React.FC = () => {
   return (
     <LieuRedirectGuard>
       <ScrollToTop />
+      <Suspense fallback={
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+          <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        </div>
+      }>
       <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
@@ -132,14 +160,17 @@ const AppRouter: React.FC = () => {
       <Route path="/politique-confidentialite" element={<PrivacyPolicyPage />} />
       <Route path="/cgu" element={<TermsOfServicePage />} />
       <Route path="/a-propos" element={<AboutPage />} />
-      <Route path="/venues" element={<VenueOwnerRoute><VenuesPage /></VenueOwnerRoute>} />
+      <Route path="/venues" element={<VenueAccessRoute><VenuesPage /></VenueAccessRoute>} />
       <Route path="/venues/new" element={<VenueOwnerRoute><CreateVenuePage /></VenueOwnerRoute>} />
-      <Route path="/venues/:venueId" element={<VenueOwnerRoute><VenueDetailPage /></VenueOwnerRoute>} />
+      <Route path="/venues/:venueId" element={<VenueAccessRoute><VenueDetailPage /></VenueAccessRoute>} />
       <Route path="/my-venues" element={<VenueOwnerRoute><MyVenuesPage /></VenueOwnerRoute>} />
-      <Route path="/my-bookings" element={<VenueOwnerRoute><MyBookingsPage /></VenueOwnerRoute>} />
+      <Route path="/my-bookings" element={<VenueAccessRoute><MyBookingsPage /></VenueAccessRoute>} />
       <Route path="/my-venues-management" element={<VenueOwnerRoute><MesSallesPage /></VenueOwnerRoute>} />
       <Route path="/profile/lieu" element={<VenueOwnerRoute><LieuProfilePage /></VenueOwnerRoute>} />
+      <Route path="/aides" element={<AidesHumourPage />} />
+      <Route path="/aides/accueil" element={<AidesHumourAccueilPage />} />
     </Routes>
+      </Suspense>
     </LieuRedirectGuard>
   );
 };
@@ -162,8 +193,6 @@ const AppRouter: React.FC = () => {
 
 const DashboardRouter = () => {
   const { user, isLoading } = useAuth()
-  console.log("🏠 DashboardRouter - Utilisateur:", user?.email, "Rôle:", user?.role, "Loading:", isLoading);
-
   // Attendre la fin de l'initialisation avant de prendre des décisions de routing
   if (isLoading) {
     return (
@@ -180,13 +209,10 @@ const DashboardRouter = () => {
   }
 
   if (user?.role === 'ORGANIZER') {
-    console.log("📊 Chargement dashboard ORGANIZER");
     return <Dashboard />
   } else if (user?.role === 'COMEDIAN') {
-    console.log("🎭 Chargement dashboard COMEDIAN");
     return <ComedianDashboardPage />
   } else if (user?.role === 'SUPER_ADMIN') {
-    console.log("🔥 Chargement dashboard SUPER_ADMIN");
     return <Dashboard /> // Pour l'instant, même interface que l'organisateur
   } else if (user?.role === 'SPECTATOR') {
     return <Navigate to="/spectateur" replace />
@@ -194,7 +220,6 @@ const DashboardRouter = () => {
     return <Navigate to="/my-venues-management" replace />
   }
 
-  console.log("❌ Aucun rôle reconnu, redirection vers login");
   return <Navigate to="/login" replace />
 }
 

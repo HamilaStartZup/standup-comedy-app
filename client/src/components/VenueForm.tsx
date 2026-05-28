@@ -68,6 +68,7 @@ export interface VenueFormData {
     soireeStart: string;
     soireeEnd: string;
   };
+  disabledWeekdays: number[];
   // Étape 6 — Contact & infos légales
   contactName: string;
   contactEmail: string;
@@ -75,6 +76,9 @@ export interface VenueFormData {
   legalStatus: string;
   siret: string;
   invoicingAvailable: boolean;
+  companyName: string;
+  website: string;
+  socialLinks: { youtube: string; instagram: string; facebook: string; twitter: string };
 }
 
 interface VenueFormProps {
@@ -145,12 +149,16 @@ const defaultData: VenueFormData = {
     soireeStart: '18:00',
     soireeEnd: '23:59',
   },
+  disabledWeekdays: [],
   contactName: '',
   contactEmail: '',
   contactPhone: '',
   legalStatus: '',
   siret: '',
   invoicingAvailable: false,
+  companyName: '',
+  website: '',
+  socialLinks: { youtube: '', instagram: '', facebook: '', twitter: '' },
 };
 
 const TIME_OPTIONS_15 = [
@@ -358,7 +366,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
       {images.map((url, i) => (
         <div key={i} style={{ position: 'relative' }}>
-          <img src={url} alt="" style={{ width: 120, height: 84, objectFit: 'cover', borderRadius: 10 }} />
+          <img src={url} alt="" style={{ width: 120, height: 84, objectFit: 'cover', borderRadius: 10 }} loading="lazy" />
           <button
             type="button"
             onClick={() => onRemove(i)}
@@ -854,6 +862,30 @@ const VenueForm: React.FC<VenueFormProps> = ({
         {!formData.pricingType && (
           <p style={{ fontSize: 13, color: '#666', fontStyle: 'italic' }}>Sélectionnez un type de tarification pour configurer les restrictions horaires.</p>
         )}
+
+        <div style={{ marginTop: 20 }}>
+          <label style={labelStyle}>Jours indisponibles</label>
+          <p style={{ margin: '0 0 10px', fontSize: 13, color: '#aaa' }}>Ces jours seront grisés et non réservables, quel que soit le mode de tarification.</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {([['L', 1], ['M', 2], ['M', 3], ['J', 4], ['V', 5], ['S', 6], ['D', 0]] as [string, number][]).map(([label, day]) => {
+              const active = formData.disabledWeekdays.includes(day);
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() =>
+                    set('disabledWeekdays', active
+                      ? formData.disabledWeekdays.filter((d) => d !== day)
+                      : [...formData.disabledWeekdays, day])
+                  }
+                  style={chipStyle(active)}
+                >
+                  {active ? '✓ ' : ''}{label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <div style={sectionStyle}>
@@ -923,6 +955,36 @@ const VenueForm: React.FC<VenueFormProps> = ({
         <input type="checkbox" checked={formData.invoicingAvailable} onChange={(e) => set('invoicingAvailable', e.target.checked)} />
         Facturation disponible
       </label>
+
+      <div style={{ marginTop: 24 }}>
+        <label style={labelStyle}>Nom de l'établissement</label>
+        <input value={formData.companyName} onChange={(e) => set('companyName', e.target.value)} placeholder="Mon Établissement" style={inputStyle} />
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <label style={labelStyle}>Site web</label>
+        <input value={formData.website} onChange={(e) => set('website', e.target.value)} placeholder="https://" style={inputStyle} />
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <label style={{ ...labelStyle, marginBottom: 12 }}>Réseaux sociaux</label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={{ ...labelStyle, fontWeight: 'normal', fontSize: 12 }}>YouTube</label>
+            <input value={formData.socialLinks.youtube} onChange={(e) => set('socialLinks', { ...formData.socialLinks, youtube: e.target.value })} placeholder="https://youtube.com/..." style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ ...labelStyle, fontWeight: 'normal', fontSize: 12 }}>Instagram</label>
+            <input value={formData.socialLinks.instagram} onChange={(e) => set('socialLinks', { ...formData.socialLinks, instagram: e.target.value })} placeholder="https://instagram.com/..." style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ ...labelStyle, fontWeight: 'normal', fontSize: 12 }}>Facebook</label>
+            <input value={formData.socialLinks.facebook} onChange={(e) => set('socialLinks', { ...formData.socialLinks, facebook: e.target.value })} placeholder="https://facebook.com/..." style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ ...labelStyle, fontWeight: 'normal', fontSize: 12 }}>Twitter / X</label>
+            <input value={formData.socialLinks.twitter} onChange={(e) => set('socialLinks', { ...formData.socialLinks, twitter: e.target.value })} placeholder="https://x.com/..." style={inputStyle} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 

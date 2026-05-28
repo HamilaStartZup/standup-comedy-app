@@ -69,8 +69,17 @@ export interface VenueDocument extends Document {
   legalStatus?: string;
   siret?: string;
   invoicingAvailable?: boolean;
+  companyName?: string;
+  website?: string;
+  socialLinks?: {
+    youtube?: string;
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+  };
   department?: string;
   region?: string;
+  disabledWeekdays?: number[];
 }
 
 const venueSchema = new Schema<VenueDocument>(
@@ -144,14 +153,24 @@ const venueSchema = new Schema<VenueDocument>(
     legalStatus: { type: String },
     siret: { type: String },
     invoicingAvailable: { type: Boolean },
+    companyName: { type: String },
+    website: { type: String },
+    socialLinks: {
+      youtube: { type: String },
+      instagram: { type: String },
+      facebook: { type: String },
+      twitter: { type: String },
+    },
     department: { type: String, index: true },
     region: { type: String, index: true },
+    disabledWeekdays: { type: [Number], default: [] },
   },
   { timestamps: true }
 );
 
 venueSchema.index({ city: 1 });
 venueSchema.index({ owner: 1, isActive: 1 });
+venueSchema.index({ isActive: 1, isDeleted: 1 });
 
 venueSchema.pre('save', function (next) {
   if (this.isModified('postalCode') || this.isNew) {

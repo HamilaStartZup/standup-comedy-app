@@ -84,7 +84,7 @@ export const markAbsence = async (req: AuthRequest, res: Response): Promise<void
     await absence.save();
 
     // Émettre un évènement SSE pour notifier tous les clients
-    emitAbsenceMarked(eventId, comedianId);
+    emitAbsenceMarked(eventId, comedianId, organizerId);
 
     // Incrémenter les statistiques d'absence du humoriste
     const comedian = await UserModel.findById(comedianId);
@@ -148,7 +148,7 @@ export const deleteAbsence = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     // Émettre un évènement SSE pour notifier tous les clients
-    emitAbsenceCancelled(eventId, comedianId);
+    emitAbsenceCancelled(eventId, comedianId, organizerId);
 
     // Décrémenter les statistiques d'absence du humoriste
     const comedian = await UserModel.findById(comedianId);
