@@ -652,6 +652,7 @@ function LandingPage() {
                 <li><button type="button" className="footer-link-btn" onClick={goOrganisateur}>Organisateur</button></li>
                 <li><button type="button" className="footer-link-btn" onClick={goLogin}>Humoriste</button></li>
                 <li><button type="button" className="footer-link-btn" onClick={goCalendar}>Spectateur</button></li>
+                <li><button type="button" className="footer-link-btn" onClick={goRegisterLieu}>Lieux</button></li>
               </ul>
             </div>
             <div className="footer-links">
