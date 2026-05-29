@@ -835,20 +835,6 @@ useEffect(() => {
             else upcoming.push(event);
           });
         }
-<<<<<<< HEAD
-        // Utilise la nouvelle logique avec endTime
-        const eventIsPast = isEventPast(event.date, event.endTime);
-        const eventDate = new Date(event.date);
-        
-        // Debug logging détaillé pour tracer TOUS les évènements
-        console.log(`\n🎭 Évènement "${event.title}":`, {
-          dateOriginale: event.date,
-          dateParsee: eventDate.toLocaleDateString('fr-FR'),
-          aujourdhuiMidnight: todayMidnight.toLocaleDateString('fr-FR'),
-          status: event.status,
-          estPasse: eventIsPast,
-          estFutur: !eventIsPast
-=======
       } else {
         filteredEvents.forEach((event: IEvent) => {
           // D'abord, isoler les évènements annulés pour qu'ils n'apparaissent pas ailleurs
@@ -864,7 +850,6 @@ useEffect(() => {
           } else {
             upcoming.push(event);
           }
->>>>>>> test
         });
       }
       

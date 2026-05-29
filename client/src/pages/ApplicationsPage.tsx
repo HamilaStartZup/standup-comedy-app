@@ -192,26 +192,6 @@ function ApplicationsPage() {
       if (!user?._id) {
         throw new Error("Vous devez être connecté pour voir les candidatures.");
       }
-<<<<<<< HEAD
-      const query = selectedEventId !== 'all' ? `?eventId=${encodeURIComponent(selectedEventId)}` : '';
-      const res = await api.get<IApplication[]>(`/applications${query}`);
-      const list = Array.isArray(res.data)
-        ? res.data
-        : (Array.isArray((res.data as any)?.applications) ? (res.data as any).applications : []);
-      
-      // Log pour déboguer les zones de mobilité
-      console.log('📋 Applications chargées:', list.length);
-      list.forEach((app: IApplication, idx: number) => {
-        if (app.comedian?.profile?.mobilityZone) {
-          console.log(`  Application ${idx + 1} - Humoriste: ${app.comedian?.firstName ?? ''} ${app.comedian?.lastName ?? ''}`, {
-            mobilityZones: app.comedian.profile.mobilityZone,
-            eventCity: app.event?.location?.city
-          });
-        }
-      });
-      
-      return list as IApplication[];
-=======
       const params = new URLSearchParams();
       if (isComedianView) {
         params.set('page', String(comedianPage));
@@ -237,7 +217,6 @@ function ApplicationsPage() {
         : (Array.isArray(raw?.applications) ? raw.applications : []);
       const pagination: PaginationMeta | null = raw?.pagination ?? null;
       return { applications: list, pagination };
->>>>>>> test
     },
     enabled: isQueryEnabled,
   });

@@ -266,9 +266,7 @@ function LoginOrganisateur() {
           </div>
         )}
 
-        {/* Social Login Buttons (via Keycloak Identity Providers) */}
-        {isOAuthEnabled && (
-          <>
+        {/* Social Login (Keycloak) — Auth Google désactivée temporairement (problème d'authentification), bloc commenté pour ne plus s'afficher au rendu :
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -280,7 +278,7 @@ function LoginOrganisateur() {
               <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, #555)' }} />
             </div>
 
-            {/* Bouton principal - Google */}
+            Bouton principal - Google
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px' }}>
               <button
                 type="button"
@@ -325,13 +323,7 @@ function LoginOrganisateur() {
               </button>
 
             </div>
-
-          </>
-        )}
-<<<<<<< HEAD
-
-=======
->>>>>>> test
+        */}
         <p style={{ marginTop: '15px', marginBottom: '10px' }}>
           <Link
             to="/forgot-password"
