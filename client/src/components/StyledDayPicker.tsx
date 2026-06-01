@@ -1,6 +1,6 @@
 import { DayPicker } from 'react-day-picker';
 import type { DayPickerProps } from 'react-day-picker';
-import { fr } from 'date-fns/locale';
+import { fr } from 'date-fns/locale/fr';
 import 'react-day-picker/src/style.css';
 
 const rdpCss = `

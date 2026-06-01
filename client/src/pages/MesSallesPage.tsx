@@ -5,7 +5,7 @@ import { listVenues, myBookings, updateBookingStatus } from '../services/api';
 import VenueCard from '../components/VenueCard';
 import Navbar from '../components/Navbar';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import type { IVenueBooking } from '../types/venue';
+import type { IVenue, IVenueBooking } from '../types/venue';
 import { useAlert } from '../hooks/useAlert';
 import { ErrorMessages, SuccessMessages, getErrorMessage } from '../services/systemMessages';
 
@@ -53,8 +53,8 @@ const MesSallesPage: React.FC = () => {
     retryDelay: 1000,
   });
 
-  const myVenues = venuesResponse?.venues || [];
-  const bookings = bookingsResponse || [];
+  const myVenues: IVenue[] = venuesResponse?.venues || [];
+  const bookings: IVenueBooking[] = bookingsResponse || [];
 
   const bookingStatuses = useMemo(
     () => Array.from(new Set(bookings.map((booking) => booking.status))),

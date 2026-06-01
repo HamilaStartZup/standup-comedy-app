@@ -164,7 +164,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
     }
   };
 
-  const bookings = data || [];
+  const bookings: IVenueBooking[] = data || [];
   const filtered = statusFilter === 'ALL'
     ? bookings
     : bookings.filter((b) => b.status === statusFilter);

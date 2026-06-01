@@ -350,15 +350,10 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [openStartTimeDropdown, setOpenStartTimeDropdown] = useState(false);
   const [openEndTimeDropdown, setOpenEndTimeDropdown] = useState(false);
-<<<<<<< HEAD
-  const startTimeRef = useRef<HTMLDivElement>(null);
-  const endTimeRef = useRef<HTMLDivElement>(null);
-=======
   const [openDurationDropdown, setOpenDurationDropdown] = useState(false);
   const startTimeRef = useRef<HTMLDivElement>(null);
   const endTimeRef = useRef<HTMLDivElement>(null);
   const durationRef = useRef<HTMLDivElement>(null);
->>>>>>> test
   const addressSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isAutoFillingRef = useRef(false);
@@ -657,20 +652,13 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   };
 
   const handleTimeSelect = (timeValue: string, field: 'startTime' | 'endTime') => {
-<<<<<<< HEAD
-    setFormData(prev => ({
-      ...prev,
-      [field]: timeValue
-    }));
-=======
     setFormData(prev => {
       const next = { ...prev, [field]: timeValue };
-      if (field === 'startTime' && prev.durationMinutes > 0) {
-        next.endTime = computeEndFromDuration(prev.date, timeValue, prev.durationMinutes).endTime;
+      if (field === 'startTime' && eventDurationMinutes > 0) {
+        next.endTime = computeEndFromDuration(prev.date, timeValue, eventDurationMinutes).endTime;
       }
       return next;
     });
->>>>>>> test
     if (field === 'startTime') {
       setOpenStartTimeDropdown(false);
       
@@ -1148,11 +1136,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           .map((d) => {
             const override = dateTimeOverrides[d];
             const start = override?.startTime ?? formData.startTime;
-<<<<<<< HEAD
-            const end = override?.endTime ?? formData.endTime;
-=======
             const end = override?.endTime ?? (effectiveEndTime || formData.endTime);
->>>>>>> test
             return { date: d, startTime: start, endTime: end };
           })
           .filter((x) => x.startTime && x.endTime);
@@ -1825,10 +1809,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       id="date"
                       value={formData.date}
                       onChange={handleChange}
-<<<<<<< HEAD
-=======
                       disabled={fieldsLockedByVenueBooking}
->>>>>>> test
                       style={{ ...inputStyle, borderColor: errors.date ? '#ef4444' : '#444' }}
                     />
                     {errors.date && <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>{errors.date}</p>}
@@ -1847,10 +1828,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         type="date"
                         value={recurrenceStartDate}
                         onChange={(e) => setRecurrenceStartDate(e.target.value)}
-<<<<<<< HEAD
-=======
                         disabled={fieldsLockedByVenueBooking}
->>>>>>> test
                         style={{ ...inputStyle, borderColor: errors.recurrenceStartDate ? '#ef4444' : '#444' }}
                         min={new Date().toISOString().split('T')[0]}
                       />

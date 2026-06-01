@@ -183,8 +183,9 @@ const MyBookingsPage: React.FC = () => {
 
   const matchesStatus = (b: IVenueBooking) => filterStatus === 'ALL' || b.status === filterStatus;
 
-  const activeBookings = (data ?? []).filter((b) => !isArchived(b) && matchesSearch(b) && matchesStatus(b)).sort(sortFn);
-  const archivedBookings = (data ?? []).filter((b) => isArchived(b) && matchesSearch(b) && matchesStatus(b))
+  const allBookings: IVenueBooking[] = data ?? [];
+  const activeBookings = allBookings.filter((b) => !isArchived(b) && matchesSearch(b) && matchesStatus(b)).sort(sortFn);
+  const archivedBookings = allBookings.filter((b) => isArchived(b) && matchesSearch(b) && matchesStatus(b))
     .sort((a, b) => {
       const dateA = new Date(a.requestedDate).getTime();
       const dateB = new Date(b.requestedDate).getTime();

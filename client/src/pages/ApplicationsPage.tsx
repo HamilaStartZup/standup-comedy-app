@@ -192,26 +192,6 @@ function ApplicationsPage() {
       if (!user?._id) {
         throw new Error("Vous devez être connecté pour voir les candidatures.");
       }
-<<<<<<< HEAD
-      const query = selectedEventId !== 'all' ? `?eventId=${encodeURIComponent(selectedEventId)}` : '';
-      const res = await api.get<IApplication[]>(`/applications${query}`);
-      const list = Array.isArray(res.data)
-        ? res.data
-        : (Array.isArray((res.data as any)?.applications) ? (res.data as any).applications : []);
-      
-      // Log pour déboguer les zones de mobilité
-      console.log('📋 Applications chargées:', list.length);
-      list.forEach((app: IApplication, idx: number) => {
-        if (app.comedian?.profile?.mobilityZone) {
-          console.log(`  Application ${idx + 1} - Humoriste: ${app.comedian?.firstName ?? ''} ${app.comedian?.lastName ?? ''}`, {
-            mobilityZones: app.comedian.profile.mobilityZone,
-            eventCity: app.event?.location?.city
-          });
-        }
-      });
-      
-      return list as IApplication[];
-=======
       const params = new URLSearchParams();
       if (isComedianView) {
         params.set('page', String(comedianPage));
@@ -237,12 +217,11 @@ function ApplicationsPage() {
         : (Array.isArray(raw?.applications) ? raw.applications : []);
       const pagination: PaginationMeta | null = raw?.pagination ?? null;
       return { applications: list, pagination };
->>>>>>> test
     },
     enabled: isQueryEnabled,
   });
 
-  const applications = applicationsData?.applications || [];
+  const applications: IApplication[] = applicationsData?.applications || [];
   const serverPagination = applicationsData?.pagination || null;
   const error = applicationsError ? (applicationsError as any).response?.data?.message || (applicationsError as any).message || 'Échec de la récupération des candidatures.' : null;
 
@@ -530,7 +509,7 @@ function ApplicationsPage() {
   // Récupérer la liste unique des humoristes
   const uniqueComedians = Array.from(new Set(applications.map(app => app.comedian ? `${app.comedian._id}::${app.comedian.firstName} ${app.comedian.lastName}` : '')))
     .filter(Boolean)
-    .map(str => {
+    .map((str: string) => {
       const [id, name] = str.split('::');
       return { id, name };
     });
@@ -619,7 +598,7 @@ function ApplicationsPage() {
           )
           .map(app => `${app.event.organizer._id}::${app.event.organizer.firstName} ${app.event.organizer.lastName}`)
       )
-    ).map(str => {
+    ).map((str: string) => {
       const [id, name] = str.split('::');
       return { id, name };
     });

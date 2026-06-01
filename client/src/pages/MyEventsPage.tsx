@@ -100,7 +100,7 @@ function RatingsSummaryModal({ event, onClose }: { event: IEvent | null; onClose
             <h3 style={{ margin: '0 0 10px 0', fontSize: '1em', color: '#ddd' }}>Moyenne par humoriste</h3>
             {data.comedianRatings.length > 0 ? (
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 260, overflowY: 'auto' }}>
-                {data.comedianRatings.map((cr) => (
+                {data.comedianRatings.map((cr: RatingsSummaryData['comedianRatings'][0]) => (
                   <li
                     key={cr.comedianId}
                     style={{
@@ -189,7 +189,7 @@ function MyEventsPage() {
   // Extraire les IDs des évènements favoris
   useEffect(() => {
     if (eventFavoritesData?.favorites) {
-      const favoriteIds = eventFavoritesData.favorites.map(event => event._id);
+      const favoriteIds = eventFavoritesData.favorites.map((event: IEvent) => event._id);
       setFavoriteEventIds(favoriteIds);
     } else if (!isComedianView) {
       setFavoriteEventIds([]);
@@ -503,7 +503,7 @@ useEffect(() => {
   const smartRecommendationMap = useMemo(() => {
     const map = new Map<string, SmartRecommendation>();
     if (smartRecommendationsData?.recommendations) {
-      smartRecommendationsData.recommendations.forEach(rec => {
+      smartRecommendationsData.recommendations.forEach((rec: SmartRecommendation) => {
         if (rec.event?._id) {
           map.set(String(rec.event._id), rec);
         }
@@ -515,7 +515,7 @@ useEffect(() => {
   // Événements des recommandations intelligentes
   const smartRecommendationEvents = useMemo(() => {
     if (!smartRecommendationsData?.recommendations) return [];
-    return smartRecommendationsData.recommendations.map(rec => rec.event);
+    return smartRecommendationsData.recommendations.map((rec: SmartRecommendation) => rec.event);
   }, [smartRecommendationsData]);
 
   // Créer un Map des scores et détails par eventId pour un accès rapide
@@ -526,7 +526,7 @@ useEffect(() => {
       matchReasons?: string[];
     }>();
     if (recommendationsData?.recommendations) {
-      recommendationsData.recommendations.forEach(rec => {
+      recommendationsData.recommendations.forEach((rec: { event: IEvent; score: number; breakdown?: { geographic: number; experienceLevel: number; experienceYears: number }; matchReasons?: string[] }) => {
         if (rec.event?._id) {
           map.set(String(rec.event._id), {
             score: rec.score,
@@ -542,7 +542,7 @@ useEffect(() => {
   // Événements de l'API recommendations avec leurs scores (pour l'onglet Opportunités)
   const recommendationEventsWithScores = useMemo(() => {
     if (!recommendationsData?.recommendations) return [];
-    return recommendationsData.recommendations.map(rec => ({
+    return recommendationsData.recommendations.map((rec: { event: IEvent; score: number; breakdown?: { geographic: number; experienceLevel: number; experienceYears: number }; matchReasons?: string[] }) => ({
       ...rec.event,
       _recommendationScore: rec.score
     }));
@@ -574,7 +574,7 @@ useEffect(() => {
   // Memoize the set of applied event IDs
   const appliedEventIds = useMemo(() => {
     if (user?.role === 'COMEDIAN' && comedianApplications) {
-      return new Set(comedianApplications.filter(app => app.event).map(app => app.event._id));
+      return new Set(comedianApplications.filter((app: IApplication) => app.event).map((app: IApplication) => app.event._id));
     }
     return new Set<string>();
   }, [comedianApplications, user?.role]);
@@ -657,7 +657,7 @@ useEffect(() => {
   const comedianApplicationsMap = useMemo(() => {
     const map = new Map<string, IApplication>();
     if (comedianApplications) {
-      comedianApplications.forEach(app => {
+      comedianApplications.forEach((app: IApplication) => {
         if (app.event?._id) {
           map.set(app.event._id, app);
         }
@@ -835,20 +835,6 @@ useEffect(() => {
             else upcoming.push(event);
           });
         }
-<<<<<<< HEAD
-        // Utilise la nouvelle logique avec endTime
-        const eventIsPast = isEventPast(event.date, event.endTime);
-        const eventDate = new Date(event.date);
-        
-        // Debug logging détaillé pour tracer TOUS les évènements
-        console.log(`\n🎭 Évènement "${event.title}":`, {
-          dateOriginale: event.date,
-          dateParsee: eventDate.toLocaleDateString('fr-FR'),
-          aujourdhuiMidnight: todayMidnight.toLocaleDateString('fr-FR'),
-          status: event.status,
-          estPasse: eventIsPast,
-          estFutur: !eventIsPast
-=======
       } else {
         filteredEvents.forEach((event: IEvent) => {
           // D'abord, isoler les évènements annulés pour qu'ils n'apparaissent pas ailleurs
@@ -864,7 +850,6 @@ useEffect(() => {
           } else {
             upcoming.push(event);
           }
->>>>>>> test
         });
       }
       
@@ -970,7 +955,7 @@ useEffect(() => {
   const acceptedUpcomingEvents = useMemo(() => {
     if (user?.role === 'COMEDIAN' && comedianApplications) {
       let filtered = upcomingEvents.filter((event) => {
-        const app = comedianApplications.find(a => a.event && a.event._id === event._id);
+        const app = comedianApplications.find((a: IApplication) => a.event && a.event._id === event._id);
         return app && app.status === 'ACCEPTED';
       });
       
@@ -991,14 +976,14 @@ useEffect(() => {
   const pendingApplicationEvents = useMemo(() => {
     if (user?.role === 'COMEDIAN' && comedianApplications) {
       return comedianApplications
-        .filter(app => {
+        .filter((app: IApplication) => {
           const isPending = app.status === 'PENDING';
           const hasEvent = !!app.event;
           const eventStatus = app.event?.status?.toLowerCase();
           const isPublished = eventStatus === 'published';
           return isPending && hasEvent && isPublished;
         })
-        .map(app => app.event as unknown as IEvent);
+        .map((app: IApplication) => app.event as unknown as IEvent);
     }
     return [] as IEvent[];
   }, [comedianApplications, user?.role]);
@@ -1006,8 +991,8 @@ useEffect(() => {
   const rejectedApplicationEvents = useMemo(() => {
     if (user?.role === 'COMEDIAN' && comedianApplications) {
       return comedianApplications
-        .filter(app => app.status === 'REJECTED' && app.event)
-        .map(app => app.event as unknown as IEvent);
+        .filter((app: IApplication) => app.status === 'REJECTED' && app.event)
+        .map((app: IApplication) => app.event as unknown as IEvent);
     }
     return [] as IEvent[];
   }, [comedianApplications, user?.role]);
@@ -1503,7 +1488,7 @@ useEffect(() => {
   const totalUpcomingPages = (isOrganizerRole && organizerTab === 'upcoming' && serverEventsPagination)
     ? Math.max(1, serverEventsPagination.totalPages)
     : Math.max(1, Math.ceil(eventsToDisplay.length / ITEMS_PER_PAGE));
-  const paginatedUpcomingEvents = (isOrganizerRole && organizerTab === 'upcoming' && serverEventsPagination)
+  const paginatedUpcomingEvents: IEvent[] = (isOrganizerRole && organizerTab === 'upcoming' && serverEventsPagination)
     ? eventsToDisplay
     : eventsToDisplay.slice(
         (upcomingPage - 1) * ITEMS_PER_PAGE,
@@ -1624,7 +1609,7 @@ useEffect(() => {
   const confirmWithdrawApplication = async () => {
     if (!user?._id || !eventToWithdraw) return;
     try {
-      const app = comedianApplications?.find(a => a.event && a.event._id === eventToWithdraw._id);
+      const app = comedianApplications?.find((a: IApplication) => a.event && a.event._id === eventToWithdraw._id);
       if (!app) {
         return;
       }

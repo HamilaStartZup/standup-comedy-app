@@ -4,6 +4,7 @@ import VenueCard from '../components/VenueCard';
 import Navbar from '../components/Navbar';
 import VenuesTabs from '../components/VenuesTabs';
 import { VENUE_TYPES } from '../types/venue';
+import type { IVenue } from '../types/venue';
 import { useVenues } from '../hooks/useVenues';
 import VenueCardSkeleton from '../components/skeletons/VenueCardSkeleton';
 import Pagination from '../components/Pagination';
@@ -47,7 +48,7 @@ const VenuesPage: React.FC = () => {
     limit: 20,
   });
 
-  const data = venuesResponse?.venues;
+  const data: IVenue[] = venuesResponse?.venues ?? [];
   const totalPages = venuesResponse?.pagination?.totalPages ?? 1;
 
   const handleSearch = (e: React.FormEvent) => {

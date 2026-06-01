@@ -335,7 +335,7 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {(data || []).map((blocked) => (
+            {(data || []).map((blocked: IVenueBlockedDate) => (
               <div
                 key={blocked._id}
                 className="blocked-date-row"

@@ -5,6 +5,7 @@ import VenueCard from '../components/VenueCard';
 import Navbar from '../components/Navbar';
 import VenuesTabs from '../components/VenuesTabs';
 import { useMyVenues } from '../hooks/useMyVenues';
+import type { IVenue } from '../types/venue';
 import MyVenueCardSkeleton from '../components/skeletons/MyVenueCardSkeleton';
 
 const MyVenuesPage: React.FC = () => {
@@ -12,7 +13,7 @@ const MyVenuesPage: React.FC = () => {
   const { user } = useAuth();
 
   const { data: venuesResponse, isLoading, error } = useMyVenues(user?._id);
-  const myVenues = venuesResponse?.venues ?? [];
+  const myVenues: IVenue[] = venuesResponse?.venues ?? [];
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)', paddingBottom: 60, padding: '20px' }}>

@@ -68,7 +68,7 @@ export default function SpectatorHomePage() {
     return p;
   }, [searchLieu, searchVenueType, searchRadius]);
 
-  const { data: eventsData, isLoading } = useQuery({
+  const { data: eventsData, isLoading } = useQuery<IEvent[]>({
     queryKey: ['events', 'spectator', queryParams],
     queryFn: async () => {
       const params = new URLSearchParams(queryParams).toString();
@@ -80,7 +80,7 @@ export default function SpectatorHomePage() {
   });
 
   // Fetch events the spectator is registered to (includes cancelled ones)
-  const { data: myRegistrationsList = [], isLoading: loadingRegistrations } = useQuery({
+  const { data: myRegistrationsList = [] as IEvent[], isLoading: loadingRegistrations } = useQuery<IEvent[]>({
     queryKey: ['events', 'spectator', 'myRegistrations'],
     queryFn: async () => {
       const res = await api.get('/events?myRegistrations=true');
@@ -91,10 +91,10 @@ export default function SpectatorHomePage() {
 
   // Set of event IDs the user is registered to — reliable source of truth
   const registeredEventIds = useMemo(() => {
-    return new Set(myRegistrationsList.map((e) => e._id));
+    return new Set(myRegistrationsList.map((e: IEvent) => e._id));
   }, [myRegistrationsList]);
 
-  const { data: aroundMeEvents = [], isLoading: loadingAroundMe } = useQuery({
+  const { data: aroundMeEvents = [] as IEvent[], isLoading: loadingAroundMe } = useQuery<IEvent[]>({
     queryKey: ['events', 'spectator', 'nearMe', user?.city, effectiveRadius],
     queryFn: async () => {
       if (!user?.city?.trim()) return [];
@@ -177,7 +177,7 @@ export default function SpectatorHomePage() {
   }, [focusId, aroundMeEvents, myRegistrationsList, loadingAroundMe, loadingRegistrations, showInfo]);
 
   const now = new Date();
-  const allEvents = eventsData || [];
+  const allEvents: IEvent[] = eventsData || [];
   const isUserWithdrawn = (event: IEvent) => {
     const ids = event.withdrawnSpectators;
     if (!ids?.length || !user?._id) return false;
@@ -188,14 +188,14 @@ export default function SpectatorHomePage() {
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const aroundMeUpcoming = aroundMeEvents
-    .filter((e) => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled' && !isUserWithdrawn(e))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .filter((e: IEvent) => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled' && !isUserWithdrawn(e))
+    .sort((a: IEvent, b: IEvent) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const registeredUpcoming = useMemo(
     () =>
       myRegistrationsList
-        .filter((e) => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled')
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+        .filter((e: IEvent) => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled')
+        .sort((a: IEvent, b: IEvent) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     [myRegistrationsList, now]
   );
 
@@ -382,7 +382,7 @@ export default function SpectatorHomePage() {
                     gap: 16,
                   }}
                 >
-                  {registeredUpcoming.map((event) => (
+                  {registeredUpcoming.map((event: IEvent) => (
                     <EventCard
                       key={event._id}
                       event={event}
@@ -442,7 +442,7 @@ export default function SpectatorHomePage() {
                     gap: 16,
                   }}
                 >
-                  {aroundMeUpcoming.map((event) => (
+                  {aroundMeUpcoming.map((event: IEvent) => (
                     <EventCard
                       key={event._id}
                       event={event}

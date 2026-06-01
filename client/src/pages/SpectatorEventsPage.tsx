@@ -45,7 +45,7 @@ export default function SpectatorEventsPage() {
   const [ratingWindowClosed, setRatingWindowClosed] = useState<Record<string, boolean>>({});
   const [eventRatings, setEventRatings] = useState<Record<string, number>>({});
 
-  const { data: myRegistrationsList = [], isLoading: loadingRegistrations } = useQuery({
+  const { data: myRegistrationsList = [] as IEvent[], isLoading: loadingRegistrations } = useQuery<IEvent[]>({
     queryKey: ['events', 'spectator', 'myRegistrations'],
     queryFn: async () => {
       const res = await api.get('/events?myRegistrations=true');
@@ -134,7 +134,7 @@ export default function SpectatorEventsPage() {
   // Build a Set of event IDs the user is registered to (from myRegistrationsList)
   // This is reliable regardless of whether spectatorRegistrations is populated on the event
   const registeredEventIds = useMemo(() => {
-    return new Set(myRegistrationsList.map((e) => e._id));
+    return new Set(myRegistrationsList.map((e: IEvent) => e._id));
   }, [myRegistrationsList]);
 
   const isUserRegistered = (event: IEvent) => {
@@ -161,21 +161,21 @@ export default function SpectatorEventsPage() {
   const registeredUpcoming = useMemo(() => {
     const ref = now;
     return myRegistrationsList
-      .filter((e) => new Date(e.date).getTime() >= ref && e.status?.toLowerCase() !== 'cancelled')
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .filter((e: IEvent) => new Date(e.date).getTime() >= ref && e.status?.toLowerCase() !== 'cancelled')
+      .sort((a: IEvent, b: IEvent) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [myRegistrationsList, now]);
 
   const registeredArchived = useMemo(() => {
     const ref = now;
     return myRegistrationsList
-      .filter((e) => new Date(e.date).getTime() < ref && e.status?.toLowerCase() !== 'cancelled')
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .filter((e: IEvent) => new Date(e.date).getTime() < ref && e.status?.toLowerCase() !== 'cancelled')
+      .sort((a: IEvent, b: IEvent) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [myRegistrationsList, now]);
 
   const registeredCancelled = useMemo(() => {
     return myRegistrationsList
-      .filter((e) => e.status?.toLowerCase() === 'cancelled')
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .filter((e: IEvent) => e.status?.toLowerCase() === 'cancelled')
+      .sort((a: IEvent, b: IEvent) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [myRegistrationsList]);
 
   const favoritesUpcoming = useMemo(() => {
@@ -196,7 +196,7 @@ export default function SpectatorEventsPage() {
     const fetchStatuses = async () => {
       try {
         const entries = await Promise.all(
-          registeredArchived.map(async (e) => {
+          registeredArchived.map(async (e: IEvent) => {
             try {
               const res = await getSpectatorEventRatingStatus(e._id);
               return [e._id, !!res.alreadyRated, !!res.ratingWindowClosed, res.eventRating ?? null] as const;
@@ -348,7 +348,7 @@ export default function SpectatorEventsPage() {
                     gap: 16,
                   }}
                 >
-                  {registeredCancelled.map((event) => (
+                  {registeredCancelled.map((event: IEvent) => (
                     <div
                       key={event._id}
                       data-event-id={event._id}
