@@ -547,7 +547,7 @@ function LandingPage() {
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 48 }}>▶</div>
                       )}
                     </div>
-                    <h3>🎥 Tutoriel d'utilisastion de l'application en tant qu'Organisateur</h3>
+                    <h3>🎥 Tutoriel d'utilisation de l'application en tant qu'Organisateur</h3>
                   </button>
                 );
               })()}
@@ -569,7 +569,7 @@ function LandingPage() {
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 48 }}>▶</div>
                       )}
                     </div>
-                    <h3>🎥 Tutoriel d'utilisastion de l'application en tant qu'Humoriste</h3>
+                    <h3>🎥 Tutoriel d'utilisation de l'application en tant qu'Humoriste</h3>
                   </button>
                 );
               })()}
