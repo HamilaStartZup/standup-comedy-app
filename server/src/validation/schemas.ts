@@ -556,6 +556,27 @@ const optionalTime = z.preprocess(
   z.string().regex(timeRegex).optional()
 );
 
+/** Chaîne vide ou valeur absente ; sinon la valeur (pour champs optionnels type SIRET, URL). */
+const optionalSiret = z.preprocess(
+  (val) => {
+    if (val === undefined || val === null || val === '') return '';
+    const digits = String(val).replace(/\s/g, '');
+    return /^\d{14}$/.test(digits) ? digits : '';
+  },
+  z.union([
+    z.string().regex(/^\d{14}$/, 'SIRET invalide (14 chiffres requis)'),
+    z.literal(''),
+  ]).optional()
+);
+
+const optionalUrl = z.preprocess(
+  (val) => (val === undefined || val === null || val === '' ? '' : val),
+  z.union([
+    z.string().url('URL invalide'),
+    z.literal(''),
+  ]).optional()
+);
+
 const timeRestrictionsSchema = z.object({
   openTime: optionalTime,
   closeTime: optionalTime,
@@ -606,24 +627,25 @@ export const createVenueSchema = z.object({
   minDuration: z.number().min(0).optional(),
   maxDuration: z.number().min(0).optional(),
   acceptedEventTypes: z.array(z.string()).optional(),
+  cancellationPolicy: z.enum(['flexible', 'moderate', 'firm']).optional(),
   cancellationConditions: z.string().optional(),
   houseRules: z.string().optional(),
   timeRestrictions: timeRestrictionsSchema,
   disabledWeekdays: z.array(z.number().int().min(0).max(6)).optional().default([]),
   // Étape 6
   contactName: z.string().optional(),
-  contactEmail: z.string().email().optional(),
+  contactEmail: z.string().email().optional().or(z.string().length(0)),
   contactPhone: z.string().optional(),
   legalStatus: z.string().optional(),
-  siret: z.string().regex(/^\d{14}$/, 'SIRET invalide (14 chiffres requis)').optional().or(z.string().length(0)),
+  siret: optionalSiret,
   invoicingAvailable: z.boolean().optional(),
   companyName: z.string().optional(),
-  website: z.string().url('URL du site invalide').optional().or(z.string().length(0)),
+  website: optionalUrl,
   socialLinks: z.object({
-    youtube: z.string().url().optional().or(z.string().length(0)),
-    instagram: z.string().url().optional().or(z.string().length(0)),
-    facebook: z.string().url().optional().or(z.string().length(0)),
-    twitter: z.string().url().optional().or(z.string().length(0)),
+    youtube: optionalUrl,
+    instagram: optionalUrl,
+    facebook: optionalUrl,
+    twitter: optionalUrl,
   }).optional(),
 });
 

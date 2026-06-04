@@ -5,6 +5,7 @@ import { listVenues, myBookings, updateBookingStatus, updateBookingGroupStatus }
 import VenueCard from '../components/VenueCard';
 import Navbar from '../components/Navbar';
 import BookingStatusBadge from '../components/BookingStatusBadge';
+import BookingInvoiceButton from '../components/BookingInvoiceButton';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import type { IVenue, IVenueBooking } from '../types/venue';
 import { useAlert } from '../hooks/useAlert';
@@ -352,18 +353,21 @@ const MesSallesPage: React.FC = () => {
                               ← Retour aux réservations
                             </button>
 
-                            <div style={{ marginBottom: 20, padding: 16, backgroundColor: '#fff', borderRadius: 20, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)' }}>
-                              <h3 style={{ margin: '0 0 8px 0', color: '#1a1a1a', fontSize: '1.2em' }}>
-                                {first.requester?.firstName} {first.requester?.lastName}
-                              </h3>
-                              <p style={{ margin: 0, color: '#64748b', fontSize: '0.9em' }}>
-                                📍 {first.venue?.name} · {first.venue?.city} · {groupBookings.length} date(s)
-                              </p>
-                              {first.message && (
-                                <p style={{ margin: '10px 0 0', fontSize: 13, color: '#475569', fontStyle: 'italic', background: '#f8fafc', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid rgba(255,65,108,0.5)' }}>
-                                  "{first.message}"
+                            <div style={{ marginBottom: 20, padding: 16, backgroundColor: '#fff', borderRadius: 20, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                              <div>
+                                <h3 style={{ margin: '0 0 8px 0', color: '#1a1a1a', fontSize: '1.2em' }}>
+                                  {first.requester?.firstName} {first.requester?.lastName}
+                                </h3>
+                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9em' }}>
+                                  📍 {first.venue?.name} · {first.venue?.city} · {groupBookings.length} date(s)
                                 </p>
-                              )}
+                                {first.message && (
+                                  <p style={{ margin: '10px 0 0', fontSize: 13, color: '#475569', fontStyle: 'italic', background: '#f8fafc', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid rgba(255,65,108,0.5)' }}>
+                                    "{first.message}"
+                                  </p>
+                                )}
+                              </div>
+                              <BookingInvoiceButton bookings={groupBookings} isSeries label="Facture série" />
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -398,7 +402,10 @@ const MesSallesPage: React.FC = () => {
                                         <div style={{ color: '#1a1a1a', fontWeight: 600 }}>{b.startTime} – {b.endTime}</div>
                                       </div>
                                     </div>
-                                    <BookingStatusBadge status={b.status} perspective="owner" isPast={past} paymentDeadlineAt={b.paymentDeadlineAt} />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+                                      <BookingStatusBadge status={b.status} perspective="owner" isPast={past} paymentDeadlineAt={b.paymentDeadlineAt} />
+                                      <BookingInvoiceButton bookings={[b]} compact />
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -487,7 +494,7 @@ const MesSallesPage: React.FC = () => {
                                     {dateFirst} → {dateLast}
                                   </p>
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
                                   <span style={{ padding: '6px 16px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)', fontSize: '0.85em', fontWeight: 600, color: '#1a1a1a' }}>
                                     {groupBookings.length} date(s)
                                   </span>
@@ -496,6 +503,13 @@ const MesSallesPage: React.FC = () => {
                                       {pendingCount} en attente
                                     </span>
                                   )}
+                                  <BookingInvoiceButton
+                                    bookings={groupBookings}
+                                    isSeries
+                                    label="Facture série"
+                                    onClick={(e) => e.stopPropagation()}
+                                    compact
+                                  />
                                 </div>
                               </div>
                             </div>
@@ -700,6 +714,10 @@ const MesSallesPage: React.FC = () => {
                             : 'Remboursement en attente'}
                         </p>
                       )}
+
+                      <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
+                        <BookingInvoiceButton bookings={[booking]} />
+                      </div>
 
                       {/* Boutons action */}
                       {normalizedStatus === 'PENDING' && (

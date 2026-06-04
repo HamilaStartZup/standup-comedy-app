@@ -7,6 +7,7 @@ import BookingCardSkeleton from '../components/skeletons/BookingCardSkeleton';
 import { SuccessMessages, ErrorMessages, getErrorMessage } from '../services/systemMessages';
 import { useAlert } from '../hooks/useAlert';
 import BookingStatusBadge from '../components/BookingStatusBadge';
+import BookingInvoiceButton from '../components/BookingInvoiceButton';
 import Navbar from '../components/Navbar';
 import VenuesTabs from '../components/VenuesTabs';
 import type { IVenueBooking, CancellationPolicy } from '../types/venue';
@@ -383,6 +384,7 @@ const MyBookingsPage: React.FC = () => {
               {cancellingId === booking._id ? 'Annulation...' : 'Annuler'}
             </button>
           )}
+          <BookingInvoiceButton bookings={[booking]} onClick={(e) => e.stopPropagation()} compact />
         </div>
       </div>
     );
@@ -471,6 +473,12 @@ const MyBookingsPage: React.FC = () => {
                   {cancellingGroupId === groupId ? 'Annulation...' : 'Annuler la série'}
                 </button>
               )}
+              <BookingInvoiceButton
+                bookings={bookings}
+                isSeries
+                label="Facture série"
+                onClick={(e) => e.stopPropagation()}
+              />
               <span style={{ color: '#7c3aed', fontSize: 13, fontWeight: 600 }}>
                 {expanded ? 'Masquer les dates ▲' : 'Voir les dates ▼'}
               </span>
@@ -1077,6 +1085,7 @@ const MyBookingsPage: React.FC = () => {
                 )}
 
                 <div className="booking-card-actions" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <BookingInvoiceButton bookings={[booking]} />
                   {!venueDeleted && (
                     <button
                       onClick={() => navigate(`/venues/${booking.venue?._id}`)}
