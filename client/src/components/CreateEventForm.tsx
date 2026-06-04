@@ -6,6 +6,7 @@ import { usePostalCodeValidation } from '../hooks/usePostalCodeValidation';
 import { useMyBookings } from '../hooks/useMyBookings';
 import { X, ChevronDown, MapPin, Calendar, Users } from 'lucide-react';
 import api, { getVenueBookingIdsInUse, uploadEventImage } from '../services/api';
+import { toLocalDateString as toLocalDateStringUtil, generateRecurringDates } from '../utils/recurrenceDates';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages } from '../services/systemMessages';
 import type { IVenueBooking } from '../types/venue';
 
@@ -142,6 +143,18 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   }, [myVenueBookings]);
 
   const [selectedVenueBookingId, setSelectedVenueBookingId] = useState('');
+  const [selectedVenueBookingGroupId, setSelectedVenueBookingGroupId] = useState('');
+
+  const confirmedVenueBookingGroups = useMemo(() => {
+    const groups = new Map<string, IVenueBooking[]>();
+    for (const b of confirmedVenueBookings) {
+      if (!b.bookingGroupId) continue;
+      const list = groups.get(b.bookingGroupId) ?? [];
+      list.push(b);
+      groups.set(b.bookingGroupId, list);
+    }
+    return groups;
+  }, [confirmedVenueBookings]);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -234,8 +247,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   }, [eventDurationMinutes]);
 
   // Formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC qui affichait le jour précédent)
-  const toLocalDateString = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const toLocalDateString = toLocalDateStringUtil;
 
   /** Calcule l'heure et la date de fin à partir de la date de début, l'heure de début et la durée (événement unique). */
   const computeEndFromDuration = (
@@ -263,40 +275,12 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
       setRecurringDates([]);
       return;
     }
-    const start = new Date(recurrenceStartDate + 'T12:00:00');
-    const end = new Date(recurrenceEndDate + 'T12:00:00');
-    if (end < start) {
-      setRecurringDates([]);
-      return;
-    }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const dates: string[] = [];
-    if (recurrenceType === 'daily') {
-      const d = new Date(start);
-      d.setHours(0, 0, 0, 0);
-      while (d <= end) {
-        if (d >= today) dates.push(toLocalDateString(d));
-        d.setDate(d.getDate() + 1);
-      }
-    } else if (recurrenceType === 'weekly') {
-      const days = recurrenceWeeklyDays.length > 0 ? recurrenceWeeklyDays : [start.getDay()];
-      const d = new Date(start);
-      d.setHours(0, 0, 0, 0);
-      while (d <= end) {
-        if (d >= today && days.includes(d.getDay())) dates.push(toLocalDateString(d));
-        d.setDate(d.getDate() + 1);
-      }
-    } else if (recurrenceType === 'monthly') {
-      const d = new Date(start);
-      d.setHours(0, 0, 0, 0);
-      const dayOfMonth = d.getDate();
-      while (d <= end) {
-        if (d >= today) dates.push(toLocalDateString(d));
-        d.setMonth(d.getMonth() + 1);
-        d.setDate(Math.min(dayOfMonth, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
-      }
-    }
+    const dates = generateRecurringDates({
+      type: recurrenceType as any,
+      startDate: recurrenceStartDate,
+      endDate: recurrenceEndDate,
+      weeklyDays: recurrenceWeeklyDays,
+    });
     setRecurringDates(dates);
   }, [eventType, recurrenceStartDate, recurrenceEndDate, recurrenceType, recurrenceWeeklyDays]);
 
@@ -1126,7 +1110,19 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
       };
 
       let response;
-      if (eventType === 'recurring' && recurringDates.length > 0) {
+      if (selectedVenueBookingGroupId) {
+        // Chemin Org B récurrent — génération depuis un lot de réservations confirmées
+        const groupBookings = confirmedVenueBookingGroups.get(selectedVenueBookingGroupId) ?? [];
+        const firstBooking = groupBookings[0];
+        const eventData = {
+          ...baseEventData,
+          startTime: firstBooking?.startTime ?? formData.startTime,
+          endTime: firstBooking?.endTime ?? effectiveEndTime,
+          venueBookingGroupId: selectedVenueBookingGroupId,
+        };
+        response = await api.post('/events', eventData);
+        showSuccess(`${response.data.count || groupBookings.length} événements créés depuis le lot confirmé !`);
+      } else if (eventType === 'recurring' && recurringDates.length > 0) {
         const dateTimes = recurringDates
           .map((d) => {
             const override = dateTimeOverrides[d];
@@ -1142,7 +1138,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           dateTimes: dateTimes.length > 0 ? dateTimes : undefined,
         };
         response = await api.post('/events', eventData);
-        console.log('✅ Réponse serveur (récurrent):', response.data);
         showSuccess(`${response.data.count || recurringDates.length} événements récurrents créés avec succès !`);
       } else {
         const eventData = {
@@ -1152,7 +1147,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           ...(selectedVenueBookingId && { venueBookingId: selectedVenueBookingId }),
         };
         response = await api.post('/events', eventData);
-        console.log('✅ Réponse serveur:', response.data);
         showSuccess(SuccessMessages.EVENT_CREATED);
       }
 
@@ -1313,7 +1307,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     gap: '20px',
   };
 
-  const fieldsLockedByVenueBooking = Boolean(selectedVenueBookingId);
+  const fieldsLockedByVenueBooking = Boolean(selectedVenueBookingId) || Boolean(selectedVenueBookingGroupId);
   const lockedFromReservationStyle: CSSProperties = fieldsLockedByVenueBooking
     ? {
         opacity: 0.55,
@@ -1416,6 +1410,58 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       </>
                     )}
                   </p>
+                )}
+
+                {/* Sélecteur de lot confirmé (série Org B) */}
+                {confirmedVenueBookingGroups.size > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontWeight: 600, color: '#ffb3c1', fontSize: 14 }}>
+                      — ou — Générer depuis un lot de réservations confirmées (série récurrente)
+                    </label>
+                    <select
+                      value={selectedVenueBookingGroupId}
+                      onChange={(e) => {
+                        const groupId = e.target.value;
+                        setSelectedVenueBookingGroupId(groupId);
+                        const bookings = confirmedVenueBookingGroups.get(groupId) ?? [];
+                        if (bookings.length > 0) {
+                          applyVenueBookingToForm(bookings[0]);
+                        }
+                        // Effacer l'ID unitaire — applyVenueBookingToForm le remet, ce setSelectedVenueBookingId('') gagne en dernier dans le batch
+                        setSelectedVenueBookingId('');
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        fontSize: 14,
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: 8,
+                        backgroundColor: 'rgba(255,255,255,0.95)',
+                        color: '#1a1a1a',
+                      }}
+                    >
+                      <option value="">— Choisir un lot —</option>
+                      {[...confirmedVenueBookingGroups.entries()].map(([groupId, bookings]) => {
+                        const first = bookings[0];
+                        const last = bookings[bookings.length - 1];
+                        const label = `${first.venue?.name ?? 'Salle'} · ${bookings.length} date(s) · du ${new Date(first.requestedDate).toLocaleDateString('fr-FR')} au ${new Date(last.requestedDate).toLocaleDateString('fr-FR')}`;
+                        return <option key={groupId} value={groupId}>{label}</option>;
+                      })}
+                    </select>
+
+                    {selectedVenueBookingGroupId && (
+                      <div style={{ marginTop: 10, padding: '10px 14px', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 8, fontSize: 12, color: '#c4b5fd' }}>
+                        <strong>Dates du lot :</strong>
+                        <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {(confirmedVenueBookingGroups.get(selectedVenueBookingGroupId) ?? []).map((b) => (
+                            <span key={b._id} style={{ background: 'rgba(139,92,246,0.2)', borderRadius: 4, padding: '2px 8px' }}>
+                              {new Date(b.requestedDate).toLocaleDateString('fr-FR')}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}

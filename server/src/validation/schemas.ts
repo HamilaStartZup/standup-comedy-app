@@ -289,7 +289,10 @@ export const createEventSchema = z.object({
   })).optional(),
   imageUrl: z.string().max(2000).optional().transform((v) => (v && v.trim() ? v.trim() : undefined)).refine((v) => !v || /^https?:\/\//i.test(v), { message: 'L\'URL de l\'image doit commencer par http:// ou https://' }),
   venueBookingId: z.string().regex(/^[a-fA-F0-9]{24}$/, { message: 'Identifiant de réservation invalide' }).optional(),
+  venueBookingGroupId: z.string().regex(/^[a-fA-F0-9]{24}$/, { message: 'Identifiant de lot de réservation invalide' }).optional(),
 }).refine((data) => {
+  // Chemin Org B récurrent : venueBookingGroupId suffit, pas de date/isRecurring requis
+  if (data.venueBookingGroupId) return true;
   // Validation : si isRecurring est true, dates doit être présent et date ne doit pas l'être
   if (data.isRecurring === true) {
     if (!data.dates || data.dates.length === 0) {
@@ -306,7 +309,7 @@ export const createEventSchema = z.object({
   }
   return true;
 }, {
-  message: 'Pour un événement unique, fournissez "date". Pour un événement récurrent, fournissez "isRecurring: true" et "dates"',
+  message: 'Pour un événement unique, fournissez "date". Pour un événement récurrent, fournissez "isRecurring: true" et "dates". Pour une série Org B, fournissez "venueBookingGroupId".',
   path: ['date']
 }).refine((data) => {
   const startParts = data.startTime.split(':');
@@ -643,8 +646,36 @@ export const createBookingSchema = z.object({
   return eh * 60 + em > sh * 60 + sm;
 }, { message: "L'heure de fin doit être après l'heure de début", path: ['endTime'] });
 
+export const createBookingBatchSchema = z.object({
+  dates: z.array(
+    z.string().refine((str) => {
+      const date = new Date(str);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return !isNaN(date.getTime()) && date >= today;
+    }, { message: 'Chaque date doit être aujourd\'hui ou dans le futur' })
+  ).min(1).max(100, { message: 'Une série ne peut pas dépasser 100 dates' }).refine(
+    (dates) => new Set(dates.map((d) => d.split('T')[0])).size === dates.length,
+    { message: 'Les dates doivent être uniques' }
+  ),
+  startTime: z.string().regex(timeRegex, { message: 'Format HH:MM requis' }).optional(),
+  endTime: z.string().regex(timeRegex, { message: 'Format HH:MM requis' }).optional(),
+  message: z.string().max(500).optional(),
+}).refine((data) => {
+  if (!data.startTime || !data.endTime) return true;
+  const [sh, sm] = data.startTime.split(':').map(Number);
+  const [eh, em] = data.endTime.split(':').map(Number);
+  return eh * 60 + em > sh * 60 + sm;
+}, { message: "L'heure de fin doit être après l'heure de début", path: ['endTime'] });
+
 export const updateBookingStatusSchema = z.object({
   status: z.enum(['ACCEPTED', 'REFUSED']),
+  ownerResponse: z.string().max(500).optional(),
+});
+
+export const updateBookingGroupStatusSchema = z.object({
+  status: z.enum(['ACCEPTED', 'REFUSED']),
+  excludedBookingIds: z.array(z.string()).optional(),
   ownerResponse: z.string().max(500).optional(),
 });
 

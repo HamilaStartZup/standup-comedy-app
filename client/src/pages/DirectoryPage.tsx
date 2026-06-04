@@ -106,7 +106,7 @@ const DirectoryPage: React.FC = () => {
     enabled: !!user && user.role === 'SUPER_ADMIN',
   });
 
-  const users = usersData?.users || [];
+  const users: User[] = usersData?.users || [];
   const usersPagination = usersData?.pagination ?? null;
   const filteredUsers = users;
 

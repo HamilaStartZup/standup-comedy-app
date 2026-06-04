@@ -44,6 +44,12 @@ interface SmartRecommendationsResponse {
   page: number;
   limit: number;
 }
+type RecommendationItem = {
+  event: IEvent;
+  score: number;
+  breakdown?: { geographic: number; experienceLevel: number; experienceYears: number };
+  matchReasons?: string[];
+};
 type OrganizerTab = 'upcoming' | 'full' | 'archived' | 'cancelled' | 'calendar' | 'favoriteComedians' | 'recurringEvents';
 type EventsSubTab = 'upcoming' | 'full' | 'archived' | 'cancelled' | 'recurringEvents';
 type SuperAdminTab = 'full' | 'upcoming' | 'archived' | 'cancelled';
@@ -100,7 +106,7 @@ function RatingsSummaryModal({ event, onClose }: { event: IEvent | null; onClose
             <h3 style={{ margin: '0 0 10px 0', fontSize: '1em', color: '#ddd' }}>Moyenne par humoriste</h3>
             {data.comedianRatings.length > 0 ? (
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 260, overflowY: 'auto' }}>
-                {data.comedianRatings.map((cr) => (
+                {data.comedianRatings.map((cr: RatingsSummaryData['comedianRatings'][number]) => (
                   <li
                     key={cr.comedianId}
                     style={{
@@ -189,7 +195,7 @@ function MyEventsPage() {
   // Extraire les IDs des évènements favoris
   useEffect(() => {
     if (eventFavoritesData?.favorites) {
-      const favoriteIds = eventFavoritesData.favorites.map(event => event._id);
+      const favoriteIds = eventFavoritesData.favorites.map((event: IEvent) => event._id);
       setFavoriteEventIds(favoriteIds);
     } else if (!isComedianView) {
       setFavoriteEventIds([]);
@@ -503,7 +509,7 @@ useEffect(() => {
   const smartRecommendationMap = useMemo(() => {
     const map = new Map<string, SmartRecommendation>();
     if (smartRecommendationsData?.recommendations) {
-      smartRecommendationsData.recommendations.forEach(rec => {
+      smartRecommendationsData.recommendations.forEach((rec: SmartRecommendation) => {
         if (rec.event?._id) {
           map.set(String(rec.event._id), rec);
         }
@@ -515,7 +521,7 @@ useEffect(() => {
   // Événements des recommandations intelligentes
   const smartRecommendationEvents = useMemo(() => {
     if (!smartRecommendationsData?.recommendations) return [];
-    return smartRecommendationsData.recommendations.map(rec => rec.event);
+    return smartRecommendationsData.recommendations.map((rec: SmartRecommendation) => rec.event);
   }, [smartRecommendationsData]);
 
   // Créer un Map des scores et détails par eventId pour un accès rapide
@@ -526,7 +532,7 @@ useEffect(() => {
       matchReasons?: string[];
     }>();
     if (recommendationsData?.recommendations) {
-      recommendationsData.recommendations.forEach(rec => {
+      recommendationsData.recommendations.forEach((rec: RecommendationItem) => {
         if (rec.event?._id) {
           map.set(String(rec.event._id), {
             score: rec.score,
@@ -542,7 +548,7 @@ useEffect(() => {
   // Événements de l'API recommendations avec leurs scores (pour l'onglet Opportunités)
   const recommendationEventsWithScores = useMemo(() => {
     if (!recommendationsData?.recommendations) return [];
-    return recommendationsData.recommendations.map(rec => ({
+    return recommendationsData.recommendations.map((rec: RecommendationItem) => ({
       ...rec.event,
       _recommendationScore: rec.score
     }));
@@ -574,7 +580,7 @@ useEffect(() => {
   // Memoize the set of applied event IDs
   const appliedEventIds = useMemo(() => {
     if (user?.role === 'COMEDIAN' && comedianApplications) {
-      return new Set(comedianApplications.filter(app => app.event).map(app => app.event._id));
+      return new Set(comedianApplications.filter((app: IApplication) => app.event).map((app: IApplication) => app.event._id));
     }
     return new Set<string>();
   }, [comedianApplications, user?.role]);
@@ -657,7 +663,7 @@ useEffect(() => {
   const comedianApplicationsMap = useMemo(() => {
     const map = new Map<string, IApplication>();
     if (comedianApplications) {
-      comedianApplications.forEach(app => {
+      comedianApplications.forEach((app: IApplication) => {
         if (app.event?._id) {
           map.set(app.event._id, app);
         }
@@ -955,7 +961,7 @@ useEffect(() => {
   const acceptedUpcomingEvents = useMemo(() => {
     if (user?.role === 'COMEDIAN' && comedianApplications) {
       let filtered = upcomingEvents.filter((event) => {
-        const app = comedianApplications.find(a => a.event && a.event._id === event._id);
+        const app = comedianApplications.find((a: IApplication) => a.event && a.event._id === event._id);
         return app && app.status === 'ACCEPTED';
       });
       
@@ -976,14 +982,14 @@ useEffect(() => {
   const pendingApplicationEvents = useMemo(() => {
     if (user?.role === 'COMEDIAN' && comedianApplications) {
       return comedianApplications
-        .filter(app => {
+        .filter((app: IApplication) => {
           const isPending = app.status === 'PENDING';
           const hasEvent = !!app.event;
           const eventStatus = app.event?.status?.toLowerCase();
           const isPublished = eventStatus === 'published';
           return isPending && hasEvent && isPublished;
         })
-        .map(app => app.event as unknown as IEvent);
+        .map((app: IApplication) => app.event as unknown as IEvent);
     }
     return [] as IEvent[];
   }, [comedianApplications, user?.role]);
@@ -991,8 +997,8 @@ useEffect(() => {
   const rejectedApplicationEvents = useMemo(() => {
     if (user?.role === 'COMEDIAN' && comedianApplications) {
       return comedianApplications
-        .filter(app => app.status === 'REJECTED' && app.event)
-        .map(app => app.event as unknown as IEvent);
+        .filter((app: IApplication) => app.status === 'REJECTED' && app.event)
+        .map((app: IApplication) => app.event as unknown as IEvent);
     }
     return [] as IEvent[];
   }, [comedianApplications, user?.role]);
@@ -1460,23 +1466,30 @@ useEffect(() => {
                 >
                   Voir spectateurs
                 </button>
-                <button
-                  type="button"
-                  style={menuItemStyle}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenActionsEventId(null);
-                    if (groupEvents && groupEvents.length > 0) {
-                      openCancelGroupModal(groupEvents);
-                    } else {
-                      openCancelModal(event);
-                    }
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                >
-                  Annuler
-                </button>
+                {/* Org B (event adossé à une réservation) : l'annulation se pilote depuis « Mes
+                    réservations » (la réservation est le levier, cf. ADR 0002). On masque donc
+                    « Annuler » côté événement pour ces occurrences/séries. */}
+                {!((groupEvents && groupEvents.length > 0)
+                  ? groupEvents.some((e) => !!e.venueBookingId)
+                  : !!event.venueBookingId) && (
+                  <button
+                    type="button"
+                    style={menuItemStyle}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenActionsEventId(null);
+                      if (groupEvents && groupEvents.length > 0) {
+                        openCancelGroupModal(groupEvents);
+                      } else {
+                        openCancelModal(event);
+                      }
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  >
+                    Annuler
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -1609,7 +1622,7 @@ useEffect(() => {
   const confirmWithdrawApplication = async () => {
     if (!user?._id || !eventToWithdraw) return;
     try {
-      const app = comedianApplications?.find(a => a.event && a.event._id === eventToWithdraw._id);
+      const app = comedianApplications?.find((a: IApplication) => a.event && a.event._id === eventToWithdraw._id);
       if (!app) {
         return;
       }
@@ -2703,7 +2716,7 @@ useEffect(() => {
           {eventsToDisplay.length === 0 && !listIsLoading && !listHasError && (
             <p style={emptyStateStyle}>{comedianEmptyStates[comedianTab]}</p>
           )}
-          {paginatedUpcomingEvents.map((event) => {
+          {paginatedUpcomingEvents.map((event: IEvent) => {
             const isCompleteEvent = isEventComplete(event);
             const participantsRatio = getParticipantsRatio(event);
             const statusLabel = translateEventStatus(event.status);
@@ -3713,7 +3726,7 @@ useEffect(() => {
                         {isOrganizerView ? 'Aucun évènement à venir pour ce filtre.' : 'Aucun évènement à venir (non complet).'}
                       </p>
                     )}
-                    {paginatedUpcomingEvents.map((event) => {
+                    {paginatedUpcomingEvents.map((event: IEvent) => {
                       const isCompleteEvent = isEventComplete(event);
                       const participantsRatio = getParticipantsRatio(event);
                       const statusLabel = translateEventStatus(event.status);

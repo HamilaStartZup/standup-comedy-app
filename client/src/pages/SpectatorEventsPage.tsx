@@ -45,7 +45,7 @@ export default function SpectatorEventsPage() {
   const [ratingWindowClosed, setRatingWindowClosed] = useState<Record<string, boolean>>({});
   const [eventRatings, setEventRatings] = useState<Record<string, number>>({});
 
-  const { data: myRegistrationsList = [], isLoading: loadingRegistrations } = useQuery({
+  const { data: myRegistrationsRaw, isLoading: loadingRegistrations } = useQuery<IEvent[]>({
     queryKey: ['events', 'spectator', 'myRegistrations'],
     queryFn: async () => {
       const res = await api.get('/events?myRegistrations=true');
@@ -53,6 +53,7 @@ export default function SpectatorEventsPage() {
     },
     enabled: !!user,
   });
+  const myRegistrationsList: IEvent[] = myRegistrationsRaw ?? [];
 
   const { data: favoritesResponse, isLoading: loadingFavorites } = useQuery({
     queryKey: ['event-favorites'],

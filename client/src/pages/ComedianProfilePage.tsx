@@ -242,7 +242,7 @@ function ComedianProfilePage() {
   })();
 
   const comedyStyleLabel = user?.profile?.comedyStyle?.length
-    ? user.profile.comedyStyle.map(s => {
+    ? user.profile.comedyStyle.map((s: string) => {
         const labels: Record<string, string> = {
           'stand-up': 'Stand up',
           'improvisation': 'Improvisation',
@@ -254,7 +254,7 @@ function ComedianProfilePage() {
     : 'Non spécifié';
 
   const langLabel = user?.profile?.performanceLanguages?.length
-    ? user.profile.performanceLanguages.map(l => {
+    ? user.profile.performanceLanguages.map((l: string) => {
         const labels: Record<string, string> = {
           francais: 'Français', arabe: 'Arabe', anglais: 'Anglais', italien: 'Italien', espagnol: 'Espagnol',
         };
@@ -263,7 +263,7 @@ function ComedianProfilePage() {
     : 'Non spécifié';
 
   const mobilityLabel = user?.profile?.mobilityZone?.length
-    ? user.profile.mobilityZone.map(z => `${z.type === 'ville' ? 'Ville' : z.type === 'departement' ? 'Département' : 'Région'}: ${z.value}`).join(', ')
+    ? user.profile.mobilityZone.map((z: { type: string; value: string }) => `${z.type === 'ville' ? 'Ville' : z.type === 'departement' ? 'Département' : 'Région'}: ${z.value}`).join(', ')
     : 'Non spécifié';
 
   const profilFields = [

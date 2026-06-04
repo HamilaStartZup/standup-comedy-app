@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { listVenueBookings, updateBookingStatus, cancelBookingByOwner } from '../services/api';
+import { listVenueBookings, updateBookingStatus, updateBookingGroupStatus, cancelBookingByOwner } from '../services/api';
 import { SuccessMessages, ErrorMessages, getErrorMessage } from '../services/systemMessages';
 import { useAlert } from '../hooks/useAlert';
 import BookingStatusBadge from './BookingStatusBadge';
@@ -115,6 +115,12 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // État pour la gestion de lots
+  const [respondingGroupId, setRespondingGroupId] = useState<string | null>(null);
+  const [groupOwnerResponse, setGroupOwnerResponse] = useState('');
+  const [groupExcluded, setGroupExcluded] = useState<Set<string>>(new Set());
+  const [groupActionLoading, setGroupActionLoading] = useState<string | null>(null);
+
   const { data, isLoading, error } = useQuery<IVenueBooking[]>({
     queryKey: ['venue-bookings', venueId],
     queryFn: () => listVenueBookings(venueId),
@@ -164,10 +170,59 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
     }
   };
 
+  const handleGroupAction = async (bookingGroupId: string, status: 'ACCEPTED' | 'REFUSED') => {
+    setGroupActionLoading(bookingGroupId);
+    try {
+      await updateBookingGroupStatus(bookingGroupId, {
+        status,
+        excludedBookingIds: status === 'ACCEPTED' ? [...groupExcluded] : undefined,
+        ownerResponse: groupOwnerResponse || undefined,
+      });
+      showSuccess(status === 'ACCEPTED' ? SuccessMessages.BOOKING_ACCEPTED : SuccessMessages.BOOKING_REFUSED);
+      queryClient.invalidateQueries({ queryKey: ['venue-bookings', venueId] });
+      setRespondingGroupId(null);
+      setGroupOwnerResponse('');
+      setGroupExcluded(new Set());
+    } catch (err) {
+      showError(getErrorMessage(err, ErrorMessages.BOOKING_UPDATE_FAILED));
+    } finally {
+      setGroupActionLoading(null);
+    }
+  };
+
   const bookings = data || [];
-  const filtered = statusFilter === 'ALL'
-    ? bookings
-    : bookings.filter((b) => b.status === statusFilter);
+
+  // Séparer les réservations par lot des réservations unitaires
+  const { bookingsByGroup, standaloneBookings } = useMemo(() => {
+    const groups = new Map<string, IVenueBooking[]>();
+    const standalone: IVenueBooking[] = [];
+    for (const b of bookings) {
+      if (b.bookingGroupId) {
+        const list = groups.get(b.bookingGroupId) ?? [];
+        list.push(b);
+        groups.set(b.bookingGroupId, list);
+      } else {
+        standalone.push(b);
+      }
+    }
+    return { bookingsByGroup: groups, standaloneBookings: standalone };
+  }, [bookings]);
+
+  const filteredStandalones = statusFilter === 'ALL'
+    ? standaloneBookings
+    : standaloneBookings.filter((b) => b.status === statusFilter);
+
+  const filteredGroups = useMemo(() => {
+    const result: [string, IVenueBooking[]][] = [];
+    for (const [groupId, groupBookings] of bookingsByGroup.entries()) {
+      const filtered = statusFilter === 'ALL'
+        ? groupBookings
+        : groupBookings.filter((b) => b.status === statusFilter);
+      if (filtered.length > 0) result.push([groupId, filtered]);
+    }
+    return result;
+  }, [bookingsByGroup, statusFilter]);
+
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { ALL: bookings.length };
@@ -250,7 +305,123 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {filtered.map((booking) => (
+      {/* ── Lots groupés ── */}
+      {filteredGroups.map(([groupId, groupBookings]) => {
+        const hasPending = groupBookings.some((b) => b.status === 'PENDING');
+        const firstBooking = groupBookings[0];
+        const isRespondingThisGroup = respondingGroupId === groupId;
+        return (
+          <div
+            key={groupId}
+            style={{
+              background: 'rgba(0,0,0,0.35)',
+              border: '1px solid rgba(255,165,0,0.25)',
+              borderRadius: 14,
+              padding: 20,
+            }}
+          >
+            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(255,165,0,0.15)', color: '#fbbf24', borderRadius: 6, padding: '3px 10px' }}>
+                Série · {groupBookings.length} réservation(s)
+              </span>
+              {firstBooking.requester && (
+                <span style={{ fontSize: 13, color: '#aaa' }}>
+                  {firstBooking.requester.firstName} {firstBooking.requester.lastName}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+              {groupBookings.map((b) => (
+                <div
+                  key={b._id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '6px 10px',
+                    background: 'rgba(255,255,255,0.03)',
+                    borderRadius: 8,
+                    fontSize: 13,
+                  }}
+                >
+                  {hasPending && b.status === 'PENDING' && isRespondingThisGroup && (
+                    <input
+                      type="checkbox"
+                      checked={!groupExcluded.has(b._id)}
+                      onChange={() => {
+                        const next = new Set(groupExcluded);
+                        if (next.has(b._id)) next.delete(b._id);
+                        else next.add(b._id);
+                        setGroupExcluded(next);
+                      }}
+                      title="Inclure dans l'acceptation"
+                    />
+                  )}
+                  <span style={{ color: '#ddd', flex: 1 }}>
+                    {new Date(b.requestedDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                    {' · '}{b.startTime} – {b.endTime}
+                  </span>
+                  <BookingStatusBadge status={b.status} perspective="owner" />
+                </div>
+              ))}
+            </div>
+
+            {firstBooking.message && (
+              <p style={{ margin: '0 0 12px 0', fontSize: 13, color: '#ccc', background: 'rgba(255,255,255,0.04)', padding: '8px 12px', borderRadius: 8, borderLeft: '3px solid rgba(255,165,0,0.4)' }}>
+                "{firstBooking.message}"
+              </p>
+            )}
+
+            {hasPending && (
+              isRespondingThisGroup ? (
+                <div>
+                  <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 6px 0' }}>Cochez les dates à inclure dans l'acceptation (décocher = refuser).</p>
+                  <textarea
+                    value={groupOwnerResponse}
+                    onChange={(e) => setGroupOwnerResponse(e.target.value)}
+                    placeholder="Message optionnel..."
+                    rows={2}
+                    style={{ width: '100%', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 13, marginBottom: 10, boxSizing: 'border-box', resize: 'vertical' }}
+                  />
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => handleGroupAction(groupId, 'ACCEPTED')}
+                      disabled={groupActionLoading === groupId}
+                      style={{ padding: '8px 18px', background: 'rgba(16,185,129,0.2)', color: '#10b981', border: '1px solid rgba(16,185,129,0.4)', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                    >
+                      ✓ Accepter le lot
+                    </button>
+                    <button
+                      onClick={() => handleGroupAction(groupId, 'REFUSED')}
+                      disabled={groupActionLoading === groupId}
+                      style={{ padding: '8px 18px', background: 'rgba(239,68,68,0.2)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                    >
+                      ✕ Refuser tout
+                    </button>
+                    <button
+                      onClick={() => { setRespondingGroupId(null); setGroupOwnerResponse(''); setGroupExcluded(new Set()); }}
+                      style={{ padding: '8px 18px', background: 'transparent', color: '#888', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setRespondingGroupId(groupId); setGroupOwnerResponse(''); setGroupExcluded(new Set()); }}
+                  style={{ padding: '8px 18px', background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                >
+                  Répondre au lot
+                </button>
+              )
+            )}
+          </div>
+        );
+      })}
+
+      {/* ── Réservations unitaires ── */}
+      {filteredStandalones.map((booking) => (
         <div
           key={booking._id}
           style={{

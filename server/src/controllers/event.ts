@@ -21,7 +21,10 @@ import {
   assertVenueBookingAvailableForNewEvent,
   getUsedVenueBookingIdsForOrganizer,
 } from '../utils/venueBookingEventLink';
+import { VenueBookingModel } from '../models/VenueBooking';
 import { detectZoneType, FRENCH_REGIONS, normalizeDepartment } from '../utils/geographicMatching';
+import { notifyEventCancellation, cancelEventInternal } from '../services/eventCancellation';
+import { cancelBookingWithRefund } from './venueBooking';
 
 /** Retourne la liste des modifications entre l'ancien et le nouvel évènement (pour l'email aux candidats) */
 function getEventChanges(oldEvent: any, newEvent: any): string[] {
@@ -137,13 +140,70 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    const { title, description, date, dates, location, requirements, startTime, endTime, endDate, budget, maxPerformers, maxSpectators, isRecurring, dateTimes, imageUrl, venueBookingId } = req.body;
+    const { title, description, date, dates, location, requirements, startTime, endTime, endDate, budget, maxPerformers, maxSpectators, isRecurring, dateTimes, imageUrl, venueBookingId, venueBookingGroupId } = req.body;
 
     if (venueBookingId && isRecurring) {
       res.status(400).json({
         message: 'Une réservation de salle ne peut être liée qu\'à un événement unique, pas à une série récurrente.',
       });
       return;
+    }
+
+    if (venueBookingId && venueBookingGroupId) {
+      res.status(400).json({
+        message: 'venueBookingId et venueBookingGroupId ne peuvent pas être fournis simultanément.',
+      });
+      return;
+    }
+
+    // ── Chemin Org B récurrent : générer depuis un lot de réservations confirmées ──
+    if (venueBookingGroupId) {
+      if (!Types.ObjectId.isValid(venueBookingGroupId)) {
+        res.status(400).json({ message: 'Identifiant de lot invalide' });
+        return;
+      }
+
+      const confirmedBookings = await VenueBookingModel.find({
+        bookingGroupId: venueBookingGroupId,
+        requester: organizerId,
+        status: 'CONFIRMED',
+      }).sort({ requestedDate: 1 });
+
+      if (confirmedBookings.length === 0) {
+        res.status(404).json({ message: 'Aucune réservation CONFIRMED trouvée pour ce lot' });
+        return;
+      }
+
+      const lotDates = confirmedBookings.map((b) => {
+        const d = new Date(b.requestedDate);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+
+      const venueBookingIdByDate: Record<string, string> = {};
+      for (const b of confirmedBookings) {
+        const d = new Date(b.requestedDate);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        venueBookingIdByDate[key] = b._id.toString();
+      }
+
+      const firstBooking = confirmedBookings[0];
+      const lotStartTime = firstBooking.startTime;
+      const lotEndTime = firstBooking.endTime;
+
+      return await createRecurringEvents(req, res, organizerId, {
+        title,
+        description,
+        dates: lotDates,
+        location,
+        requirements,
+        startTime: startTime ?? lotStartTime,
+        endTime: endTime ?? lotEndTime,
+        budget,
+        maxPerformers,
+        maxSpectators,
+        imageUrl,
+        venueBookingIdByDate,
+      });
     }
 
     let linkedVenueBookingId: Types.ObjectId | undefined;
@@ -318,6 +378,8 @@ const createRecurringEvents = async (
     imageUrl?: string;
     /** Heures par date (optionnel). Si fourni, utilise startTime/endTime par date au lieu des valeurs globales. */
     dateTimes?: Array<{ date: string; startTime: string; endTime: string }>;
+    /** Mapping date → venueBookingId pour séries Org B (lot confirmé). */
+    venueBookingIdByDate?: Record<string, string>;
   }
 ): Promise<void> => {
   const session = await mongoose.startSession();
@@ -458,6 +520,20 @@ const createRecurringEvents = async (
           return;
         }
 
+        const linkedBookingId = eventData.venueBookingIdByDate?.[dateStr]
+          ? new Types.ObjectId(eventData.venueBookingIdByDate[dateStr])
+          : undefined;
+
+        if (linkedBookingId) {
+          const check = await assertVenueBookingAvailableForNewEvent(organizerId, linkedBookingId.toString());
+          if (check.ok === false) {
+            await session.abortTransaction();
+            session.endSession();
+            res.status(409).json({ message: check.message });
+            return;
+          }
+        }
+
         const event = new EventModel({
           title: eventData.title,
           description: eventData.description,
@@ -475,6 +551,7 @@ const createRecurringEvents = async (
           maxSpectators: eventData.maxSpectators != null ? Number(eventData.maxSpectators) : undefined,
           recurrenceGroupId: recurrenceGroupId,
           imageUrl: eventData.imageUrl && typeof eventData.imageUrl === 'string' && eventData.imageUrl.trim() ? eventData.imageUrl.trim() : undefined,
+          ...(linkedBookingId && { venueBookingId: linkedBookingId }),
         });
 
         console.log(`🔄 [RECURRENCE] Événement modèle créé, validation...`);
@@ -781,7 +858,7 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
       const total = await EventModel.countDocuments(query);
       const events = await EventModel.find(query)
         .populate('organizer', 'firstName lastName email organizerProfile.companyName')
-        .select('title date endDate startTime endTime status city location isRecurrent recurrenceGroupId imageUrl organizer withdrawnComedians requirements budget description maxSpectators applications venue modifiedByOrganizer cancellationReason')
+        .select('title date endDate startTime endTime status city location isRecurrent recurrenceGroupId imageUrl organizer withdrawnComedians requirements budget description maxSpectators applications venue venueBookingId modifiedByOrganizer cancellationReason')
         .sort({ date: -1 })
         .skip(skip)
         .limit(limit)
@@ -792,7 +869,7 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
 
     let events = await EventModel.find(query)
       .populate('organizer', 'firstName lastName email organizerProfile.companyName')
-      .select('title date endDate startTime endTime status city location isRecurrent recurrenceGroupId imageUrl organizer withdrawnComedians requirements budget description maxSpectators applications venue modifiedByOrganizer cancellationReason')
+      .select('title date endDate startTime endTime status city location isRecurrent recurrenceGroupId imageUrl organizer withdrawnComedians requirements budget description maxSpectators applications venue venueBookingId modifiedByOrganizer cancellationReason')
       .sort({ date: -1 })
       .lean() as any[];
 
@@ -1113,103 +1190,47 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
     const isEventTodayOrFuture = updatedEvent && eventDateAtMidnight >= todayAtMidnight;
 
     if (isEventTodayOrFuture) {
-      const applications = await ApplicationModel.find({ event: updatedEvent._id, status: { $in: ['PENDING', 'ACCEPTED'] } })
-        .populate('comedian', 'email firstName lastName');
-
       const organizer = await UserModel.findById(organizerId).select('firstName lastName email');
-      if (organizer && applications.length > 0) {
-        // Si l'évènement est annulé, informer les candidats ACCEPTED et PENDING
+      if (organizer) {
         if (req.body.status === 'cancelled' || updatedEvent.status === 'cancelled') {
-          const affectedApplications = await ApplicationModel.find({
-            event: updatedEvent._id,
-            status: { $in: ['PENDING', 'ACCEPTED'] }
-          }).populate('comedian', 'email firstName lastName');
-          const participants = affectedApplications
-            .map((app: any) => app.comedian)
-            .filter((c: any) => !!c?.email);
-          await sendEventCancellationToParticipants(participants as any, updatedEvent as any, {
-            firstName: organizer.firstName,
-            lastName: organizer.lastName,
-            email: organizer.email,
-          }, (req.body as any).cancellationReason);
-
-          // Créer des notifications in-app pour les humoristes concernés
-          try {
-            const { createNotification } = await import('./notification');
-            for (const app of affectedApplications) {
-              const comedian = app.comedian;
-              if (comedian && (comedian as any).role === 'COMEDIAN') {
-                const comedianId = (comedian as any)._id?.toString() || comedian.toString();
-                await createNotification(
-                  comedianId,
-                  'event_cancelled',
-                  'Évènement annulé',
-                  `L'évènement "${updatedEvent.title}" auquel vous avez postulé a été annulé.`,
-                  updatedEvent._id.toString(),
-                  app._id.toString(),
-                  organizer._id?.toString() || organizer.toString()
-                );
-              }
-            }
-          } catch (notificationError) {
-            console.error('Erreur lors de la création des notifications in-app pour l\'annulation:', notificationError);
-          }
-          console.log(`✅ [Annulation] Notifications in-app créées pour ${affectedApplications.length} candidature(s).`);
-
-          // Notifier les spectateurs inscrits à l'événement (annulation)
-          const spectatorIds = (updatedEvent.spectatorRegistrations || []) as mongoose.Types.ObjectId[];
-          if (spectatorIds.length > 0) {
-            try {
-              const { createNotification } = await import('./notification');
-              for (const sid of spectatorIds) {
-                const spectatorId = sid?.toString?.() || (sid as any).toString?.();
-                if (spectatorId) {
-                  await createNotification(
-                    spectatorId,
-                    'event_cancelled',
-                    'Évènement annulé',
-                    `L'évènement "${updatedEvent.title}" auquel vous étiez inscrit a été annulé.`,
-                    updatedEvent._id.toString()
-                  );
-                }
-              }
-              console.log(`✅ [Annulation] Notifications in-app créées pour ${spectatorIds.length} spectateur(s).`);
-            } catch (notifErr) {
-              console.error('Erreur notifications in-app spectateurs (annulation):', notifErr);
-            }
-          }
+          // Annulation : notifier humoristes (candidature active) et spectateurs inscrits.
+          await notifyEventCancellation(updatedEvent, (req.body as any).cancellationReason);
         } else {
-          // Sinon, envoyer une notification de mise à jour classique (avec détail des champs modifiés)
-          try {
-            const changes = getEventChanges(event, updatedEvent);
-            await sendEventUpdatedNotificationToApplicants(applications as any, updatedEvent, {
-              firstName: organizer.firstName,
-              lastName: organizer.lastName,
-              email: organizer.email,
-            }, changes);
-            // Créer des notifications in-app pour les humoristes concernés
+          // Mise à jour classique : notifier les candidats du détail des champs modifiés.
+          const applications = await ApplicationModel.find({ event: updatedEvent._id, status: { $in: ['PENDING', 'ACCEPTED'] } })
+            .populate('comedian', 'email firstName lastName');
+          if (applications.length > 0) {
             try {
-              const { createNotification } = await import('./notification');
-              for (const app of applications) {
-                const comedian = app.comedian;
-                if (comedian && (comedian as any).role === 'COMEDIAN') {
-                  const comedianId = (comedian as any)._id?.toString() || comedian.toString();
-                  await createNotification(
-                    comedianId,
-                    'event_updated',
-                    'Évènement modifié',
-                    `L'évènement "${updatedEvent.title}" auquel vous avez postulé a été modifié.`,
-                    updatedEvent._id.toString(),
-                    app._id.toString(),
-                    organizer._id?.toString() || organizer.toString()
-                  );
+              const changes = getEventChanges(event, updatedEvent);
+              await sendEventUpdatedNotificationToApplicants(applications as any, updatedEvent, {
+                firstName: organizer.firstName,
+                lastName: organizer.lastName,
+                email: organizer.email,
+              }, changes);
+              // Créer des notifications in-app pour les humoristes concernés
+              try {
+                const { createNotification } = await import('./notification');
+                for (const app of applications) {
+                  const comedian = app.comedian;
+                  if (comedian && (comedian as any).role === 'COMEDIAN') {
+                    const comedianId = (comedian as any)._id?.toString() || comedian.toString();
+                    await createNotification(
+                      comedianId,
+                      'event_updated',
+                      'Évènement modifié',
+                      `L'évènement "${updatedEvent.title}" auquel vous avez postulé a été modifié.`,
+                      updatedEvent._id.toString(),
+                      app._id.toString(),
+                      organizer._id?.toString() || organizer.toString()
+                    );
+                  }
                 }
+              } catch (notificationError) {
+                console.error('Erreur lors de la création des notifications in-app pour la mise à jour:', notificationError);
               }
-            } catch (notificationError) {
-              console.error('Erreur lors de la création des notifications in-app pour la mise à jour:', notificationError);
+            } catch (err) {
+              console.error('❌ Erreur envoi emails maj évènement:', err);
             }
-          } catch (err) {
-            console.error('❌ Erreur envoi emails maj évènement:', err);
           }
         }
       }
@@ -2046,5 +2067,56 @@ export const uploadEventImage = async (req: AuthRequest, res: Response): Promise
   } catch (error: any) {
     console.error('Upload event image error:', error);
     res.status(500).json({ message: error?.message || 'Erreur lors de l\'upload.' });
+  }
+};
+
+/**
+ * Annuler toute une série d'événements (recurrenceGroupId) et leurs réservations associées.
+ * Commodité sans nouvelle logique de remboursement — les réservations payées doivent être
+ * annulées individuellement pour obtenir un remboursement via cancelBooking.
+ */
+export const cancelEventSeries = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const organizerId = req.user?.id;
+    const { recurrenceGroupId } = req.params;
+
+    if (!organizerId) {
+      res.status(401).json({ message: 'Non authentifié' });
+      return;
+    }
+
+    if (!Types.ObjectId.isValid(recurrenceGroupId)) {
+      res.status(400).json({ message: 'Identifiant de série invalide' });
+      return;
+    }
+
+    const events = await EventModel.find({
+      recurrenceGroupId,
+      organizer: organizerId,
+    });
+
+    if (events.length === 0) {
+      res.status(404).json({ message: 'Aucun événement trouvé pour cette série' });
+      return;
+    }
+
+    // Annulation par occurrence (cf. ADR 0002) :
+    // - Org B (event adossé à une réservation) → annuler la réservation (remboursement par
+    //   police), ce qui cascade l'annulation soft de l'événement.
+    // - Org A (event sans réservation) → soft-cancel direct, sans remboursement.
+    let cancelledBookingCount = 0;
+    for (const event of events) {
+      if (event.venueBookingId) {
+        await cancelBookingWithRefund(event.venueBookingId);
+        cancelledBookingCount++;
+      } else {
+        await cancelEventInternal(event);
+      }
+    }
+
+    res.status(200).json({ cancelledEventCount: events.length, cancelledBookingCount });
+  } catch (error: any) {
+    console.error('cancelEventSeries error:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 };

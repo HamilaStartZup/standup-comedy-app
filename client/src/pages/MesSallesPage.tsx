@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { listVenues, myBookings, updateBookingStatus } from '../services/api';
+import { listVenues, myBookings, updateBookingStatus, updateBookingGroupStatus } from '../services/api';
 import VenueCard from '../components/VenueCard';
 import Navbar from '../components/Navbar';
+import BookingStatusBadge from '../components/BookingStatusBadge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import type { IVenueBooking } from '../types/venue';
+import type { IVenue, IVenueBooking } from '../types/venue';
 import { useAlert } from '../hooks/useAlert';
 import { ErrorMessages, SuccessMessages, getErrorMessage } from '../services/systemMessages';
 
@@ -32,6 +33,13 @@ const MesSallesPage: React.FC = () => {
   const [expandedRequesterId, setExpandedRequesterId] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
+  // Vue des séries récurrentes (réservations partageant un bookingGroupId)
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [isRespondingGroup, setIsRespondingGroup] = useState(false);
+  const [groupOwnerResponse, setGroupOwnerResponse] = useState('');
+  const [groupExcluded, setGroupExcluded] = useState<Set<string>>(new Set());
+  const [groupActionLoadingId, setGroupActionLoadingId] = useState<string | null>(null);
+
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     const bookingIdParam = searchParams.get('bookingId');
@@ -53,8 +61,8 @@ const MesSallesPage: React.FC = () => {
     retryDelay: 1000,
   });
 
-  const myVenues = venuesResponse?.venues || [];
-  const bookings = bookingsResponse || [];
+  const myVenues: IVenue[] = venuesResponse?.venues || [];
+  const bookings: IVenueBooking[] = bookingsResponse || [];
 
   const bookingStatuses = useMemo(
     () => Array.from(new Set(bookings.map((booking) => booking.status))),
@@ -101,6 +109,30 @@ const MesSallesPage: React.FC = () => {
     [bookings, selectedVenueId, selectedStatus]
   );
 
+  // Regroupement des réservations d'une même série (bookingGroupId partagé), triées par date.
+  const recurringGroups = useMemo(() => {
+    const map = new Map<string, IVenueBooking[]>();
+    for (const booking of bookings) {
+      if (!booking.bookingGroupId) continue;
+      const list = map.get(booking.bookingGroupId) ?? [];
+      list.push(booking);
+      map.set(booking.bookingGroupId, list);
+    }
+    map.forEach((list) =>
+      list.sort((a, b) => new Date(a.requestedDate).getTime() - new Date(b.requestedDate).getTime())
+    );
+    return map;
+  }, [bookings]);
+
+  // Réservations hors série (affichées individuellement, après application des filtres).
+  const standaloneBookings = filteredBookings.filter((b) => !b.bookingGroupId);
+
+  const resetGroupResponse = () => {
+    setIsRespondingGroup(false);
+    setGroupOwnerResponse('');
+    setGroupExcluded(new Set());
+  };
+
   // Scroll vers la réservation ciblée et flash de surbrillance ~2 s
   useEffect(() => {
     if (!highlightedBookingId || loadingBookings) return;
@@ -132,6 +164,25 @@ const MesSallesPage: React.FC = () => {
       showError(getErrorMessage(error, ErrorMessages.BOOKING_UPDATE_FAILED));
     } finally {
       setActionLoadingId(null);
+    }
+  };
+
+  // Réponse du LIEU au niveau du lot : accepter (avec exclusions décochées) ou refuser tout.
+  const handleGroupAction = async (bookingGroupId: string, status: 'ACCEPTED' | 'REFUSED') => {
+    setGroupActionLoadingId(bookingGroupId);
+    try {
+      await updateBookingGroupStatus(bookingGroupId, {
+        status,
+        excludedBookingIds: status === 'ACCEPTED' ? [...groupExcluded] : undefined,
+        ownerResponse: groupOwnerResponse || undefined,
+      });
+      showSuccess(status === 'ACCEPTED' ? SuccessMessages.BOOKING_ACCEPTED : SuccessMessages.BOOKING_REFUSED);
+      queryClient.invalidateQueries({ queryKey: ['venue-owner-bookings'] });
+      resetGroupResponse();
+    } catch (error) {
+      showError(getErrorMessage(error, ErrorMessages.BOOKING_UPDATE_FAILED));
+    } finally {
+      setGroupActionLoadingId(null);
     }
   };
 
@@ -284,8 +335,176 @@ const MesSallesPage: React.FC = () => {
                   Vous n'avez pas encore de demande de réservation pour vos salles.
                 </p>
               </div>
+            ) : selectedGroupId ? (
+              <div>
+                {(() => {
+                        const groupBookings = recurringGroups.get(selectedGroupId) ?? [];
+                        const first = groupBookings[0];
+                        if (!first) return <p style={{ color: '#aaa' }}>Série introuvable.</p>;
+                        const hasPending = groupBookings.some((b) => b.status === 'PENDING');
+                        return (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedGroupId(null); resetGroupResponse(); }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 20, padding: '10px 16px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.08)', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
+                            >
+                              ← Retour aux réservations
+                            </button>
+
+                            <div style={{ marginBottom: 20, padding: 16, backgroundColor: '#fff', borderRadius: 20, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)' }}>
+                              <h3 style={{ margin: '0 0 8px 0', color: '#1a1a1a', fontSize: '1.2em' }}>
+                                {first.requester?.firstName} {first.requester?.lastName}
+                              </h3>
+                              <p style={{ margin: 0, color: '#64748b', fontSize: '0.9em' }}>
+                                📍 {first.venue?.name} · {first.venue?.city} · {groupBookings.length} date(s)
+                              </p>
+                              {first.message && (
+                                <p style={{ margin: '10px 0 0', fontSize: 13, color: '#475569', fontStyle: 'italic', background: '#f8fafc', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid rgba(255,65,108,0.5)' }}>
+                                  "{first.message}"
+                                </p>
+                              )}
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                              {groupBookings.map((b) => {
+                                const past = hasBookingEnded(b.requestedDate, b.endTime);
+                                const dateFormatted = new Date(b.requestedDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+                                const isExcluded = groupExcluded.has(b._id);
+                                return (
+                                  <div
+                                    key={b._id}
+                                    data-booking-id={b._id}
+                                    style={{ backgroundColor: '#fff', borderRadius: 20, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, opacity: past ? 0.7 : 1, flexWrap: 'wrap' }}
+                                  >
+                                    <div style={{ flex: 1, minWidth: 200, display: 'flex', alignItems: 'center', gap: 12 }}>
+                                      {isRespondingGroup && b.status === 'PENDING' && (
+                                        <input
+                                          type="checkbox"
+                                          checked={!isExcluded}
+                                          onChange={() => {
+                                            const next = new Set(groupExcluded);
+                                            if (next.has(b._id)) next.delete(b._id); else next.add(b._id);
+                                            setGroupExcluded(next);
+                                          }}
+                                          title="Inclure cette date dans l'acceptation"
+                                          style={{ width: 18, height: 18, cursor: 'pointer', flexShrink: 0 }}
+                                        />
+                                      )}
+                                      <div>
+                                        <div style={{ padding: '6px 16px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)', fontSize: '0.85em', fontWeight: 600, color: '#1a1a1a', display: 'inline-block', marginBottom: 8 }}>
+                                          {dateFormatted}
+                                        </div>
+                                        <div style={{ color: '#1a1a1a', fontWeight: 600 }}>{b.startTime} – {b.endTime}</div>
+                                      </div>
+                                    </div>
+                                    <BookingStatusBadge status={b.status} perspective="owner" isPast={past} paymentDeadlineAt={b.paymentDeadlineAt} />
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {hasPending && (
+                              <div style={{ marginTop: 20 }}>
+                                {isRespondingGroup ? (
+                                  <div style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)' }}>
+                                    <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 8px 0' }}>
+                                      Cochez les dates à inclure dans l'acceptation (décocher = refuser cette date).
+                                    </p>
+                                    <textarea
+                                      value={groupOwnerResponse}
+                                      onChange={(e) => setGroupOwnerResponse(e.target.value)}
+                                      placeholder="Message optionnel pour le demandeur..."
+                                      rows={2}
+                                      style={{ width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', color: '#1a1a1a', fontSize: 13, marginBottom: 10, boxSizing: 'border-box', resize: 'vertical' }}
+                                    />
+                                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                      <button
+                                        onClick={() => handleGroupAction(selectedGroupId, 'ACCEPTED')}
+                                        disabled={groupActionLoadingId === selectedGroupId}
+                                        style={{ padding: '9px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: groupActionLoadingId === selectedGroupId ? 0.6 : 1 }}
+                                      >
+                                        ✓ Accepter le lot
+                                      </button>
+                                      <button
+                                        onClick={() => handleGroupAction(selectedGroupId, 'REFUSED')}
+                                        disabled={groupActionLoadingId === selectedGroupId}
+                                        style={{ padding: '9px 20px', background: '#fff', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: groupActionLoadingId === selectedGroupId ? 0.6 : 1 }}
+                                      >
+                                        ✕ Refuser tout
+                                      </button>
+                                      <button
+                                        onClick={resetGroupResponse}
+                                        style={{ padding: '9px 20px', background: 'transparent', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 10, cursor: 'pointer', fontSize: 13 }}
+                                      >
+                                        Annuler
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setIsRespondingGroup(true)}
+                                    style={{ padding: '10px 22px', background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
+                                  >
+                                    Répondre au lot
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        );
+                })()}
+              </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                {recurringGroups.size > 0 && (
+                  <div style={{ marginBottom: 28 }}>
+                    <h3 style={{ color: '#fff', fontSize: 16, fontWeight: 700, margin: '0 0 14px 0' }}>
+                      🔁 Séries récurrentes ({recurringGroups.size})
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      {Array.from(recurringGroups.entries()).map(([groupId, groupBookings]) => {
+                          const first = groupBookings[0];
+                          const last = groupBookings[groupBookings.length - 1];
+                          const pendingCount = groupBookings.filter((b) => b.status === 'PENDING').length;
+                          const dateFirst = first?.requestedDate ? new Date(first.requestedDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+                          const dateLast = last?.requestedDate ? new Date(last.requestedDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+                          return (
+                            <div
+                              key={groupId}
+                              onClick={() => { setSelectedGroupId(groupId); resetGroupResponse(); }}
+                              style={{ backgroundColor: '#fff', borderRadius: 20, padding: '16px 20px', boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', cursor: 'pointer' }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                                <div>
+                                  <h3 style={{ margin: '0 0 6px 0', color: '#1a1a1a', fontSize: '1.1em' }}>
+                                    {first?.requester?.firstName} {first?.requester?.lastName}
+                                  </h3>
+                                  <p style={{ margin: 0, color: '#64748b', fontSize: '0.9em' }}>
+                                    📍 {first?.venue?.name} · {first?.venue?.city} · {groupBookings.length} date(s)
+                                  </p>
+                                  <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.82em' }}>
+                                    {dateFirst} → {dateLast}
+                                  </p>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                                  <span style={{ padding: '6px 16px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)', fontSize: '0.85em', fontWeight: 600, color: '#1a1a1a' }}>
+                                    {groupBookings.length} date(s)
+                                  </span>
+                                  {pendingCount > 0 && (
+                                    <span style={{ padding: '4px 12px', borderRadius: 999, background: 'rgba(245,158,11,0.15)', color: '#b45309', fontSize: '0.75em', fontWeight: 700 }}>
+                                      {pendingCount} en attente
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div
                   style={{
                     display: 'grid',
@@ -335,7 +554,7 @@ const MesSallesPage: React.FC = () => {
                   </select>
                 </div>
 
-                {filteredBookings.length === 0 ? (
+                {standaloneBookings.length === 0 ? (
                   <div
                     style={{
                       textAlign: 'center',
@@ -345,10 +564,12 @@ const MesSallesPage: React.FC = () => {
                       color: '#aaa',
                     }}
                   >
-                    Aucune réservation ne correspond à ces filtres.
+                    {recurringGroups.size > 0
+                      ? 'Aucune réservation individuelle (hors séries).'
+                      : 'Aucune réservation ne correspond à ces filtres.'}
                   </div>
                 ) : (
-                  filteredBookings.map((booking) => {
+                  standaloneBookings.map((booking) => {
                     const isExpiredByDate = hasBookingEnded(booking.requestedDate, booking.endTime);
                     const normalizedStatus = booking.status === 'PENDING' && isExpiredByDate ? 'EXPIRED' : booking.status;
                     const statusColor =
@@ -502,6 +723,7 @@ const MesSallesPage: React.FC = () => {
                     </div>
                     );
                   }))}
+              </div>
               </div>
             )}
           </div>

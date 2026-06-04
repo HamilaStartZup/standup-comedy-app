@@ -221,7 +221,7 @@ function ApplicationsPage() {
     enabled: isQueryEnabled,
   });
 
-  const applications = applicationsData?.applications || [];
+  const applications: IApplication[] = applicationsData?.applications || [];
   const serverPagination = applicationsData?.pagination || null;
   const error = applicationsError ? (applicationsError as any).response?.data?.message || (applicationsError as any).message || 'Échec de la récupération des candidatures.' : null;
 

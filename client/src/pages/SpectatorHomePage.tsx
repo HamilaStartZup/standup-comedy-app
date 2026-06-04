@@ -68,7 +68,7 @@ export default function SpectatorHomePage() {
     return p;
   }, [searchLieu, searchVenueType, searchRadius]);
 
-  const { data: eventsData, isLoading } = useQuery({
+  const { data: eventsRaw, isLoading } = useQuery({
     queryKey: ['events', 'spectator', queryParams],
     queryFn: async () => {
       const params = new URLSearchParams(queryParams).toString();
@@ -78,9 +78,10 @@ export default function SpectatorHomePage() {
     },
     enabled: !!user && hasSearchFilter,
   });
+  const eventsData: IEvent[] = eventsRaw ?? [];
 
   // Fetch events the spectator is registered to (includes cancelled ones)
-  const { data: myRegistrationsList = [], isLoading: loadingRegistrations } = useQuery({
+  const { data: regRaw, isLoading: loadingRegistrations } = useQuery({
     queryKey: ['events', 'spectator', 'myRegistrations'],
     queryFn: async () => {
       const res = await api.get('/events?myRegistrations=true');
@@ -88,13 +89,14 @@ export default function SpectatorHomePage() {
     },
     enabled: !!user,
   });
+  const myRegistrationsList: IEvent[] = regRaw ?? [];
 
   // Set of event IDs the user is registered to — reliable source of truth
   const registeredEventIds = useMemo(() => {
     return new Set(myRegistrationsList.map((e) => e._id));
   }, [myRegistrationsList]);
 
-  const { data: aroundMeEvents = [], isLoading: loadingAroundMe } = useQuery({
+  const { data: aroundMeRaw, isLoading: loadingAroundMe } = useQuery({
     queryKey: ['events', 'spectator', 'nearMe', user?.city, effectiveRadius],
     queryFn: async () => {
       if (!user?.city?.trim()) return [];
@@ -104,6 +106,7 @@ export default function SpectatorHomePage() {
     },
     enabled: !!user && !!user?.city?.trim(),
   });
+  const aroundMeEvents: IEvent[] = aroundMeRaw ?? [];
 
   const { data: favoritesData } = useQuery({
     queryKey: ['event-favorites'],

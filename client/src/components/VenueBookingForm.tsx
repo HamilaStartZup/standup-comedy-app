@@ -2,11 +2,15 @@ import React, { useState, useMemo, useEffect } from 'react';
 import StyledDayPicker from './StyledDayPicker';
 import SlotPickerModal from './SlotPickerModal';
 import { useNavigate } from 'react-router-dom';
-import { createBooking, getTakenSlots, getBookedDates, getFullDates } from '../services/api';
+import { createBooking, createBookingBatch, getTakenSlots, getBookedDates, getFullDates } from '../services/api';
 import { SuccessMessages, ErrorMessages, getErrorMessage } from '../services/systemMessages';
 import { useAlert } from '../hooks/useAlert';
 import { PRICING_TYPE_LABELS_DISPLAY } from '../types/venue';
 import type { IVenueTimeRestrictions, IVenueBlockedDate, IExtraFee } from '../types/venue';
+import { generateRecurringDates } from '../utils/recurrenceDates';
+
+type RecurrenceType = 'daily' | 'weekly' | 'monthly';
+const WEEKDAY_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
 type PricingType = 'heure' | 'demi_journee' | 'journee' | 'soiree' | 'forfait' | 'pourcentage_billetterie' | 'gratuit';
 
@@ -147,6 +151,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
 }) => {
   const { showSuccess, showError } = useAlert();
   const navigate = useNavigate();
+  const [bookingMode, setBookingMode] = useState<'unique' | 'recurring'>('unique');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [formData, setFormData] = useState({ startTime: '', endTime: '', message: '' });
   const [demiJourneeSlot, setDemiJourneeSlot] = useState<'matin' | 'aprem' | ''>('');
@@ -157,7 +162,30 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
   const [fullBookedDates, setFullBookedDates] = useState<Set<string>>(new Set());
 
+  // Mode récurrent
+  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('weekly');
+  const [recurrenceStartDate, setRecurrenceStartDate] = useState('');
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
+  const [recurrenceWeeklyDays, setRecurrenceWeeklyDays] = useState<number[]>([]);
+  const [batchUnavailable, setBatchUnavailable] = useState<{ date: string; reason: string }[]>([]);
+  const [batchCreatedCount, setBatchCreatedCount] = useState<number | null>(null);
+
+  const recurringDates = useMemo(() => {
+    if (bookingMode !== 'recurring' || !recurrenceStartDate || !recurrenceEndDate) return [];
+    return generateRecurringDates({
+      type: recurrenceType,
+      startDate: recurrenceStartDate,
+      endDate: recurrenceEndDate,
+      weeklyDays: recurrenceWeeklyDays,
+    });
+  }, [bookingMode, recurrenceType, recurrenceStartDate, recurrenceEndDate, recurrenceWeeklyDays]);
+
   const isFullDayPricing = FULL_DAY_TYPES.includes(pricingType || '');
+
+  const recurringModalDate = useMemo(() => {
+    if (recurrenceStartDate) return parseLocalDate(recurrenceStartDate);
+    return new Date();
+  }, [recurrenceStartDate]);
 
   useEffect(() => {
     if (!isFullDayPricing) return;
@@ -404,8 +432,72 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
     return newErrors;
   };
 
+  const resolveTimeSlot = (): { startTime?: string; endTime?: string } => {
+    if (!pricingType || pricingType === 'heure') {
+      return { startTime: formData.startTime || undefined, endTime: formData.endTime || undefined };
+    }
+    if (pricingType === 'demi_journee') {
+      return {
+        startTime: demiJourneeSlot === 'matin'
+          ? (timeRestrictions?.matinStart || '09:00')
+          : (timeRestrictions?.apremStart || '14:00'),
+        endTime: demiJourneeSlot === 'matin'
+          ? (timeRestrictions?.matinEnd || '13:00')
+          : (timeRestrictions?.apremEnd || '18:00'),
+      };
+    }
+    return {};
+  };
+
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (bookingMode === 'recurring') {
+      if (recurringDates.length === 0) {
+        setErrors({ recurrence: 'Aucune date générée. Vérifiez les dates et le motif de récurrence.' });
+        return;
+      }
+      const recurringErrors: Record<string, string> = {};
+      if (!pricingType || pricingType === 'heure') {
+        if (!formData.startTime) recurringErrors.startTime = "L'heure de début est requise.";
+        if (!formData.endTime) recurringErrors.endTime = "L'heure de fin est requise.";
+        if (formData.startTime && formData.endTime && formData.startTime >= formData.endTime) {
+          recurringErrors.endTime = "L'heure de fin doit être après l'heure de début.";
+        }
+      } else if (pricingType === 'demi_journee') {
+        if (!demiJourneeSlot) recurringErrors.slot = 'Veuillez sélectionner un créneau.';
+      }
+      if (Object.keys(recurringErrors).length > 0) {
+        setErrors(recurringErrors);
+        return;
+      }
+      setErrors({});
+      setIsSubmitting(true);
+      const { startTime, endTime } = resolveTimeSlot();
+      try {
+        const result = await createBookingBatch(venueId, {
+          dates: recurringDates,
+          ...(startTime && { startTime }),
+          ...(endTime && { endTime }),
+          message: formData.message || undefined,
+        });
+        setBatchCreatedCount(result.created.length);
+        setBatchUnavailable(result.unavailable);
+        if (result.created.length > 0) {
+          showSuccess(`${result.created.length} réservation(s) créée(s) sur ${recurringDates.length} demandée(s).`);
+          onBookingCreated?.();
+        }
+        if (result.unavailable.length === 0) {
+          navigate('/my-bookings');
+        }
+      } catch (err) {
+        showError(getErrorMessage(err, ErrorMessages.BOOKING_CREATE_FAILED));
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -414,26 +506,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
     setErrors({});
     setIsSubmitting(true);
 
-    // Résoudre startTime / endTime selon le type de tarification.
-    // Pour les types "plats" (journee, soiree, forfait, gratuit, pourcentage_billetterie),
-    // on n'envoie pas les heures : le controller les normalise côté serveur à partir des
-    // timeRestrictions de la salle, évitant ainsi les conflits de validation schema.
-    let startTime: string | undefined;
-    let endTime: string | undefined;
-
-    if (!pricingType || pricingType === 'heure') {
-      startTime = formData.startTime || undefined;
-      endTime = formData.endTime || undefined;
-    } else if (pricingType === 'demi_journee') {
-      startTime = demiJourneeSlot === 'matin'
-        ? (timeRestrictions?.matinStart || '09:00')
-        : (timeRestrictions?.apremStart || '14:00');
-      endTime = demiJourneeSlot === 'matin'
-        ? (timeRestrictions?.matinEnd || '13:00')
-        : (timeRestrictions?.apremEnd || '18:00');
-    }
-    // Pour journee, soiree, forfait, gratuit, pourcentage_billetterie :
-    // startTime/endTime restent undefined → le controller applique les timeRestrictions.
+    const { startTime, endTime } = resolveTimeSlot();
 
     try {
       const requestedDate = toDateStr(selectedDate!);
@@ -523,7 +596,247 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
       </h3>
       <p style={{ margin: '0 0 16px 0', fontSize: 13, color: '#888' }}>{venueName}</p>
 
+      {/* Sélecteur de mode */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        {(['unique', 'recurring'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => { setBookingMode(m); setErrors({}); setBatchCreatedCount(null); setBatchUnavailable([]); }}
+            style={{
+              flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700,
+              background: bookingMode === m ? 'linear-gradient(135deg,#ff416c,#ff4b2b)' : 'rgba(255,255,255,0.06)',
+              color: bookingMode === m ? '#fff' : '#aaa',
+            }}
+          >
+            {m === 'unique' ? 'Réservation unique' : 'Série récurrente'}
+          </button>
+        ))}
+      </div>
+
       <form onSubmit={handleSubmit}>
+        {/* ── Mode récurrent ── */}
+        {bookingMode === 'recurring' && (
+          <div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Motif de récurrence</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['daily', 'weekly', 'monthly'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setRecurrenceType(t)}
+                    style={{
+                      flex: 1, padding: '8px 4px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)',
+                      cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                      background: recurrenceType === t ? 'rgba(255,65,108,0.18)' : 'rgba(0,0,0,0.3)',
+                      color: recurrenceType === t ? '#ff8fa3' : '#aaa',
+                    }}
+                  >
+                    {t === 'daily' ? 'Quotidien' : t === 'weekly' ? 'Hebdo' : 'Mensuel'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {recurrenceType === 'weekly' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>Jours de la semaine</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {WEEKDAY_LABELS.map((label, idx) => {
+                    const active = recurrenceWeeklyDays.includes(idx);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setRecurrenceWeeklyDays(
+                          active ? recurrenceWeeklyDays.filter((d) => d !== idx) : [...recurrenceWeeklyDays, idx]
+                        )}
+                        style={{
+                          padding: '5px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.12)',
+                          cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                          background: active ? 'rgba(255,65,108,0.18)' : 'rgba(0,0,0,0.3)',
+                          color: active ? '#ff8fa3' : '#aaa',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+              <div>
+                <label style={labelStyle}>Date de début</label>
+                <input
+                  type="date"
+                  value={recurrenceStartDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setRecurrenceStartDate(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Date de fin</label>
+                <input
+                  type="date"
+                  value={recurrenceEndDate}
+                  min={recurrenceStartDate || new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
+            {/* Créneau en mode récurrent */}
+            {showHourSelectors && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>Créneau</label>
+                <button
+                  type="button"
+                  onClick={() => setIsSlotModalOpen(true)}
+                  style={{ ...inputStyle, cursor: 'pointer', textAlign: 'left', display: 'block', width: '100%' }}
+                >
+                  {formData.startTime ? `${formData.startTime} – ${formData.endTime}` : 'Choisir un créneau…'}
+                </button>
+                {errors.startTime && <p style={errorStyle}>{errors.startTime}</p>}
+                <SlotPickerModal
+                  open={isSlotModalOpen}
+                  onClose={() => setIsSlotModalOpen(false)}
+                  pricingType="heure"
+                  selectedDate={recurringModalDate}
+                  timeRestrictions={timeRestrictions}
+                  blockedSlots={[]}
+                  minStartHour={0}
+                  minDuration={minDuration}
+                  maxDuration={maxDuration}
+                  onSelect={({ startTime, endTime }) => setFormData((p) => ({ ...p, startTime, endTime }))}
+                  initialSelection={formData.startTime ? { startTime: formData.startTime, endTime: formData.endTime } : undefined}
+                />
+              </div>
+            )}
+
+            {showDemiJournee && timeRestrictions?.matinEnabled === false && timeRestrictions?.apremEnabled === false && (
+              <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 13, color: '#fca5a5' }}>
+                Aucun créneau demi-journée n'est disponible pour cette salle.
+              </div>
+            )}
+
+            {showDemiJournee && !(timeRestrictions?.matinEnabled === false && timeRestrictions?.apremEnabled === false) && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>Créneau</label>
+                <button
+                  type="button"
+                  onClick={() => setIsSlotModalOpen(true)}
+                  style={{ ...inputStyle, cursor: 'pointer', textAlign: 'left', display: 'block', width: '100%' }}
+                >
+                  {demiJourneeSlot
+                    ? demiJourneeSlot === 'matin'
+                      ? `Matin (${timeRestrictions?.matinStart || '09:00'} – ${timeRestrictions?.matinEnd || '13:00'})`
+                      : `Après-midi (${timeRestrictions?.apremStart || '14:00'} – ${timeRestrictions?.apremEnd || '18:00'})`
+                    : 'Choisir un créneau…'}
+                </button>
+                {errors.slot && <p style={errorStyle}>{errors.slot}</p>}
+                <SlotPickerModal
+                  open={isSlotModalOpen}
+                  onClose={() => setIsSlotModalOpen(false)}
+                  pricingType="demi_journee"
+                  selectedDate={recurringModalDate}
+                  timeRestrictions={timeRestrictions}
+                  blockedSlots={[]}
+                  minStartHour={0}
+                  onSelect={({ startTime, endTime, label }) => {
+                    setFormData((p) => ({ ...p, startTime, endTime }));
+                    if (label) setDemiJourneeSlot(label);
+                  }}
+                  initialSelection={formData.startTime ? { startTime: formData.startTime, endTime: formData.endTime } : undefined}
+                />
+              </div>
+            )}
+
+            {pricingType && PRICING_BADGES[pricingType] && (() => {
+              const config = PRICING_BADGES[pricingType]!;
+              const hasOpenClose = timeRestrictions?.openTime && timeRestrictions?.closeTime;
+              const dynamicLabel =
+                pricingType === 'soiree'
+                  ? `Soirée (${timeRestrictions?.soireeStart || '18:00'} – ${timeRestrictions?.soireeEnd || '23:59'})`
+                  : hasOpenClose
+                    ? `Disponible de ${timeRestrictions!.openTime} à ${timeRestrictions!.closeTime}`
+                    : config.timeLabel;
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <p style={{ margin: '0 0 6px 0', fontSize: 12, color: '#888' }}>
+                    Mode de tarification : <strong style={{ color: '#ccc' }}>{PRICING_TYPE_LABELS_DISPLAY[pricingType]}</strong>
+                  </p>
+                  <span style={config.variant === 'success' ? infoBadgeSuccessStyle : infoBadgeStyle}>
+                    {dynamicLabel}
+                    {config.extraNote && ` — ${config.extraNote}`}
+                  </span>
+                </div>
+              );
+            })()}
+
+            {priceBreakdown && (
+              <div style={{ marginBottom: 14 }}>
+                <p style={{ margin: '0 0 6px 0', fontSize: 12, color: '#888' }}>
+                  Mode de tarification : <strong style={{ color: '#ccc' }}>{PRICING_TYPE_LABELS_DISPLAY[pricingType as PricingType] || 'À l\'heure'}</strong>
+                  {recurringDates.length > 0 && <span style={{ marginLeft: 8, color: '#666' }}>— par réservation</span>}
+                </p>
+                <PriceBreakdown breakdown={priceBreakdown} currency={currency} />
+                {recurringDates.length > 0 && (
+                  <div style={{ marginTop: 8, padding: '8px 14px', background: 'rgba(255,65,108,0.08)', border: '1px solid rgba(255,65,108,0.2)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 13, color: '#ccc' }}>
+                      Total estimé ({recurringDates.length} réservation{recurringDates.length > 1 ? 's' : ''})
+                    </span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: '#ff8fa3' }}>
+                      {(priceBreakdown.total * recurringDates.length).toLocaleString('fr-FR')} {currency}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {recurringDates.length > 0 && (
+              <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, fontSize: 13, color: '#93c5fd' }}>
+                <strong>{recurringDates.length} date(s) sélectionnée(s)</strong>
+                {recurringDates.length <= 10 && (
+                  <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {recurringDates.map((d) => (
+                      <span key={d} style={{ background: 'rgba(59,130,246,0.15)', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>{d}</span>
+                    ))}
+                  </div>
+                )}
+                {recurringDates.length > 10 && (
+                  <span style={{ fontSize: 11, color: '#64a4e4', marginLeft: 8 }}>({recurringDates.slice(0, 5).join(', ')}…)</span>
+                )}
+              </div>
+            )}
+
+            {batchUnavailable.length > 0 && (
+              <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, fontSize: 12, color: '#fdba74' }}>
+                <strong>{batchUnavailable.length} date(s) non disponible(s) :</strong>
+                <ul style={{ margin: '6px 0 0 0', paddingLeft: 16 }}>
+                  {batchUnavailable.map(({ date, reason }) => (
+                    <li key={date}>{date} — {reason}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {batchCreatedCount !== null && batchCreatedCount > 0 && (
+              <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, fontSize: 13, color: '#6ee7b7' }}>
+                {batchCreatedCount} réservation(s) soumise(s) avec succès.
+              </div>
+            )}
+
+            {errors.recurrence && <p style={errorStyle}>{errors.recurrence}</p>}
+          </div>
+        )}
+
+        {/* ── Mode unique ── */}
+        {bookingMode === 'unique' && (<>
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Date souhaitée</label>
           <div
@@ -681,7 +994,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
             </div>
           );
         })()}
-
+        </>)}
 
         <div style={{ marginBottom: 20 }}>
           <label style={labelStyle}>Message (optionnel)</label>
@@ -712,7 +1025,12 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
               cursor: isSubmitting ? 'not-allowed' : 'pointer',
             }}
           >
-            {isSubmitting ? 'Envoi en cours...' : 'Envoyer la demande'}
+            {isSubmitting
+            ? 'Envoi en cours...'
+            : bookingMode === 'recurring'
+              ? `Envoyer ${recurringDates.length > 0 ? recurringDates.length + ' demande(s)' : 'la série'}`
+              : 'Envoyer la demande'
+          }
           </button>
         )}
 
