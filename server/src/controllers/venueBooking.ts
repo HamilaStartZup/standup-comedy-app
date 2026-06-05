@@ -13,6 +13,7 @@ import {
   emitVenueBookingStatusChanged,
   emitVenueBookingPaymentUpdated,
 } from '../services/eventEmitter';
+import { createNotification } from './notification';
 import { computeBookingAmount } from '../utils/venuePricing';
 import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 import {
@@ -165,10 +166,20 @@ async function cascadeCancelLinkedEvent(
  * côté événements, qui reste défensive vis-à-vis d'occurrences Org B). No-op si la réservation
  * est introuvable ou déjà dans un état terminal.
  */
-export async function cancelBookingWithRefund(bookingId: unknown): Promise<void> {
+interface CancelledBookingInfo {
+  venueId: string;
+  ownerId: string;
+  venueName: string;
+  requesterId: string;
+  wasRefunded: boolean;
+}
+
+export async function cancelBookingWithRefund(bookingId: unknown): Promise<CancelledBookingInfo | null> {
   const booking = await VenueBookingModel.findById(bookingId as mongoose.Types.ObjectId)
-    .populate<{ venue: { cancellationPolicy?: CancellationPolicy } }>('venue', 'cancellationPolicy');
-  if (!booking || !['PENDING', 'ACCEPTED', 'CONFIRMED'].includes(booking.status)) return;
+    .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string; cancellationPolicy?: CancellationPolicy } }>(
+      'venue', 'cancellationPolicy owner name'
+    );
+  if (!booking || !['PENDING', 'ACCEPTED', 'CONFIRMED'].includes(booking.status)) return null;
 
   // Expirer une session de paiement en cours (empêche de payer une réservation annulée)
   if (booking.stripeSessionId && booking.paymentStatus === 'pending' && stripe) {
@@ -179,11 +190,27 @@ export async function cancelBookingWithRefund(bookingId: unknown): Promise<void>
     }
   }
 
-  const policy: CancellationPolicy = (booking.venue as { cancellationPolicy?: CancellationPolicy })?.cancellationPolicy ?? 'moderate';
+  const policy: CancellationPolicy = booking.venue?.cancellationPolicy ?? 'moderate';
   await applyBookingCancellationRefund(booking, policy);
   booking.status = 'CANCELLED_BY_REQUESTER';
   await booking.save();
+
+  const venueId = booking.venue._id.toString();
+  const ownerId = booking.venue.owner.toString();
+  const venueName = booking.venue.name;
+  const requesterId = booking.requester.toString();
+
+  emitVenueBookingStatusChanged(
+    booking._id.toString(),
+    venueId,
+    booking.status,
+    booking.paymentStatus,
+    [requesterId, ownerId]
+  );
+
   await cascadeCancelLinkedEvent(booking._id);
+
+  return { venueId, ownerId, venueName, requesterId, wasRefunded: booking.paymentStatus === 'refunded' };
 }
 
 // ─── Créer une demande de réservation ────────────────────────────────────────
@@ -423,6 +450,7 @@ export const createBookingBatch = async (req: AuthRequest, res: Response): Promi
     }
 
     const bookingGroupId = new mongoose.Types.ObjectId();
+    const isAutomatic = venue.bookingMode === 'automatic';
 
     const created: any[] = [];
     const unavailable: { date: string; reason: string }[] = [];
@@ -463,44 +491,49 @@ export const createBookingBatch = async (req: AuthRequest, res: Response): Promi
         [requesterId, venue.owner.toString()]
       );
 
-      try {
-        const isAutomatic = venue.bookingMode === 'automatic';
-        if (!isAutomatic) {
-          await NotificationModel.create({
-            user: venue.owner,
-            type: 'venue_booking_request',
-            title: 'Nouvelle demande de réservation',
-            message: `Une demande de réservation (série) a été faite pour votre salle "${venue.name}".`,
-            relatedVenue: venue._id,
-            relatedBooking: booking._id,
-            read: false,
-          });
-        } else if (initialStatus === 'CONFIRMED') {
-          await NotificationModel.create({
-            user: requesterId,
-            type: 'venue_booking_confirmed',
-            title: 'Réservation confirmée',
-            message: `Votre réservation pour "${venue.name}" a été confirmée automatiquement (aucun paiement requis).`,
-            relatedVenue: venue._id,
-            relatedBooking: booking._id,
-            read: false,
-          });
-        } else {
-          await NotificationModel.create({
-            user: requesterId,
-            type: 'venue_booking_payment_required',
-            title: 'Réservation acceptée — paiement requis',
-            message: `Votre réservation pour "${venue.name}" a été acceptée automatiquement. Vous avez 72h pour effectuer le paiement.`,
-            relatedVenue: venue._id,
-            relatedBooking: booking._id,
-            read: false,
-          });
-        }
-      } catch (notifError) {
-        console.error('Erreur notification createBookingBatch:', notifError, { venueId, dateStr });
-      }
-
       created.push(booking);
+    }
+
+    // Une seule notification par destinataire pour l'ensemble de la série
+    if (created.length > 0) {
+      const n = created.length;
+      const firstBooking = created[0];
+      const label = n > 1 ? `série de ${n} créneaux` : 'réservation';
+      if (!isAutomatic) {
+        await createNotification(
+          venue.owner.toString(),
+          'venue_booking_request',
+          'Nouvelle demande de réservation',
+          `Une demande de ${label} a été faite pour votre salle "${venue.name}".`,
+          undefined, undefined, undefined,
+          venue._id.toString(),
+          firstBooking._id.toString()
+        );
+      } else if (firstBooking.status === 'CONFIRMED') {
+        await createNotification(
+          requesterId,
+          'venue_booking_confirmed',
+          'Réservation confirmée',
+          n > 1
+            ? `Vos ${n} réservations pour "${venue.name}" ont été confirmées automatiquement (aucun paiement requis).`
+            : `Votre réservation pour "${venue.name}" a été confirmée automatiquement (aucun paiement requis).`,
+          undefined, undefined, undefined,
+          venue._id.toString(),
+          firstBooking._id.toString()
+        );
+      } else {
+        await createNotification(
+          requesterId,
+          'venue_booking_payment_required',
+          'Réservation acceptée — paiement requis',
+          n > 1
+            ? `Vos ${n} réservations pour "${venue.name}" ont été acceptées automatiquement. Vous avez 72h pour effectuer le paiement.`
+            : `Votre réservation pour "${venue.name}" a été acceptée automatiquement. Vous avez 72h pour effectuer le paiement.`,
+          undefined, undefined, undefined,
+          venue._id.toString(),
+          firstBooking._id.toString()
+        );
+      }
     }
 
     res.status(201).json({ bookingGroupId, created, unavailable });
@@ -857,6 +890,13 @@ export const updateBookingGroupStatus = async (req: AuthRequest, res: Response):
 
     const updated: any[] = [];
 
+    // Compteurs par issue pour la notif groupée post-boucle
+    type NotifCtx = { requesterId: string; venueId: string; venueName: string; firstBookingId: string };
+    let refusedCount = 0;
+    let acceptedCount = 0;
+    let confirmedCount = 0;
+    let groupCtx: NotifCtx | null = null;
+
     for (const booking of pendingBookings) {
       const isExcluded = excludedBookingIds.includes(booking._id.toString());
 
@@ -896,41 +936,60 @@ export const updateBookingGroupStatus = async (req: AuthRequest, res: Response):
 
       updated.push(booking);
 
-      try {
-        const bookingStatus = booking.status as VenueBookingStatus;
-        if (bookingStatus === 'REFUSED') {
-          await NotificationModel.create({
-            user: booking.requester,
-            type: 'venue_booking_response',
-            title: 'Réservation refusée',
-            message: `Votre demande de réservation pour "${booking.venue.name}" a été refusée.`,
-            relatedVenue: booking.venue._id,
-            relatedBooking: booking._id,
-            read: false,
-          });
-        } else if (bookingStatus === 'CONFIRMED') {
-          await NotificationModel.create({
-            user: booking.requester,
-            type: 'venue_booking_confirmed',
-            title: 'Réservation confirmée',
-            message: `Votre réservation pour "${booking.venue.name}" a été confirmée (aucun paiement requis).`,
-            relatedVenue: booking.venue._id,
-            relatedBooking: booking._id,
-            read: false,
-          });
-        } else if (bookingStatus === 'ACCEPTED') {
-          await NotificationModel.create({
-            user: booking.requester,
-            type: 'venue_booking_payment_required',
-            title: 'Réservation acceptée — paiement requis',
-            message: `Votre réservation pour "${booking.venue.name}" a été acceptée. Vous avez 72h pour effectuer le paiement.`,
-            relatedVenue: booking.venue._id,
-            relatedBooking: booking._id,
-            read: false,
-          });
-        }
-      } catch (notifError) {
-        console.error('Erreur notification updateBookingGroupStatus:', notifError, { bookingGroupId });
+      const bookingStatus = booking.status as VenueBookingStatus;
+      groupCtx = groupCtx ?? {
+        requesterId: booking.requester.toString(),
+        venueId: booking.venue._id.toString(),
+        venueName: booking.venue.name,
+        firstBookingId: booking._id.toString(),
+      };
+      if (bookingStatus === 'REFUSED') refusedCount++;
+      else if (bookingStatus === 'CONFIRMED') confirmedCount++;
+      else if (bookingStatus === 'ACCEPTED') acceptedCount++;
+    }
+
+    // Une seule notification par issue — jamais N fois la même cloche
+    if (groupCtx) {
+      const ctx = groupCtx;
+      const s = (n: number) => (n > 1 ? 's' : '');
+      if (refusedCount > 0) {
+        await createNotification(
+          ctx.requesterId,
+          'venue_booking_response',
+          'Réservation refusée',
+          refusedCount > 1
+            ? `${refusedCount} de vos demandes de réservation pour "${ctx.venueName}" ont été refusées.`
+            : `Votre demande de réservation pour "${ctx.venueName}" a été refusée.`,
+          undefined, undefined, undefined,
+          ctx.venueId,
+          ctx.firstBookingId
+        );
+      }
+      if (confirmedCount > 0) {
+        await createNotification(
+          ctx.requesterId,
+          'venue_booking_confirmed',
+          'Réservation confirmée',
+          confirmedCount > 1
+            ? `${confirmedCount} réservation${s(confirmedCount)} pour "${ctx.venueName}" ont été confirmées (aucun paiement requis).`
+            : `Votre réservation pour "${ctx.venueName}" a été confirmée (aucun paiement requis).`,
+          undefined, undefined, undefined,
+          ctx.venueId,
+          ctx.firstBookingId
+        );
+      }
+      if (acceptedCount > 0) {
+        await createNotification(
+          ctx.requesterId,
+          'venue_booking_payment_required',
+          'Réservation acceptée — paiement requis',
+          acceptedCount > 1
+            ? `${acceptedCount} réservation${s(acceptedCount)} pour "${ctx.venueName}" ont été acceptées. Vous avez 72h pour effectuer le paiement.`
+            : `Votre réservation pour "${ctx.venueName}" a été acceptée. Vous avez 72h pour effectuer le paiement.`,
+          undefined, undefined, undefined,
+          ctx.venueId,
+          ctx.firstBookingId
+        );
       }
     }
 
@@ -959,7 +1018,7 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     const booking = await VenueBookingModel.findById(bookingId)
-      .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy } }>('venue', 'cancellationPolicy owner');
+      .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string; cancellationPolicy: CancellationPolicy } }>('venue', 'cancellationPolicy owner name');
     if (!booking) {
       res.status(404).json({ message: 'Réservation introuvable' });
       return;
@@ -986,7 +1045,8 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     // Remboursement si booking confirmé et payé — selon la politique d'annulation de la salle
-    const policy: CancellationPolicy = (booking.venue as { _id: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy }).cancellationPolicy ?? 'moderate';
+    const venueInfo = booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string; cancellationPolicy: CancellationPolicy };
+    const policy: CancellationPolicy = venueInfo.cancellationPolicy ?? 'moderate';
     await applyBookingCancellationRefund(booking, policy);
 
     booking.status = 'CANCELLED_BY_REQUESTER';
@@ -995,29 +1055,51 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
     // Cascade ADR 0002 : l'événement lié (s'il existe) est annulé
     await cascadeCancelLinkedEvent(booking._id);
 
-    // Notification pour le requester en cas d'annulation d'un booking confirmé
-    if (booking.paymentStatus === 'refunded') {
-      try {
-        await NotificationModel.create({
-          user: booking.requester,
-          type: 'venue_booking_cancelled_by_requester',
-          title: 'Réservation annulée — remboursement effectué',
-          message: `Votre réservation a été annulée. Remboursement de ${booking.refundedAmount ?? booking.paidAmount}€ en cours.`,
-          relatedBooking: booking._id,
-          read: false,
-        });
-      } catch (notifError) {
-        console.error('Erreur notification cancelBooking refund:', notifError, { bookingId });
-      }
-    }
-
     emitVenueBookingStatusChanged(
       booking._id.toString(),
-      (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy })._id.toString(),
+      venueInfo._id.toString(),
       booking.status,
       booking.paymentStatus,
-      [requesterId, (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy }).owner?.toString() || ''].filter(Boolean)
+      [requesterId, venueInfo.owner?.toString() || ''].filter(Boolean)
     );
+
+    // Notification propriétaire :
+    // - Booking sans groupe → notif immédiate
+    // - Booking dans un groupe → notif uniquement quand le dernier créneau du groupe est annulé
+    const ownerId = venueInfo.owner?.toString();
+    if (ownerId) {
+      if (!booking.bookingGroupId) {
+        const d = booking.requestedDate;
+        const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        await createNotification(
+          ownerId,
+          'venue_booking_cancelled_by_requester',
+          'Réservation annulée par le demandeur',
+          `Une réservation pour "${venueInfo.name}" le ${dateStr} a été annulée. Le créneau est de nouveau disponible.`,
+          undefined, undefined, undefined,
+          venueInfo._id.toString(),
+          booking._id.toString()
+        );
+      } else {
+        // Dernier booking du groupe annulé ? → 1 notif groupée pour le proprio
+        const remaining = await VenueBookingModel.countDocuments({
+          bookingGroupId: booking.bookingGroupId,
+          status: { $in: ['PENDING', 'ACCEPTED', 'CONFIRMED'] },
+        });
+        if (remaining === 0) {
+          const total = await VenueBookingModel.countDocuments({ bookingGroupId: booking.bookingGroupId });
+          await createNotification(
+            ownerId,
+            'venue_booking_cancelled_by_requester',
+            'Série de réservations annulée par le demandeur',
+            `La série de ${total} réservation${total > 1 ? 's' : ''} pour "${venueInfo.name}" a été annulée. ${total > 1 ? `${total} créneaux sont` : 'Le créneau est'} de nouveau disponible${total > 1 ? 's' : ''}.`,
+            undefined, undefined, undefined,
+            venueInfo._id.toString(),
+            booking._id.toString()
+          );
+        }
+      }
+    }
 
     res.status(200).json({
       message: 'Réservation annulée',
@@ -1579,7 +1661,7 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
     let expiredCount = 0;
     let reminderCount = 0;
 
-    // Step A — Expire overdue bookings
+    // Step A — Expire overdue bookings (groupes traités en bloc)
     const overdueBookings = await VenueBookingModel.find({
       status: 'ACCEPTED',
       paymentDeadlineAt: { $lte: now },
@@ -1587,84 +1669,160 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
       .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string } | null }>('venue', 'owner name')
       .populate<{ requester: { _id: mongoose.Types.ObjectId; firstName: string; lastName: string } }>('requester', 'firstName lastName');
 
+    const processedGroups = new Set<string>();
+
     for (const booking of overdueBookings) {
       try {
-        // Expire Stripe session if pending
-        if (booking.stripeSessionId && booking.paymentStatus === 'pending' && stripe) {
-          try {
-            await stripe.checkout.sessions.expire(booking.stripeSessionId);
-            console.log('[PaymentTimeout] Session Stripe expirée:', booking.stripeSessionId);
-          } catch (stripeErr) {
-            console.error('[PaymentTimeout] Erreur expiration session Stripe:', stripeErr, { bookingId: booking._id });
+        const groupId = booking.bookingGroupId?.toString();
+
+        if (groupId) {
+          if (processedGroups.has(groupId)) continue;
+          processedGroups.add(groupId);
+
+          const siblings = await VenueBookingModel.find({
+            bookingGroupId: booking.bookingGroupId,
+            status: 'ACCEPTED',
+          })
+            .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string } | null }>('venue', 'owner name')
+            .populate<{ requester: { _id: mongoose.Types.ObjectId; firstName: string; lastName: string } }>('requester', 'firstName lastName');
+
+          const sessionSibling = siblings.find(s => s.stripeSessionId && s.paymentStatus === 'pending');
+          if (sessionSibling?.stripeSessionId && stripe) {
+            try {
+              await stripe.checkout.sessions.expire(sessionSibling.stripeSessionId);
+              console.log('[PaymentTimeout] Session Stripe groupe expirée:', sessionSibling.stripeSessionId);
+            } catch (stripeErr) {
+              console.error('[PaymentTimeout] Erreur expiration session Stripe groupe:', stripeErr, { groupId });
+            }
           }
-        }
 
-        // Atomic update to prevent race condition with Stripe webhook confirmation
-        const expired = await VenueBookingModel.findOneAndUpdate(
-          { _id: booking._id, status: 'ACCEPTED' },
-          { status: 'EXPIRED' },
-          { new: true }
-        );
-        if (!expired) {
-          console.log('[PaymentTimeout] Booking déjà transitionné, skip:', booking._id);
-          continue;
-        }
-        expiredCount++;
+          let groupExpiredCount = 0;
+          for (const sibling of siblings) {
+            try {
+              const expired = await VenueBookingModel.findOneAndUpdate(
+                { _id: sibling._id, status: 'ACCEPTED' },
+                { status: 'EXPIRED' },
+                { new: true }
+              );
+              if (!expired) {
+                console.log('[PaymentTimeout] Booking groupe déjà transitionné, skip:', sibling._id);
+                continue;
+              }
+              groupExpiredCount++;
+              expiredCount++;
+              if (!sibling.venue) continue;
+              emitVenueBookingPaymentUpdated(
+                sibling._id.toString(),
+                (sibling.venue as any)._id.toString(),
+                'EXPIRED',
+                sibling.paymentStatus,
+                [(sibling.requester as any)._id?.toString() || sibling.requester.toString(), (sibling.venue as any)?.owner?.toString() || ''].filter(Boolean)
+              );
+            } catch (siblingErr) {
+              console.error('[PaymentTimeout] Erreur expiration booking groupe:', siblingErr, { bookingId: sibling._id });
+            }
+          }
 
-        if (!booking.venue) {
-          console.error('[PaymentTimeout] Venue non trouvée pour booking, expiré sans notification:', booking._id);
-          continue;
-        }
+          if (groupExpiredCount === 0) continue;
+          const first = siblings[0];
+          if (!first?.venue) continue;
 
-        emitVenueBookingPaymentUpdated(
-          booking._id.toString(),
-          (booking.venue as any)._id.toString(),
-          'EXPIRED',
-          booking.paymentStatus,
-          [(booking.requester as any)._id?.toString() || booking.requester.toString(), (booking.venue as any)?.owner?.toString() || ''].filter(Boolean)
-        );
+          const venueId = (first.venue as any)._id.toString();
+          const ownerId = (first.venue as any).owner.toString();
+          const venueName = first.venue.name;
+          const requesterId = (first.requester as any)._id?.toString() || first.requester.toString();
+          const requesterName = (first.requester as any)?.firstName
+            ? `${(first.requester as any).firstName} ${(first.requester as any).lastName}`
+            : 'un utilisateur';
+          const n = groupExpiredCount;
+          const plural = n > 1;
 
-        const d = booking.requestedDate;
-        const eventDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+          await createNotification(
+            requesterId,
+            'venue_booking_payment_expired',
+            'Série de réservations expirée',
+            `Votre série de réservations pour "${venueName}" a expiré faute de paiement — ${n} créneau${plural ? 'x' : ''} libéré${plural ? 's' : ''}.`,
+            undefined, undefined, undefined,
+            venueId
+          );
+          await createNotification(
+            ownerId,
+            'venue_booking_payment_expired',
+            'Série de réservations expirée — créneaux disponibles',
+            `La série de réservations de "${requesterName}" pour "${venueName}" a expiré — ${n} créneau${plural ? 'x' : ''} redevien${plural ? 'nent' : 't'} disponible${plural ? 's' : ''}.`,
+            undefined, undefined, undefined,
+            venueId
+          );
 
-        // Notify requester
-        try {
-          await NotificationModel.create({
-            user: booking.requester,
-            type: 'venue_booking_payment_expired',
-            title: 'Réservation expirée',
-            message: `Votre réservation pour "${booking.venue.name}" le ${eventDate} a expiré car le paiement n'a pas été effectué dans les 72h.`,
-            relatedVenue: booking.venue._id,
-            relatedBooking: booking._id,
-            read: false,
-          });
-        } catch (notifError) {
-          console.error('[PaymentTimeout] Erreur notification requester:', notifError, { bookingId: booking._id });
-        }
+        } else {
+          // Booking solo — traitement individuel
+          if (booking.stripeSessionId && booking.paymentStatus === 'pending' && stripe) {
+            try {
+              await stripe.checkout.sessions.expire(booking.stripeSessionId);
+              console.log('[PaymentTimeout] Session Stripe expirée:', booking.stripeSessionId);
+            } catch (stripeErr) {
+              console.error('[PaymentTimeout] Erreur expiration session Stripe:', stripeErr, { bookingId: booking._id });
+            }
+          }
 
-        // Notify owner
-        const requesterName = (booking.requester as any)?.firstName
-          ? `${(booking.requester as any).firstName} ${(booking.requester as any).lastName}`
-          : 'un utilisateur';
-        try {
-          await NotificationModel.create({
-            user: booking.venue.owner,
-            type: 'venue_booking_payment_expired',
-            title: 'Réservation expirée — créneau disponible',
-            message: `La réservation de "${requesterName}" pour "${booking.venue.name}" le ${eventDate} a expiré faute de paiement. Le créneau est de nouveau disponible.`,
-            relatedVenue: booking.venue._id,
-            relatedBooking: booking._id,
-            read: false,
-          });
-        } catch (notifError) {
-          console.error('[PaymentTimeout] Erreur notification owner:', notifError, { bookingId: booking._id });
+          const expired = await VenueBookingModel.findOneAndUpdate(
+            { _id: booking._id, status: 'ACCEPTED' },
+            { status: 'EXPIRED' },
+            { new: true }
+          );
+          if (!expired) {
+            console.log('[PaymentTimeout] Booking déjà transitionné, skip:', booking._id);
+            continue;
+          }
+          expiredCount++;
+
+          if (!booking.venue) {
+            console.error('[PaymentTimeout] Venue non trouvée pour booking, expiré sans notification:', booking._id);
+            continue;
+          }
+
+          emitVenueBookingPaymentUpdated(
+            booking._id.toString(),
+            (booking.venue as any)._id.toString(),
+            'EXPIRED',
+            booking.paymentStatus,
+            [(booking.requester as any)._id?.toString() || booking.requester.toString(), (booking.venue as any)?.owner?.toString() || ''].filter(Boolean)
+          );
+
+          const d = booking.requestedDate;
+          const eventDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+          const venueId = (booking.venue as any)._id.toString();
+          const ownerId = (booking.venue as any).owner.toString();
+          const requesterId = (booking.requester as any)._id?.toString() || booking.requester.toString();
+          const requesterName = (booking.requester as any)?.firstName
+            ? `${(booking.requester as any).firstName} ${(booking.requester as any).lastName}`
+            : 'un utilisateur';
+
+          await createNotification(
+            requesterId,
+            'venue_booking_payment_expired',
+            'Réservation expirée',
+            `Votre réservation pour "${booking.venue.name}" le ${eventDate} a expiré car le paiement n'a pas été effectué dans les 72h.`,
+            undefined, undefined, undefined,
+            venueId,
+            booking._id.toString()
+          );
+          await createNotification(
+            ownerId,
+            'venue_booking_payment_expired',
+            'Réservation expirée — créneau disponible',
+            `La réservation de "${requesterName}" pour "${booking.venue.name}" le ${eventDate} a expiré faute de paiement. Le créneau est de nouveau disponible.`,
+            undefined, undefined, undefined,
+            venueId,
+            booking._id.toString()
+          );
         }
       } catch (bookingErr) {
         console.error('[PaymentTimeout] Erreur traitement booking:', bookingErr, { bookingId: booking._id });
       }
     }
 
-    // Step B — Send 24h reminders
+    // Step B — Rappels 24h (un seul rappel par groupe)
     const reminderDeadline = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const reminderBookings = await VenueBookingModel.find({
       status: 'ACCEPTED',
@@ -1673,6 +1831,8 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
     })
       .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string } | null }>('venue', 'owner name');
 
+    const processedReminderGroups = new Set<string>();
+
     for (const booking of reminderBookings) {
       try {
         if (!booking.venue) {
@@ -1680,23 +1840,46 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
           continue;
         }
 
-        const d = booking.requestedDate;
-        const eventDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        const groupId = booking.bookingGroupId?.toString();
 
-        // Save reminder flag first to prevent spam if notification fails then succeeds on retry
-        booking.paymentReminderSentAt = new Date();
-        await booking.save();
+        if (groupId) {
+          if (processedReminderGroups.has(groupId)) continue;
+          processedReminderGroups.add(groupId);
 
-        await NotificationModel.create({
-          user: booking.requester,
-          type: 'venue_booking_payment_reminder',
-          title: 'Rappel — paiement requis',
-          message: `Rappel : votre réservation pour "${booking.venue.name}" le ${eventDate} expire dans 24h. Effectuez le paiement pour confirmer.`,
-          relatedVenue: booking.venue._id,
-          relatedBooking: booking._id,
-          read: false,
-        });
-        reminderCount++;
+          // Poser le flag sur tous les membres du groupe pour éviter les doublons
+          await VenueBookingModel.updateMany(
+            { bookingGroupId: booking.bookingGroupId, status: 'ACCEPTED', paymentReminderSentAt: null },
+            { paymentReminderSentAt: now }
+          );
+
+          await createNotification(
+            booking.requester.toString(),
+            'venue_booking_payment_reminder',
+            'Rappel — paiement de série requis',
+            `Rappel : votre série de réservations pour "${booking.venue.name}" expire dans 24h. Effectuez le paiement pour confirmer.`,
+            undefined, undefined, undefined,
+            (booking.venue as any)._id.toString(),
+            booking._id.toString()
+          );
+          reminderCount++;
+        } else {
+          const d = booking.requestedDate;
+          const eventDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+
+          booking.paymentReminderSentAt = new Date();
+          await booking.save();
+
+          await createNotification(
+            booking.requester.toString(),
+            'venue_booking_payment_reminder',
+            'Rappel — paiement requis',
+            `Rappel : votre réservation pour "${booking.venue.name}" le ${eventDate} expire dans 24h. Effectuez le paiement pour confirmer.`,
+            undefined, undefined, undefined,
+            (booking.venue as any)._id.toString(),
+            booking._id.toString()
+          );
+          reminderCount++;
+        }
 
         emitVenueBookingPaymentUpdated(
           booking._id.toString(),

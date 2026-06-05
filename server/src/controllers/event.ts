@@ -13,7 +13,7 @@ import { emitEventCreated, emitEventUpdated, emitEventDeleted, emitEventComplete
 import { Types } from 'mongoose';
 import { extractPostalCode, getDepartmentFromPostalCode } from '../utils/cityMapping';
 import { getCityCoordinates } from '../utils/cityMapping';
-import { notifySpectatorsInRadius } from '../services/spectatorNotificationService';
+import { notifySpectatorsInRadius, notifySpectatorsOfEventSeries } from '../services/spectatorNotificationService';
 import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 import { escapeRegex } from '../utils/regex';
 import Logger from '../utils/logger';
@@ -25,6 +25,7 @@ import { VenueBookingModel } from '../models/VenueBooking';
 import { detectZoneType, FRENCH_REGIONS, normalizeDepartment } from '../utils/geographicMatching';
 import { notifyEventCancellation, cancelEventInternal } from '../services/eventCancellation';
 import { cancelBookingWithRefund } from './venueBooking';
+import { createNotification } from './notification';
 
 /** Retourne la liste des modifications entre l'ancien et le nouvel évènement (pour l'email aux candidats) */
 function getEventChanges(oldEvent: any, newEvent: any): string[] {
@@ -617,6 +618,11 @@ const createRecurringEvents = async (
     } catch (verifyError) {
       console.error('⚠️ [RECURRENCE] Erreur lors de la vérification (non-bloquant):', verifyError);
     }
+
+    // Notifier les spectateurs dans le rayon (une seule notif de série par spectateur)
+    notifySpectatorsOfEventSeries(createdEvents as any[]).catch((err) => {
+      console.error('❌ [RECURRENCE] Erreur notification spectateurs par rayon (non-bloquant):', err);
+    });
 
     // Envoyer UN SEUL email par humoriste regroupant toutes les dates (au lieu d'un email par date)
     if (organizer) {
@@ -2105,13 +2111,33 @@ export const cancelEventSeries = async (req: AuthRequest, res: Response): Promis
     //   police), ce qui cascade l'annulation soft de l'événement.
     // - Org A (event sans réservation) → soft-cancel direct, sans remboursement.
     let cancelledBookingCount = 0;
+    let groupInfo: { venueId: string; ownerId: string; venueName: string; requesterId: string } | null = null;
+
     for (const event of events) {
       if (event.venueBookingId) {
-        await cancelBookingWithRefund(event.venueBookingId);
-        cancelledBookingCount++;
+        const result = await cancelBookingWithRefund(event.venueBookingId);
+        if (result) {
+          groupInfo = groupInfo ?? result;
+          cancelledBookingCount++;
+        }
       } else {
         await cancelEventInternal(event);
       }
+    }
+
+    // Une seule notification par destinataire pour l'ensemble de la série annulée
+    if (groupInfo) {
+      const n = cancelledBookingCount;
+      const label = n > 1 ? `série de ${n} réservations` : 'réservation';
+      await createNotification(
+        groupInfo.ownerId,
+        'venue_booking_cancelled_by_requester',
+        'Réservation(s) annulée(s) par le demandeur',
+        `La ${label} pour "${groupInfo.venueName}" a été annulée. ${n > 1 ? `${n} créneaux sont` : 'Le créneau est'} de nouveau disponible${n > 1 ? 's' : ''}.`,
+        undefined, undefined, undefined,
+        groupInfo.venueId,
+        undefined
+      );
     }
 
     res.status(200).json({ cancelledEventCount: events.length, cancelledBookingCount });

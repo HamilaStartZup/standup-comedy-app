@@ -7,6 +7,7 @@ import { VenueBookingModel } from '../models/VenueBooking';
 import { NotificationModel } from '../models/Notification';
 import mongoose from 'mongoose';
 import { emitVenueBookingPaymentUpdated } from '../services/eventEmitter';
+import { createNotification } from './notification';
 import { computeBookingAmount } from '../utils/venuePricing';
 import { ProcessedStripeEventModel } from '../models/ProcessedStripeEvent';
 
@@ -269,6 +270,9 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
             'venue', 'name owner pricePerEvent pricingType deposit extraFees'
           );
 
+        let confirmedCount = 0;
+        let groupNotifCtx: { requesterId: string; ownerId: string; venueId: string; venueName: string; firstBookingId: string } | null = null;
+
         for (const booking of bookings) {
           if (booking.status !== 'ACCEPTED') continue;
 
@@ -290,6 +294,14 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
           );
 
           if (!updated) continue;
+          confirmedCount++;
+          groupNotifCtx = groupNotifCtx ?? {
+            requesterId: updated.requester.toString(),
+            ownerId: booking.venue.owner.toString(),
+            venueId: booking.venue._id.toString(),
+            venueName: booking.venue.name,
+            firstBookingId: updated._id.toString(),
+          };
 
           emitVenueBookingPaymentUpdated(
             updated._id.toString(),
@@ -298,31 +310,33 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
             updated.paymentStatus,
             [updated.requester.toString(), booking.venue.owner.toString()]
           );
+        }
 
-          try {
-            await NotificationModel.create([
-              {
-                user: updated.requester,
-                type: 'venue_booking_confirmed',
-                title: 'Réservation confirmée',
-                message: `Votre paiement pour "${booking.venue.name}" a été reçu. Réservation confirmée !`,
-                relatedVenue: booking.venue._id,
-                relatedBooking: updated._id,
-                read: false,
-              },
-              {
-                user: booking.venue.owner,
-                type: 'venue_booking_confirmed',
-                title: 'Paiement reçu',
-                message: `Le paiement pour la réservation de "${booking.venue.name}" a été reçu. Réservation confirmée !`,
-                relatedVenue: booking.venue._id,
-                relatedBooking: updated._id,
-                read: false,
-              },
-            ]);
-          } catch (notifError) {
-            console.error('[Stripe] Erreur notification webhook venue_booking_group:', notifError, { bookingGroupId });
-          }
+        if (groupNotifCtx && confirmedCount > 0) {
+          const n = confirmedCount;
+          const ctx = groupNotifCtx;
+          await createNotification(
+            ctx.requesterId,
+            'venue_booking_confirmed',
+            'Réservation confirmée',
+            n > 1
+              ? `Votre paiement pour la série de ${n} réservations chez "${ctx.venueName}" a été reçu. Réservations confirmées !`
+              : `Votre paiement pour "${ctx.venueName}" a été reçu. Réservation confirmée !`,
+            undefined, undefined, undefined,
+            ctx.venueId,
+            ctx.firstBookingId
+          );
+          await createNotification(
+            ctx.ownerId,
+            'venue_booking_confirmed',
+            'Paiement reçu',
+            n > 1
+              ? `Le paiement pour la série de ${n} réservations de "${ctx.venueName}" a été reçu. Réservations confirmées !`
+              : `Le paiement pour la réservation de "${ctx.venueName}" a été reçu. Réservation confirmée !`,
+            undefined, undefined, undefined,
+            ctx.venueId,
+            ctx.firstBookingId
+          );
         }
 
         console.log('[Stripe] Lot confirmé après paiement (webhook):', userId, '→ group', bookingGroupId);
@@ -424,18 +438,26 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
             [booking.requester.toString(), (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId }).owner.toString()]
           );
 
-          try {
-            await NotificationModel.create({
-              user: booking.requester,
-              type: 'venue_booking_refunded',
-              title: 'Remboursement effectué',
-              message: `Votre remboursement de ${booking.refundedAmount}€ pour "${booking.venue.name}" a été traité.`,
-              relatedVenue: booking.venue._id,
-              relatedBooking: booking._id,
-              read: false,
-            });
-          } catch (notifError) {
-            console.error('[Stripe] Erreur notification refund.updated:', notifError, { refundId });
+          // Pour les séries (bookingGroupId), n'envoyer qu'une seule notification au demandeur
+          // (la première fois qu'un booking du groupe est remboursé).
+          const isFirstGroupRefund = booking.bookingGroupId
+            ? (await VenueBookingModel.countDocuments({
+                bookingGroupId: booking.bookingGroupId,
+                paymentStatus: 'refunded',
+                _id: { $ne: booking._id },
+              })) === 0
+            : true;
+
+          if (isFirstGroupRefund) {
+            await createNotification(
+              booking.requester.toString(),
+              'venue_booking_refunded',
+              'Remboursement effectué',
+              `Votre remboursement de ${booking.refundedAmount}€ pour "${booking.venue.name}" a été traité.`,
+              undefined, undefined, undefined,
+              (booking.venue as { _id: mongoose.Types.ObjectId })._id.toString(),
+              booking._id.toString()
+            );
           }
 
           console.log('[Stripe] Remboursement confirmé via webhook:', refundId);
@@ -908,6 +930,8 @@ export const confirmVenueGroupPayment = async (req: AuthRequest, res: Response):
       );
 
     let confirmed = 0;
+    let groupNotifCtx: { requesterId: string; ownerId: string; venueId: string; venueName: string; firstBookingId: string } | null = null;
+
     for (const booking of bookings) {
       if (booking.status !== 'ACCEPTED') continue;
 
@@ -931,6 +955,13 @@ export const confirmVenueGroupPayment = async (req: AuthRequest, res: Response):
 
       if (!updated) continue;
       confirmed += 1;
+      groupNotifCtx = groupNotifCtx ?? {
+        requesterId: updated.requester.toString(),
+        ownerId: booking.venue.owner.toString(),
+        venueId: booking.venue._id.toString(),
+        venueName: booking.venue.name,
+        firstBookingId: updated._id.toString(),
+      };
 
       emitVenueBookingPaymentUpdated(
         updated._id.toString(),
@@ -939,31 +970,33 @@ export const confirmVenueGroupPayment = async (req: AuthRequest, res: Response):
         updated.paymentStatus,
         [updated.requester.toString(), booking.venue.owner.toString()]
       );
+    }
 
-      try {
-        await NotificationModel.create([
-          {
-            user: updated.requester,
-            type: 'venue_booking_confirmed',
-            title: 'Réservation confirmée',
-            message: `Votre paiement pour "${booking.venue.name}" a été reçu. Réservation confirmée !`,
-            relatedVenue: booking.venue._id,
-            relatedBooking: updated._id,
-            read: false,
-          },
-          {
-            user: booking.venue.owner,
-            type: 'venue_booking_confirmed',
-            title: 'Paiement reçu',
-            message: `Le paiement pour la réservation de "${booking.venue.name}" a été reçu. Réservation confirmée !`,
-            relatedVenue: booking.venue._id,
-            relatedBooking: updated._id,
-            read: false,
-          },
-        ]);
-      } catch (notifError) {
-        console.error('Erreur notification confirmVenueGroupPayment:', notifError, { bookingGroupId, userId });
-      }
+    if (groupNotifCtx && confirmed > 0) {
+      const n = confirmed;
+      const ctx = groupNotifCtx;
+      await createNotification(
+        ctx.requesterId,
+        'venue_booking_confirmed',
+        'Réservation confirmée',
+        n > 1
+          ? `Votre paiement pour la série de ${n} réservations chez "${ctx.venueName}" a été reçu. Réservations confirmées !`
+          : `Votre paiement pour "${ctx.venueName}" a été reçu. Réservation confirmée !`,
+        undefined, undefined, undefined,
+        ctx.venueId,
+        ctx.firstBookingId
+      );
+      await createNotification(
+        ctx.ownerId,
+        'venue_booking_confirmed',
+        'Paiement reçu',
+        n > 1
+          ? `Le paiement pour la série de ${n} réservations de "${ctx.venueName}" a été reçu. Réservations confirmées !`
+          : `Le paiement pour la réservation de "${ctx.venueName}" a été reçu. Réservation confirmée !`,
+        undefined, undefined, undefined,
+        ctx.venueId,
+        ctx.firstBookingId
+      );
     }
 
     console.log('[Stripe] Lot confirmé après paiement (confirm):', userId, '→ group', bookingGroupId, `(${confirmed} réservations)`);
@@ -1036,19 +1069,15 @@ export const confirmVenueRefund = async (req: AuthRequest, res: Response): Promi
       [booking.requester.toString(), booking.venue.owner.toString()]
     );
 
-    try {
-      await NotificationModel.create({
-        user: booking.requester,
-        type: 'venue_booking_refunded',
-        title: 'Remboursement effectué',
-        message: `Votre remboursement de ${booking.refundedAmount}€ pour "${booking.venue.name}" a été traité.`,
-        relatedVenue: booking.venue._id,
-        relatedBooking: booking._id,
-        read: false,
-      });
-    } catch (notifError) {
-      console.error('Erreur notification confirmVenueRefund:', notifError, { bookingId });
-    }
+    await createNotification(
+      booking.requester.toString(),
+      'venue_booking_refunded',
+      'Remboursement effectué',
+      `Votre remboursement de ${booking.refundedAmount}€ pour "${booking.venue.name}" a été traité.`,
+      undefined, undefined, undefined,
+      booking.venue._id.toString(),
+      booking._id.toString()
+    );
 
     res.status(200).json({ message: 'Remboursement confirmé', paymentStatus: 'refunded', refundedAmount: booking.refundedAmount });
   } catch (error: any) {

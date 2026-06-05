@@ -170,6 +170,7 @@ export const handleSSEEvent = (queryClient: QueryClient, event: SSEEvent): void 
     case 'VENUE_BOOKING_STATUS_CHANGED':
       console.log('🏢 [SSE] Statut de réservation salle modifié:', event.data.id, event.data.status);
       queryClient.invalidateQueries({ queryKey: ['my-bookings'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['venue-owner-bookings'], exact: false });
       if (event.data.venueId) {
         queryClient.invalidateQueries({ queryKey: ['venue-bookings', event.data.venueId], exact: false });
         queryClient.invalidateQueries({ queryKey: ['venue', event.data.venueId], exact: false });
@@ -181,6 +182,7 @@ export const handleSSEEvent = (queryClient: QueryClient, event: SSEEvent): void 
     case 'VENUE_BOOKING_PAYMENT_UPDATED':
       console.log('💳 [SSE] Paiement réservation salle mis à jour:', event.data.id, event.data.paymentStatus);
       queryClient.invalidateQueries({ queryKey: ['my-bookings'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['venue-owner-bookings'], exact: false });
       if (event.data.venueId) {
         queryClient.invalidateQueries({ queryKey: ['venue-bookings', event.data.venueId], exact: false });
         queryClient.invalidateQueries({ queryKey: ['venue', event.data.venueId], exact: false });
@@ -224,6 +226,7 @@ export const handleSSEEvent = (queryClient: QueryClient, event: SSEEvent): void 
       console.log('🗑️ [SSE] Salle supprimée:', event.data.venueId);
       queryClient.invalidateQueries({ queryKey: ['venues'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['my-venues'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['venue-owner-bookings'], exact: false });
       if (event.data.venueId) {
         queryClient.cancelQueries({ queryKey: ['venue', event.data.venueId] });
         queryClient.removeQueries({ queryKey: ['venue', event.data.venueId] });
