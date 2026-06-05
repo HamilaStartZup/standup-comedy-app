@@ -455,8 +455,23 @@ export const createBookingBatch = async (req: AuthRequest, res: Response): Promi
     const created: any[] = [];
     const unavailable: { date: string; reason: string }[] = [];
 
+    const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+
     for (const dateStr of dates) {
       const date = new Date(dateStr);
+
+      if (venue.disabledWeekdays && venue.disabledWeekdays.includes(date.getDay())) {
+        unavailable.push({ date: dateStr, reason: 'Cette salle n\'est pas disponible ce jour-là.' });
+        continue;
+      }
+
+      const tr = venue.timeRestrictions;
+      if (tr && startTime && endTime && pricingType === 'heure' && tr.openTime && tr.closeTime) {
+        if (toMinutes(startTime) < toMinutes(tr.openTime) || toMinutes(endTime) > toMinutes(tr.closeTime)) {
+          unavailable.push({ date: dateStr, reason: `Les réservations à l'heure sont possibles uniquement entre ${tr.openTime} et ${tr.closeTime}.` });
+          continue;
+        }
+      }
 
       const slotCheck = await checkSlotConflict(venueId, date, startTime, endTime, pricingType);
       if (slotCheck.ok === false) {

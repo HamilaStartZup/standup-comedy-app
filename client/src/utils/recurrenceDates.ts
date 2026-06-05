@@ -51,8 +51,11 @@ export function generateRecurringDates({
     const dayOfMonth = d.getDate();
     while (d <= end) {
       if (d >= today) dates.push(toLocalDateString(d));
+      // setDate(1) avant setMonth évite le débordement JS (ex: "31 février" → mars)
+      d.setDate(1);
       d.setMonth(d.getMonth() + 1);
-      d.setDate(Math.min(dayOfMonth, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+      const lastDayOfNewMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      d.setDate(Math.min(dayOfMonth, lastDayOfNewMonth));
     }
   }
 

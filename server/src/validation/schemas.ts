@@ -559,14 +559,11 @@ const optionalTime = z.preprocess(
 /** Chaîne vide ou valeur absente ; sinon la valeur (pour champs optionnels type SIRET, URL). */
 const optionalSiret = z.preprocess(
   (val) => {
-    if (val === undefined || val === null || val === '') return '';
-    const digits = String(val).replace(/\s/g, '');
-    return /^\d{14}$/.test(digits) ? digits : '';
+    if (val === undefined || val === null || val === '') return undefined;
+    const cleaned = String(val).replace(/\s/g, '');
+    return cleaned === '' ? undefined : cleaned;
   },
-  z.union([
-    z.string().regex(/^\d{14}$/, 'SIRET invalide (14 chiffres requis)'),
-    z.literal(''),
-  ]).optional()
+  z.string().regex(/^\d{14}$/, 'SIRET invalide (14 chiffres requis)').optional()
 );
 
 const optionalUrl = z.preprocess(

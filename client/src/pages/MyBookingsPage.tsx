@@ -175,7 +175,15 @@ const MyBookingsPage: React.FC = () => {
     setCancelConfirmGroup(null);
     setCancellingGroupId(groupId);
     try {
-      const results = await Promise.allSettled(toCancel.map((b) => cancelBooking(b._id)));
+      const results: PromiseSettledResult<void>[] = [];
+      for (const b of toCancel) {
+        try {
+          await cancelBooking(b._id);
+          results.push({ status: 'fulfilled', value: undefined });
+        } catch (e) {
+          results.push({ status: 'rejected', reason: e });
+        }
+      }
       const failures = results.filter((r) => r.status === 'rejected').length;
       if (failures > 0) {
         showError(`${failures} réservation(s) n'ont pas pu être annulées. Veuillez réessayer.`);

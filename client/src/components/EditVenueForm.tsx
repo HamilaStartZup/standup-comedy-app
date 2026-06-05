@@ -17,9 +17,9 @@ const emptyToUndefined = (value: string | number): number | undefined => {
 };
 
 const normalizeSiret = (siret: string): string | undefined => {
-  const digits = siret.replace(/\s/g, '');
-  if (!digits) return undefined;
-  return /^\d{14}$/.test(digits) ? digits : undefined;
+  const cleaned = siret.replace(/\s/g, '');
+  if (!cleaned) return undefined;
+  return cleaned;
 };
 
 const normalizeUrl = (url: string): string | undefined => {

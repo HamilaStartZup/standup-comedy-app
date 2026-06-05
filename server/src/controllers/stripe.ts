@@ -836,7 +836,7 @@ export const createVenueGroupCheckoutSession = async (req: AuthRequest, res: Res
 
     const now = Date.now();
     const expiresAtMs = Math.max(
-      now + 30 * 60 * 1000,
+      now + 35 * 60 * 1000,
       Math.min(
         minDeadline ? minDeadline.getTime() : now + 24 * 60 * 60 * 1000,
         now + 24 * 60 * 60 * 1000
