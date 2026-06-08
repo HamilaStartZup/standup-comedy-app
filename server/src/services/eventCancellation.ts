@@ -109,15 +109,117 @@ export async function notifyEventCancellation(event: EventDocument, reason?: str
  * Annule un événement (soft : `status='cancelled'` + `cancellationReason`), déclenche les
  * notifications participants et émet l'événement SSE. **Idempotent** (no-op si déjà annulé).
  * `req`/`res`-free — utilisé par la cascade réservation → événement et l'annulation de série.
+ * `skipNotify` permet de différer les notifications (ex. annulation de série avec regroupement).
  */
-export async function cancelEventInternal(event: EventDocument, reason?: string): Promise<void> {
+export async function cancelEventInternal(
+  event: EventDocument,
+  reason?: string,
+  options: { skipNotify?: boolean } = {}
+): Promise<void> {
   if (event.status === 'cancelled') return;
   event.status = 'cancelled';
   if (reason !== undefined) event.cancellationReason = reason;
   await event.save();
 
-  await notifyEventCancellation(event, reason);
+  if (!options.skipNotify) {
+    await notifyEventCancellation(event, reason);
+  }
 
   const audience = await getEventAudience(event._id as mongoose.Types.ObjectId, event.organizer.toString());
   emitEventUpdated(event._id.toString(), audience);
+}
+
+/**
+ * Notifie en une seule passe l'ensemble des participants distincts d'une série d'événements annulés.
+ * Dédoublonne humoristes et spectateurs sur tous les événements pour éviter le spam.
+ * 1 notif in-app + 1 email groupé par participant distinct.
+ */
+export async function notifySeriesCancellation(
+  events: EventDocument[],
+  reason?: string
+): Promise<void> {
+  if (events.length === 0) return;
+
+  const eventIds = events.map((e) => e._id);
+  const organizer = await UserModel.findById(events[0].organizer).select('firstName lastName email');
+  if (!organizer) return;
+  const organizerId = organizer._id.toString();
+
+  // Collect distinct comedians with active applications across all events
+  const applications = await ApplicationModel.find(
+    { event: { $in: eventIds }, status: { $in: ['PENDING', 'ACCEPTED'] } }
+  ).populate<{ comedian: PopulatedComedian }>('comedian', 'email firstName lastName role');
+
+  const seenComedianIds = new Set<string>();
+  const distinctComedians: PopulatedComedian[] = [];
+  for (const app of applications) {
+    const c = app.comedian;
+    if (!c) continue;
+    const id = c._id.toString();
+    if (!seenComedianIds.has(id)) {
+      seenComedianIds.add(id);
+      distinctComedians.push(c);
+    }
+  }
+
+  const dates = events
+    .map((e) => new Date(e.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }))
+    .join(', ');
+  const title = events[0].title;
+  const n = events.length;
+
+  // Email groupé aux humoristes concernés
+  const comedianParticipants = distinctComedians.filter((c) => c.email);
+  if (comedianParticipants.length > 0) {
+    try {
+      await sendEventCancellationToParticipants(
+        comedianParticipants as any,
+        { ...events[0], title: `${title} (${n} dates : ${dates})` } as any,
+        { firstName: organizer.firstName, lastName: organizer.lastName, email: organizer.email },
+        reason
+      );
+    } catch (err) {
+      console.error('[EventCancellation] Échec email annulation série:', err);
+    }
+  }
+
+  // Notifications in-app humoristes
+  for (const comedian of distinctComedians) {
+    if (comedian.role === 'COMEDIAN') {
+      await createNotification(
+        comedian._id.toString(),
+        'event_cancelled',
+        'Série d\'évènements annulée',
+        n > 1
+          ? `La série "${title}" (${n} dates) à laquelle vous avez postulé a été annulée.`
+          : `L'évènement "${title}" auquel vous avez postulé a été annulé.`,
+        events[0]._id.toString(),
+        undefined,
+        organizerId
+      );
+    }
+  }
+
+  // Collect distinct spectators across all events
+  const seenSpectatorIds = new Set<string>();
+  for (const event of events) {
+    for (const sid of (event.spectatorRegistrations || []) as mongoose.Types.ObjectId[]) {
+      const spectatorId = sid?.toString?.();
+      if (spectatorId && !seenSpectatorIds.has(spectatorId)) {
+        seenSpectatorIds.add(spectatorId);
+      }
+    }
+  }
+
+  for (const spectatorId of seenSpectatorIds) {
+    await createNotification(
+      spectatorId,
+      'event_cancelled',
+      'Série d\'évènements annulée',
+      n > 1
+        ? `La série "${title}" (${n} dates) à laquelle vous étiez inscrit a été annulée.`
+        : `L'évènement "${title}" auquel vous étiez inscrit a été annulé.`,
+      events[0]._id.toString()
+    );
+  }
 }

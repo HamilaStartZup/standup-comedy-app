@@ -668,10 +668,10 @@ export const createBookingSchema = z.object({
 export const createBookingBatchSchema = z.object({
   dates: z.array(
     z.string().refine((str) => {
-      const date = new Date(str);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return !isNaN(date.getTime()) && date >= today;
+      const date = new Date(`${str}T00:00:00Z`);
+      const now = new Date();
+      const todayUtcMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+      return !isNaN(date.getTime()) && date.getTime() >= todayUtcMs;
     }, { message: 'Chaque date doit être aujourd\'hui ou dans le futur' })
   ).min(1).max(100, { message: 'Une série ne peut pas dépasser 100 dates' }).refine(
     (dates) => new Set(dates.map((d) => d.split('T')[0])).size === dates.length,

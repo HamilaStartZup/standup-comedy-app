@@ -23,9 +23,7 @@ import {
 } from '../utils/venueBookingEventLink';
 import { VenueBookingModel } from '../models/VenueBooking';
 import { detectZoneType, FRENCH_REGIONS, normalizeDepartment } from '../utils/geographicMatching';
-import { notifyEventCancellation, cancelEventInternal } from '../services/eventCancellation';
-import { cancelBookingWithRefund } from './venueBooking';
-import { createNotification } from './notification';
+import { notifyEventCancellation } from '../services/eventCancellation';
 
 /** Retourne la liste des modifications entre l'ancien et le nouvel évènement (pour l'email aux candidats) */
 function getEventChanges(oldEvent: any, newEvent: any): string[] {
@@ -555,10 +553,8 @@ const createRecurringEvents = async (
           ...(linkedBookingId && { venueBookingId: linkedBookingId }),
         });
 
-        console.log(`🔄 [RECURRENCE] Événement modèle créé, validation...`);
         const savedEvent = await event.save({ session });
         createdEvents.push(savedEvent);
-        console.log(`✅ [RECURRENCE] Événement créé pour le ${dateStr}:`, savedEvent._id);
 
         // Émettre un évènement SSE pour chaque événement créé
         emitEventCreated(savedEvent._id.toString(), [organizerId]);
@@ -596,7 +592,6 @@ const createRecurringEvents = async (
           runValidators: false // Ne pas valider les autres champs comme numberOfScenes
         }
       );
-      console.log(`✅ [RECURRENCE] Stats de l'organisateur mises à jour (+${createdEvents.length} événements)`);
     } catch (statsError: any) {
       console.error('❌ [RECURRENCE] Erreur lors de la mise à jour des stats:', statsError);
       // Ne pas faire échouer la création des événements si les stats échouent
@@ -607,18 +602,6 @@ const createRecurringEvents = async (
     await session.commitTransaction();
     await session.endSession();
 
-    console.log(`✅ [RECURRENCE] Transaction commitée - ${createdEvents.length} événements créés avec succès dans le groupe ${recurrenceGroupId}`);
-    console.log(`✅ [RECURRENCE] IDs des événements créés:`, createdEvents.map(e => e._id.toString()));
-
-    // Vérifier que les événements sont bien en base (optionnel, pour debug)
-    try {
-      const eventIds = createdEvents.map(e => e._id);
-      const verifiedEvents = await EventModel.find({ _id: { $in: eventIds } });
-      console.log(`✅ [RECURRENCE] Vérification: ${verifiedEvents.length}/${createdEvents.length} événements trouvés en base`);
-    } catch (verifyError) {
-      console.error('⚠️ [RECURRENCE] Erreur lors de la vérification (non-bloquant):', verifyError);
-    }
-
     // Notifier les spectateurs dans le rayon (une seule notif de série par spectateur)
     notifySpectatorsOfEventSeries(createdEvents as any[]).catch((err) => {
       console.error('❌ [RECURRENCE] Erreur notification spectateurs par rayon (non-bloquant):', err);
@@ -626,12 +609,8 @@ const createRecurringEvents = async (
 
     // Envoyer UN SEUL email par humoriste regroupant toutes les dates (au lieu d'un email par date)
     if (organizer) {
-      console.log(`📧 [RECURRENCE] Démarrage envoi notifications groupées (1 email par humoriste, ${createdEvents.length} dates)...`);
-
       const eventIds = createdEvents.map(e => e._id);
       const eventsForNotification = await EventModel.find({ _id: { $in: eventIds } }).sort({ date: 1 });
-
-      console.log(`📧 [RECURRENCE] ${eventsForNotification.length} événements récupérés pour notification groupée`);
 
       try {
         notifyComediansByMobilityForRecurringGroupAsync(eventsForNotification, {
@@ -639,7 +618,6 @@ const createRecurringEvents = async (
           lastName: organizer.lastName || '',
           email: organizer.email || ''
         });
-        console.log(`✅ [RECURRENCE] Notification groupée lancée (1 email par humoriste avec toutes les dates)`);
       } catch (notifError) {
         console.error(`⚠️ [RECURRENCE] Erreur notification mobilité groupée (non-bloquant):`, notifError);
       }
@@ -671,7 +649,6 @@ const createRecurringEvents = async (
         count: createdEvents.length
       });
       
-      console.log(`✅ [RECURRENCE] Réponse HTTP envoyée avec succès`);
     } catch (responseError) {
       // Si la réponse échoue mais que les événements sont créés, on doit quand même informer
       console.error('❌ [RECURRENCE] Erreur lors de l\'envoi de la réponse HTTP:', responseError);
@@ -2076,73 +2053,3 @@ export const uploadEventImage = async (req: AuthRequest, res: Response): Promise
   }
 };
 
-/**
- * Annuler toute une série d'événements (recurrenceGroupId) et leurs réservations associées.
- * Commodité sans nouvelle logique de remboursement — les réservations payées doivent être
- * annulées individuellement pour obtenir un remboursement via cancelBooking.
- */
-export const cancelEventSeries = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const organizerId = req.user?.id;
-    const { recurrenceGroupId } = req.params;
-
-    if (!organizerId) {
-      res.status(401).json({ message: 'Non authentifié' });
-      return;
-    }
-
-    if (!Types.ObjectId.isValid(recurrenceGroupId)) {
-      res.status(400).json({ message: 'Identifiant de série invalide' });
-      return;
-    }
-
-    const events = await EventModel.find({
-      recurrenceGroupId,
-      organizer: organizerId,
-    });
-
-    if (events.length === 0) {
-      res.status(404).json({ message: 'Aucun événement trouvé pour cette série' });
-      return;
-    }
-
-    // Annulation par occurrence (cf. ADR 0002) :
-    // - Org B (event adossé à une réservation) → annuler la réservation (remboursement par
-    //   police), ce qui cascade l'annulation soft de l'événement.
-    // - Org A (event sans réservation) → soft-cancel direct, sans remboursement.
-    let cancelledBookingCount = 0;
-    let groupInfo: { venueId: string; ownerId: string; venueName: string; requesterId: string } | null = null;
-
-    for (const event of events) {
-      if (event.venueBookingId) {
-        const result = await cancelBookingWithRefund(event.venueBookingId);
-        if (result) {
-          groupInfo = groupInfo ?? result;
-          cancelledBookingCount++;
-        }
-      } else {
-        await cancelEventInternal(event);
-      }
-    }
-
-    // Une seule notification par destinataire pour l'ensemble de la série annulée
-    if (groupInfo) {
-      const n = cancelledBookingCount;
-      const label = n > 1 ? `série de ${n} réservations` : 'réservation';
-      await createNotification(
-        groupInfo.ownerId,
-        'venue_booking_cancelled_by_requester',
-        'Réservation(s) annulée(s) par le demandeur',
-        `La ${label} pour "${groupInfo.venueName}" a été annulée. ${n > 1 ? `${n} créneaux sont` : 'Le créneau est'} de nouveau disponible${n > 1 ? 's' : ''}.`,
-        undefined, undefined, undefined,
-        groupInfo.venueId,
-        undefined
-      );
-    }
-
-    res.status(200).json({ cancelledEventCount: events.length, cancelledBookingCount });
-  } catch (error: any) {
-    console.error('cancelEventSeries error:', error);
-    res.status(500).json({ message: 'Erreur interne du serveur' });
-  }
-};

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { cancelBooking, createVenueCheckoutSession, createVenueGroupCheckoutSession, confirmVenuePayment, confirmVenueGroupPayment, confirmVenueRefund } from '../services/api';
+import { cancelBooking, cancelBookingGroup, createVenueCheckoutSession, createVenueGroupCheckoutSession, confirmVenuePayment, confirmVenueGroupPayment, confirmVenueRefund } from '../services/api';
 import { useMyBookings } from '../hooks/useMyBookings';
 import BookingCardSkeleton from '../components/skeletons/BookingCardSkeleton';
 import { SuccessMessages, ErrorMessages, getErrorMessage } from '../services/systemMessages';
@@ -164,32 +164,15 @@ const MyBookingsPage: React.FC = () => {
     }
   };
 
-  // Annulation de toute une série Org B : boucle cancelBooking (remboursement par occurrence),
-  // chaque événement lié tombe par cascade côté serveur (cf. ADR 0002).
+  // Annulation de toute une série Org B : appel unique booking-centric (ADR 0004).
   const handleCancelSeriesConfirm = async () => {
     if (!cancelConfirmGroup) return;
-    const { groupId, bookings } = cancelConfirmGroup;
-    const toCancel = bookings.filter(
-      (b) => ['PENDING', 'ACCEPTED', 'CONFIRMED'].includes(b.status) && !isDatePast(b.requestedDate)
-    );
+    const { groupId } = cancelConfirmGroup;
     setCancelConfirmGroup(null);
     setCancellingGroupId(groupId);
     try {
-      const results: PromiseSettledResult<void>[] = [];
-      for (const b of toCancel) {
-        try {
-          await cancelBooking(b._id);
-          results.push({ status: 'fulfilled', value: undefined });
-        } catch (e) {
-          results.push({ status: 'rejected', reason: e });
-        }
-      }
-      const failures = results.filter((r) => r.status === 'rejected').length;
-      if (failures > 0) {
-        showError(`${failures} réservation(s) n'ont pas pu être annulées. Veuillez réessayer.`);
-      } else {
-        showSuccess('Série annulée.');
-      }
+      await cancelBookingGroup(groupId);
+      showSuccess('Série annulée.');
       queryClient.invalidateQueries({ queryKey: ['my-bookings'] });
     } catch (err) {
       showError(getErrorMessage(err, ErrorMessages.BOOKING_CANCEL_FAILED));

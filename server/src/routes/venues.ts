@@ -13,7 +13,7 @@ import {
   updateBookingGroupStatusSchema,
 } from '../validation/schemas';
 import { createVenue, listVenues, listMyVenues, getVenue, updateVenue, deleteVenue } from '../controllers/venue';
-import { createBooking, createBookingBatch, listVenueBookings, myBookings, updateBookingStatus, updateBookingGroupStatus, cancelBooking, cancelBookingByOwner, blockDate, listBlockedDates, unblockDate, takenSlots, checkPaymentTimeouts, getRefundEstimate, getMyVenueBookings, fullDates } from '../controllers/venueBooking';
+import { createBooking, createBookingBatch, listVenueBookings, myBookings, updateBookingStatus, updateBookingGroupStatus, cancelBooking, cancelBookingByOwner, cancelBookingGroup, blockDate, listBlockedDates, unblockDate, takenSlots, checkPaymentTimeouts, getRefundEstimate, getMyVenueBookings, fullDates } from '../controllers/venueBooking';
 
 const router = express.Router();
 
@@ -52,6 +52,8 @@ router.post('/:venueId/bookings/batch', authMiddleware, authorizeRoles('ORGANIZE
 router.get('/:venueId/bookings', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateVenueId, asyncHandler(listVenueBookings));
 router.patch('/bookings/:bookingId', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateBookingId, validate(updateBookingStatusSchema), asyncHandler(updateBookingStatus));
 router.patch('/bookings/group/:bookingGroupId', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validate(updateBookingGroupStatusSchema), asyncHandler(updateBookingGroupStatus));
+// Annulation de toute une série de réservations (booking-centric, ADR 0004) — avant /:bookingId pour éviter le conflit de route
+router.delete('/bookings/group/:bookingGroupId', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU', 'COMEDIAN'), asyncHandler(cancelBookingGroup));
 router.delete('/bookings/:bookingId', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU', 'COMEDIAN'), validateBookingId, asyncHandler(cancelBooking));
 // Annulation d'une réservation ACCEPTED par le propriétaire
 router.patch('/bookings/:bookingId/cancel', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU'), validateBookingId, validate(cancelBookingByOwnerSchema), asyncHandler(cancelBookingByOwner));

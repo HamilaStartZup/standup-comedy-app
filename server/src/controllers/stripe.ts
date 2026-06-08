@@ -10,6 +10,7 @@ import { emitVenueBookingPaymentUpdated } from '../services/eventEmitter';
 import { createNotification } from './notification';
 import { computeBookingAmount } from '../utils/venuePricing';
 import { ProcessedStripeEventModel } from '../models/ProcessedStripeEvent';
+import { confirmGroupBookingsPaid, PopulatedGroupBooking } from '../utils/venueBookingHelpers';
 
 const stripe = config.stripe.secretKey ? new Stripe(config.stripe.secretKey) : null;
 
@@ -270,76 +271,7 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
             'venue', 'name owner pricePerEvent pricingType deposit extraFees'
           );
 
-        let confirmedCount = 0;
-        let groupNotifCtx: { requesterId: string; ownerId: string; venueId: string; venueName: string; firstBookingId: string } | null = null;
-
-        for (const booking of bookings) {
-          if (booking.status !== 'ACCEPTED') continue;
-
-          const { amount } = computeBookingAmount(
-            { pricePerEvent: booking.venue.pricePerEvent, pricingType: booking.venue.pricingType as any, deposit: booking.venue.deposit, extraFees: booking.venue.extraFees },
-            { startTime: booking.startTime, endTime: booking.endTime }
-          );
-
-          const updated = await VenueBookingModel.findOneAndUpdate(
-            { _id: booking._id, status: 'ACCEPTED' },
-            {
-              status: 'CONFIRMED',
-              paymentStatus: 'paid',
-              paidAmount: amount,
-              paidAt: new Date(),
-              stripePaymentIntentId: session.payment_intent as string,
-            },
-            { new: true }
-          );
-
-          if (!updated) continue;
-          confirmedCount++;
-          groupNotifCtx = groupNotifCtx ?? {
-            requesterId: updated.requester.toString(),
-            ownerId: booking.venue.owner.toString(),
-            venueId: booking.venue._id.toString(),
-            venueName: booking.venue.name,
-            firstBookingId: updated._id.toString(),
-          };
-
-          emitVenueBookingPaymentUpdated(
-            updated._id.toString(),
-            booking.venue._id.toString(),
-            updated.status,
-            updated.paymentStatus,
-            [updated.requester.toString(), booking.venue.owner.toString()]
-          );
-        }
-
-        if (groupNotifCtx && confirmedCount > 0) {
-          const n = confirmedCount;
-          const ctx = groupNotifCtx;
-          await createNotification(
-            ctx.requesterId,
-            'venue_booking_confirmed',
-            'Réservation confirmée',
-            n > 1
-              ? `Votre paiement pour la série de ${n} réservations chez "${ctx.venueName}" a été reçu. Réservations confirmées !`
-              : `Votre paiement pour "${ctx.venueName}" a été reçu. Réservation confirmée !`,
-            undefined, undefined, undefined,
-            ctx.venueId,
-            ctx.firstBookingId
-          );
-          await createNotification(
-            ctx.ownerId,
-            'venue_booking_confirmed',
-            'Paiement reçu',
-            n > 1
-              ? `Le paiement pour la série de ${n} réservations de "${ctx.venueName}" a été reçu. Réservations confirmées !`
-              : `Le paiement pour la réservation de "${ctx.venueName}" a été reçu. Réservation confirmée !`,
-            undefined, undefined, undefined,
-            ctx.venueId,
-            ctx.firstBookingId
-          );
-        }
-
-        console.log('[Stripe] Lot confirmé après paiement (webhook):', userId, '→ group', bookingGroupId);
+        await confirmGroupBookingsPaid(bookings as PopulatedGroupBooking[], session.payment_intent as string);
       } catch (e) {
         console.error('[Stripe] Erreur confirmation lot après webhook:', e);
         try {
@@ -800,15 +732,25 @@ export const createVenueGroupCheckoutSession = async (req: AuthRequest, res: Res
       return;
     }
 
+    // Pré-calcul par réservation pour éviter un double appel computeBookingAmount
+    type ComputedAmount = { amount: number; requiresPayment: boolean };
+    const bookingAmounts = new Map<string, ComputedAmount>();
+    for (const booking of bookings) {
+      bookingAmounts.set(
+        booking._id.toString(),
+        computeBookingAmount(
+          { pricePerEvent: booking.venue.pricePerEvent, pricingType: booking.venue.pricingType as any, deposit: booking.venue.deposit, extraFees: booking.venue.extraFees },
+          { startTime: booking.startTime, endTime: booking.endTime }
+        )
+      );
+    }
+
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
     let hasPayable = false;
     let minDeadline: Date | undefined;
 
     for (const booking of bookings) {
-      const { amount, requiresPayment } = computeBookingAmount(
-        { pricePerEvent: booking.venue.pricePerEvent, pricingType: booking.venue.pricingType as any, deposit: booking.venue.deposit, extraFees: booking.venue.extraFees },
-        { startTime: booking.startTime, endTime: booking.endTime }
-      );
+      const { amount, requiresPayment } = bookingAmounts.get(booking._id.toString())!;
       if (!requiresPayment || amount === 0) continue;
 
       hasPayable = true;
@@ -861,10 +803,7 @@ export const createVenueGroupCheckoutSession = async (req: AuthRequest, res: Res
     });
 
     for (const booking of bookings) {
-      const { requiresPayment } = computeBookingAmount(
-        { pricePerEvent: booking.venue.pricePerEvent, pricingType: booking.venue.pricingType as any, deposit: booking.venue.deposit, extraFees: booking.venue.extraFees },
-        { startTime: booking.startTime, endTime: booking.endTime }
-      );
+      const { requiresPayment } = bookingAmounts.get(booking._id.toString())!;
       if (!requiresPayment) continue;
       booking.paymentStatus = 'pending';
       booking.stripeSessionId = session.id;
@@ -929,77 +868,8 @@ export const confirmVenueGroupPayment = async (req: AuthRequest, res: Response):
         'venue', 'name owner pricePerEvent pricingType deposit extraFees'
       );
 
-    let confirmed = 0;
-    let groupNotifCtx: { requesterId: string; ownerId: string; venueId: string; venueName: string; firstBookingId: string } | null = null;
+    const confirmed = await confirmGroupBookingsPaid(bookings as PopulatedGroupBooking[], session.payment_intent as string);
 
-    for (const booking of bookings) {
-      if (booking.status !== 'ACCEPTED') continue;
-
-      const { amount } = computeBookingAmount(
-        { pricePerEvent: booking.venue.pricePerEvent, pricingType: booking.venue.pricingType as any, deposit: booking.venue.deposit, extraFees: booking.venue.extraFees },
-        { startTime: booking.startTime, endTime: booking.endTime }
-      );
-
-      // Atomic update — prevents race condition with webhook handler
-      const updated = await VenueBookingModel.findOneAndUpdate(
-        { _id: booking._id, status: 'ACCEPTED' },
-        {
-          status: 'CONFIRMED',
-          paymentStatus: 'paid',
-          paidAmount: amount,
-          paidAt: new Date(),
-          stripePaymentIntentId: session.payment_intent as string,
-        },
-        { new: true }
-      );
-
-      if (!updated) continue;
-      confirmed += 1;
-      groupNotifCtx = groupNotifCtx ?? {
-        requesterId: updated.requester.toString(),
-        ownerId: booking.venue.owner.toString(),
-        venueId: booking.venue._id.toString(),
-        venueName: booking.venue.name,
-        firstBookingId: updated._id.toString(),
-      };
-
-      emitVenueBookingPaymentUpdated(
-        updated._id.toString(),
-        booking.venue._id.toString(),
-        updated.status,
-        updated.paymentStatus,
-        [updated.requester.toString(), booking.venue.owner.toString()]
-      );
-    }
-
-    if (groupNotifCtx && confirmed > 0) {
-      const n = confirmed;
-      const ctx = groupNotifCtx;
-      await createNotification(
-        ctx.requesterId,
-        'venue_booking_confirmed',
-        'Réservation confirmée',
-        n > 1
-          ? `Votre paiement pour la série de ${n} réservations chez "${ctx.venueName}" a été reçu. Réservations confirmées !`
-          : `Votre paiement pour "${ctx.venueName}" a été reçu. Réservation confirmée !`,
-        undefined, undefined, undefined,
-        ctx.venueId,
-        ctx.firstBookingId
-      );
-      await createNotification(
-        ctx.ownerId,
-        'venue_booking_confirmed',
-        'Paiement reçu',
-        n > 1
-          ? `Le paiement pour la série de ${n} réservations de "${ctx.venueName}" a été reçu. Réservations confirmées !`
-          : `Le paiement pour la réservation de "${ctx.venueName}" a été reçu. Réservation confirmée !`,
-        undefined, undefined, undefined,
-        ctx.venueId,
-        ctx.firstBookingId
-      );
-    }
-
-    console.log('[Stripe] Lot confirmé après paiement (confirm):', userId, '→ group', bookingGroupId, `(${confirmed} réservations)`);
     res.status(200).json({ message: 'Lot confirmé', bookingGroupId, confirmed });
   } catch (error: any) {
     console.error('Stripe confirmVenueGroupPayment error:', error);

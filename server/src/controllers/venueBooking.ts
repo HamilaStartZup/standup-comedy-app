@@ -6,8 +6,8 @@ import { VenueBookingModel, VenueBookingDocument, VenueBookingStatus } from '../
 import { VenueBlockedDateModel } from '../models/VenueBlockedDate';
 import { NotificationModel } from '../models/Notification';
 import { stripe } from './stripe';
-import { EventModel } from '../models/Event';
-import { cancelEventInternal } from '../services/eventCancellation';
+import { EventModel, EventDocument } from '../models/Event';
+import { cancelEventInternal, notifySeriesCancellation } from '../services/eventCancellation';
 import { config } from '../config/env';
 import {
   emitVenueBookingStatusChanged,
@@ -21,7 +21,9 @@ import {
   computePaymentDeadlineAt,
   decideInitialBookingStatus,
   checkSlotConflict,
+  checkSlotConflictBatch,
 } from '../utils/venueBookingHelpers';
+import { parseCalendarDate, calendarWeekday, isCalendarDatePast } from '../utils/calendarDate';
 
 function hasBookingEnded(requestedDate: Date, endTime: string): boolean {
   const [endHour, endMinute] = endTime.split(':').map(Number);
@@ -147,17 +149,24 @@ async function applyBookingCancellationRefund(
 /**
  * Annule l'événement lié à une réservation (s'il existe). Sens unique booking → event.
  * Isolé : un échec n'interrompt jamais l'annulation de la réservation ni une boucle batch.
+ * `skipNotify` permet de différer les notifications lors d'une annulation de série.
+ * Retourne l'EventDocument annulé si trouvé (pour collecte dans cancelBookingGroup).
  */
 async function cascadeCancelLinkedEvent(
   bookingId: unknown,
-  reason?: string
-): Promise<void> {
+  reason?: string,
+  options: { skipNotify?: boolean } = {}
+): Promise<import('../models/Event').EventDocument | null> {
   try {
     const event = await EventModel.findOne({ venueBookingId: bookingId as mongoose.Types.ObjectId });
-    if (event) await cancelEventInternal(event, reason);
+    if (event) {
+      await cancelEventInternal(event, reason, options);
+      return event;
+    }
   } catch (err) {
     console.error('[Venue] Échec cascade annulation événement lié:', err, { bookingId });
   }
+  return null;
 }
 
 /**
@@ -172,9 +181,13 @@ interface CancelledBookingInfo {
   venueName: string;
   requesterId: string;
   wasRefunded: boolean;
+  cancelledEvent: EventDocument | null;
 }
 
-export async function cancelBookingWithRefund(bookingId: unknown): Promise<CancelledBookingInfo | null> {
+export async function cancelBookingWithRefund(
+  bookingId: unknown,
+  options: { skipNotify?: boolean } = {}
+): Promise<CancelledBookingInfo | null> {
   const booking = await VenueBookingModel.findById(bookingId as mongoose.Types.ObjectId)
     .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string; cancellationPolicy?: CancellationPolicy } }>(
       'venue', 'cancellationPolicy owner name'
@@ -208,9 +221,9 @@ export async function cancelBookingWithRefund(bookingId: unknown): Promise<Cance
     [requesterId, ownerId]
   );
 
-  await cascadeCancelLinkedEvent(booking._id);
+  const cancelledEvent = await cascadeCancelLinkedEvent(booking._id, undefined, options);
 
-  return { venueId, ownerId, venueName, requesterId, wasRefunded: booking.paymentStatus === 'refunded' };
+  return { venueId, ownerId, venueName, requesterId, wasRefunded: booking.paymentStatus === 'refunded', cancelledEvent };
 }
 
 // ─── Créer une demande de réservation ────────────────────────────────────────
@@ -452,28 +465,42 @@ export const createBookingBatch = async (req: AuthRequest, res: Response): Promi
     const bookingGroupId = new mongoose.Types.ObjectId();
     const isAutomatic = venue.bookingMode === 'automatic';
 
-    const created: any[] = [];
+    // Non-transactionnel par choix (ADR 0001) : chaque réservation est indépendante.
+    const created: VenueBookingDocument[] = [];
     const unavailable: { date: string; reason: string }[] = [];
 
     const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
-    for (const dateStr of dates) {
-      const date = new Date(dateStr);
-
-      if (venue.disabledWeekdays && venue.disabledWeekdays.includes(date.getDay())) {
-        unavailable.push({ date: dateStr, reason: 'Cette salle n\'est pas disponible ce jour-là.' });
-        continue;
+    // Pré-filtrage (weekday + time) avant le slot check batch (2 requêtes pour N dates)
+    type DateEntry = { dateStr: string; date: Date; needsSlotCheck: boolean; earlyReject?: string };
+    const entries: DateEntry[] = dates.map((dateStr) => {
+      const date = parseCalendarDate(dateStr);
+      if (venue.disabledWeekdays && venue.disabledWeekdays.includes(calendarWeekday(dateStr))) {
+        return { dateStr, date, needsSlotCheck: false, earlyReject: 'Cette salle n\'est pas disponible ce jour-là.' };
       }
-
       const tr = venue.timeRestrictions;
       if (tr && startTime && endTime && pricingType === 'heure' && tr.openTime && tr.closeTime) {
         if (toMinutes(startTime) < toMinutes(tr.openTime) || toMinutes(endTime) > toMinutes(tr.closeTime)) {
-          unavailable.push({ date: dateStr, reason: `Les réservations à l'heure sont possibles uniquement entre ${tr.openTime} et ${tr.closeTime}.` });
-          continue;
+          return { dateStr, date, needsSlotCheck: false, earlyReject: `Les réservations à l'heure sont possibles uniquement entre ${tr.openTime} et ${tr.closeTime}.` };
         }
       }
+      return { dateStr, date, needsSlotCheck: true };
+    });
 
-      const slotCheck = await checkSlotConflict(venueId, date, startTime, endTime, pricingType);
+    const slotCheckEntries = entries.filter((e) => e.needsSlotCheck);
+    const slotResults = await checkSlotConflictBatch(
+      venueId,
+      slotCheckEntries.map((e) => ({ date: e.date, startTime: startTime ?? undefined, endTime: endTime ?? undefined, pricingType: pricingType ?? undefined }))
+    );
+    const slotResultMap = new Map(slotCheckEntries.map((e, i) => [e.dateStr, slotResults[i]]));
+
+    for (const { dateStr, date, needsSlotCheck, earlyReject } of entries) {
+      if (!needsSlotCheck) {
+        unavailable.push({ date: dateStr, reason: earlyReject! });
+        continue;
+      }
+
+      const slotCheck = slotResultMap.get(dateStr)!;
       if (slotCheck.ok === false) {
         unavailable.push({ date: dateStr, reason: slotCheck.reason });
         continue;
@@ -798,7 +825,11 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
 
     if (status === 'ACCEPTED') {
       const venueDoc = await VenueModel.findById(booking.venue._id);
-      acceptBooking(booking, venueDoc ?? { pricePerEvent: 0 });
+      if (!venueDoc) {
+        res.status(409).json({ message: 'Cette salle n\'existe plus, impossible d\'accepter la réservation' });
+        return;
+      }
+      acceptBooking(booking, venueDoc);
     } else {
       refuseBooking(booking);
     }
@@ -903,7 +934,7 @@ export const updateBookingGroupStatus = async (req: AuthRequest, res: Response):
       return;
     }
 
-    const updated: any[] = [];
+    const updated: typeof pendingBookings = [];
 
     // Compteurs par issue pour la notif groupée post-boucle
     type NotifCtx = { requesterId: string; venueId: string; venueName: string; firstBookingId: string };
@@ -911,6 +942,14 @@ export const updateBookingGroupStatus = async (req: AuthRequest, res: Response):
     let acceptedCount = 0;
     let confirmedCount = 0;
     let groupCtx: NotifCtx | null = null;
+
+    // Pré-chargement batch des conflits de créneau pour les bookings non exclus (2 requêtes au lieu de N)
+    const toSlotCheck = pendingBookings.filter((b) => !excludedBookingIds.includes(b._id.toString()) && status !== 'REFUSED');
+    const batchSlotResults = await checkSlotConflictBatch(
+      pendingBookings[0].venue._id.toString(),
+      toSlotCheck.map((b) => ({ date: b.requestedDate, startTime: b.startTime, endTime: b.endTime, pricingType: b.venue.pricingType }))
+    );
+    const slotCheckMap = new Map(toSlotCheck.map((b, i) => [b._id.toString(), batchSlotResults[i]]));
 
     for (const booking of pendingBookings) {
       const isExcluded = excludedBookingIds.includes(booking._id.toString());
@@ -920,15 +959,8 @@ export const updateBookingGroupStatus = async (req: AuthRequest, res: Response):
       if (isExcluded || status === 'REFUSED') {
         refuseBooking(booking);
       } else {
-        // Vérifier le conflit de créneau avant acceptation
         // NOTE: non atomique (cf. commentaire dans checkSlotConflict)
-        const slotCheck = await checkSlotConflict(
-          booking.venue._id.toString(),
-          booking.requestedDate,
-          booking.startTime,
-          booking.endTime,
-          booking.venue.pricingType
-        );
+        const slotCheck = slotCheckMap.get(booking._id.toString())!;
         if (slotCheck.ok === false) {
           refuseBooking(booking);
           booking.ownerResponse = booking.ownerResponse
@@ -1912,6 +1944,86 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
     res.status(200).json({ expired: expiredCount, reminded: reminderCount });
   } catch (error) {
     console.error('Erreur checkPaymentTimeouts:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+};
+
+// ─── Annulation de série booking-centric (ADR 0004) ──────────────────────────
+
+/**
+ * Annule toutes les réservations non passées d'un groupe (PENDING/ACCEPTED/CONFIRMED),
+ * requester-scoped. Collecte les événements annulés et envoie des notifications groupées
+ * (1 notif proprio + 1 notif/email par participant distinct via notifySeriesCancellation).
+ */
+export const cancelBookingGroup = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const requesterId = req.user?.id;
+    const { bookingGroupId } = req.params;
+
+    if (!requesterId) {
+      res.status(401).json({ message: 'Non authentifié' });
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(bookingGroupId)) {
+      res.status(400).json({ message: 'ID de groupe invalide' });
+      return;
+    }
+
+    const bookings = await VenueBookingModel.find({
+      bookingGroupId,
+      requester: requesterId,
+      status: { $in: ['PENDING', 'ACCEPTED', 'CONFIRMED'] },
+    }).sort({ requestedDate: 1 });
+
+    const cancellable = bookings.filter((b) => {
+      const dateStr = (b.requestedDate as Date).toISOString().slice(0, 10);
+      return !isCalendarDatePast(dateStr);
+    });
+
+    if (cancellable.length === 0) {
+      res.status(404).json({ message: 'Aucune réservation annulable pour ce groupe' });
+      return;
+    }
+
+    let groupInfo: { venueId: string; ownerId: string; venueName: string } | null = null;
+    const cancelledEvents: EventDocument[] = [];
+    let cancelledCount = 0;
+
+    for (const booking of cancellable) {
+      const result = await cancelBookingWithRefund(booking._id, { skipNotify: true });
+      if (!result) continue;
+      cancelledCount++;
+      if (!groupInfo) {
+        groupInfo = { venueId: result.venueId, ownerId: result.ownerId, venueName: result.venueName };
+      }
+      if (result.cancelledEvent) {
+        cancelledEvents.push(result.cancelledEvent);
+      }
+    }
+
+    if (groupInfo && cancelledCount > 0) {
+      const { ownerId, venueId, venueName } = groupInfo;
+      const n = cancelledCount;
+      await createNotification(
+        ownerId,
+        'venue_booking_cancelled_by_requester',
+        'Série de réservations annulée',
+        n > 1
+          ? `${n} réservations pour "${venueName}" ont été annulées par le demandeur. Les créneaux sont de nouveau disponibles.`
+          : `Une réservation pour "${venueName}" a été annulée par le demandeur. Le créneau est de nouveau disponible.`,
+        undefined, undefined, undefined,
+        venueId
+      );
+    }
+
+    if (cancelledEvents.length > 0) {
+      await notifySeriesCancellation(cancelledEvents);
+    }
+
+    res.status(200).json({ cancelled: cancelledCount });
+  } catch (error) {
+    console.error('Erreur cancelBookingGroup:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 };

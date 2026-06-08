@@ -72,6 +72,7 @@ const overlaps = (aStart: string, aEnd: string, bStart: string, bEnd: string) =>
 const parseLocalDate = (s: string) => { const [y, mo, d] = s.split('-').map(Number); return new Date(y, mo - 1, d); };
 const toDateStr = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const formatDateFR = (s: string) => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}`; };
 const FULL_DAY_TYPES = ['journee', 'soiree', 'forfait', 'gratuit', 'pourcentage_billetterie'];
 
 interface PriceBreakdownData {
@@ -415,6 +416,27 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
     return d;
   }, [minBookingDelay]);
 
+  // Mêmes sources d'indisponibilité que le calendrier du mode unique,
+  // appliquées aux dates générées par la récurrence.
+  const unavailableDateSet = useMemo(() => {
+    const set = new Set<string>();
+    fullDayBlockedDates.forEach((d) => set.add(toDateStr(d)));
+    noAvailableSlotsDates.forEach((d) => set.add(toDateStr(d)));
+    return set;
+  }, [fullDayBlockedDates, noAvailableSlotsDates]);
+
+  const { availableRecurringDates, excludedRecurringDates } = useMemo(() => {
+    const available: string[] = [];
+    const excluded: string[] = [];
+    const minStr = toDateStr(minSelectableDate);
+    for (const d of recurringDates) {
+      const dayOfWeek = parseLocalDate(d).getDay();
+      const unavailable = unavailableDateSet.has(d) || disabledWeekdays.includes(dayOfWeek) || d < minStr;
+      (unavailable ? excluded : available).push(d);
+    }
+    return { availableRecurringDates: available, excludedRecurringDates: excluded };
+  }, [recurringDates, unavailableDateSet, disabledWeekdays, minSelectableDate]);
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!selectedDate) newErrors.date = 'La date est requise.';
@@ -453,8 +475,12 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
     e.preventDefault();
 
     if (bookingMode === 'recurring') {
-      if (recurringDates.length === 0) {
-        setErrors({ recurrence: 'Aucune date générée. Vérifiez les dates et le motif de récurrence.' });
+      if (availableRecurringDates.length === 0) {
+        setErrors({
+          recurrence: recurringDates.length > 0
+            ? 'Toutes les dates générées sont indisponibles. Ajustez le motif ou la période.'
+            : 'Aucune date générée. Vérifiez les dates et le motif de récurrence.',
+        });
         return;
       }
       const recurringErrors: Record<string, string> = {};
@@ -476,7 +502,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
       const { startTime, endTime } = resolveTimeSlot();
       try {
         const result = await createBookingBatch(venueId, {
-          dates: recurringDates,
+          dates: availableRecurringDates,
           ...(startTime && { startTime }),
           ...(endTime && { endTime }),
           message: formData.message || undefined,
@@ -484,7 +510,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
         setBatchCreatedCount(result.created.length);
         setBatchUnavailable(result.unavailable);
         if (result.created.length > 0) {
-          showSuccess(`${result.created.length} réservation(s) créée(s) sur ${recurringDates.length} demandée(s).`);
+          showSuccess(`${result.created.length} réservation(s) créée(s) sur ${availableRecurringDates.length} demandée(s).`);
           onBookingCreated?.();
         }
         if (result.unavailable.length === 0) {
@@ -782,35 +808,46 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
               <div style={{ marginBottom: 14 }}>
                 <p style={{ margin: '0 0 6px 0', fontSize: 12, color: '#888' }}>
                   Mode de tarification : <strong style={{ color: '#ccc' }}>{PRICING_TYPE_LABELS_DISPLAY[pricingType as PricingType] || 'À l\'heure'}</strong>
-                  {recurringDates.length > 0 && <span style={{ marginLeft: 8, color: '#666' }}>— par réservation</span>}
+                  {availableRecurringDates.length > 0 && <span style={{ marginLeft: 8, color: '#666' }}>— par réservation</span>}
                 </p>
                 <PriceBreakdown breakdown={priceBreakdown} currency={currency} />
-                {recurringDates.length > 0 && (
+                {availableRecurringDates.length > 0 && (
                   <div style={{ marginTop: 8, padding: '8px 14px', background: 'rgba(255,65,108,0.08)', border: '1px solid rgba(255,65,108,0.2)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, color: '#ccc' }}>
-                      Total estimé ({recurringDates.length} réservation{recurringDates.length > 1 ? 's' : ''})
+                      Total estimé ({availableRecurringDates.length} réservation{availableRecurringDates.length > 1 ? 's' : ''})
                     </span>
                     <span style={{ fontSize: 15, fontWeight: 800, color: '#ff8fa3' }}>
-                      {(priceBreakdown.total * recurringDates.length).toLocaleString('fr-FR')} {currency}
+                      {(priceBreakdown.total * availableRecurringDates.length).toLocaleString('fr-FR')} {currency}
                     </span>
                   </div>
                 )}
               </div>
             )}
 
-            {recurringDates.length > 0 && (
+            {availableRecurringDates.length > 0 && (
               <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, fontSize: 13, color: '#93c5fd' }}>
-                <strong>{recurringDates.length} date(s) sélectionnée(s)</strong>
-                {recurringDates.length <= 10 && (
+                <strong>{availableRecurringDates.length} date(s) sélectionnée(s)</strong>
+                {availableRecurringDates.length <= 10 && (
                   <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    {recurringDates.map((d) => (
-                      <span key={d} style={{ background: 'rgba(59,130,246,0.15)', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>{d}</span>
+                    {availableRecurringDates.map((d) => (
+                      <span key={d} style={{ background: 'rgba(59,130,246,0.15)', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>{formatDateFR(d)}</span>
                     ))}
                   </div>
                 )}
-                {recurringDates.length > 10 && (
-                  <span style={{ fontSize: 11, color: '#64a4e4', marginLeft: 8 }}>({recurringDates.slice(0, 5).join(', ')}…)</span>
+                {availableRecurringDates.length > 10 && (
+                  <span style={{ fontSize: 11, color: '#64a4e4', marginLeft: 8 }}>({availableRecurringDates.slice(0, 5).map(formatDateFR).join(', ')}…)</span>
                 )}
+              </div>
+            )}
+
+            {excludedRecurringDates.length > 0 && (
+              <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: 8, fontSize: 12, color: '#cbd5e1' }}>
+                <strong>{excludedRecurringDates.length} date(s) indisponible(s)</strong> — exclue(s) de la demande
+                <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {excludedRecurringDates.map((d) => (
+                    <span key={d} style={{ background: 'rgba(148,163,184,0.15)', borderRadius: 4, padding: '2px 8px', fontSize: 11, textDecoration: 'line-through', opacity: 0.8 }}>{formatDateFR(d)}</span>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -819,7 +856,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
                 <strong>{batchUnavailable.length} date(s) non disponible(s) :</strong>
                 <ul style={{ margin: '6px 0 0 0', paddingLeft: 16 }}>
                   {batchUnavailable.map(({ date, reason }) => (
-                    <li key={date}>{date} — {reason}</li>
+                    <li key={date}>{formatDateFR(date)} — {reason}</li>
                   ))}
                 </ul>
               </div>
@@ -1028,7 +1065,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
             {isSubmitting
             ? 'Envoi en cours...'
             : bookingMode === 'recurring'
-              ? `Envoyer ${recurringDates.length > 0 ? recurringDates.length + ' demande(s)' : 'la série'}`
+              ? `Envoyer ${availableRecurringDates.length > 0 ? availableRecurringDates.length + ' demande(s)' : 'la série'}`
               : 'Envoyer la demande'
           }
           </button>

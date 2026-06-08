@@ -520,8 +520,9 @@ export const cancelBooking = async (bookingId: string): Promise<void> => {
   await api.delete(`/venues/bookings/${bookingId}`);
 };
 
-export const cancelEventSeries = async (recurrenceGroupId: string): Promise<{ cancelledEventCount: number; cancelledBookingCount: number }> => {
-  const response = await api.delete<{ cancelledEventCount: number; cancelledBookingCount: number }>(`/events/series/${recurrenceGroupId}`);
+
+export const cancelBookingGroup = async (bookingGroupId: string): Promise<{ cancelled: number }> => {
+  const response = await api.delete<{ cancelled: number }>(`/venues/bookings/group/${bookingGroupId}`);
   return response.data;
 };
 

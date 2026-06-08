@@ -14,7 +14,6 @@ import {
   getEvents,
   getEventById,
   deleteEvent,
-  cancelEventSeries,
   getOrganizerEvents,
   getVenueBookingIdsInUse,
   notifyHumorists,
@@ -121,8 +120,6 @@ router.get('/:eventId', asyncHandler(getEventById));
 // PUT /api/events/:eventId - Mettre à jour un évènement
 router.put('/:eventId', authMiddleware, validate(updateEventSchema), asyncHandler(updateEvent));
 
-// DELETE /api/events/series/:recurrenceGroupId - Annuler toute une série
-router.delete('/series/:recurrenceGroupId', authMiddleware, asyncHandler(cancelEventSeries));
 // DELETE /api/events/:eventId - Supprimer un évènement
 router.delete('/:eventId', authMiddleware, asyncHandler(deleteEvent));
 
