@@ -149,8 +149,8 @@ export default function SpectatorProfilePage() {
 
   const pageStyle: CSSProperties = {
     minHeight: 'calc(100vh - 60px)',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
-    color: '#fff',
+    background: 'var(--ccc-bg-gradient)',
+    color: 'var(--ccc-text-primary)',
     padding: 24,
   };
   const containerStyle: CSSProperties = {
@@ -158,12 +158,13 @@ export default function SpectatorProfilePage() {
     margin: '0 auto',
   };
   const cardStyle: CSSProperties = {
-    background: '#fff',
-    color: '#1a1a2e',
+    background: 'var(--ccc-bg-elevated)',
+    color: 'var(--ccc-text-primary)',
     borderRadius: 12,
     padding: 24,
     marginBottom: 24,
-    border: '1px solid rgba(0,0,0,0.1)',
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
   };
   const titleStyle: CSSProperties = {
     marginTop: 0,
@@ -173,7 +174,7 @@ export default function SpectatorProfilePage() {
   const subtitleStyle: CSSProperties = {
     marginTop: 0,
     marginBottom: 20,
-    color: '#666',
+    color: 'var(--ccc-text-secondary)',
     fontSize: '0.95rem',
   };
   const inputStyle: CSSProperties = {
@@ -233,7 +234,7 @@ export default function SpectatorProfilePage() {
       <Navbar />
       <div style={pageStyle}>
         <div style={containerStyle}>
-          <h1 style={{ marginBottom: 8, fontSize: '1.75rem' }}>Mon profil</h1>
+          <h1 className="ccc-page-title" style={{ marginBottom: 8 }}>Mon profil</h1>
           <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: 24 }}>
             Modifiez les informations renseignées lors de votre inscription.
           </p>

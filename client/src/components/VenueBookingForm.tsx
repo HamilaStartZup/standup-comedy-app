@@ -128,7 +128,7 @@ const PriceBreakdown: React.FC<{ breakdown: PriceBreakdownData; currency: string
         marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.12)',
       }}>
         <span style={{ color: '#fff', fontWeight: 700 }}>Total à payer</span>
-        <span style={{ color: '#ff416c', fontWeight: 800, fontSize: 15 }}>{total.toLocaleString('fr-FR')} {currency}</span>
+        <span style={{ color: '#7c3aed', fontWeight: 800, fontSize: 15 }}>{total.toLocaleString('fr-FR')} {currency}</span>
       </div>
     </div>
   );
@@ -557,11 +557,11 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    background: 'rgba(0,0,0,0.4)',
-    border: '1px solid rgba(255,255,255,0.12)',
+    background: 'var(--ccc-bg-surface)',
+    border: '1px solid var(--ccc-border-subtle)',
     borderRadius: 10,
     padding: '10px 14px',
-    color: '#fff',
+    color: 'var(--ccc-text-primary)',
     fontSize: 14,
     outline: 'none',
     boxSizing: 'border-box',
@@ -571,7 +571,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
     display: 'block',
     fontSize: 12,
     fontWeight: 600,
-    color: '#aaa',
+    color: 'var(--ccc-text-muted)',
     marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
@@ -604,11 +604,10 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
   return (
     <div
       style={{
-        background: 'rgba(0,0,0,0.3)',
-        border: '1px solid rgba(255,65,108,0.3)',
+        border: '1px solid var(--ccc-border-subtle)',
         borderRadius: 16,
         padding: 24,
-        boxShadow: '0 4px 24px rgba(255,65,108,0.1)',
+        boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
       }}
     >
       <style>{`
@@ -617,10 +616,10 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
         }
       `}</style>
 
-      <h3 style={{ margin: '0 0 4px 0', fontSize: 18, fontWeight: 700, color: '#fff' }}>
+      <h3 style={{ margin: '0 0 4px 0', fontSize: 18, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>
         Réserver cette salle
       </h3>
-      <p style={{ margin: '0 0 16px 0', fontSize: 13, color: '#888' }}>{venueName}</p>
+      <p style={{ margin: '0 0 16px 0', fontSize: 13, color: 'var(--ccc-text-muted)' }}>{venueName}</p>
 
       {/* Sélecteur de mode */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
@@ -631,8 +630,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
             onClick={() => { setBookingMode(m); setErrors({}); setBatchCreatedCount(null); setBatchUnavailable([]); }}
             style={{
               flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700,
-              background: bookingMode === m ? 'linear-gradient(135deg,#ff416c,#ff4b2b)' : 'rgba(255,255,255,0.06)',
-              color: bookingMode === m ? '#fff' : '#aaa',
+              background: bookingMode === m ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-surface)',
+              color: bookingMode === m ? '#fff' : 'var(--ccc-text-secondary)',
             }}
           >
             {m === 'unique' ? 'Réservation unique' : 'Série récurrente'}
@@ -653,10 +652,10 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
                     type="button"
                     onClick={() => setRecurrenceType(t)}
                     style={{
-                      flex: 1, padding: '8px 4px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)',
+                      flex: 1, padding: '8px 4px', borderRadius: 8, border: 'none',
                       cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                      background: recurrenceType === t ? 'rgba(255,65,108,0.18)' : 'rgba(0,0,0,0.3)',
-                      color: recurrenceType === t ? '#ff8fa3' : '#aaa',
+                      background: recurrenceType === t ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-surface)',
+                      color: recurrenceType === t ? '#fff' : 'var(--ccc-text-secondary)',
                     }}
                   >
                     {t === 'daily' ? 'Quotidien' : t === 'weekly' ? 'Hebdo' : 'Mensuel'}
@@ -679,10 +678,10 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
                           active ? recurrenceWeeklyDays.filter((d) => d !== idx) : [...recurrenceWeeklyDays, idx]
                         )}
                         style={{
-                          padding: '5px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.12)',
+                          padding: '5px 10px', borderRadius: 6, border: 'none',
                           cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                          background: active ? 'rgba(255,65,108,0.18)' : 'rgba(0,0,0,0.3)',
-                          color: active ? '#ff8fa3' : '#aaa',
+                          background: active ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-surface)',
+                          color: active ? '#fff' : 'var(--ccc-text-secondary)',
                         }}
                       >
                         {label}
@@ -812,7 +811,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
                 </p>
                 <PriceBreakdown breakdown={priceBreakdown} currency={currency} />
                 {availableRecurringDates.length > 0 && (
-                  <div style={{ marginTop: 8, padding: '8px 14px', background: 'rgba(255,65,108,0.08)', border: '1px solid rgba(255,65,108,0.2)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ marginTop: 8, padding: '8px 14px', background: 'rgba(124, 58, 237,0.08)', border: '1px solid rgba(124, 58, 237,0.2)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, color: '#ccc' }}>
                       Total estimé ({availableRecurringDates.length} réservation{availableRecurringDates.length > 1 ? 's' : ''})
                     </span>
@@ -878,10 +877,10 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
           <label style={labelStyle}>Date souhaitée</label>
           <div
             style={{
-              background: 'rgba(0,0,0,0.3)',
+              background: 'var(--ccc-bg-surface)',
               border: errors.date
                 ? '1px solid #ef4444'
-                : '1px solid rgba(255,255,255,0.1)',
+                : '1px solid var(--ccc-border-subtle)',
               borderRadius: 10,
               padding: '8px 4px',
             }}
@@ -1052,8 +1051,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
               width: '100%',
               padding: '14px',
               background: isSubmitting
-                ? 'rgba(255,65,108,0.5)'
-                : 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                ? 'rgba(124, 58, 237,0.5)'
+                : 'var(--ccc-accent-gradient)',
               color: '#fff',
               border: 'none',
               borderRadius: 10,

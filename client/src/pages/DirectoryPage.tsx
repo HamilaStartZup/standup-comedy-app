@@ -113,7 +113,8 @@ const DirectoryPage: React.FC = () => {
   // Styles
   const mainContainerStyle = {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'var(--ccc-bg-gradient)',
+    color: 'var(--ccc-text-primary)',
     fontFamily: 'Arial, sans-serif',
   };
 
@@ -124,19 +125,19 @@ const DirectoryPage: React.FC = () => {
   };
 
   const titleStyle = {
-    fontSize: '2.5em',
     marginBottom: '10px',
-    color: '#ffffff',
     textAlign: 'center' as const,
-    fontWeight: 'bold',
+    fontSize: '2.5em',
+    color: 'var(--ccc-accent)',
+    fontWeight: 700,
+    letterSpacing: '-0.02em',
   };
 
   const subtitleStyle = {
     fontSize: '1.2em',
-    color: '#ffffff',
+    color: 'var(--ccc-text-secondary)',
     textAlign: 'center' as const,
     marginBottom: '40px',
-    opacity: 0.9,
   };
 
   const filtersStyle = {
@@ -386,12 +387,12 @@ const DirectoryPage: React.FC = () => {
                 width: '40px',
                 height: '40px',
                 border: '4px solid rgba(255, 255, 255, 0.3)',
-                borderTop: '4px solid #ffffff',
+                borderTop: '4px solid var(--ccc-accent)',
                 borderRadius: '50%',
                 animation: 'spin 1s linear infinite',
                 margin: '0 auto 20px',
               }}></div>
-              <p style={{ color: '#ffffff', fontSize: '18px' }}>Chargement du répertoire...</p>
+              <p style={{ color: 'var(--ccc-text-secondary)', fontSize: '18px' }}>Chargement du répertoire...</p>
             </div>
           </div>
         </div>
@@ -656,10 +657,10 @@ const DirectoryPage: React.FC = () => {
         ) : (
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
             <div style={{ fontSize: '48px', marginBottom: '20px' }}>👥</div>
-            <h3 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '10px' }}>
+            <h3 style={{ color: 'var(--ccc-text-primary)', fontSize: '24px', marginBottom: '10px' }}>
               Aucun utilisateur trouvé
             </h3>
-            <p style={{ color: '#ffffff', opacity: 0.8 }}>
+            <p style={{ color: 'var(--ccc-text-secondary)' }}>
               {searchTerm || roleFilter !== 'all'
                 ? 'Essayez de modifier vos critères de recherche'
                 : 'Aucun utilisateur inscrit pour le moment'}

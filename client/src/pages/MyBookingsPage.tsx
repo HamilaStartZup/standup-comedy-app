@@ -348,7 +348,7 @@ const MyBookingsPage: React.FC = () => {
         data-booking-id={booking._id}
         style={{
           backgroundColor: '#f9fafb', borderRadius: 14, padding: 14,
-          border: isHighlighted ? '2px solid #ff416c' : '1px solid rgba(0,0,0,0.08)',
+          border: isHighlighted ? '2px solid #7c3aed' : '1px solid rgba(0,0,0,0.08)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 12, opacity: past ? 0.7 : 1, flexWrap: 'wrap',
         }}
@@ -416,7 +416,7 @@ const MyBookingsPage: React.FC = () => {
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a1a2e 0%, #331f41 100%)' }}>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ccc-bg-surface)' }}>
                 <span style={{ fontSize: 48 }}>🏛️</span>
               </div>
             )}
@@ -487,7 +487,7 @@ const MyBookingsPage: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)', paddingBottom: 60, padding: '20px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ccc-bg-gradient)', color: 'var(--ccc-text-primary)', padding: '20px', paddingBottom: 60 }}>
       {/* Modal de confirmation d'annulation */}
       {cancelConfirmBooking && (
         <div style={{
@@ -496,30 +496,33 @@ const MyBookingsPage: React.FC = () => {
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
         }}>
           <div style={{
-            background: 'linear-gradient(135deg, #1e1b2e, #2a1f3d)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 16, padding: 28, maxWidth: 440, width: '100%',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+            background: 'var(--ccc-bg-elevated)',
+            border: '1px solid var(--ccc-border-subtle)',
+            borderRadius: 16,
+            padding: 28,
+            maxWidth: 440,
+            width: '100%',
+            boxShadow: '0 12px 40px rgba(15, 23, 42, 0.12)',
           }}>
-            <h3 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700, color: '#fff' }}>
+            <h3 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>
               Confirmer l'annulation
             </h3>
-            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#888' }}>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--ccc-text-muted)' }}>
               {cancelConfirmBooking.venue?.name} — {new Date(cancelConfirmBooking.requestedDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
 
             {/* Infos remboursement si booking payé */}
             {refundEstimate && cancelConfirmBooking.paidAmount ? (
-              <div style={{ marginBottom: 20, padding: '14px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }}>
+              <div style={{ marginBottom: 20, padding: '14px 16px', background: 'var(--ccc-bg-surface)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 10 }}>
                 <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: refundEstimate.refundPercent === 0 ? '#ef4444' : refundEstimate.refundPercent === 50 ? '#f59e0b' : '#10b981' }}>
                   {formatRefundMessage(refundEstimate, cancelConfirmBooking.paidAmount)}
                 </p>
-                <p style={{ margin: 0, fontSize: 12, color: '#888' }}>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--ccc-text-muted)' }}>
                   {formatRefundReason(refundEstimate.reason)}
                 </p>
               </div>
             ) : cancelConfirmBooking.paymentStatus === 'paid' ? null : (
-              <p style={{ marginBottom: 20, fontSize: 13, color: '#ccc' }}>
+              <p style={{ marginBottom: 20, fontSize: 13, color: 'var(--ccc-text-secondary)' }}>
                 Cette réservation n'a pas encore été payée. Aucun remboursement ne sera effectué.
               </p>
             )}
@@ -528,8 +531,8 @@ const MyBookingsPage: React.FC = () => {
               <button
                 onClick={() => setCancelConfirmBooking(null)}
                 style={{
-                  flex: 1, padding: '12px', background: 'rgba(255,255,255,0.06)',
-                  color: '#ccc', border: '1px solid rgba(255,255,255,0.12)',
+                  flex: 1, padding: '12px', background: 'var(--ccc-bg-surface)',
+                  color: 'var(--ccc-text-secondary)', border: '1px solid var(--ccc-border-medium)',
                   borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer',
                 }}
               >
@@ -561,23 +564,23 @@ const MyBookingsPage: React.FC = () => {
         const refundTotal = rows.reduce((s, r) => s + (r.estimate?.refundAmount ?? 0), 0);
         return (
           <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-            <div style={{ background: 'linear-gradient(135deg, #1e1b2e, #2a1f3d)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: 28, maxWidth: 520, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}>
-              <h3 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700, color: '#fff' }}>Annuler la série</h3>
-              <p style={{ margin: '0 0 16px', fontSize: 13, color: '#888' }}>
+            <div style={{ background: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 16, padding: 28, maxWidth: 520, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 12px 40px rgba(15, 23, 42, 0.12)' }}>
+              <h3 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>Annuler la série</h3>
+              <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--ccc-text-muted)' }}>
                 {cancelConfirmGroup.bookings[0]?.venue?.name} — {toCancel.length} date(s) annulable(s)
               </p>
 
               {paidTotal > 0 ? (
-                <div style={{ marginBottom: 16, padding: '12px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }}>
+                <div style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--ccc-bg-surface)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 10 }}>
                   <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: refundTotal === 0 ? '#ef4444' : refundTotal >= paidTotal ? '#10b981' : '#f59e0b' }}>
                     Remboursement estimé : {refundTotal.toFixed(2)}€ sur {paidTotal.toFixed(2)}€ payés
                   </p>
-                  <p style={{ margin: 0, fontSize: 12, color: '#888' }}>
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--ccc-text-muted)' }}>
                     Chaque date est remboursée selon la politique de la salle, en fonction de son échéance.
                   </p>
                 </div>
               ) : (
-                <p style={{ marginBottom: 16, fontSize: 13, color: '#ccc' }}>
+                <p style={{ marginBottom: 16, fontSize: 13, color: 'var(--ccc-text-secondary)' }}>
                   Aucune réservation payée — aucun remboursement ne sera effectué.
                 </p>
               )}
@@ -591,9 +594,9 @@ const MyBookingsPage: React.FC = () => {
                     : estimate
                       ? `${estimate.refundAmount.toFixed(2)}€ (${estimate.refundPercent}%)`
                       : '—';
-                  const color = !paid ? '#888' : estimate && estimate.refundPercent === 0 ? '#ef4444' : estimate && estimate.refundPercent === 50 ? '#f59e0b' : '#10b981';
+                  const color = !paid ? 'var(--ccc-text-muted)' : estimate && estimate.refundPercent === 0 ? '#ef4444' : estimate && estimate.refundPercent === 50 ? '#f59e0b' : '#10b981';
                   return (
-                    <div key={booking._id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#ccc', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div key={booking._id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ccc-text-secondary)', padding: '6px 0', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
                       <span>{dateStr}</span>
                       <span style={{ color, fontWeight: 600 }}>{label}</span>
                     </div>
@@ -602,7 +605,7 @@ const MyBookingsPage: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', gap: 12 }}>
-                <button onClick={() => setCancelConfirmGroup(null)} style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.06)', color: '#ccc', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                <button onClick={() => setCancelConfirmGroup(null)} style={{ flex: 1, padding: '12px', background: 'var(--ccc-bg-surface)', color: 'var(--ccc-text-secondary)', border: '1px solid var(--ccc-border-medium)', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                   Garder la série
                 </button>
                 <button onClick={handleCancelSeriesConfirm} style={{ flex: 1, padding: '12px', background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
@@ -631,10 +634,10 @@ const MyBookingsPage: React.FC = () => {
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px' }}>
         <div className="my-bookings-header" style={{ marginBottom: 24 }}>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5em', fontWeight: 800, color: '#ff416c' }}>
+          <h1 className="ccc-page-title" style={{ margin: '0 0 8px 0' }}>
             Salles
           </h1>
-          <p style={{ margin: 0, fontSize: '1.1em', color: '#aaa' }}>
+          <p style={{ margin: 0, fontSize: '1.1em', color: 'var(--ccc-text-muted)' }}>
             Gérez vos réservations et explorez les salles disponibles.
           </p>
         </div>
@@ -654,20 +657,20 @@ const MyBookingsPage: React.FC = () => {
             style={{
               textAlign: 'center',
               padding: '64px 24px',
-              border: '1px dashed rgba(255,255,255,0.1)',
+              border: '1px dashed var(--ccc-border-medium)',
               borderRadius: 20,
             }}
           >
             <div style={{ fontSize: 60, marginBottom: 20 }}>📅</div>
-            <h3 style={{ color: '#fff', fontSize: 22, marginBottom: 10 }}>Aucune réservation</h3>
-            <p style={{ color: '#888', fontSize: 15, marginBottom: 28 }}>
+            <h3 style={{ color: 'var(--ccc-text-primary)', fontSize: 22, marginBottom: 10 }}>Aucune réservation</h3>
+            <p style={{ color: 'var(--ccc-text-muted)', fontSize: 15, marginBottom: 28 }}>
               Vous n'avez encore fait aucune demande de réservation.
             </p>
             <button
               onClick={() => navigate('/venues')}
               style={{
                 padding: '14px 32px',
-                background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                background: 'var(--ccc-accent-gradient)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 12,
@@ -707,9 +710,9 @@ const MyBookingsPage: React.FC = () => {
                   style={{
                     padding: '10px 14px',
                     background: '#fff',
-                    border: `1px solid ${filterStatus !== 'ALL' ? '#ff416c' : '#e2e8f0'}`,
+                    border: `1px solid ${filterStatus !== 'ALL' ? '#7c3aed' : '#e2e8f0'}`,
                     borderRadius: 10,
-                    color: filterStatus !== 'ALL' ? '#ff416c' : '#1a1a1a',
+                    color: filterStatus !== 'ALL' ? '#7c3aed' : '#1a1a1a',
                     fontSize: 14,
                     cursor: 'pointer',
                     outline: 'none',
@@ -790,12 +793,12 @@ const MyBookingsPage: React.FC = () => {
                   alignItems: 'stretch',
                   backgroundColor: '#ffffff',
                   border: isHighlighted
-                    ? '2px solid #ff416c'
+                    ? '2px solid #7c3aed'
                     : `1px solid ${isUrgent ? '#f97316' : 'rgba(0,0,0,0.08)'}`,
                   borderRadius: 20,
                   overflow: 'hidden',
                   boxShadow: isHighlighted
-                    ? '0 0 20px rgba(255,65,108,0.4)'
+                    ? '0 0 20px rgba(124, 58, 237,0.4)'
                     : '0 10px 40px rgba(0,0,0,0.12)',
                   transition: 'border-color 0.2s',
                   opacity: venueDeleted || archived ? 0.6 : 1,
@@ -832,7 +835,7 @@ const MyBookingsPage: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: 'linear-gradient(135deg, #1a1a2e 0%, #331f41 100%)',
+                        background: 'var(--ccc-bg-surface)',
                       }}
                     >
                       <span style={{ fontSize: 48 }}>🏛️</span>
@@ -966,7 +969,7 @@ const MyBookingsPage: React.FC = () => {
                       background: '#fdf2f8',
                       padding: '10px 14px',
                       borderRadius: 8,
-                      borderLeft: '3px solid #ff416c',
+                      borderLeft: '3px solid #7c3aed',
                       fontStyle: 'italic',
                     }}
                   >

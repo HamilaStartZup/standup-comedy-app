@@ -210,7 +210,7 @@ const DashboardRouter = () => {
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+        background: 'var(--ccc-bg-gradient)',
       }}>
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-500"></div>
       </div>

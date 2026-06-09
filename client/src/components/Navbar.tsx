@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { listVenues } from '../services/api';
 import { normalizeFilters } from '../hooks/useVenues';
 import NotificationDropdown from './NotificationDropdown';
+import { theme } from '../styles/theme';
 
 function getProfilePathForRole(role: string | undefined): string | null {
   switch (role) {
@@ -77,19 +78,19 @@ function Navbar() {
   const navLinkBaseStyle: CSSProperties = {
     margin: '0 15px',
     textDecoration: 'none',
-    color: '#ffffff',
+    color: theme.colors.text.primary,
     fontWeight: 'bold',
   };
 
   const activeLinkStyle: CSSProperties = {
-    borderBottom: '2px solid #ff416c',
+    borderBottom: `2px solid ${theme.colors.accent.primary}`,
     paddingBottom: '2px',
   };
 
   const rightLinkStyle: CSSProperties = {
     margin: '0 10px',
     textDecoration: 'none',
-    color: '#ff416c',
+    color: theme.colors.accent.primary,
     fontWeight: 'bold',
     border: 'none',
     background: 'none',
@@ -98,65 +99,54 @@ function Navbar() {
 
   const userNameStyle: CSSProperties = {
     marginRight: '10px',
-    color: '#ffffff',
+    color: theme.colors.text.primary,
     fontWeight: 'bold',
+  };
+
+  const sharedRoleStyles = {
+    navbarBg: theme.colors.navbar.bg,
+    badgeBg: theme.colors.bg.surface,
+    badgeColor: theme.colors.text.primary,
+    avatarGradient: theme.colors.bg.surfaceHover,
   };
 
   // Styles selon le rôle - uniquement texte et icône, pas de couleurs
   const getRoleStyles = () => {
     if (user?.role === 'ORGANIZER') {
       return {
-        navbarBg: 'rgba(0, 0, 0, 0.4)',
-        badgeBg: 'transparent',
-        badgeColor: '#ffffff',
+        ...sharedRoleStyles,
         badgeIcon: '🎯',
         badgeText: 'Organisateur',
-        avatarGradient: 'rgba(128, 128, 128, 0.6)',
       };
     } else if (user?.role === 'COMEDIAN') {
       return {
-        navbarBg: 'rgba(0, 0, 0, 0.4)',
-        badgeBg: 'transparent',
-        badgeColor: '#ffffff',
+        ...sharedRoleStyles,
         badgeIcon: '🎭',
         badgeText: 'Humoriste',
-        avatarGradient: 'rgba(128, 128, 128, 0.6)',
       };
     } else if (user?.role === 'SUPER_ADMIN') {
       return {
-        navbarBg: 'rgba(0, 0, 0, 0.4)',
-        badgeBg: 'transparent',
-        badgeColor: '#ffffff',
+        ...sharedRoleStyles,
         badgeIcon: '👑',
         badgeText: 'Super Admin',
-        avatarGradient: 'rgba(128, 128, 128, 0.6)',
       };
     } else if (user?.role === 'SPECTATOR') {
       return {
-        navbarBg: 'rgba(0, 0, 0, 0.4)',
-        badgeBg: 'transparent',
-        badgeColor: '#ffffff',
+        ...sharedRoleStyles,
         badgeIcon: '👥',
         badgeText: 'Spectateur',
-        avatarGradient: 'rgba(128, 128, 128, 0.6)',
       };
     } else if (user?.role === 'LIEU') {
       return {
-        navbarBg: 'rgba(0, 0, 0, 0.4)',
-        badgeBg: 'transparent',
-        badgeColor: '#ffffff',
+        ...sharedRoleStyles,
         badgeIcon: '🏛️',
         badgeText: 'Lieu',
-        avatarGradient: 'rgba(128, 128, 128, 0.6)',
       };
     }
     return {
-      navbarBg: 'rgba(0, 0, 0, 0.4)',
-      badgeBg: 'transparent',
-      badgeColor: '#ffffff',
+      ...sharedRoleStyles,
       badgeIcon: '👤',
       badgeText: 'Invité',
-      avatarGradient: 'rgba(128, 128, 128, 0.6)',
     };
   };
 
@@ -272,16 +262,18 @@ function Navbar() {
         alignItems: 'center',
         padding: '10px 20px',
         background: roleStyles.navbarBg,
-        color: '#ffffff',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
+        color: theme.colors.text.primary,
+        boxShadow: theme.shadow.navbar,
         position: 'sticky',
         top: 0,
         zIndex: 1000,
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+        borderBottom: `1px solid ${theme.colors.navbar.border}`,
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
       }}>
         {/* Menu Desktop - Masqué sur mobile */}
         <div style={{ display: 'flex', alignItems: 'center' }} id="desktop-nav">
-          <h2 style={{ margin: '0', color: '#ff4b2b' }}>Connect Comedy Club</h2>
+          <h2 style={{ margin: '0', color: theme.colors.accent.primary, fontWeight: 700 }}>Connect Comedy Club</h2>
 <div style={{ marginLeft: '30px' }}>
             {user?.role === 'SPECTATOR' ? (
               <>
@@ -330,7 +322,7 @@ function Navbar() {
             style={{
               background: 'none',
               border: 'none',
-              color: '#ffffff',
+              color: theme.colors.text.primary,
               fontSize: '1.5rem',
               cursor: 'pointer',
               padding: '8px',
@@ -343,7 +335,7 @@ function Navbar() {
           
           <h2 style={{ 
             margin: '0 0 0 15px', 
-            color: '#ff4b2b', 
+            color: theme.colors.accent.primary, 
             fontSize: '1.2rem',
             flexGrow: 1,
             overflow: 'hidden',
@@ -370,20 +362,20 @@ function Navbar() {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '6px 12px',
-                  borderRadius: '20px',
+                  borderRadius: theme.radius.full,
                   background: roleStyles.badgeBg,
                   color: roleStyles.badgeColor,
                   fontSize: '0.85rem',
                   fontWeight: 'bold',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  border: `1px solid ${theme.colors.border.medium}`,
                   cursor: 'pointer',
                   fontFamily: 'inherit',
                 }}
               >
                 <span style={{ fontSize: '1rem' }}>{roleStyles.badgeIcon}</span>
                 <span>{roleStyles.badgeText}</span>
-                <span style={{ color: '#aaa', margin: '0 4px' }}>|</span>
-                <span style={{ color: '#ffffff' }}>{`${user.firstName} ${user.lastName}`}</span>
+                <span style={{ color: theme.colors.text.muted, margin: '0 4px' }}>|</span>
+                <span style={{ color: theme.colors.text.primary }}>{`${user.firstName} ${user.lastName}`}</span>
                 <span style={{ fontSize: '0.65rem', marginLeft: '4px', opacity: 0.85 }} aria-hidden>▼</span>
               </button>
               {isUserMenuOpen && (
@@ -394,10 +386,10 @@ function Navbar() {
                     top: 'calc(100% + 6px)',
                     right: 0,
                     minWidth: '220px',
-                    background: '#1a1d27',
-                    border: '1px solid rgba(255, 255, 255, 0.18)',
-                    borderRadius: '12px',
-                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
+                    background: theme.colors.bg.elevated,
+                    border: `1px solid ${theme.colors.border.subtle}`,
+                    borderRadius: theme.radius.md,
+                    boxShadow: theme.shadow.dropdown,
                     zIndex: 2000,
                     overflow: 'hidden',
                   }}
@@ -410,11 +402,11 @@ function Navbar() {
                       style={{
                         display: 'block',
                         padding: '14px 16px',
-                        color: '#ffffff',
+                        color: theme.colors.text.primary,
                         textDecoration: 'none',
                         fontWeight: 'bold',
                         fontSize: '0.95rem',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderBottom: `1px solid ${theme.colors.border.subtle}`,
                       }}
                     >
                       Profil
@@ -432,7 +424,7 @@ function Navbar() {
                       width: '100%',
                       textAlign: 'left',
                       padding: '14px 16px',
-                      color: '#ff416c',
+                      color: theme.colors.accent.primary,
                       fontWeight: 'bold',
                       fontSize: '0.95rem',
                       border: 'none',
@@ -583,7 +575,7 @@ function Navbar() {
                   }}>
                     <div style={{
                       padding: '2px 8px',
-                      borderRadius: '12px',
+                      borderRadius: theme.radius.md,
                       background: 'transparent',
                       color: '#666',
                       fontSize: '0.75rem',
@@ -619,9 +611,9 @@ function Navbar() {
                       gap: '12px',
                       padding: '16px 20px',
                       textDecoration: 'none',
-                      color: isActive ? '#ff416c' : '#333',
+                      color: isActive ? theme.colors.accent.primary : '#333',
                       backgroundColor: isActive ? '#fff5f5' : 'transparent',
-                      borderLeft: isActive ? '4px solid #ff416c' : '4px solid transparent',
+                      borderLeft: isActive ? `4px solid ${theme.colors.accent.primary}` : '4px solid transparent',
                       fontWeight: isActive ? 'bold' : 'normal',
                     }}
                   >
@@ -659,7 +651,7 @@ function Navbar() {
                   padding: '16px',
                   background: 'linear-gradient(135deg, #dc3545, #c82333)',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: theme.radius.sm,
                   color: '#ffffff',
                   fontSize: '1rem',
                   fontWeight: 'bold',

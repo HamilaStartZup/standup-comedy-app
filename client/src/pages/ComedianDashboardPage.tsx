@@ -6,6 +6,7 @@ import { useAlert } from '../hooks/useAlert';
 import api from '../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { pageTitleStyle } from '../styles/theme';
 
 function ComedianDashboardPage() {
   const { user } = useAuth();
@@ -67,9 +68,9 @@ function ComedianDashboardPage() {
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     padding: '20px',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+    background: 'var(--ccc-bg-gradient)',
   };
 
   const dashboardHeaderStyle: CSSProperties = {
@@ -79,15 +80,14 @@ function ComedianDashboardPage() {
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: '2.5em',
+    ...pageTitleStyle,
     marginBottom: '20px',
-    color: '#ff416c',
   };
 
   const tabNavigationStyle: CSSProperties = {
     display: 'flex',
     marginBottom: '30px',
-    borderBottom: '1px solid #444',
+    borderBottom: '1px solid var(--ccc-border-medium)',
   };
 
   const tabButtonStyle: CSSProperties = {
@@ -95,15 +95,15 @@ function ComedianDashboardPage() {
     cursor: 'pointer',
     backgroundColor: 'transparent',
     border: 'none',
-    color: '#aaa',
+    color: 'var(--ccc-text-muted)',
     fontSize: '1.1em',
     fontWeight: 'bold',
   };
 
   const activeTabButtonStyle: CSSProperties = {
     ...tabButtonStyle,
-    color: '#ff416c',
-    borderBottom: '2px solid #ff416c',
+    color: 'var(--ccc-accent)',
+    borderBottom: '2px solid var(--ccc-accent)',
   };
 
   const cardsGridStyle: CSSProperties = {
@@ -116,10 +116,11 @@ function ComedianDashboardPage() {
   };
 
   const cardStyle: CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: '12px',
     padding: '28px',
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
@@ -138,7 +139,7 @@ function ComedianDashboardPage() {
 
   const cardTitleStyle: CSSProperties = {
     fontSize: '1.4em',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     fontWeight: 600,
     letterSpacing: '0.5px'
   };
@@ -221,12 +222,12 @@ function ComedianDashboardPage() {
               <p style={cardTitleStyle}>Mes Candidatures</p>
               <p style={cardValueStyle}>{sentCount}</p>
             </div>
-            <span style={{ fontSize: '2.6em', color: '#ff416c' }}>📝</span>
+            <span style={{ fontSize: '2.6em', color: '#7c3aed' }}>📝</span>
           </div>
         </div>
         {/* Ajout du camembert */}
-        <div style={{ maxWidth: 400, margin: '40px auto 0 auto', background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: 24 }}>
-          <h2 style={{ color: '#ff416c', textAlign: 'center', marginBottom: 16 }}>Répartition des Candidatures</h2>
+        <div style={{ maxWidth: 400, margin: '40px auto 0 auto', backgroundColor: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)', borderRadius: 8, padding: 24 }}>
+          <h2 style={{ color: '#7c3aed', textAlign: 'center', marginBottom: 16 }}>Répartition des Candidatures</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie

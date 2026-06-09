@@ -27,11 +27,12 @@ function ToastAlert({ id, message, type, onDismiss, autoDismiss }: ToastAlertPro
   const colors = getTypeColors();
 
   const toastStyle: CSSProperties = {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     borderRadius: '8px',
     padding: '12px 16px',
-    color: '#ffffff',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+    color: 'var(--ccc-text-primary)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.12)',
+    border: '1px solid var(--ccc-border-subtle)',
     borderLeft: `4px solid ${colors.bg}`,
     display: 'flex',
     alignItems: 'center',

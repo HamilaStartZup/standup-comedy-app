@@ -76,17 +76,17 @@ const CreateVenuePage: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)', paddingBottom: 60, padding: '20px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ccc-bg-gradient)', color: 'var(--ccc-text-primary)', padding: '20px', paddingBottom: 60 }}>
       <Navbar />
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '40px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
           <button
             onClick={() => navigate(-1)}
-            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 14px', color: '#aaa', cursor: 'pointer', fontSize: 14 }}
+            style={{ background: 'transparent', border: '1px solid var(--ccc-border-medium)', borderRadius: 8, padding: '8px 14px', color: 'var(--ccc-text-secondary)', cursor: 'pointer', fontSize: 14 }}
           >
             ← Retour
           </button>
-          <h1 style={{ margin: 0, fontSize: '2.2em', fontWeight: 800, color: '#ff416c' }}>
+          <h1 className="ccc-page-title" style={{ margin: 0 }}>
             Ajouter une salle
           </h1>
         </div>

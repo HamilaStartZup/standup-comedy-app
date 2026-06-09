@@ -6,13 +6,13 @@ import EditOrganizerProfileForm from '../components/EditOrganizerProfileForm';
 import EmailPreferences from '../components/EmailPreferences';
 import DeleteAccountSection from '../components/DeleteAccountSection';
 import ExportDataSection from '../components/ExportDataSection';
-const ACCENT = '#e85d75';
-const ACCENT_GRADIENT = 'linear-gradient(135deg, #e85d75, #c13057)';
-const CARD_BG = '#1a1d27';
-const BORDER = '#2a2d3a';
-const SEPARATOR = '#22253a';
-const LABEL_COLOR = '#777';
-const VALUE_COLOR = '#e0e0e0';
+const ACCENT = 'var(--ccc-accent)';
+const ACCENT_GRADIENT = 'var(--ccc-accent-gradient)';
+const CARD_BG = 'var(--ccc-bg-elevated)';
+const BORDER = 'var(--ccc-border-subtle)';
+const SEPARATOR = 'var(--ccc-border-subtle)';
+const LABEL_COLOR = 'var(--ccc-text-muted)';
+const VALUE_COLOR = 'var(--ccc-text-secondary)';
 
 function OrganizerProfilePage() {
   const { user: authUser, refreshUser } = useAuth();
@@ -39,9 +39,9 @@ function OrganizerProfilePage() {
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#fff',
+    color: 'var(--ccc-text-primary)',
     padding: '20px',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+    background: 'var(--ccc-bg-gradient)',
   };
 
   const wrapperStyle: CSSProperties = {
@@ -60,6 +60,7 @@ function OrganizerProfilePage() {
     justifyContent: 'space-between',
     marginBottom: 16,
     border: `1px solid ${BORDER}`,
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     flexWrap: 'wrap',
     gap: 16,
   };
@@ -108,6 +109,7 @@ function OrganizerProfilePage() {
     display: 'flex',
     marginBottom: 16,
     border: `1px solid ${BORDER}`,
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
   };
 
   const tabButtonStyle = (active: boolean): CSSProperties => ({
@@ -120,7 +122,7 @@ function OrganizerProfilePage() {
     fontSize: 14,
     transition: 'all 0.2s',
     background: active ? ACCENT_GRADIENT : 'transparent',
-    color: active ? '#fff' : '#777',
+    color: active ? '#fff' : 'var(--ccc-text-muted)',
   });
 
   const contentCardStyle: CSSProperties = {
@@ -128,6 +130,7 @@ function OrganizerProfilePage() {
     borderRadius: 16,
     padding: 24,
     border: `1px solid ${BORDER}`,
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     marginBottom: 16,
   };
 
@@ -182,6 +185,7 @@ function OrganizerProfilePage() {
   const modifierButtonStyle: CSSProperties = {
     background: 'transparent',
     border: `1px solid ${BORDER}`,
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: 12,
     padding: '12px 20px',
     color: '#666',
@@ -234,12 +238,12 @@ function OrganizerProfilePage() {
               {!user?.avatarUrl && (user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : 'DA')}
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 20, color: '#fff', marginBottom: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 20, color: 'var(--ccc-text-primary)', marginBottom: 6 }}>
                 {user ? `${user.firstName} ${user.lastName}` : '—'}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <span style={badgeStyle}>ORGANISATEUR</span>
-                <span style={{ color: '#888', fontSize: 14 }}>
+                <span style={{ color: 'var(--ccc-text-muted)', fontSize: 14 }}>
                   {user?.organizerProfile?.companyName || '—'}
                 </span>
               </div>
@@ -251,7 +255,7 @@ function OrganizerProfilePage() {
               <div style={{ color: ACCENT, fontSize: 26, fontWeight: 700 }}>
                 {user?.stats?.totalEvents ?? 0}
               </div>
-              <div style={{ color: '#888', fontSize: 12, marginTop: 2 }}>Évènements créés</div>
+              <div style={{ color: 'var(--ccc-text-muted)', fontSize: 12, marginTop: 2 }}>Évènements créés</div>
             </div>
             <button
               type="button"

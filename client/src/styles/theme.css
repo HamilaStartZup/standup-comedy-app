@@ -1,0 +1,45 @@
+:root {
+  /* Backgrounds */
+  --ccc-bg-base: #fcfbff;
+  --ccc-bg-gradient-start: #ffffff;
+  --ccc-bg-gradient-end: #f5f3ff;
+  --ccc-bg-gradient: linear-gradient(160deg, #ffffff 0%, #f8f7ff 48%, #fcfbff 100%);
+  --ccc-bg-elevated: #ffffff;
+  --ccc-bg-surface: rgba(15, 23, 42, 0.05);
+
+  /* Accent — violet moderne */
+  --ccc-accent: #7c3aed;
+  --ccc-accent-secondary: #a78bfa;
+  --ccc-accent-gradient: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+  --ccc-accent-soft: rgba(124, 58, 237, 0.12);
+
+  /* Text */
+  --ccc-text-primary: #1e293b;
+  --ccc-text-secondary: #475569;
+  --ccc-text-muted: #64748b;
+  --ccc-text-faint: #94a3b8;
+
+  /* Borders */
+  --ccc-border-subtle: rgba(15, 23, 42, 0.08);
+  --ccc-border-medium: rgba(15, 23, 42, 0.14);
+
+  /* Radius */
+  --ccc-radius-sm: 8px;
+  --ccc-radius-md: 12px;
+  --ccc-radius-full: 9999px;
+
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ccc-page-title {
+  font-size: 2.5em;
+  color: var(--ccc-accent);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}

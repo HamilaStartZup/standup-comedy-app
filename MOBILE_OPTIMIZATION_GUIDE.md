@@ -61,7 +61,7 @@ Optimiser l'application **Standup Comedy Connect** pour offrir une **expérience
 #### Variables CSS Globales
 ```css
 :root {
-  --primary-gradient: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+  --primary-gradient: var(--ccc-accent-gradient);
   --mobile-breakpoint: 768px;
   --header-height: 64px;
   --bottom-nav-height: 64px;

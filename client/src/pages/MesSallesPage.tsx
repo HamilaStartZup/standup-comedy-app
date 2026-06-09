@@ -188,7 +188,7 @@ const MesSallesPage: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)', paddingBottom: 60, padding: '20px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ccc-bg-gradient)', color: 'var(--ccc-text-primary)', padding: '20px', paddingBottom: 60 }}>
       <style>{`
         @media (max-width: 640px) {
           .mes-salles-header h1 { font-size: 1.8em !important; }
@@ -196,7 +196,7 @@ const MesSallesPage: React.FC = () => {
           .venue-grid { grid-template-columns: 1fr !important; }
         }
         .is-highlighted {
-          background-color: rgba(255, 65, 108, 0.12) !important;
+          background-color: rgba(124, 58, 237, 0.12) !important;
           transition: background-color 0.3s ease;
         }
       `}</style>
@@ -204,22 +204,22 @@ const MesSallesPage: React.FC = () => {
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px' }}>
         <div className="mes-salles-header" style={{ marginBottom: 24 }}>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5em', fontWeight: 800, color: '#ff416c' }}>
+          <h1 className="ccc-page-title" style={{ margin: '0 0 8px 0' }}>
             Mes Salles
           </h1>
-          <p style={{ margin: 0, fontSize: '1.1em', color: '#aaa' }}>
+          <p style={{ margin: 0, fontSize: '1.1em', color: 'var(--ccc-text-muted)' }}>
             Gérez vos salles et les demandes de réservation.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 28, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 28, borderBottom: '1px solid var(--ccc-border-medium)' }}>
           <button
             onClick={() => setActiveTab('salles')}
             className="tab-btn"
             style={{
               padding: '12px 24px',
-              background: activeTab === 'salles' ? 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)' : 'transparent',
-              color: activeTab === 'salles' ? '#fff' : '#888',
+              background: activeTab === 'salles' ? 'var(--ccc-accent-gradient)' : 'transparent',
+              color: activeTab === 'salles' ? '#fff' : 'var(--ccc-text-muted)',
               border: 'none',
               borderRadius: '10px 10px 0 0',
               fontWeight: 600,
@@ -235,8 +235,8 @@ const MesSallesPage: React.FC = () => {
             className="tab-btn"
             style={{
               padding: '12px 24px',
-              background: activeTab === 'reservations' ? 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)' : 'transparent',
-              color: activeTab === 'reservations' ? '#fff' : '#888',
+              background: activeTab === 'reservations' ? 'var(--ccc-accent-gradient)' : 'transparent',
+              color: activeTab === 'reservations' ? '#fff' : 'var(--ccc-text-muted)',
               border: 'none',
               borderRadius: '10px 10px 0 0',
               fontWeight: 600,
@@ -256,14 +256,14 @@ const MesSallesPage: React.FC = () => {
                 onClick={() => navigate('/venues/new')}
                 style={{
                   padding: '12px 28px',
-                  background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                  background: 'var(--ccc-accent-gradient)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: 12,
                   fontWeight: 700,
                   fontSize: 15,
                   cursor: 'pointer',
-                  boxShadow: '0 4px 16px rgba(255,65,108,0.3)',
+                  boxShadow: '0 4px 16px rgba(124, 58, 237,0.3)',
                 }}
               >
                 + Créer une salle
@@ -280,15 +280,15 @@ const MesSallesPage: React.FC = () => {
                 borderRadius: 20,
               }}>
                 <div style={{ fontSize: 60, marginBottom: 20 }}>🏛️</div>
-                <h3 style={{ color: '#fff', fontSize: 22, marginBottom: 10 }}>Aucune salle pour le moment</h3>
-                <p style={{ color: '#888', fontSize: 15, marginBottom: 28, maxWidth: 400, margin: '0 auto 28px' }}>
+                <h3 style={{ color: 'var(--ccc-text-primary)', fontSize: 22, marginBottom: 10 }}>Aucune salle pour le moment</h3>
+                <p style={{ color: 'var(--ccc-text-muted)', fontSize: 15, marginBottom: 28, maxWidth: 400, margin: '0 auto 28px' }}>
                   Créez votre première salle pour commencer à recevoir des demandes de réservation.
                 </p>
                 <button
                   onClick={() => navigate('/venues/new')}
                   style={{
                     padding: '14px 32px',
-                    background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                    background: 'var(--ccc-accent-gradient)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 12,
@@ -302,7 +302,7 @@ const MesSallesPage: React.FC = () => {
               </div>
             ) : (
               <>
-                <p style={{ color: '#888', fontSize: 14, marginBottom: 24 }}>
+                <p style={{ color: 'var(--ccc-text-muted)', fontSize: 14, marginBottom: 24 }}>
                   {myVenues.length} salle{myVenues.length > 1 ? 's' : ''}
                 </p>
                 <div className="venue-grid" style={{
@@ -331,8 +331,8 @@ const MesSallesPage: React.FC = () => {
                 borderRadius: 20,
               }}>
                 <div style={{ fontSize: 60, marginBottom: 20 }}>📅</div>
-                <h3 style={{ color: '#fff', fontSize: 22, marginBottom: 10 }}>Aucune réservation</h3>
-                <p style={{ color: '#888', fontSize: 15, marginBottom: 28 }}>
+                <h3 style={{ color: 'var(--ccc-text-primary)', fontSize: 22, marginBottom: 10 }}>Aucune réservation</h3>
+                <p style={{ color: 'var(--ccc-text-muted)', fontSize: 15, marginBottom: 28 }}>
                   Vous n'avez pas encore de demande de réservation pour vos salles.
                 </p>
               </div>
@@ -341,14 +341,14 @@ const MesSallesPage: React.FC = () => {
                 {(() => {
                         const groupBookings = recurringGroups.get(selectedGroupId) ?? [];
                         const first = groupBookings[0];
-                        if (!first) return <p style={{ color: '#aaa' }}>Série introuvable.</p>;
+                        if (!first) return <p style={{ color: 'var(--ccc-text-muted)' }}>Série introuvable.</p>;
                         const hasPending = groupBookings.some((b) => b.status === 'PENDING');
                         return (
                           <>
                             <button
                               type="button"
                               onClick={() => { setSelectedGroupId(null); resetGroupResponse(); }}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 20, padding: '10px 16px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.08)', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 20, padding: '10px 16px', borderRadius: 8, border: '1px solid var(--ccc-border-medium)', background: 'var(--ccc-bg-elevated)', color: 'var(--ccc-text-primary)', cursor: 'pointer', fontSize: 14, fontWeight: 600, boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}
                             >
                               ← Retour aux réservations
                             </button>
@@ -362,7 +362,7 @@ const MesSallesPage: React.FC = () => {
                                   📍 {first.venue?.name} · {first.venue?.city} · {groupBookings.length} date(s)
                                 </p>
                                 {first.message && (
-                                  <p style={{ margin: '10px 0 0', fontSize: 13, color: '#475569', fontStyle: 'italic', background: '#f8fafc', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid rgba(255,65,108,0.5)' }}>
+                                  <p style={{ margin: '10px 0 0', fontSize: 13, color: '#475569', fontStyle: 'italic', background: '#f8fafc', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid rgba(124, 58, 237,0.5)' }}>
                                     "{first.message}"
                                   </p>
                                 )}
@@ -451,7 +451,7 @@ const MesSallesPage: React.FC = () => {
                                 ) : (
                                   <button
                                     onClick={() => setIsRespondingGroup(true)}
-                                    style={{ padding: '10px 22px', background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
+                                    style={{ padding: '10px 22px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
                                   >
                                     Répondre au lot
                                   </button>
@@ -466,7 +466,7 @@ const MesSallesPage: React.FC = () => {
               <div>
                 {recurringGroups.size > 0 && (
                   <div style={{ marginBottom: 28 }}>
-                    <h3 style={{ color: '#fff', fontSize: 16, fontWeight: 700, margin: '0 0 14px 0' }}>
+                    <h3 style={{ color: 'var(--ccc-text-primary)', fontSize: 16, fontWeight: 700, margin: '0 0 14px 0' }}>
                       🔁 Séries récurrentes ({recurringGroups.size})
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -533,9 +533,9 @@ const MesSallesPage: React.FC = () => {
                     style={{
                       padding: '10px 12px',
                       borderRadius: 10,
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      background: 'rgba(0,0,0,0.3)',
-                      color: '#fff',
+                      border: '1px solid var(--ccc-border-medium)',
+                      background: 'var(--ccc-bg-elevated)',
+                      color: 'var(--ccc-text-primary)',
                       fontSize: 14,
                     }}
                   >
@@ -553,9 +553,9 @@ const MesSallesPage: React.FC = () => {
                     style={{
                       padding: '10px 12px',
                       borderRadius: 10,
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      background: 'rgba(0,0,0,0.3)',
-                      color: '#fff',
+                      border: '1px solid var(--ccc-border-medium)',
+                      background: 'var(--ccc-bg-elevated)',
+                      color: 'var(--ccc-text-primary)',
                       fontSize: 14,
                     }}
                   >
@@ -575,7 +575,7 @@ const MesSallesPage: React.FC = () => {
                       padding: '36px 24px',
                       border: '1px dashed rgba(255,255,255,0.15)',
                       borderRadius: 16,
-                      color: '#aaa',
+                      color: 'var(--ccc-text-muted)',
                     }}
                   >
                     {recurringGroups.size > 0

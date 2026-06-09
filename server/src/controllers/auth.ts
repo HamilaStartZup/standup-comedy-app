@@ -585,13 +585,13 @@ export const forgotPassword = async (req: Request, res: Response) => {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
           <div style="background-color: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h2 style="color: #ff416c; margin-bottom: 20px;">🔐 Réinitialisation de mot de passe</h2>
+            <h2 style="color: #7c3aed; margin-bottom: 20px;">🔐 Réinitialisation de mot de passe</h2>
             <p>Bonjour ${user.firstName},</p>
             <p>Vous avez demandé à réinitialiser votre mot de passe.</p>
             <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" style="display: inline-block; padding: 15px 30px; background: linear-gradient(to right, #ff416c, #ff4b2b); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+              <a href="${resetUrl}" style="display: inline-block; padding: 15px 30px; background: var(--ccc-accent-gradient); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
                 Réinitialiser mon mot de passe
               </a>
             </div>
@@ -602,7 +602,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
             
             <p style="color: #999; font-size: 0.85em; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
               Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br/>
-              <span style="word-break: break-all; color: #ff416c;">${resetUrl}</span>
+              <span style="word-break: break-all; color: #7c3aed;">${resetUrl}</span>
             </p>
             
             <p style="margin-top: 30px; color: #666; font-size: 0.9em;">
@@ -765,7 +765,7 @@ export const adminResetPassword = async (req: AuthRequest, res: Response) => {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
             <div style="background-color: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              <h2 style="color: #ff416c; margin-bottom: 20px;">🔐 Mot de passe réinitialisé</h2>
+              <h2 style="color: #7c3aed; margin-bottom: 20px;">🔐 Mot de passe réinitialisé</h2>
               <p>Bonjour ${user.firstName},</p>
               <p>Votre demande de réinitialisation de mot de passe a été traitée par un administrateur.</p>
               
@@ -778,7 +778,7 @@ export const adminResetPassword = async (req: AuthRequest, res: Response) => {
               </div>
               
               <p style="margin-top: 25px;">Vous pouvez maintenant vous connecter avec ce nouveau mot de passe :</p>
-              <a href="${config.frontend.url}/login" style="display: inline-block; padding: 12px 24px; background: #ff416c; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold;">
+              <a href="${config.frontend.url}/login" style="display: inline-block; padding: 12px 24px; background: #7c3aed; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold;">
                 Se connecter
               </a>
               

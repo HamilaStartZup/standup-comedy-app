@@ -72,18 +72,18 @@ function ResetPasswordPage() {
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: '100vh',
-    backgroundColor: '#1a1a2e',
-    backgroundImage: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
-    color: '#ffffff',
+    background: 'var(--ccc-bg-gradient)',
+    color: 'var(--ccc-text-primary)',
     fontFamily: 'Arial, sans-serif',
     textAlign: 'center',
   };
 
   const containerStyle: CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
     padding: '40px',
     borderRadius: '15px',
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     maxWidth: '400px',
     width: '90%',
   };
@@ -93,9 +93,9 @@ function ResetPasswordPage() {
     padding: '12px 10px',
     margin: '10px 0',
     borderRadius: '8px',
-    border: '1px solid #444',
-    backgroundColor: '#2c2c4d',
-    color: '#ffffff',
+    border: '1px solid var(--ccc-border-medium)',
+    backgroundColor: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     fontSize: '1em',
     outline: 'none',
   };
@@ -106,7 +106,7 @@ function ResetPasswordPage() {
     margin: '20px 0',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #ff416c, #ff4b2b)',
+    background: 'var(--ccc-accent-gradient)',
     color: 'white',
     fontSize: '1.2em',
     fontWeight: 'bold',
@@ -115,7 +115,7 @@ function ResetPasswordPage() {
   };
 
   const linkStyle: CSSProperties = {
-    color: '#ff416c',
+    color: 'var(--ccc-accent)',
     textDecoration: 'none',
     fontWeight: 'bold',
   };
@@ -126,7 +126,7 @@ function ResetPasswordPage() {
         <div style={containerStyle}>
           <div style={{ fontSize: '3em', marginBottom: '20px' }}>❌</div>
           <h2>Token invalide</h2>
-          <p style={{ color: '#aaa', marginBottom: '20px' }}>
+          <p style={{ color: 'var(--ccc-text-muted)', marginBottom: '20px' }}>
             Le lien de réinitialisation est invalide ou expiré.
           </p>
           <Link to="/forgot-password" style={linkStyle}>
@@ -142,7 +142,7 @@ function ResetPasswordPage() {
       <div style={containerStyle}>
         <div style={{ fontSize: '3em', marginBottom: '20px' }}>🔐</div>
         <h2>Réinitialiser votre mot de passe</h2>
-        <p style={{ color: '#aaa', marginBottom: '20px' }}>
+        <p style={{ color: 'var(--ccc-text-muted)', marginBottom: '20px' }}>
           Entrez votre nouveau mot de passe
         </p>
 
@@ -174,7 +174,7 @@ function ResetPasswordPage() {
             <div style={{
               marginBottom: '15px',
               padding: '8px',
-              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              backgroundColor: 'var(--ccc-bg-surface)',
               borderRadius: '5px',
               fontSize: '0.8em',
               textAlign: 'left'

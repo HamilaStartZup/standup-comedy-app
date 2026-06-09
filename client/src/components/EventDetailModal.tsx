@@ -1,7 +1,30 @@
-import React from 'react';
+import React, { type CSSProperties } from 'react';
 import Modal from './Modal';
 import { IEvent } from '../types/event';
 import { getOrganizerName, translateEventStatus } from '../utils/eventHelpers';
+import { theme } from '../styles/theme';
+
+const fieldLabelStyle: CSSProperties = {
+  fontSize: '0.8em',
+  color: theme.colors.text.muted,
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  fontWeight: 600,
+  marginBottom: '6px',
+};
+
+const fieldValueStyle: CSSProperties = {
+  color: '#0f172a',
+  fontSize: '1em',
+  fontWeight: 600,
+};
+
+const sectionHeadingStyle: CSSProperties = {
+  fontSize: '1.1em',
+  color: theme.colors.semantic.success,
+  marginBottom: '12px',
+  marginTop: 0,
+};
 
 interface EventDetailModalProps {
   isOpen: boolean;
@@ -47,11 +70,11 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
       border-radius: 3px;
     }
     .event-detail-content::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, #ff416c, #ff4b2b);
+      background: linear-gradient(180deg, #7c3aed, #a78bfa);
       border-radius: 3px;
     }
     .event-detail-content::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(180deg, #ff4b2b, #ff416c);
+      background: linear-gradient(180deg, #a78bfa, #7c3aed);
     }
   `;
 
@@ -68,17 +91,15 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
         }}
       >
         {/* Titre principal */}
-        <h2 style={{ fontSize: '1.6em', color: '#ff416c', marginBottom: '20px', marginTop: 0 }}>
+        <h2 style={{ fontSize: '1.6em', color: theme.colors.accent.primary, marginBottom: '20px', marginTop: 0, fontWeight: 700 }}>
           {selectedEvent.title}
         </h2>
 
         {/* Section Info Principale - Layout grille 2 colonnes */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }}>
           <div>
-            <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: '6px' }}>
-              Date
-            </div>
-            <div style={{ color: '#fff', fontSize: '1em', fontWeight: 500 }}>
+            <div style={fieldLabelStyle}>Date</div>
+            <div style={fieldValueStyle}>
               {new Date(selectedEvent.date).toLocaleDateString('fr-FR', {
                 weekday: 'long',
                 year: 'numeric',
@@ -88,19 +109,15 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: '6px' }}>
-              Horaires
-            </div>
-            <div style={{ color: '#fff', fontSize: '1em', fontWeight: 500 }}>
+            <div style={fieldLabelStyle}>Horaires</div>
+            <div style={fieldValueStyle}>
               {selectedEvent.startTime || '—'} {selectedEvent.startTime && selectedEvent.endTime ? '→' : ''}{' '}
               {selectedEvent.endTime || '—'}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: '6px' }}>
-              Lieu
-            </div>
-            <div style={{ color: '#fff', fontSize: '1em', fontWeight: 500 }}>
+            <div style={fieldLabelStyle}>Lieu</div>
+            <div style={fieldValueStyle}>
               {(() => {
                 const location = selectedEvent.location;
                 if (typeof location === 'object' && location !== null) {
@@ -116,18 +133,14 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: '6px' }}>
-              Statut
-            </div>
-            <div style={{ color: '#ffb3c1', fontSize: '1em', fontWeight: 500 }}>
+            <div style={fieldLabelStyle}>Statut</div>
+            <div style={{ ...fieldValueStyle, color: theme.colors.accent.primary }}>
               {translateEventStatus(selectedEvent.status)}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: '6px' }}>
-              Tarif
-            </div>
-            <div style={{ color: '#fff', fontSize: '1em', fontWeight: 500 }}>
+            <div style={fieldLabelStyle}>Tarif</div>
+            <div style={fieldValueStyle}>
               1€ la place
             </div>
           </div>
@@ -139,15 +152,13 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
             style={{
               marginBottom: '20px',
               padding: '12px',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '8px',
-              borderLeft: '3px solid #ff416c',
+              backgroundColor: theme.colors.bg.surface,
+              borderRadius: theme.radius.sm,
+              borderLeft: `3px solid ${theme.colors.accent.primary}`,
             }}
           >
-            <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: '6px' }}>
-              Description
-            </div>
-            <div style={{ color: '#ddd', fontSize: '0.95em', lineHeight: 1.5 }}>
+            <div style={fieldLabelStyle}>Description</div>
+            <div style={{ color: '#0f172a', fontSize: '0.95em', lineHeight: 1.5 }}>
               {selectedEvent.description}
             </div>
           </div>
@@ -162,22 +173,18 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
               gap: '16px',
               marginBottom: '24px',
               paddingBottom: '24px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              borderBottom: `1px solid ${theme.colors.border.subtle}`,
             }}
           >
             <div>
-              <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: '6px' }}>
-                Organisateur
-              </div>
-              <div style={{ color: '#fff', fontSize: '1em', fontWeight: 500 }}>
+              <div style={fieldLabelStyle}>Organisateur</div>
+              <div style={fieldValueStyle}>
                 {getOrganizerName(selectedEvent.organizer)}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: '6px' }}>
-                Email
-              </div>
-              <div style={{ color: '#fff', fontSize: '0.95em' }}>
+              <div style={fieldLabelStyle}>Email</div>
+              <div style={{ ...fieldValueStyle, fontSize: '0.95em', fontWeight: 500 }}>
                 {selectedEvent.organizer?.email || '—'}
               </div>
             </div>
@@ -198,7 +205,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
             <div style={{ fontSize: '0.8em', color: '#ffc107', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: '6px' }}>
               ⚠️ Raison d'annulation
             </div>
-            <div style={{ color: '#fff', fontSize: '0.95em' }}>
+            <div style={{ color: '#0f172a', fontSize: '0.95em' }}>
               {selectedEvent.cancellationReason}
             </div>
           </div>
@@ -206,39 +213,29 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
         {/* Exigences */}
         <div style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '1.1em', color: '#28a745', marginBottom: '12px', marginTop: 0 }}>
-            Exigences
-          </h3>
+          <h3 style={sectionHeadingStyle}>Exigences</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
             <div>
-              <div style={{ fontSize: '0.8em', color: '#888', marginBottom: '4px' }}>
-                Expérience Min.
-              </div>
-              <div style={{ color: '#fff', fontWeight: 500 }}>
+              <div style={{ ...fieldLabelStyle, marginBottom: '4px' }}>Expérience Min.</div>
+              <div style={fieldValueStyle}>
                 {selectedEvent.requirements?.minExperience ?? '—'} ans
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.8em', color: '#888', marginBottom: '4px' }}>
-                Max Humoristes
-              </div>
-              <div style={{ color: '#fff', fontWeight: 500 }}>
+              <div style={{ ...fieldLabelStyle, marginBottom: '4px' }}>Max Humoristes</div>
+              <div style={fieldValueStyle}>
                 {selectedEvent.requirements?.maxPerformers ?? '—'}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.8em', color: '#888', marginBottom: '4px' }}>
-                Durée
-              </div>
-              <div style={{ color: '#fff', fontWeight: 500 }}>
+              <div style={{ ...fieldLabelStyle, marginBottom: '4px' }}>Durée</div>
+              <div style={fieldValueStyle}>
                 {selectedEvent.requirements?.duration ?? '—'} min
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.8em', color: '#888', marginBottom: '4px' }}>
-                Niveau
-              </div>
-              <div style={{ color: '#fff', fontWeight: 500 }}>
+              <div style={{ ...fieldLabelStyle, marginBottom: '4px' }}>Niveau</div>
+              <div style={fieldValueStyle}>
                 {(() => {
                   const level = selectedEvent.requirements?.requiredExperienceLevel;
                   if (!level || level === 'all') return 'Tous niveaux';
@@ -255,7 +252,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
         {/* Participants */}
         {user?.role === 'ORGANIZER' || user?.role === 'SUPER_ADMIN' ? (
           <div ref={participantsSectionRef}>
-            <h3 style={{ fontSize: '1.1em', color: '#28a745', marginBottom: '12px', marginTop: '24px' }}>
+            <h3 style={{ ...sectionHeadingStyle, marginTop: '24px' }}>
               Participants ({selectedEvent.participants?.length || 0}/
               {selectedEvent.requirements?.maxPerformers ?? 0})
             </h3>
@@ -272,9 +269,9 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                       style={{
                         marginBottom: '12px',
                         padding: '10px',
-                        backgroundColor: isAbsent ? 'rgba(220, 53, 69, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '8px',
-                        border: isAbsent ? '1px solid rgba(220, 53, 69, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+                        backgroundColor: isAbsent ? theme.colors.card.cancelled.bg : theme.colors.bg.surface,
+                        borderRadius: theme.radius.sm,
+                        border: isAbsent ? `1px solid ${theme.colors.card.cancelled.border}` : `1px solid ${theme.colors.border.subtle}`,
                       }}
                     >
                       <div
@@ -300,7 +297,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                           )}
                           <span
                             style={{
-                              color: '#ff4b2b',
+                              color: theme.colors.accent.primary,
                               cursor: 'pointer',
                               textDecoration: 'underline',
                               fontWeight: 'bold',
@@ -359,19 +356,19 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                           style={{
                             marginTop: '8px',
                             padding: '8px',
-                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                            borderRadius: '4px',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            backgroundColor: theme.colors.bg.surface,
+                            borderRadius: theme.radius.sm,
+                            border: `1px solid ${theme.colors.border.subtle}`,
                             borderLeft: '3px solid #dc3545',
                           }}
                         >
                           <div style={{ fontSize: '0.8em', color: '#ffc107', marginBottom: '2px', fontWeight: 'bold' }}>
                             💬 Raison de l'absence:
                           </div>
-                          <div style={{ fontSize: '0.8em', color: '#ffffff', fontStyle: 'italic' }}>
+                          <div style={{ fontSize: '0.8em', color: '#0f172a', fontStyle: 'italic' }}>
                             "{absence.reason}"
                           </div>
-                          <div style={{ fontSize: '0.7em', color: '#aaa', marginTop: '4px' }}>
+                          <div style={{ fontSize: '0.7em', color: theme.colors.text.muted, marginTop: '4px' }}>
                             Marqué le {new Date(absence.markedAt).toLocaleDateString('fr-FR')}
                           </div>
                         </div>
@@ -381,11 +378,11 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 })}
               </div>
             ) : (
-              <p style={{ color: '#aaa' }}>Aucun participant pour l'instant.</p>
+              <p style={{ color: theme.colors.text.muted }}>Aucun participant pour l'instant.</p>
             )}
           </div>
         ) : (
-          <h3 style={{ fontSize: '1.1em', color: '#28a745', marginBottom: '12px', marginTop: '24px' }}>
+          <h3 style={{ ...sectionHeadingStyle, marginTop: '24px' }}>
             Participants confirmés ({selectedEvent.participants?.length || 0}/
             {selectedEvent.requirements?.maxPerformers ?? 0})
           </h3>
@@ -398,24 +395,24 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
             justifyContent: 'center',
             marginTop: '28px',
             paddingTop: '24px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            borderTop: `1px solid ${theme.colors.border.subtle}`,
           }}
         >
           <button
             onClick={onClose}
             style={{
               padding: '8px 24px',
-              borderRadius: '8px',
+              borderRadius: theme.radius.sm,
               border: 'none',
-              background: '#ff416c',
-              color: '#fff',
+              background: theme.colors.accent.gradient,
+              color: theme.colors.text.onAccent,
               fontWeight: 'bold',
               cursor: 'pointer',
               minWidth: '120px',
               minHeight: '44px',
               fontSize: '1em',
               transition: 'all 0.2s ease',
-              WebkitTapHighlightColor: 'rgba(255,65,108,0.3)',
+              WebkitTapHighlightColor: 'rgba(124, 58, 237,0.3)',
             }}
             onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}

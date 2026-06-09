@@ -22,14 +22,14 @@ const RequesterInfoBlock: React.FC<{ requester: IUserData }> = ({ requester }) =
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#bbb' }}>
       <div>
         <span style={{ color: '#888' }}>✉ </span>
-        <a href={`mailto:${requester.email}`} style={{ color: '#ff416c', textDecoration: 'none' }}>
+        <a href={`mailto:${requester.email}`} style={{ color: '#7c3aed', textDecoration: 'none' }}>
           {requester.email}
         </a>
       </div>
       {phone && (
         <div>
           <span style={{ color: '#888' }}>☎ </span>
-          <a href={`tel:${phone}`} style={{ color: '#ff416c', textDecoration: 'none' }}>
+          <a href={`tel:${phone}`} style={{ color: '#7c3aed', textDecoration: 'none' }}>
             {phone}
           </a>
         </div>
@@ -58,8 +58,8 @@ const RequesterAvatar: React.FC<{ requester: IUserData; size?: number }> = ({ re
         width: size,
         height: size,
         borderRadius: '50%',
-        background: 'rgba(255,65,108,0.2)',
-        color: '#ff416c',
+        background: 'rgba(124, 58, 237,0.2)',
+        color: '#7c3aed',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -291,7 +291,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                 fontWeight: 600,
                 cursor: 'pointer',
                 background: isActive
-                  ? 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)'
+                  ? 'var(--ccc-accent-gradient)'
                   : 'rgba(255,255,255,0.07)',
                 color: isActive ? '#fff' : '#888',
                 outline: isActive ? 'none' : '1px solid rgba(255,255,255,0.1)',
@@ -410,7 +410,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
               ) : (
                 <button
                   onClick={() => { setRespondingGroupId(groupId); setGroupOwnerResponse(''); setGroupExcluded(new Set()); }}
-                  style={{ padding: '8px 18px', background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                  style={{ padding: '8px 18px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
                 >
                   Répondre au lot
                 </button>
@@ -473,7 +473,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#ff416c',
+                      color: '#7c3aed',
                       fontSize: 12,
                       cursor: 'pointer',
                       padding: 0,
@@ -510,7 +510,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                 background: 'rgba(255,255,255,0.04)',
                 padding: '10px 14px',
                 borderRadius: 8,
-                borderLeft: '3px solid rgba(255,65,108,0.5)',
+                borderLeft: '3px solid rgba(124, 58, 237,0.5)',
               }}
             >
               "{booking.message}"
@@ -600,7 +600,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                   onClick={() => { setRespondingId(booking._id); setOwnerResponse(''); }}
                   style={{
                     padding: '8px 18px',
-                    background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                    background: 'var(--ccc-accent-gradient)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 8,

@@ -27,9 +27,8 @@ function TermsOfServicePage() {
 
   const pageStyle: CSSProperties = {
     minHeight: '100vh',
-    backgroundColor: '#1a1a2e',
-    backgroundImage: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
-    color: '#ffffff',
+    background: 'var(--ccc-bg-gradient)',
+    color: 'var(--ccc-text-primary)',
     fontFamily: 'Arial, sans-serif',
     padding: '40px 20px',
   };
@@ -43,42 +42,45 @@ function TermsOfServicePage() {
   };
 
   const containerStyle: CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
     padding: '40px',
     borderRadius: '15px',
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     flex: 1,
     minWidth: 0,
   };
 
   const headingStyle: CSSProperties = {
-    color: '#FF5A7E',
     marginBottom: '24px',
-    fontSize: '2em',
+    fontSize: '2.5em',
+    color: 'var(--ccc-accent)',
+    fontWeight: 700,
+    letterSpacing: '-0.02em',
   };
 
   const sectionTitleStyle: CSSProperties = {
-    color: '#FF5A7E',
+    color: 'var(--ccc-accent)',
     marginTop: '32px',
     marginBottom: '16px',
     fontSize: '1.3em',
   };
 
   const textStyle: CSSProperties = {
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: 'var(--ccc-text-secondary)',
     lineHeight: '1.7',
     marginBottom: '12px',
   };
 
   const listStyle: CSSProperties = {
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: 'var(--ccc-text-secondary)',
     lineHeight: '1.7',
     marginBottom: '12px',
     paddingLeft: '20px',
   };
 
   const linkStyle: CSSProperties = {
-    color: '#ff416c',
+    color: 'var(--ccc-accent)',
     textDecoration: 'none',
     fontWeight: 'bold',
   };
