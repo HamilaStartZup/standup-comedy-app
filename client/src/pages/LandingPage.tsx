@@ -68,8 +68,8 @@ const LANDING_CSS = `
   .landing-dark .role-features { list-style: none; padding: 0; margin: 0; }
   .landing-dark .role-features li { padding: 10px 0; padding-left: 28px; position: relative; color: #64748B; font-size: 15px; line-height: 1.6; }
   .landing-dark .role-features li::before { content: '✓'; position: absolute; left: 0; color: var(--primary); font-weight: bold; font-size: 16px; }
-  .landing-dark .role-cta { margin-top: 24px; padding: 12px 24px; background: transparent; border: 2px solid var(--primary); color: var(--primary); border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s; width: 100%; font-family: 'Sora', sans-serif; }
-  .landing-dark .role-cta:hover { background: var(--primary); color: white; }
+  .landing-dark .role-cta { margin-top: 24px; padding: 12px 24px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(255, 75, 43, 0.1)); border: 1px solid rgba(124, 58, 237, 0.3); color: var(--primary); border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s; width: 100%; font-family: 'Sora', sans-serif; box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08); }
+  .landing-dark .role-cta:hover { background: var(--ccc-accent-gradient); border-color: rgba(124, 58, 237, 0.5); color: white; }
   .landing-dark .problem-section { padding: 140px 0; background: transparent; position: relative; overflow: hidden; }
   .landing-dark .problem-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; max-width: 1200px; margin: 0 auto; position: relative; z-index: 2; }
   .landing-dark .comparison-side { background: white; border-radius: 24px; padding: 48px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); position: relative; overflow: hidden; transition: transform 0.3s ease; color: #1a1a1a; }
@@ -102,8 +102,8 @@ const LANDING_CSS = `
   @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.3), 0 0 40px rgba(124, 58, 237, 0.1); } 50% { box-shadow: 0 0 30px rgba(124, 58, 237, 0.5), 0 0 60px rgba(124, 58, 237, 0.2); } }
   .landing-dark .divider-arrow { animation: glowPulse 2s ease-in-out infinite; }
   .landing-dark .problem-conclusion-new { margin-top: 60px; text-align: center; position: relative; z-index: 2; }
-  .landing-dark .conclusion-card { max-width: 700px; margin: 0 auto; padding: 40px; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); border: 2px solid var(--primary); position: relative; overflow: hidden; color: #1a1a1a; }
-  .landing-dark .conclusion-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px; background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent)); }
+  .landing-dark .conclusion-card { max-width: 700px; margin: 0 auto; padding: 40px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(255, 75, 43, 0.1)); border-radius: 20px; box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08); border: 1px solid rgba(124, 58, 237, 0.3); position: relative; overflow: hidden; color: #1a1a1a; }
+  .landing-dark .conclusion-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px; background: var(--ccc-accent-gradient); }
   .landing-dark .conclusion-icon { width: 64px; height: 64px; margin: 0 auto 20px; background: linear-gradient(135deg, var(--primary-light), white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; }
   .landing-dark .conclusion-text { font-size: 24px; font-weight: 700; color: #0F172A; margin-bottom: 12px; line-height: 1.4; }
   .landing-dark .conclusion-subtext { font-size: 16px; color: #64748B; line-height: 1.6; }

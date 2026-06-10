@@ -158,8 +158,8 @@ const Dashboard = () => {
 
   // Style de base pour toutes les cartes
   const cardStyle: CSSProperties = {
-    backgroundColor: 'var(--ccc-bg-elevated)',
-    border: '1px solid var(--ccc-border-subtle)',
+    background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(255, 75, 43, 0.1))',
+    border: '1px solid rgba(124, 58, 237, 0.3)',
     boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: '20px',
     padding: '30px',
@@ -708,8 +708,6 @@ const Dashboard = () => {
                   ...cardStyle,
                   ...superAdminCardLayoutStyle,
                   cursor: 'pointer',
-                  background: 'linear-gradient(135deg, rgba(124, 58, 237,0.15), rgba(255,75,43,0.1))',
-                  border: '1px solid rgba(124, 58, 237,0.3)',
                 }}
                 onClick={() => navigate('/my-venues')}
               >
