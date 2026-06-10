@@ -11,7 +11,6 @@ import {
   createEvent,
   updateEvent,
   getEventsList,
-  getEvents,
   getEventById,
   deleteEvent,
   getOrganizerEvents,
@@ -115,7 +114,7 @@ router.get('/:eventId/rating-status', authMiddleware, asyncHandler(getRatingStat
 router.get('/:eventId/ratings-summary', authMiddleware, asyncHandler(getEventRatingsSummary));
 
 // GET /api/events/:eventId - Récupérer un évènement par son ID
-router.get('/:eventId', asyncHandler(getEventById));
+router.get('/:eventId', authMiddleware, asyncHandler(getEventById));
 
 // PUT /api/events/:eventId - Mettre à jour un évènement
 router.put('/:eventId', authMiddleware, validate(updateEventSchema), asyncHandler(updateEvent));

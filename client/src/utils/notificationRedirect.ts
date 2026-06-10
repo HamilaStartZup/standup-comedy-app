@@ -100,7 +100,7 @@ export function getRedirectPath(
 
     // ── ORGANISATEUR / LIEU ──────────────────────────────────────────────────
     case 'new_application':
-      return { path: buildUrl('/events', { focus: eventId }) };
+      return { path: buildUrl('/applications', { status: 'PENDING', applicationId: appId }) };
 
     case 'late_cancellation_organizer':
       return { path: buildUrl('/events', { focus: eventId }) };

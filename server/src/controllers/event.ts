@@ -900,44 +900,6 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
 };
 
 // ============================================================================
-// GET EVENTS (original, without role filtering)
-// ============================================================================
-export const getEvents = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { status, date, city, organizerId } = req.query;
-    const query: any = {};
-
-    if (status) query.status = status;
-    if (date) {
-      try {
-        query.date = { $gte: new Date(date as string) };
-      } catch {
-        res.status(400).json({ message: 'Invalid date format' });
-        return;
-      }
-    }
-    if (city) query['location.city'] = city;
-    if (organizerId) {
-      if (mongoose.Types.ObjectId.isValid(organizerId as string)) {
-        query.organizer = new mongoose.Types.ObjectId(organizerId as string);
-      } else {
-        res.status(400).json({ message: 'Invalid organizerId' });
-        return;
-      }
-    }
-
-    const events = await EventModel.find(query)
-      .populate('organizer', 'firstName lastName email')
-      .sort({ date: 1 });
-
-    res.json({ events });
-  } catch (error) {
-    console.error('Get events error:', error);
-    res.status(500).json({ message: 'Error fetching events' });
-  }
-};
-
-// ============================================================================
 // GET EVENT BY ID
 // ============================================================================
 export const getEventById = async (req: Request, res: Response): Promise<void> => {

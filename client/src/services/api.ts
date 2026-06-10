@@ -37,16 +37,6 @@ export const upgradeToOrganizer = async (payload: {
   return response.data;
 };
 
-export const switchToLieu = async () => {
-  const response = await api.post('/auth/switch-to-lieu');
-  return response.data;
-};
-
-export const switchToOrganizer = async () => {
-  const response = await api.post('/auth/switch-to-organizer');
-  return response.data;
-};
-
 // Fonctions pour gérer les absences
 export const markAbsence = async (eventId: string, comedianId: string, reason?: string) => {
   const response = await api.post('/absences', { eventId, comedianId, reason });

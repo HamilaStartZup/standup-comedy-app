@@ -111,13 +111,14 @@ function ComedianProfilePage() {
     letterSpacing: '0.06em',
   };
 
-  const statBoxStyle: CSSProperties = {
-    background: 'rgba(232,93,117,0.1)',
-    border: '1px solid rgba(232,93,117,0.25)',
-    borderRadius: 12,
-    padding: '12px 20px',
-    textAlign: 'center',
-    minWidth: 90,
+  const statPillStyle: CSSProperties = {
+    background: 'rgba(232,93,117,0.08)',
+    color: ACCENT,
+    border: '1px solid rgba(232,93,117,0.4)',
+    borderRadius: 20,
+    padding: '2px 10px',
+    fontSize: 11,
+    fontWeight: 600,
   };
 
   const tabsContainerStyle: CSSProperties = {
@@ -222,15 +223,17 @@ function ComedianProfilePage() {
     color: '#dc3545',
   };
 
-  const infoFields = [
-    { label: 'Prénom', value: user?.firstName || 'Non défini', fieldName: 'firstName' },
-    { label: 'Nom', value: user?.lastName || 'Non défini', fieldName: 'lastName' },
-    { label: 'Email', value: user?.email || 'Non défini', isEmail: true, fieldName: 'email' },
-    { label: 'Ville', value: user?.city || 'Non défini', fieldName: 'city' },
-    { label: 'Téléphone', value: user?.phone || 'Non défini', fieldName: 'phone' },
-    { label: 'Genre', value: user?.gender === 'femme' ? 'Femme' : user?.gender === 'homme' ? 'Homme' : 'Non défini', fieldName: 'gender' },
-    { label: 'Adresse', value: user?.address || 'Non définie', fieldName: 'address' },
+  const allInfoFields = [
+    { label: 'Prénom', value: user?.firstName || 'Non défini', fieldName: 'firstName', present: !!user?.firstName },
+    { label: 'Nom', value: user?.lastName || 'Non défini', fieldName: 'lastName', present: !!user?.lastName },
+    { label: 'Email', value: user?.email || 'Non défini', isEmail: true, fieldName: 'email', present: !!user?.email },
+    { label: 'Ville', value: user?.city || 'Non défini', fieldName: 'city', present: !!user?.city },
+    { label: 'Téléphone', value: user?.phone || 'Non défini', fieldName: 'phone', present: !!user?.phone },
+    { label: 'Genre', value: user?.gender === 'femme' ? 'Femme' : user?.gender === 'homme' ? 'Homme' : 'Non défini', fieldName: 'gender', present: !!user?.gender },
+    { label: 'Adresse', value: user?.address || 'Non définie', fieldName: 'address', present: !!user?.address },
   ];
+  // En consultation d'un profil tiers, masquer les champs sans valeur (pas d'affichage "Non défini").
+  const infoFields = isViewingOtherProfile ? allInfoFields.filter((f) => f.present) : allInfoFields;
 
   const experienceLabel = (() => {
     const scenes = user?.profile?.numberOfScenes;
@@ -296,22 +299,17 @@ function ComedianProfilePage() {
               {!user?.avatarUrl && (user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : '—')}
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 20, color: '#fff', marginBottom: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 20, color: '#fff', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {user ? `${user.firstName} ${user.lastName}` : '—'}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <span style={badgeStyle}>HUMORISTE</span>
+                <span style={statPillStyle}>✓ {user?.stats?.applicationsAccepted ?? 0} candidatures acceptées</span>
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
-            <div style={statBoxStyle}>
-              <div style={{ color: ACCENT, fontSize: 26, fontWeight: 700 }}>
-                {user?.stats?.applicationsAccepted ?? 0}
-              </div>
-              <div style={{ color: '#888', fontSize: 12, marginTop: 2 }}>Candidatures acceptées</div>
-            </div>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', flexShrink: 0, justifyContent: isMobile ? 'flex-start' : 'flex-end' }}>
             {fromApplications && (
               <button
                 type="button"

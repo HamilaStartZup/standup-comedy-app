@@ -287,51 +287,6 @@ export const createApplication = async (req: AuthRequest, res: Response): Promis
   }
 };
 
-export const getEventApplications = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { eventId } = req.params;
-    const organizerId = req.user?.id;
-
-    if (!organizerId) {
-      res.status(401).json({
-        message: 'Non autorisé'
-      });
-      return;
-    }
-
-    // Valider l'ID de l'évènement
-    if (!Types.ObjectId.isValid(eventId)) {
-      res.status(400).json({
-        message: 'ID d\'évènement invalide'
-      });
-      return;
-    }
-
-    // Vérifier la propriété de l'organisateur
-    const event = await EventModel.findOne({
-      _id: eventId,
-      organizer: organizerId
-    });
-
-    if (!event) {
-      res.status(403).json({
-        message: 'Vous n\'avez pas la permission de consulter ces applications'
-      });
-      return;
-    }
-
-    // Récupérer les applications
-    const applications = await ApplicationModel.find({ event: eventId })
-      .populate('comedian', 'firstName lastName email phone profile')
-      .sort({ createdAt: -1 });
-
-    res.json({ applications });
-  } catch (error) {
-    console.error('Erreur lors de la récupération des applications de l\'évènement:', error);
-    res.status(500).json({ message: 'Erreur lors de la récupération des applications' });
-  }
-};
-
 export const updateApplicationStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { applicationId } = req.params;
