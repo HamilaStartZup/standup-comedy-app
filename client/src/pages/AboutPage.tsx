@@ -8,57 +8,59 @@ function AboutPage() {
 
   const pageStyle: CSSProperties = {
     minHeight: '100vh',
-    backgroundColor: '#1a1a2e',
-    backgroundImage: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
-    color: '#ffffff',
+    background: 'var(--ccc-bg-gradient)',
+    color: 'var(--ccc-text-primary)',
     fontFamily: 'Arial, sans-serif',
     padding: '40px 20px',
   };
 
   const containerStyle: CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
     padding: '40px',
     borderRadius: '15px',
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     maxWidth: '900px',
     margin: '0 auto',
   };
 
   const headingStyle: CSSProperties = {
-    color: '#FF5A7E',
     marginBottom: '24px',
-    fontSize: '2.5em',
     textAlign: 'center',
+    fontSize: '2.5em',
+    color: 'var(--ccc-accent)',
+    fontWeight: 700,
+    letterSpacing: '-0.02em',
   };
 
   const sectionTitleStyle: CSSProperties = {
-    color: '#FF5A7E',
+    color: 'var(--ccc-accent)',
     marginTop: '40px',
     marginBottom: '16px',
     fontSize: '1.5em',
   };
 
   const textStyle: CSSProperties = {
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: 'var(--ccc-text-secondary)',
     lineHeight: '1.8',
     marginBottom: '16px',
     fontSize: '1.05em',
   };
 
   const listStyle: CSSProperties = {
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: 'var(--ccc-text-secondary)',
     lineHeight: '2',
     marginBottom: '16px',
     paddingLeft: '24px',
   };
 
   const highlightStyle: CSSProperties = {
-    color: '#FF5A7E',
+    color: 'var(--ccc-accent)',
     fontWeight: 'bold',
   };
 
   const linkStyle: CSSProperties = {
-    color: '#ff416c',
+    color: 'var(--ccc-accent)',
     textDecoration: 'none',
     fontWeight: 'bold',
   };
@@ -70,8 +72,8 @@ function AboutPage() {
   };
 
   const ctaBoxStyle: CSSProperties = {
-    backgroundColor: 'rgba(255, 90, 126, 0.1)',
-    border: '2px solid #FF5A7E',
+    backgroundColor: 'var(--ccc-accent-soft)',
+    border: '2px solid var(--ccc-accent)',
     borderRadius: '12px',
     padding: '32px',
     marginTop: '40px',
@@ -79,14 +81,14 @@ function AboutPage() {
   };
 
   const ctaTitleStyle: CSSProperties = {
-    color: '#FF5A7E',
+    color: 'var(--ccc-accent)',
     fontSize: '1.4em',
     marginBottom: '16px',
   };
 
   const ctaButtonStyle: CSSProperties = {
     display: 'inline-block',
-    backgroundColor: '#FF5A7E',
+    backgroundColor: 'var(--ccc-accent)',
     color: 'white',
     padding: '14px 32px',
     borderRadius: '8px',

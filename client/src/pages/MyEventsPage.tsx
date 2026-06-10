@@ -25,6 +25,7 @@ import { markAbsence, cancelAbsence, getEventAbsences, addEventFavorite, removeE
 import type { ComedianSearchResult, SearchComediansByZoneResponse } from '../services/api';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages, InfoMessages, ConfirmMessages } from '../services/systemMessages';
 import { MoreVertical } from 'lucide-react';
+import { theme, pageTitleStyle } from '../styles/theme';
 
 const ITEMS_PER_PAGE = 5;
 type ComedianTab = 'opportunities' | 'accepted' | 'favorites' | 'recommendations';
@@ -82,28 +83,28 @@ function RatingsSummaryModal({ event, onClose }: { event: IEvent | null; onClose
   return (
     <Modal isOpen onClose={onClose}>
       <div>
-        <h2 style={{ margin: '0 0 16px 0', fontSize: '1.25em', color: '#fff' }}>
+        <h2 style={{ margin: '0 0 16px 0', fontSize: '1.25em', color: theme.colors.text.primary }}>
           Notes — {event.title}
         </h2>
-        {isLoading && <p style={{ color: '#aaa' }}>Chargement des notes…</p>}
+        {isLoading && <p style={{ color: theme.colors.text.muted }}>Chargement des notes…</p>}
         {error && <p style={{ color: '#dc3545' }}>Impossible de charger les notes.</p>}
         {data && !isLoading && (
           <>
-            <div style={{ marginBottom: 20, padding: '16px', background: 'rgba(255,255,255,0.06)', borderRadius: 8 }}>
-              <div style={{ marginBottom: 12, color: '#fff', fontSize: '0.95em' }}>
-                <span style={{ color: '#888' }}>Moyenne par événement</span>
+            <div style={{ marginBottom: 20, padding: '16px', background: theme.colors.bg.surface, borderRadius: theme.radius.md }}>
+              <div style={{ marginBottom: 12, color: theme.colors.text.primary, fontSize: '0.95em' }}>
+                <span style={{ color: theme.colors.text.muted }}>Moyenne par événement</span>
                 <div style={{ color: '#FFD700', fontWeight: 600, fontSize: '1.2em', marginTop: 4 }}>
                   {data.averageEventRating != null ? `${data.averageEventRating}/5` : '—'}
                 </div>
               </div>
-              <div style={{ marginBottom: 12, color: '#fff', fontSize: '0.95em' }}>
-                <span style={{ color: '#888' }}>Nombre total d&apos;avis</span>
-                <div style={{ color: '#fff', fontWeight: 600, fontSize: '1.2em', marginTop: 4 }}>
+              <div style={{ marginBottom: 12, color: theme.colors.text.primary, fontSize: '0.95em' }}>
+                <span style={{ color: theme.colors.text.muted }}>Nombre total d&apos;avis</span>
+                <div style={{ color: theme.colors.text.primary, fontWeight: 600, fontSize: '1.2em', marginTop: 4 }}>
                   {data.totalRatings}
                 </div>
               </div>
             </div>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '1em', color: '#ddd' }}>Moyenne par humoriste</h3>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '1em', color: theme.colors.text.secondary }}>Moyenne par humoriste</h3>
             {data.comedianRatings.length > 0 ? (
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 260, overflowY: 'auto' }}>
                 {data.comedianRatings.map((cr: RatingsSummaryData['comedianRatings'][number]) => (
@@ -111,14 +112,14 @@ function RatingsSummaryModal({ event, onClose }: { event: IEvent | null; onClose
                     key={cr.comedianId}
                     style={{
                       padding: '10px 0',
-                      borderBottom: '1px solid rgba(255,255,255,0.08)',
+                      borderBottom: `1px solid ${theme.colors.border.subtle}`,
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       gap: 12,
                     }}
                   >
-                    <span style={{ color: '#fff' }}>
+                    <span style={{ color: theme.colors.text.primary }}>
                       {cr.firstName} {cr.lastName}
                     </span>
                     <span style={{ color: '#FFD700', fontWeight: 600 }}>
@@ -128,10 +129,10 @@ function RatingsSummaryModal({ event, onClose }: { event: IEvent | null; onClose
                 ))}
               </ul>
             ) : (
-              <p style={{ color: '#888', margin: 0 }}>Aucun humoriste à afficher.</p>
+              <p style={{ color: theme.colors.text.muted, margin: 0 }}>Aucun humoriste à afficher.</p>
             )}
             {data.totalRatings === 0 && (
-              <p style={{ color: '#888', marginTop: 12 }}>Aucune notation pour cet événement.</p>
+              <p style={{ color: theme.colors.text.muted, marginTop: 12 }}>Aucune notation pour cet événement.</p>
             )}
           </>
         )}
@@ -255,6 +256,7 @@ function MyEventsPage() {
   const [selectedRecurrenceGroupId, setSelectedRecurrenceGroupId] = useState<string | null>(null);
   const [expandedUpcomingGroupId, setExpandedUpcomingGroupId] = useState<string | null>(null);
   const [openActionsEventId, setOpenActionsEventId] = useState<string | null>(null);
+  const [hoveredActionsButtonId, setHoveredActionsButtonId] = useState<string | null>(null);
   const [spectatorsModalEvent, setSpectatorsModalEvent] = useState<IEvent | null>(null);
   const [ratingsModalEvent, setRatingsModalEvent] = useState<IEvent | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
@@ -442,7 +444,7 @@ useEffect(() => {
       node.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const previousOutline = node.style.outline;
       const previousOffset = node.style.outlineOffset;
-      node.style.outline = '3px solid #ff416c';
+      node.style.outline = `3px solid ${theme.colors.accent.primary}`;
       node.style.outlineOffset = '2px';
       setTimeout(() => {
         node.style.outline = previousOutline;
@@ -1320,13 +1322,20 @@ useEffect(() => {
     }
     const menuId = actionKey ?? event._id;
     const isOpen = openActionsEventId === menuId;
+    const isActionsButtonHighlighted = isOpen || hoveredActionsButtonId === menuId;
+    const handleMenuItemMouseEnter = (e: React.MouseEvent<HTMLButtonElement>, disabled?: boolean) => {
+      if (!disabled) e.currentTarget.style.backgroundColor = theme.colors.accent.soft;
+    };
+    const handleMenuItemMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.currentTarget.style.backgroundColor = 'transparent';
+    };
     const menuItemStyle: CSSProperties = {
       display: 'block',
       width: '100%',
       padding: '10px 14px',
       border: 'none',
       background: 'transparent',
-      color: '#fff',
+      color: theme.colors.text.primary,
       fontSize: '14px',
       textAlign: 'left',
       cursor: 'pointer',
@@ -1346,6 +1355,8 @@ useEffect(() => {
             e.stopPropagation();
             setOpenActionsEventId(isOpen ? null : menuId);
           }}
+          onMouseEnter={() => setHoveredActionsButtonId(menuId)}
+          onMouseLeave={() => setHoveredActionsButtonId(null)}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -1353,14 +1364,18 @@ useEffect(() => {
             width: '36px',
             height: '36px',
             padding: 0,
-            borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.25)',
-            background: isOpen ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.25)',
-            color: '#fff',
+            borderRadius: theme.radius.sm,
+            border: `1px solid ${isActionsButtonHighlighted ? theme.colors.accent.softBorder : theme.colors.border.medium}`,
+            background: isActionsButtonHighlighted ? theme.colors.accent.soft : theme.colors.bg.surface,
+            color: isActionsButtonHighlighted ? theme.colors.accent.primary : theme.colors.text.primary,
             cursor: 'pointer',
+            boxShadow: isActionsButtonHighlighted ? theme.shadow.accent : 'none',
+            transform: isActionsButtonHighlighted ? 'scale(1.05)' : 'scale(1)',
+            transition: 'background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease, color 0.2s ease',
           }}
           title="Actions"
           aria-label="Actions"
+          aria-expanded={isOpen}
         >
           <MoreVertical size={20} />
         </button>
@@ -1373,10 +1388,10 @@ useEffect(() => {
               marginBottom: '8px',
               minWidth: '200px',
               ...(isMobile ? { maxWidth: 'min(280px, calc(100vw - 24px))' } : {}),
-              backgroundColor: '#2a2a3a',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              borderRadius: '8px',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+              backgroundColor: theme.colors.bg.elevated,
+              border: `1px solid ${theme.colors.border.subtle}`,
+              borderRadius: theme.radius.md,
+              boxShadow: theme.shadow.dropdown,
               zIndex: 1000,
               overflow: 'hidden',
             }}
@@ -1392,8 +1407,8 @@ useEffect(() => {
                     setOpenActionsEventId(null);
                     handleCardClick(event, true);
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  onMouseEnter={(e) => handleMenuItemMouseEnter(e)}
+                  onMouseLeave={handleMenuItemMouseLeave}
                 >
                   Gérer absences
                 </button>
@@ -1405,8 +1420,8 @@ useEffect(() => {
                     setOpenActionsEventId(null);
                     setRatingsModalEvent(event);
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  onMouseEnter={(e) => handleMenuItemMouseEnter(e)}
+                  onMouseLeave={handleMenuItemMouseLeave}
                 >
                   Voir les notes
                 </button>
@@ -1421,8 +1436,8 @@ useEffect(() => {
                 setOpenActionsEventId(null);
                   handleEditClick(event);
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  onMouseEnter={(e) => handleMenuItemMouseEnter(e)}
+                  onMouseLeave={handleMenuItemMouseLeave}
                 >
                   Modifier
                 </button>
@@ -1434,8 +1449,8 @@ useEffect(() => {
                     setOpenActionsEventId(null);
                     handleDuplicateClick(event);
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  onMouseEnter={(e) => handleMenuItemMouseEnter(e)}
+                  onMouseLeave={handleMenuItemMouseLeave}
                 >
                   Dupliquer
                 </button>
@@ -1448,8 +1463,8 @@ useEffect(() => {
                     handleNotifyHumorists(event);
                   }}
                   disabled={notifyingEventId === event._id}
-                  onMouseEnter={(e) => { if (notifyingEventId !== event._id) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  onMouseEnter={(e) => handleMenuItemMouseEnter(e, notifyingEventId === event._id)}
+                  onMouseLeave={handleMenuItemMouseLeave}
                 >
                   {notifyingEventId === event._id ? 'Envoi...' : 'Notifier les humoristes'}
                 </button>
@@ -1461,8 +1476,8 @@ useEffect(() => {
                     setOpenActionsEventId(null);
                     setSpectatorsModalEvent(event);
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  onMouseEnter={(e) => handleMenuItemMouseEnter(e)}
+                  onMouseLeave={handleMenuItemMouseLeave}
                 >
                   Voir spectateurs
                 </button>
@@ -1484,8 +1499,8 @@ useEffect(() => {
                         openCancelModal(event);
                       }
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    onMouseEnter={(e) => handleMenuItemMouseEnter(e)}
+                    onMouseLeave={handleMenuItemMouseLeave}
                   >
                     Annuler
                   </button>
@@ -1955,9 +1970,9 @@ useEffect(() => {
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#ffffff',
+    color: theme.colors.text.primary,
     padding: '20px',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+    background: theme.colors.bg.gradient,
   };
 
   const pageHeaderStyle: CSSProperties = {
@@ -1970,40 +1985,93 @@ useEffect(() => {
     marginBottom: '30px',
   };
 
-  const titleStyle: CSSProperties = {
-    fontSize: '2.5em',
-    color: '#ff416c',
-  };
+  const titleStyle: CSSProperties = pageTitleStyle;
 
   const buttonStyle: CSSProperties = {
     padding: '10px 20px',
-    borderRadius: '8px',
+    borderRadius: theme.radius.sm,
     border: 'none',
-    background: 'linear-gradient(to right, #ff416c, #ff4b2b)',
-    color: 'white',
+    background: theme.colors.accent.gradient,
+    color: theme.colors.text.onAccent,
     fontSize: '1em',
     fontWeight: 'bold',
     cursor: 'pointer',
-    transition: 'background 0.3s ease',
+    transition: 'opacity 0.2s ease, transform 0.2s ease',
+    boxShadow: theme.shadow.accent,
   };
 
   const sectionStyle: CSSProperties = {
     maxWidth: '1200px',
     margin: '0 auto 40px auto',
     padding: '20px',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: '8px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
+  };
+
+  const filterSectionWrapStyle: CSSProperties = {
+    maxWidth: '1200px',
+    margin: '0 auto 20px auto',
+    padding: '0 20px',
+  };
+
+  const filterLabelStyle: CSSProperties = {
+    display: 'block',
+    color: theme.colors.text.primary,
+    marginBottom: '8px',
+    fontWeight: 'bold',
+    fontSize: '14px',
+  };
+
+  /** Même surface visuelle que les cartes évènement à venir */
+  const eventCardSurfaceStyle: CSSProperties = {
+    backgroundColor: theme.colors.card.default,
+    borderRadius: theme.radius.md,
+    boxShadow: theme.shadow.card,
+    border: `1px solid ${theme.colors.border.onCard}`,
+    color: theme.colors.text.onCard,
+  };
+
+  const filterToggleButtonStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    padding: '10px 18px',
+    marginBottom: '8px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    fontSize: '14px',
+    fontFamily: 'inherit',
+    textAlign: 'left',
+    ...eventCardSurfaceStyle,
+  };
+
+  const filterFieldStyle: CSSProperties = {
+    width: '100%',
+    padding: '10px 18px',
+    fontSize: '14px',
+    outline: 'none',
+    fontFamily: 'inherit',
+    ...eventCardSurfaceStyle,
+  };
+
+  const completionFilterSelectStyle: CSSProperties = {
+    padding: '10px 18px',
+    minWidth: 160,
+    outline: 'none',
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+    ...eventCardSurfaceStyle,
   };
 
   const sectionTitleStyle: CSSProperties = {
     fontSize: '1.8em',
-    color: '#ff4b2b',
+    color: theme.colors.accent.primary,
     marginBottom: '15px',
+    fontWeight: 600,
+    letterSpacing: '-0.01em',
   };
 
   const emptyStateStyle: CSSProperties = {
-    color: '#aaa',
+    color: theme.colors.text.muted,
     fontSize: '1.1em',
   };
 
@@ -2011,6 +2079,8 @@ useEffect(() => {
   const organizerTabs: OrganizerTab[] = ['upcoming', 'full', 'archived', 'cancelled', 'calendar', 'favoriteComedians', 'recurringEvents'];
   const eventsSubTabs: EventsSubTab[] = ['upcoming', 'full', 'archived', 'cancelled', 'recurringEvents'];
   const superAdminTabs: SuperAdminTab[] = ['full', 'upcoming', 'archived', 'cancelled'];
+  const isEventsSubTabActive = eventsSubTabs.includes(organizerTab as EventsSubTab);
+  const eventsDropdownValue: EventsSubTab | '' = isEventsSubTabActive ? (organizerTab as EventsSubTab) : '';
 
   const comedianTabsContainerStyle: CSSProperties = {
     display: 'flex',
@@ -2023,16 +2093,16 @@ useEffect(() => {
     flex: isMobile ? '1 1 45%' : '0 0 auto',
     minWidth: '140px',
     padding: '10px 14px',
-    borderRadius: '10px',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    backgroundColor: isActive ? 'rgba(255, 75, 43, 0.25)' : 'rgba(0, 0, 0, 0.35)',
-    color: isActive ? '#ffffff' : '#ddd',
+    borderRadius: theme.radius.md,
+    border: `1px solid ${isActive ? theme.colors.accent.softBorder : theme.colors.border.subtle}`,
+    backgroundColor: isActive ? theme.colors.accent.soft : theme.colors.bg.surface,
+    color: isActive ? theme.colors.text.primary : theme.colors.text.secondary,
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    boxShadow: isActive ? '0 4px 12px rgba(255, 75, 43, 0.25)' : 'none',
+    boxShadow: isActive ? theme.shadow.accent : 'none',
   });
 
   const comedianTabTitleStyle: CSSProperties = {
@@ -2042,7 +2112,7 @@ useEffect(() => {
 
   const comedianTabCountStyle: CSSProperties = {
     fontSize: '0.85em',
-    color: '#ffb3c1',
+    color: theme.colors.text.accent,
   };
 
   const organizerTabsContainerStyle: CSSProperties = {
@@ -2055,10 +2125,10 @@ useEffect(() => {
 
   const organizerTabButtonStyle = (isActive: boolean): CSSProperties => ({
     padding: '10px 18px',
-    borderRadius: '999px',
-    border: isActive ? '1px solid #ff4b2b' : '1px solid rgba(255, 255, 255, 0.25)',
-    backgroundColor: isActive ? 'rgba(255, 75, 43, 0.25)' : 'rgba(0, 0, 0, 0.25)',
-    color: isActive ? '#ffffff' : '#ddd',
+    borderRadius: theme.radius.full,
+    border: `1px solid ${isActive ? theme.colors.accent.softBorder : theme.colors.border.medium}`,
+    backgroundColor: isActive ? theme.colors.accent.soft : theme.colors.bg.surface,
+    color: isActive ? theme.colors.text.primary : theme.colors.text.secondary,
     fontWeight: isActive ? 700 : 500,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
@@ -2069,9 +2139,9 @@ useEffect(() => {
 
   const organizerTabCountStyle: CSSProperties = {
     fontSize: '0.85em',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: theme.colors.bg.surfaceHover,
     padding: '2px 8px',
-    borderRadius: '999px',
+    borderRadius: theme.radius.full,
   };
 
   const dropdownContainerStyle: CSSProperties = {
@@ -2082,24 +2152,22 @@ useEffect(() => {
   const dropdownSelectStyle = (isActive: boolean): CSSProperties => ({
     padding: '10px 18px',
     paddingRight: '40px',
-    borderRadius: '999px',
-    border: isActive ? '1px solid #ff4b2b' : '1px solid rgba(255, 255, 255, 0.25)',
-    backgroundColor: isActive ? 'rgba(255, 75, 43, 0.25)' : 'rgba(0, 0, 0, 0.25)',
-    color: isActive ? '#ffffff' : '#ddd',
+    borderRadius: theme.radius.full,
+    border: `1px solid ${isActive ? theme.colors.accent.softBorder : theme.colors.border.medium}`,
+    backgroundColor: isActive ? theme.colors.accent.soft : theme.colors.bg.surface,
+    color: isActive ? theme.colors.text.primary : theme.colors.text.secondary,
     fontWeight: isActive ? 700 : 500,
     cursor: 'pointer',
     fontSize: '1em',
     fontFamily: 'inherit',
     appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none'%3e%3cpath d='M6 9l6 6 6-6' stroke='%23${isActive ? 'ffffff' : 'dddddd'}' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")`,
+    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none'%3e%3cpath d='M6 9l6 6 6-6' stroke='%23${isActive ? '7c3aed' : '64748b'}' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")`,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 14px center',
     backgroundSize: '14px',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     minWidth: isMobile ? '100%' : '220px',
-    boxShadow: isActive
-      ? '0 4px 12px rgba(255, 75, 43, 0.25), 0 0 0 1px rgba(255, 75, 43, 0.1) inset'
-      : '0 2px 4px rgba(0, 0, 0, 0.1)',
+    boxShadow: isActive ? theme.shadow.accent : 'none',
     backdropFilter: 'blur(10px)',
     WebkitBackdropFilter: 'blur(10px)',
     WebkitFontSmoothing: 'antialiased',
@@ -2107,11 +2175,8 @@ useEffect(() => {
   } as CSSProperties);
 
   const eventCardStyle: CSSProperties = {
-    backgroundColor: '#ffffff',
-    borderRadius: '20px',
+    ...eventCardSurfaceStyle,
     padding: isMobile ? '16px' : '20px',
-    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.12)',
-    border: '1px solid rgba(0, 0, 0, 0.08)',
     marginBottom: '15px',
     cursor: 'pointer',
     display: 'flex',
@@ -2123,14 +2188,14 @@ useEffect(() => {
 
   /** Style carte lorsque l'événement est en statut Complet (fond vert comme la capture) */
   const eventCardStyleComplete: CSSProperties = {
-    backgroundColor: '#E1FFE6',
-    border: '1px solid #c8f0d0',
+    backgroundColor: theme.colors.card.complete.bg,
+    border: `1px solid ${theme.colors.card.complete.border}`,
   };
 
   /** Fond rouge clair pour les évènements annulés (comme candidatures refusées) */
   const eventCardStyleCancelled: CSSProperties = {
-    backgroundColor: '#FFEBEE',
-    border: '1px solid #ffcdd2',
+    backgroundColor: theme.colors.card.cancelled.bg,
+    border: `1px solid ${theme.colors.card.cancelled.border}`,
   };
 
   const cardContentStyle: CSSProperties = {
@@ -2150,12 +2215,12 @@ useEffect(() => {
 
   const cardDateBadgeStyle: CSSProperties = {
     padding: '6px 16px',
-    borderRadius: '999px',
-    border: '1px solid rgba(0, 0, 0, 0.12)',
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    borderRadius: theme.radius.full,
+    border: `1px solid ${theme.colors.border.onCardStrong}`,
+    backgroundColor: theme.colors.bg.surface,
     fontSize: '0.85em',
     fontWeight: 600,
-    color: '#1a1a1a',
+    color: theme.colors.text.onCard,
   };
 
   const cardHeaderActionsStyle: CSSProperties = {
@@ -2168,7 +2233,7 @@ useEffect(() => {
   const favoriteStarButtonStyle = (isFavorite: boolean): CSSProperties => ({
     border: 'none',
     background: 'transparent',
-    color: isFavorite ? '#ffd700' : '#888888',
+    color: isFavorite ? theme.colors.semantic.star : theme.colors.semantic.starInactive,
     fontSize: '1.4em',
     cursor: 'pointer',
     transition: 'color 0.2s ease, transform 0.2s ease',
@@ -2190,14 +2255,14 @@ useEffect(() => {
 
   const cardMetaLabelStyle: CSSProperties = {
     fontSize: '0.72em',
-    color: '#64748B',
+    color: theme.colors.text.onCardMuted,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   };
 
   const cardMetaValueStyle: CSSProperties = {
     fontSize: '0.95em',
-    color: '#1a1a1a',
+    color: theme.colors.text.onCard,
     fontWeight: 600,
   };
 
@@ -2220,12 +2285,12 @@ useEffect(() => {
 
   const statusBadgeStyle: CSSProperties = {
     padding: '6px 14px',
-    borderRadius: '999px',
-    border: '1px solid rgba(0, 0, 0, 0.1)',
+    borderRadius: theme.radius.full,
+    border: `1px solid ${theme.colors.border.onCard}`,
     fontSize: '0.85em',
     fontWeight: 600,
-    color: '#1a1a1a',
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    color: theme.colors.text.onCard,
+    backgroundColor: theme.colors.bg.surface,
   };
 
   const renderStatusChip = (label: string, color: string, backgroundColor: string) => (
@@ -2234,13 +2299,13 @@ useEffect(() => {
 
   const eventTitleStyle: CSSProperties = {
     fontSize: isMobile ? '1.2em' : '1.45em',
-    color: '#1a1a1a',
+    color: theme.colors.text.onCard,
     margin: 0,
   };
 
   const eventDetailStyle: CSSProperties = {
     fontSize: '0.9em',
-    color: '#64748B',
+    color: theme.colors.text.onCardMuted,
     marginBottom: '3px',
   };
 
@@ -2250,12 +2315,12 @@ useEffect(() => {
 
   const modalLabelStyle: CSSProperties = {
     fontWeight: 'bold',
-    color: '#ff4b2b',
+    color: theme.colors.accent.primary,
     marginRight: '5px',
   };
 
   const modalValueStyle: CSSProperties = {
-    color: '#ffffff',
+    color: theme.colors.text.secondary,
   };
 
   // const modalParticipantListStyle: CSSProperties = {
@@ -2265,38 +2330,38 @@ useEffect(() => {
   // };
 
   // const modalParticipantItemStyle: CSSProperties = {
-  //   color: '#ffffff',
+  //   color: theme.colors.text.primary,
   //   marginBottom: '3px',
   // };
 
   const actionButtonStyleSmall: CSSProperties = {
     padding: '8px 15px',
-    borderRadius: '5px',
+    borderRadius: theme.radius.sm,
     border: 'none',
-    color: 'white',
+    color: theme.colors.text.onAccent,
     fontWeight: 'bold',
     cursor: 'pointer',
-    transition: 'background-color 0.3s ease',
+    transition: 'opacity 0.2s ease',
   };
 
   const deleteButtonStyle: CSSProperties = {
     ...actionButtonStyleSmall,
-    backgroundColor: '#dc3545',
+    backgroundColor: theme.colors.semantic.danger,
   };
 
   const editButtonStyle: CSSProperties = {
     ...actionButtonStyleSmall,
-    backgroundColor: '#ffc107',
+    backgroundColor: theme.colors.semantic.warning,
   };
 
   const applyButtonStyle: CSSProperties = {
     ...actionButtonStyleSmall,
-    background: 'linear-gradient(to right, #28a745, #218838)',
+    background: `linear-gradient(135deg, ${theme.colors.semantic.success} 0%, ${theme.colors.semantic.successDark} 100%)`,
   };
 
   const disabledApplyButtonStyle: CSSProperties = {
     ...actionButtonStyleSmall,
-    backgroundColor: '#6c757d',
+    backgroundColor: theme.colors.semantic.disabled,
     cursor: 'not-allowed',
   };
 
@@ -2329,8 +2394,8 @@ useEffect(() => {
 
   // Ajout du style du spinner
   const spinnerStyle: React.CSSProperties = {
-    border: '8px solid #f3f3f3',
-    borderTop: '8px solid #ff416c',
+    border: `8px solid ${theme.colors.bg.surface}`,
+    borderTop: `8px solid ${theme.colors.accent.primary}`,
     borderRadius: '50%',
     width: '70px',
     height: '70px',
@@ -2352,7 +2417,7 @@ useEffect(() => {
       {authIsLoading || eventsLoading ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
           <div style={spinnerStyle}></div>
-          <p style={{ color: '#aaa', marginTop: 20, fontSize: '1.2em' }}>
+          <p style={{ color: theme.colors.text.muted, marginTop: 20, fontSize: '1.2em' }}>
             {authIsLoading ? 'Chargement de votre profil...' : 'Chargement des évènements...'}
           </p>
         </div>
@@ -2361,21 +2426,22 @@ useEffect(() => {
           <p style={{ color: '#dc3545', fontSize: '1.2em', marginBottom: '20px' }}>
             Erreur lors du chargement des évènements
           </p>
-          <p style={{ color: '#aaa', fontSize: '1em', marginBottom: '20px', textAlign: 'center' }}>
+          <p style={{ color: theme.colors.text.muted, fontSize: '1em', marginBottom: '20px', textAlign: 'center' }}>
             {eventsErrorMessage?.message || 'Une erreur inattendue s\'est produite'}
           </p>
           <button
             onClick={() => refetch()}
             style={{
               padding: '12px 24px',
-              borderRadius: '8px',
+              borderRadius: theme.radius.sm,
               border: 'none',
-              background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
-              color: '#fff',
+              background: theme.colors.accent.gradient,
+              color: theme.colors.text.onAccent,
               fontSize: '1em',
               fontWeight: '600',
               cursor: 'pointer',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              boxShadow: theme.shadow.accent,
             }}
           >
             Réessayer
@@ -2392,7 +2458,7 @@ useEffect(() => {
             }}>
             <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
               <h1 style={titleStyle}>Les évènements</h1>
-              <p style={{ fontSize: '1.1em', color: '#aaa' }}>
+              <p style={{ fontSize: '1.1em', color: theme.colors.text.muted }}>
                 {user?.role === 'ORGANIZER' 
                   ? 'Gérez et visualisez vos évènements. Créez de nouveaux évènements pour trouver les meilleurs humoristes.'
                   : user?.role === 'SUPER_ADMIN'
@@ -2419,14 +2485,15 @@ useEffect(() => {
           {user?.role === 'SUPER_ADMIN' && (
             <div style={{ maxWidth: '1200px', margin: '0 auto 20px auto', padding: '0 20px' }}>
               <div style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                backgroundColor: theme.colors.bg.elevated,
                 padding: '20px',
-                borderRadius: '8px',
+                borderRadius: theme.radius.md,
                 margin: '0 auto',
-                border: '1px solid #444',
-                width: '100%'
+                border: `1px solid ${theme.colors.border.subtle}`,
+                width: '100%',
+                boxShadow: theme.shadow.card,
               }}>
-              <h3 style={{ color: '#ff4b2b', marginBottom: '15px', fontSize: '1.2em' }}>Filtres de recherche</h3>
+              <h3 style={{ color: theme.colors.accent.primary, marginBottom: '15px', fontSize: '1.2em' }}>Filtres de recherche</h3>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 320px))',
@@ -2434,7 +2501,7 @@ useEffect(() => {
                   justifyContent: isMobile ? 'stretch' : 'center'
               }}>
                 <div style={{ maxWidth: isMobile ? '100%' : 320 }}>
-                <label style={{ display: 'block', color: '#ffffff', marginBottom: '5px', fontWeight: 'bold' }}>
+                <label style={{ display: 'block', color: theme.colors.text.primary, marginBottom: '5px', fontWeight: 'bold' }}>
                   Filtrer par organisateur:
                 </label>
                 <select
@@ -2451,21 +2518,21 @@ useEffect(() => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    borderRadius: '5px',
+                    borderRadius: theme.radius.sm,
                     border: '1px solid #555',
                     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    color: '#ffffff',
+                    color: theme.colors.text.primary,
                     fontSize: '14px'
                   }}
                 >
-                  <option value="" style={{ backgroundColor: '#1a1a2e', color: '#ffffff' }}>
+                  <option value="" style={{ backgroundColor: theme.colors.bg.elevated, color: theme.colors.text.primary }}>
                     Tous les organisateurs
                   </option>
                   {availableOrganizers.map((organizer) => (
                     <option 
                       key={organizer.id} 
                       value={organizer.fullName}
-                      style={{ backgroundColor: '#1a1a2e', color: '#ffffff' }}
+                      style={{ backgroundColor: theme.colors.bg.elevated, color: theme.colors.text.primary }}
                     >
                       {organizer.fullName}
                     </option>
@@ -2473,7 +2540,7 @@ useEffect(() => {
                 </select>
               </div>
                 <div style={{ maxWidth: isMobile ? '100%' : 320 }}>
-                  <label style={{ display: 'block', color: '#ffffff', marginBottom: '5px', fontWeight: 'bold' }}>
+                  <label style={{ display: 'block', color: theme.colors.text.primary, marginBottom: '5px', fontWeight: 'bold' }}>
                     Recherche par mots-clés:
                   </label>
                   <form
@@ -2497,10 +2564,10 @@ useEffect(() => {
                         flex: isMobile ? undefined : 1,
                         width: isMobile ? '100%' : undefined,
                         padding: '10px',
-                        borderRadius: '5px',
+                        borderRadius: theme.radius.sm,
                         border: '1px solid #555',
                         backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                        color: '#ffffff',
+                        color: theme.colors.text.primary,
                         fontSize: '14px'
                       }}
                     />
@@ -2508,10 +2575,10 @@ useEffect(() => {
                       type="submit"
                       style={{
                         padding: '10px 18px',
-                        borderRadius: '6px',
+                        borderRadius: theme.radius.sm,
                         border: 'none',
-                        background: '#ff4b2b',
-                        color: '#fff',
+                        background: theme.colors.accent.gradient,
+                        color: theme.colors.text.onAccent,
                         fontWeight: 600,
                         cursor: 'pointer',
                         width: isMobile ? '100%' : 'auto'
@@ -2539,10 +2606,10 @@ useEffect(() => {
                   }}
                   style={{
                     padding: '8px 15px',
-                    borderRadius: '5px',
+                    borderRadius: theme.radius.sm,
                     border: '1px solid #555',
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    color: '#ffffff',
+                    color: theme.colors.text.primary,
                     cursor: 'pointer',
                     fontSize: '14px',
                     width: isMobile ? '100%' : 'auto',
@@ -2587,14 +2654,9 @@ useEffect(() => {
                 value={completionFilter}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setCompletionFilter(e.target.value as 'all' | 'complete' | 'incomplete')}
                 style={{
+                  ...completionFilterSelectStyle,
                   marginLeft: isMobile ? 0 : 'auto',
-                  padding: '8px',
-                  borderRadius: '6px',
-                  border: '1px solid #444',
-                  background: '#222',
-                  color: '#fff',
-                  minWidth: 160,
-                  width: isMobile ? '100%' : undefined
+                  width: isMobile ? '100%' : undefined,
                 }}
               >
                 <option value="all">Tous</option>
@@ -2610,7 +2672,7 @@ useEffect(() => {
               marginBottom: '20px',
               padding: '15px',
               backgroundColor: 'rgba(0, 0, 0, 0.3)',
-              borderRadius: '8px',
+              borderRadius: theme.radius.sm,
               border: '1px solid #444'
             }}
           >
@@ -2627,7 +2689,7 @@ useEffect(() => {
                 <label
                   style={{
                     display: 'block',
-                    color: '#ffffff',
+                    color: theme.colors.text.primary,
                     marginBottom: '8px',
                     fontWeight: 'bold',
                     fontSize: '14px'
@@ -2643,10 +2705,10 @@ useEffect(() => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    borderRadius: '6px',
+                    borderRadius: theme.radius.sm,
                     border: '1px solid #555',
                     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    color: '#ffffff',
+                    color: theme.colors.text.primary,
                     fontSize: '14px'
                   }}
                 />
@@ -2657,7 +2719,7 @@ useEffect(() => {
                 <label
                   style={{
                     display: 'block',
-                    color: '#ffffff',
+                    color: theme.colors.text.primary,
                     marginBottom: '8px',
                     fontWeight: 'bold',
                     fontSize: '14px'
@@ -2671,10 +2733,10 @@ useEffect(() => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    borderRadius: '6px',
+                    borderRadius: theme.radius.sm,
                     border: '1px solid #555',
                     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    color: '#ffffff',
+                    color: theme.colors.text.primary,
                     fontSize: '14px'
                   }}
                 >
@@ -2694,10 +2756,10 @@ useEffect(() => {
                   }}
                   style={{
                     padding: '10px 18px',
-                    borderRadius: '6px',
+                    borderRadius: theme.radius.sm,
                     border: '1px solid #555',
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    color: '#ffffff',
+                    color: theme.colors.text.primary,
                     cursor: 'pointer',
                     fontSize: '14px',
                     whiteSpace: 'nowrap',
@@ -2811,7 +2873,7 @@ useEffect(() => {
                   </div>
                 </div>
                 <div style={cardStatusBlockStyle}>
-                  {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? '#28a745' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(255, 65, 108, 0.12)')}
+                  {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? '#28a745' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(124, 58, 237, 0.12)')}
                   {renderStatusChip(
                     isCompleteEvent ? `Complet • ${participantsRatio}` : `Non complet • ${participantsRatio}`,
                     isCompleteEvent ? '#64748B' : '#ffc107',
@@ -2846,7 +2908,7 @@ useEffect(() => {
                   })()}
                   <div style={cardActionStackStyle}>
                     {isEventWithinOneHour(event) ? (
-                      <span style={{ fontSize: '12px', color: '#888' }}>
+                      <span style={{ fontSize: '12px', color: theme.colors.text.muted }}>
                         Plus de modification possible (événement dans moins d'1 h)
                       </span>
                     ) : !appliedEventIds.has(event._id) ? (
@@ -2898,31 +2960,38 @@ useEffect(() => {
                   <div style={dropdownContainerStyle}>
                     <style>{`
                       .organizer-events-dropdown option {
-                        background-color: #1a1a2e !important;
-                        color: #ffffff !important;
+                        background-color: #ffffff !important;
+                        color: #1e293b !important;
                         padding: 12px 16px;
                         font-size: 1em;
                       }
                       .organizer-events-dropdown option:hover {
-                        background-color: rgba(255, 75, 43, 0.2) !important;
+                        background-color: rgba(124, 58, 237, 0.12) !important;
                       }
                       .organizer-events-dropdown option:checked {
-                        background-color: rgba(255, 75, 43, 0.3) !important;
-                        color: #ffffff !important;
+                        background-color: rgba(124, 58, 237, 0.18) !important;
+                        color: #7c3aed !important;
                         font-weight: 700;
                       }
                     `}</style>
                     <select
                       className="organizer-events-dropdown"
-                      value={organizerTab}
+                      value={eventsDropdownValue}
                       onChange={(e) => {
-                        const newTab = e.target.value as OrganizerTab;
+                        const newTab = e.target.value as EventsSubTab | '';
+                        if (!newTab) return;
                         if (newTab !== 'recurringEvents') setSelectedRecurrenceGroupId(null);
                         if (newTab !== 'upcoming') setExpandedUpcomingGroupId(null);
                         setOrganizerTab(newTab);
                       }}
-                      style={dropdownSelectStyle(eventsSubTabs.includes(organizerTab as EventsSubTab))}
+                      style={dropdownSelectStyle(isEventsSubTabActive)}
+                      aria-label="Filtrer les évènements"
                     >
+                      {!isEventsSubTabActive && (
+                        <option value="" disabled>
+                          Évènements
+                        </option>
+                      )}
                       {eventsSubTabs.map(tabId => (
                         <option key={tabId} value={tabId}>
                           {organizerTabTitles[tabId]} ({organizerTabCounts[tabId]})
@@ -2960,22 +3029,8 @@ useEffect(() => {
               
               {/* Barre de recherche par zone d'événement et filtre (masquée sur l'onglet Événements récurrents) */}
               {organizerTab !== 'recurringEvents' && (
-              <div
-                style={{
-                  maxWidth: '1200px',
-                  margin: '0 auto 20px auto',
-                  padding: '0 20px'
-                }}
-              >
-                <div
-                  style={{
-                    marginBottom: '20px',
-                    padding: '15px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                    borderRadius: '8px',
-                    border: '1px solid #444'
-                  }}
-                >
+              <div style={filterSectionWrapStyle}>
+                <div style={{ marginBottom: '20px' }}>
                   <div
                     style={{
                       display: 'flex',
@@ -2986,15 +3041,7 @@ useEffect(() => {
                   >
                     {/* Recherche par zone d'événement */}
                     <div style={{ flex: isMobile ? undefined : 1, width: isMobile ? '100%' : undefined }}>
-                      <label
-                        style={{
-                          display: 'block',
-                          color: '#ffffff',
-                          marginBottom: '8px',
-                          fontWeight: 'bold',
-                          fontSize: '14px'
-                        }}
-                      >
+                      <label style={filterLabelStyle}>
                         Recherche par zone d'événement
                       </label>
                       <input
@@ -3002,43 +3049,19 @@ useEffect(() => {
                         placeholder="Ville, département, région de l'événement..."
                         value={organizerEventZoneSearch}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOrganizerEventZoneSearch(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          borderRadius: '6px',
-                          border: '1px solid #555',
-                          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                          color: '#ffffff',
-                          fontSize: '14px'
-                        }}
+                        style={filterFieldStyle}
                       />
                     </div>
                     
                     {/* Filtre par niveau d'expérience */}
                     <div style={{ width: isMobile ? '100%' : '200px' }}>
-                      <label
-                        style={{
-                          display: 'block',
-                          color: '#ffffff',
-                          marginBottom: '8px',
-                          fontWeight: 'bold',
-                          fontSize: '14px'
-                        }}
-                      >
+                      <label style={filterLabelStyle}>
                         Niveau d'expérience
                       </label>
                       <select
                         value={organizerEventExperienceFilter}
                         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setOrganizerEventExperienceFilter(e.target.value as 'all' | '0-50' | '50-200' | '200+')}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          borderRadius: '6px',
-                          border: '1px solid #555',
-                          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                          color: '#ffffff',
-                          fontSize: '14px'
-                        }}
+                        style={filterFieldStyle}
                       >
                         <option value="all">Tous les niveaux</option>
                         <option value="0-50">Débutant (0-50 scènes)</option>
@@ -3055,15 +3078,13 @@ useEffect(() => {
                           setOrganizerEventExperienceFilter('all');
                         }}
                         style={{
+                          ...eventCardSurfaceStyle,
                           padding: '10px 18px',
-                          borderRadius: '6px',
-                          border: '1px solid #555',
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          color: '#ffffff',
                           cursor: 'pointer',
                           fontSize: '14px',
                           whiteSpace: 'nowrap',
-                          height: 'fit-content'
+                          height: 'fit-content',
+                          fontWeight: 600,
                         }}
                       >
                         Réinitialiser
@@ -3076,41 +3097,17 @@ useEffect(() => {
 
               {/* Section de recherche d'humoristes par zone d'événement (masquée sur l'onglet Événements récurrents) */}
               {organizerTab !== 'recurringEvents' && (
-              <div
-                style={{
-                  maxWidth: '1200px',
-                  margin: '0 auto 20px auto',
-                  padding: '0 20px'
-                }}
-              >
-                <div
-                  style={{
-                    marginBottom: '20px',
-                    padding: '15px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                    borderRadius: '8px',
-                    border: '1px solid #444'
-                  }}
-                >
+              <div style={filterSectionWrapStyle}>
+                <div style={{ marginBottom: '20px' }}>
                   {/* Bouton pour afficher/masquer la section */}
                   <button
+                    type="button"
                     onClick={() => setShowComedianSearchSection(!showComedianSearchSection)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      width: '100%',
-                      padding: '10px 15px',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: '#ffffffff',
-                      fontWeight: 'bold',
-                      fontSize: '16px'
-                    }}
+                    style={filterToggleButtonStyle}
+                    aria-expanded={showComedianSearchSection}
                   >
                     <span>Rechercher des humoristes par zone</span>
-                    <span style={{ fontSize: '20px' }}>{showComedianSearchSection ? '−' : '+'}</span>
+                    <span style={{ fontSize: '18px', lineHeight: 1, color: theme.colors.text.muted }}>{showComedianSearchSection ? '−' : '+'}</span>
                   </button>
 
                   {showComedianSearchSection && (
@@ -3125,15 +3122,7 @@ useEffect(() => {
                       >
                         {/* Sélection du type de zone */}
                         <div style={{ width: isMobile ? '100%' : '180px' }}>
-                          <label
-                            style={{
-                              display: 'block',
-                              color: '#ffffff',
-                              marginBottom: '8px',
-                              fontWeight: 'bold',
-                              fontSize: '14px'
-                            }}
-                          >
+                          <label style={filterLabelStyle}>
                             Type de zone
                           </label>
                           <select
@@ -3144,15 +3133,7 @@ useEffect(() => {
                               setComedianSearchResults([]); // Réinitialiser les résultats
                               setComedianSearchTotal(0);
                             }}
-                            style={{
-                              width: '100%',
-                              padding: '10px',
-                              borderRadius: '6px',
-                              border: '1px solid #555',
-                              backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                              color: '#ffffff',
-                              fontSize: '14px'
-                            }}
+                            style={filterFieldStyle}
                           >
                             <option value="ville">Ville</option>
                             <option value="departement">Département</option>
@@ -3162,15 +3143,7 @@ useEffect(() => {
 
                         {/* Recherche par zone */}
                         <div style={{ flex: isMobile ? undefined : 1, width: isMobile ? '100%' : undefined }}>
-                          <label
-                            style={{
-                              display: 'block',
-                              color: '#ffffff',
-                              marginBottom: '8px',
-                              fontWeight: 'bold',
-                              fontSize: '14px'
-                            }}
-                          >
+                          <label style={filterLabelStyle}>
                             Zone d'événement
                           </label>
 
@@ -3179,15 +3152,7 @@ useEffect(() => {
                             <select
                               value={comedianZoneSearch}
                               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setComedianZoneSearch(e.target.value)}
-                              style={{
-                                width: '100%',
-                                padding: '10px',
-                                borderRadius: '6px',
-                                border: '1px solid #555',
-                                backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                                color: '#ffffff',
-                                fontSize: '14px'
-                              }}
+                              style={filterFieldStyle}
                             >
                               <option value="">Sélectionnez une région</option>
                               {Object.keys(FRENCH_REGIONS).map(region => (
@@ -3201,15 +3166,7 @@ useEffect(() => {
                             <select
                               value={comedianZoneSearch}
                               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setComedianZoneSearch(e.target.value)}
-                              style={{
-                                width: '100%',
-                                padding: '10px',
-                                borderRadius: '6px',
-                                border: '1px solid #555',
-                                backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                                color: '#ffffff',
-                                fontSize: '14px'
-                              }}
+                              style={filterFieldStyle}
                             >
                               <option value="">Sélectionnez un département</option>
                               {DEPARTMENTS_ORDER.map(code => (
@@ -3225,44 +3182,20 @@ useEffect(() => {
                               placeholder="Ex: Paris, Lyon, Marseille..."
                               value={comedianZoneSearch}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setComedianZoneSearch(e.target.value)}
-                              style={{
-                                width: '100%',
-                                padding: '10px',
-                                borderRadius: '6px',
-                                border: '1px solid #555',
-                                backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                                color: '#ffffff',
-                                fontSize: '14px'
-                              }}
+                              style={filterFieldStyle}
                             />
                           )}
                         </div>
 
                         {/* Filtre par niveau d'expérience */}
                         <div style={{ width: isMobile ? '100%' : '200px' }}>
-                          <label
-                            style={{
-                              display: 'block',
-                              color: '#ffffff',
-                              marginBottom: '8px',
-                              fontWeight: 'bold',
-                              fontSize: '14px'
-                            }}
-                          >
+                          <label style={filterLabelStyle}>
                             Niveau d'expérience
                           </label>
                           <select
                             value={comedianExperienceFilter}
                             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setComedianExperienceFilter(e.target.value as 'all' | '0-50' | '50-200' | '200+')}
-                            style={{
-                              width: '100%',
-                              padding: '10px',
-                              borderRadius: '6px',
-                              border: '1px solid #555',
-                              backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                              color: '#ffffff',
-                              fontSize: '14px'
-                            }}
+                            style={filterFieldStyle}
                           >
                             <option value="all">Tous les niveaux</option>
                             <option value="0-50">Débutant (0-50 scènes)</option>
@@ -3282,16 +3215,14 @@ useEffect(() => {
                               setComedianSearchTotal(0);
                             }}
                             style={{
+                              ...eventCardSurfaceStyle,
                               padding: '10px 18px',
-                              borderRadius: '6px',
-                              border: '1px solid #555',
-                              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                              color: '#ffffff',
                               cursor: 'pointer',
                               fontSize: '14px',
                               whiteSpace: 'nowrap',
-                              height: 'fit-content'
-                           }}
+                              height: 'fit-content',
+                              fontWeight: 600,
+                            }}
                           >
                             Réinitialiser
                           </button>
@@ -3347,7 +3278,7 @@ useEffect(() => {
                                 style={{
                                   padding: '15px',
                                   backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                                  borderRadius: '8px',
+                                  borderRadius: theme.radius.sm,
                                   border: '1px solid #444',
                                   cursor: 'pointer',
                                   transition: 'all 0.2s ease'
@@ -3364,7 +3295,7 @@ useEffect(() => {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
                                   <div style={{ flex: 1 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-                                      <h5 style={{ color: '#ffffff', margin: 0, fontSize: '16px' }}>
+                                      <h5 style={{ color: theme.colors.text.primary, margin: 0, fontSize: '16px' }}>
                                         {comedian.stageName || `${comedian.firstName} ${comedian.lastName}`}
                                       </h5>
                                       <button
@@ -3400,11 +3331,11 @@ useEffect(() => {
                                         style={{
                                           border: 'none',
                                           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                          color: '#ffffff',
+                                          color: theme.colors.text.primary,
                                           fontSize: '12px',
                                           cursor: 'pointer',
                                           padding: '6px 12px',
-                                          borderRadius: '15px',
+                                          borderRadius: theme.radius.md,
                                           transition: 'transform 0.2s ease, opacity 0.2s ease',
                                         }}
                                         title="Inviter pour un événement"
@@ -3421,12 +3352,12 @@ useEffect(() => {
                                       </button>
                                     </div>
                                     {comedian.stageName && (
-                                      <p style={{ color: '#aaa', margin: '0 0 5px 0', fontSize: '13px' }}>
+                                      <p style={{ color: theme.colors.text.muted, margin: '0 0 5px 0', fontSize: '13px' }}>
                                         {comedian.firstName} {comedian.lastName}
                                       </p>
                                     )}
                                     {comedian.mobilityZone && comedian.mobilityZone.length > 0 && (
-                                      <p style={{ color: '#888', margin: '0', fontSize: '13px' }}>
+                                      <p style={{ color: theme.colors.text.muted, margin: '0', fontSize: '13px' }}>
                                         🚗 Zones : {comedian.mobilityZone.map(z => z.value).join(', ')}
                                       </p>
                                     )}
@@ -3455,7 +3386,7 @@ useEffect(() => {
                                         key={idx}
                                         style={{
                                           padding: '3px 8px',
-                                          borderRadius: '10px',
+                                          borderRadius: theme.radius.md,
                                           fontSize: '15px',
                                           backgroundColor: 'rgba(102, 126, 234, 0.2)',
                                           color: '#667eea'
@@ -3478,7 +3409,7 @@ useEffect(() => {
                                 disabled={comedianSearchPage === 1}
                                 style={{
                                   padding: '8px 16px',
-                                  borderRadius: '6px',
+                                  borderRadius: theme.radius.sm,
                                   border: '1px solid #28a745',
                                   backgroundColor: comedianSearchPage === 1 ? 'rgba(0, 0, 0, 0.3)' : 'rgba(40, 167, 69, 0.2)',
                                   color: comedianSearchPage === 1 ? '#666' : '#ffffff',
@@ -3487,7 +3418,7 @@ useEffect(() => {
                               >
                                 Précédent
                               </button>
-                              <span style={{ color: '#ffffff', alignSelf: 'center' }}>
+                              <span style={{ color: theme.colors.text.primary, alignSelf: 'center' }}>
                                 Page {comedianSearchPage} / {Math.ceil(comedianSearchTotal / 10)}
                               </span>
                               <button
@@ -3495,7 +3426,7 @@ useEffect(() => {
                                 disabled={comedianSearchPage >= Math.ceil(comedianSearchTotal / 10)}
                                 style={{
                                   padding: '8px 16px',
-                                  borderRadius: '6px',
+                                  borderRadius: theme.radius.sm,
                                   border: '1px solid #28a745',
                                   backgroundColor: comedianSearchPage >= Math.ceil(comedianSearchTotal / 10) ? 'rgba(0, 0, 0, 0.3)' : 'rgba(40, 167, 69, 0.2)',
                                   color: comedianSearchPage >= Math.ceil(comedianSearchTotal / 10) ? '#666' : '#ffffff',
@@ -3548,14 +3479,9 @@ useEffect(() => {
                     value={completionFilter}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setCompletionFilter(e.target.value as 'all' | 'complete' | 'incomplete')}
                     style={{
+                      ...completionFilterSelectStyle,
                       marginLeft: isMobile ? 0 : 'auto',
-                      padding: '8px',
-                      borderRadius: '6px',
-                      border: '1px solid #444',
-                      background: '#222',
-                      color: '#fff',
-                      minWidth: 160,
-                      width: isMobile ? '100%' : undefined
+                      width: isMobile ? '100%' : undefined,
                     }}
                   >
                     <option value="all">Tous</option>
@@ -3613,7 +3539,7 @@ useEffect(() => {
                             </div>
                           </div>
                           <div style={cardStatusBlockStyle}>
-                            {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? '#28a745' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(255, 65, 108, 0.12)')}
+                            {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? '#28a745' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(124, 58, 237, 0.12)')}
                             {renderStatusChip(
                               isCompleteEvent ? `Complet • ${participantsRatio}` : `Non complet • ${participantsRatio}`,
                               isCompleteEvent ? '#64748B' : '#ffc107',
@@ -3675,7 +3601,7 @@ useEffect(() => {
                                   style={{
                                     padding: '12px 16px',
                                     backgroundColor: isDateComplete ? '#E1FFE6' : '#f8fafc',
-                                    borderRadius: '8px',
+                                    borderRadius: theme.radius.sm,
                                     border: isDateComplete ? '1px solid #c8f0d0' : '1px solid rgba(0, 0, 0, 0.08)',
                                     cursor: 'pointer',
                                     display: 'flex',
@@ -3757,7 +3683,7 @@ useEffect(() => {
                             </div>
                           </div>
                           <div style={cardStatusBlockStyle}>
-                            {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? '#28a745' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(255, 65, 108, 0.12)')}
+                            {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? '#28a745' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(124, 58, 237, 0.12)')}
                             {renderStatusChip(
                               isCompleteEvent ? `Complet • ${participantsRatio}` : `Non complet • ${participantsRatio}`,
                               isCompleteEvent ? '#64748B' : '#ffc107',
@@ -3822,7 +3748,7 @@ useEffect(() => {
                       </div>
                     </div>
                     <div style={cardStatusBlockStyle}>
-                      {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? '#28a745' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(255, 65, 108, 0.12)')}
+                      {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? '#28a745' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(124, 58, 237, 0.12)')}
                       {renderStatusChip(`Complet • ${participantsRatio}`, '#64748B', 'rgba(0, 0, 0, 0.06)')}
                       {renderOrganizerActions(event, 'full')}
                     </div>
@@ -4039,7 +3965,7 @@ useEffect(() => {
                   style={{
                     padding: '15px',
                     backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                    borderRadius: '8px',
+                    borderRadius: theme.radius.sm,
                     border: '1px solid #444',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease'
@@ -4056,7 +3982,7 @@ useEffect(() => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-                        <h5 style={{ color: '#ffffff', margin: 0, fontSize: '16px' }}>
+                        <h5 style={{ color: theme.colors.text.primary, margin: 0, fontSize: '16px' }}>
                           {comedian.stageName || `${comedian.firstName} ${comedian.lastName}`}
                         </h5>
                         <button
@@ -4087,13 +4013,13 @@ useEffect(() => {
                         </button>
                       </div>
                       {comedian.stageName && (
-                        <p style={{ color: '#aaa', margin: '0 0 5px 0', fontSize: '13px' }}>
+                        <p style={{ color: theme.colors.text.muted, margin: '0 0 5px 0', fontSize: '13px' }}>
                           {comedian.firstName} {comedian.lastName}
                         </p>
                       )}
                       {(comedian.mobilityZone || comedian.profile?.mobilityZone) && 
                        (comedian.mobilityZone || comedian.profile?.mobilityZone).length > 0 && (
-                        <p style={{ color: '#888', margin: '0', fontSize: '13px' }}>
+                        <p style={{ color: theme.colors.text.muted, margin: '0', fontSize: '13px' }}>
                           🚗 Zones : {(comedian.mobilityZone || comedian.profile?.mobilityZone).map((z: any) => z.value).join(', ')}
                         </p>
                       )}
@@ -4123,7 +4049,7 @@ useEffect(() => {
                           key={idx}
                           style={{
                             padding: '3px 8px',
-                            borderRadius: '10px',
+                            borderRadius: theme.radius.md,
                             fontSize: '15px',
                             backgroundColor: 'rgba(102, 126, 234, 0.2)',
                             color: '#667eea'
@@ -4138,7 +4064,7 @@ useEffect(() => {
               ))}
             </div>
           ) : (
-            <p style={{ color: '#aaa', marginTop: '20px', textAlign: 'center' }}>
+            <p style={{ color: theme.colors.text.muted, marginTop: '20px', textAlign: 'center' }}>
               Aucun humoriste en favoris pour le moment. Utilisez la recherche d'humoristes pour en ajouter.
             </p>
           )}
@@ -4160,10 +4086,10 @@ useEffect(() => {
                   gap: '8px',
                   marginBottom: '20px',
                   padding: '10px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  color: '#fff',
+                  borderRadius: theme.radius.sm,
+                  border: `1px solid ${theme.colors.border.medium}`,
+                  background: theme.colors.bg.surface,
+                  color: theme.colors.text.primary,
                   cursor: 'pointer',
                   fontSize: '14px',
                   fontWeight: 600,
@@ -4268,7 +4194,7 @@ useEffect(() => {
                   })}
                 </div>
               ) : (
-                <p style={{ color: '#aaa', marginTop: '20px', textAlign: 'center' }}>
+                <p style={{ color: theme.colors.text.muted, marginTop: '20px', textAlign: 'center' }}>
                   Aucun événement récurrent. Les événements créés en série apparaîtront ici regroupés par groupe.
                 </p>
               )}
@@ -4335,13 +4261,13 @@ useEffect(() => {
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
             placeholder="Raison de l'annulation"
-            style={{ width: '100%', minHeight: 80, padding: 10, borderRadius: 6, border: '1px solid #555', background: 'rgba(0,0,0,0.4)', color: '#fff' }}
+            style={{ width: '100%', minHeight: 80, padding: 10, borderRadius: theme.radius.sm, border: `1px solid ${theme.colors.border.medium}`, background: theme.colors.bg.surface, color: theme.colors.text.primary }}
           />
           <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <button onClick={() => setShowCancelModal(false)} style={{ ...actionButtonStyleSmall, backgroundColor: '#6c757d' }}>
               Fermer
             </button>
-            <button onClick={confirmCancelEvent} style={{ ...actionButtonStyleSmall, background: 'linear-gradient(to right, #ff416c, #ff4b2b)' }}>
+            <button onClick={confirmCancelEvent} style={{ ...actionButtonStyleSmall, background: theme.colors.accent.gradient }}>
               Confirmer l'annulation
             </button>
           </div>
@@ -4361,7 +4287,7 @@ useEffect(() => {
       >
         {spectatorsModalEvent && (
           <div>
-            <h2 style={{ margin: '0 0 16px 0', fontSize: '1.25em', color: '#fff' }}>
+            <h2 style={{ margin: '0 0 16px 0', fontSize: '1.25em', color: theme.colors.text.primary }}>
               Spectateurs — {spectatorsModalEvent.title}
             </h2>
             {(() => {
@@ -4374,7 +4300,7 @@ useEffect(() => {
                   <p style={{ marginBottom: 16, color: '#22c55e', fontSize: '1em' }}>
                     <strong>{count}</strong> personne{count !== 1 ? 's' : ''} inscrite{count !== 1 ? 's' : ''}
                     {placesLeft !== null && (
-                      <span style={{ color: '#ddd' }}> · <strong>{placesLeft}</strong> place{placesLeft !== 1 ? 's' : ''} restante{placesLeft !== 1 ? 's' : ''}</span>
+                      <span style={{ color: theme.colors.text.muted }}> · <strong>{placesLeft}</strong> place{placesLeft !== 1 ? 's' : ''} restante{placesLeft !== 1 ? 's' : ''}</span>
                     )}
                   </p>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 320, overflowY: 'auto' }}>
@@ -4383,14 +4309,14 @@ useEffect(() => {
                         ? `${(reg as { firstName: string; lastName: string }).firstName} ${(reg as { lastName: string }).lastName}`
                         : '—';
                       return (
-                        <li key={i} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}>
+                        <li key={i} style={{ padding: '8px 0', borderBottom: `1px solid ${theme.colors.border.subtle}`, color: theme.colors.text.primary }}>
                           {name}
                         </li>
                       );
                     })}
                   </ul>
                   {regs.length === 0 && (
-                    <p style={{ color: '#888', marginTop: 8 }}>Aucun spectateur inscrit pour le moment.</p>
+                    <p style={{ color: theme.colors.text.muted, marginTop: 8 }}>Aucun spectateur inscrit pour le moment.</p>
                   )}
                 </>
               );
@@ -4404,7 +4330,7 @@ useEffect(() => {
         <div>
           {comedianToInvite && (
             <>
-              <p style={{ marginBottom: 16, color: '#ddd' }}>
+              <p style={{ marginBottom: 16, color: theme.colors.text.secondary }}>
                 Inviter <strong>{comedianToInvite.stageName || `${comedianToInvite.firstName} ${comedianToInvite.lastName}`}</strong> à postuler pour un de vos événements :
               </p>
 
@@ -4412,13 +4338,12 @@ useEffect(() => {
                 value={selectedEventForInvite}
                 onChange={(e) => setSelectedEventForInvite(e.target.value)}
                 style={{
-                  width: '100%',
+                  ...filterFieldStyle,
                   padding: '12px',
-                  borderRadius: '8px',
-                  border: '1px solid #555',
-                  backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                  color: '#fff',
                   marginBottom: '16px',
+                  border: `1px solid ${theme.colors.border.medium}`,
+                  borderRadius: theme.radius.sm,
+                  backgroundColor: theme.colors.bg.surface,
                 }}
               >
                 <option value="">-- Choisir un événement --</option>
@@ -4462,7 +4387,7 @@ useEffect(() => {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backgroundColor: theme.colors.bg.overlay,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -4471,13 +4396,13 @@ useEffect(() => {
           onClick={(e) => e.target === e.currentTarget && closeWithdrawModal()}
         >
           <div style={{
-            backgroundColor: '#1a1a2e',
-            borderRadius: '12px',
+            backgroundColor: theme.colors.bg.elevated,
+            borderRadius: theme.radius.md,
             padding: '24px',
             maxWidth: '500px',
             width: '90%',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: theme.shadow.dropdown,
+            border: `1px solid ${theme.colors.border.subtle}`,
           }}>
             {/* Header avec titre et bouton X */}
             <div style={{
@@ -4489,7 +4414,7 @@ useEffect(() => {
               <h2 style={{
                 fontSize: '20px',
                 fontWeight: '600',
-                color: '#fff',
+                color: theme.colors.text.primary,
                 margin: 0,
               }}>
                 Retirer votre candidature
@@ -4499,11 +4424,11 @@ useEffect(() => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#999',
+                  color: theme.colors.text.muted,
                   cursor: 'pointer',
                   fontSize: '20px',
                   padding: '4px 8px',
-                  borderRadius: '6px',
+                  borderRadius: theme.radius.sm,
                   transition: 'all 0.2s',
                 }}
                 aria-label="Fermer"
@@ -4514,12 +4439,12 @@ useEffect(() => {
 
             {/* Message principal */}
             <p style={{
-              color: '#ccc',
+              color: theme.colors.text.secondary,
               fontSize: '15px',
               lineHeight: '1.6',
               margin: '0 0 12px 0',
             }}>
-              Êtes-vous sûr de vouloir retirer votre candidature pour l'évènement <strong style={{ color: '#fff' }}>"{eventToWithdraw.title}"</strong> ?
+              Êtes-vous sûr de vouloir retirer votre candidature pour l'évènement <strong style={{ color: theme.colors.text.primary }}>"{eventToWithdraw.title}"</strong> ?
             </p>
 
             {/* Avertissement */}
@@ -4529,7 +4454,7 @@ useEffect(() => {
               margin: '0 0 24px 0',
               padding: '10px 12px',
               backgroundColor: 'rgba(220, 53, 69, 0.15)',
-              borderRadius: '8px',
+              borderRadius: theme.radius.sm,
               border: '1px solid rgba(220, 53, 69, 0.3)',
             }}>
               ⚠️ Cette action est définitive.
@@ -4545,10 +4470,10 @@ useEffect(() => {
                 onClick={closeWithdrawModal}
                 style={{
                   padding: '10px 24px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  color: '#fff',
+                  borderRadius: theme.radius.sm,
+                  border: `1px solid ${theme.colors.border.medium}`,
+                  backgroundColor: theme.colors.bg.surface,
+                  color: theme.colors.text.primary,
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
@@ -4561,10 +4486,10 @@ useEffect(() => {
                 onClick={confirmWithdrawApplication}
                 style={{
                   padding: '10px 24px',
-                  borderRadius: '8px',
+                  borderRadius: theme.radius.sm,
                   border: 'none',
-                  backgroundColor: '#dc3545',
-                  color: '#fff',
+                  backgroundColor: theme.colors.semantic.danger,
+                  color: theme.colors.text.onAccent,
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',

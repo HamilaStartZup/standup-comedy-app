@@ -202,7 +202,7 @@ const NotificationDropdown = () => {
     justifyContent: 'center',
     fontSize: '0.6em',
     fontWeight: 'bold',
-    border: '2px solid #1a1a2e',
+    border: '2px solid #ffffff',
     minWidth: '16px',
   };
 
@@ -213,10 +213,10 @@ const NotificationDropdown = () => {
     width: '320px',
     maxWidth: '90vw',
     maxHeight: '450px',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     borderRadius: '8px',
-    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.12)',
+    border: '1px solid var(--ccc-border-subtle)',
     overflow: 'hidden',
     zIndex: 10000,
     display: 'flex',
@@ -225,7 +225,7 @@ const NotificationDropdown = () => {
 
   const notificationItemStyle: CSSProperties = {
     padding: '10px 12px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    borderBottom: '1px solid var(--ccc-border-subtle)',
     cursor: 'pointer',
     transition: 'background 0.2s ease',
     display: 'flex',
@@ -293,13 +293,13 @@ const NotificationDropdown = () => {
           {/* En-tête */}
           <div style={{
             padding: '12px 14px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            borderBottom: '1px solid var(--ccc-border-subtle)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            backgroundColor: 'var(--ccc-bg-surface)',
           }}>
-            <h3 style={{ margin: 0, color: '#ff416c', fontSize: '0.95em', fontWeight: 'bold' }}>
+            <h3 style={{ margin: 0, color: '#7c3aed', fontSize: '0.95em', fontWeight: 'bold' }}>
               Notifications {unreadCount > 0 && `(${unreadCount})`}
             </h3>
             {unreadCount > 0 && (
@@ -309,8 +309,8 @@ const NotificationDropdown = () => {
                   padding: '4px 10px',
                   borderRadius: '4px',
                   border: '1px solid rgba(255, 255, 255, 0.2)',
-                  background: 'rgba(255, 65, 108, 0.2)',
-                  color: '#ff416c',
+                  background: 'rgba(124, 58, 237, 0.2)',
+                  color: '#7c3aed',
                   fontSize: '0.75em',
                   fontWeight: 'bold',
                   cursor: 'pointer',
@@ -330,7 +330,7 @@ const NotificationDropdown = () => {
               <div style={{
                 padding: '30px 16px',
                 textAlign: 'center',
-                color: '#aaa',
+                color: 'var(--ccc-text-muted)',
               }}>
                 <p style={{ margin: 0, fontSize: '0.9em' }}>
                   {isNotifError ? 'Impossible de charger les notifications' : 'Aucune notification'}
@@ -343,14 +343,14 @@ const NotificationDropdown = () => {
                   onClick={() => handleNotificationClick(notification)}
                   style={{
                     ...notificationItemStyle,
-                    backgroundColor: notification.read ? 'transparent' : 'rgba(255, 65, 108, 0.1)',
-                    borderLeft: notification.read ? 'none' : '3px solid #ff416c',
+                    backgroundColor: notification.read ? 'transparent' : 'rgba(124, 58, 237, 0.1)',
+                    borderLeft: notification.read ? 'none' : '3px solid #7c3aed',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.backgroundColor = 'var(--ccc-bg-surface)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = notification.read ? 'transparent' : 'rgba(255, 65, 108, 0.1)';
+                    e.currentTarget.style.backgroundColor = notification.read ? 'transparent' : 'rgba(124, 58, 237, 0.1)';
                   }}
                 >
                   <span style={{ fontSize: '1.3em', flexShrink: 0 }}>
@@ -359,7 +359,7 @@ const NotificationDropdown = () => {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{
                       margin: 0,
-                      color: '#fff',
+                      color: 'var(--ccc-text-primary)',
                       fontWeight: notification.read ? 'normal' : 'bold',
                       fontSize: '0.9em',
                       marginBottom: '3px',
@@ -369,7 +369,7 @@ const NotificationDropdown = () => {
                     </p>
                     <p style={{
                       margin: 0,
-                      color: '#aaa',
+                      color: 'var(--ccc-text-muted)',
                       fontSize: '0.8em',
                       lineHeight: '1.3',
                     }}>

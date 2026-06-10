@@ -13,6 +13,7 @@ import {
   FRENCH_DEPARTMENTS,
   DEPARTMENTS_ORDER,
 } from '../utils/geographicMatching';
+import { primaryButtonStyle } from '../styles/theme';
 
 const VENUE_TYPES_WITH_ALL = [
   { value: '', label: 'Tous les types' },
@@ -77,11 +78,11 @@ const VenuesPage: React.FC = () => {
     : DEPARTMENTS_ORDER;
 
   const inputStyle: React.CSSProperties = {
-    background: 'rgba(0,0,0,0.4)',
-    border: '1px solid rgba(255,255,255,0.12)',
+    background: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-medium)',
     borderRadius: 12,
     padding: '12px 16px',
-    color: '#fff',
+    color: 'var(--ccc-text-primary)',
     fontSize: 14,
     outline: 'none',
     flex: 1,
@@ -89,7 +90,7 @@ const VenuesPage: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)', paddingBottom: 60, padding: '20px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ccc-bg-gradient)', color: 'var(--ccc-text-primary)', padding: '20px', paddingBottom: 60 }}>
       <style>{`
         @media (max-width: 640px) {
           .venues-page-title { font-size: 1.8em !important; }
@@ -104,10 +105,10 @@ const VenuesPage: React.FC = () => {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px' }}>
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
-          <h1 className="venues-page-title" style={{ margin: '0 0 8px 0', fontSize: '2.5em', fontWeight: 800, color: '#ff416c' }}>
+          <h1 className="venues-page-title ccc-page-title" style={{ margin: '0 0 8px 0' }}>
             Salles
           </h1>
-          <p style={{ margin: '0 0 20px 0', fontSize: '1.1em', color: '#aaa' }}>
+          <p style={{ margin: '0 0 20px 0', fontSize: '1.1em', color: 'var(--ccc-text-muted)' }}>
             Réservez des salles pour vos soirées stand-up, spectacles et événements.
           </p>
 
@@ -123,8 +124,9 @@ const VenuesPage: React.FC = () => {
             display: 'flex',
             flexWrap: 'wrap',
             gap: 12,
-            background: 'rgba(0,0,0,0.3)',
-            border: '1px solid rgba(255,65,108,0.2)',
+            background: 'var(--ccc-bg-elevated)',
+            border: '1px solid var(--ccc-border-subtle)',
+            boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
             borderRadius: 16,
             padding: 16,
             marginBottom: 32,
@@ -143,7 +145,7 @@ const VenuesPage: React.FC = () => {
             style={inputStyle}
           >
             {VENUE_TYPES_WITH_ALL.map((t) => (
-              <option key={t.value} value={t.value} style={{ background: '#1a1a2e' }}>
+              <option key={t.value} value={t.value} style={{ background: '#ffffff' }}>
                 {t.label}
               </option>
             ))}
@@ -158,9 +160,9 @@ const VenuesPage: React.FC = () => {
             }}
             style={inputStyle}
           >
-            <option value="" style={{ background: '#1a1a2e' }}>Toutes les régions</option>
+            <option value="" style={{ background: '#ffffff' }}>Toutes les régions</option>
             {REGION_OPTIONS.filter(Boolean).map((r) => (
-              <option key={r} value={r} style={{ background: '#1a1a2e' }}>
+              <option key={r} value={r} style={{ background: '#ffffff' }}>
                 {r}
               </option>
             ))}
@@ -172,9 +174,9 @@ const VenuesPage: React.FC = () => {
             onChange={(e) => setFilters((p) => ({ ...p, department: e.target.value }))}
             style={inputStyle}
           >
-            <option value="" style={{ background: '#1a1a2e' }}>Tous les départements</option>
+            <option value="" style={{ background: '#ffffff' }}>Tous les départements</option>
             {availableDepartments.map((code) => (
-              <option key={code} value={code} style={{ background: '#1a1a2e' }}>
+              <option key={code} value={code} style={{ background: '#ffffff' }}>
                 {code} — {FRENCH_DEPARTMENTS[code] ?? code}
               </option>
             ))}
@@ -190,17 +192,7 @@ const VenuesPage: React.FC = () => {
           />
           <button
             type="submit"
-            style={{
-              padding: '12px 28px',
-              background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 12,
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
+            style={{ ...primaryButtonStyle, whiteSpace: 'nowrap' }}
           >
             Rechercher
           </button>
@@ -211,8 +203,8 @@ const VenuesPage: React.FC = () => {
               style={{
                 padding: '12px 20px',
                 background: 'transparent',
-                color: '#888',
-                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'var(--ccc-text-muted)',
+                border: '1px solid var(--ccc-border-medium)',
                 borderRadius: 12,
                 cursor: 'pointer',
                 fontSize: 14,
@@ -237,14 +229,14 @@ const VenuesPage: React.FC = () => {
             style={{
               textAlign: 'center',
               padding: '64px 24px',
-              background: 'rgba(0,0,0,0.3)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'var(--ccc-bg-elevated)',
+              border: '1px solid var(--ccc-border-subtle)',
               borderRadius: 20,
             }}
           >
             <div style={{ fontSize: 56, marginBottom: 16 }}>🏛️</div>
-            <h3 style={{ color: '#fff', fontSize: 20, marginBottom: 8 }}>Aucune salle disponible</h3>
-            <p style={{ color: '#888', fontSize: 15, marginBottom: 24 }}>
+            <h3 style={{ color: 'var(--ccc-text-primary)', fontSize: 20, marginBottom: 8 }}>Aucune salle disponible</h3>
+            <p style={{ color: 'var(--ccc-text-muted)', fontSize: 15, marginBottom: 24 }}>
               {activeFilters.city || activeFilters.venueType || activeFilters.minCapacity || activeFilters.region || activeFilters.department
                 ? "Essayez d'autres critères de recherche."
                 : "Aucune salle n'a encore été ajoutée."}
@@ -254,9 +246,9 @@ const VenuesPage: React.FC = () => {
                 onClick={handleReset}
                 style={{
                   padding: '10px 24px',
-                  background: 'rgba(255,65,108,0.15)',
-                  color: '#ff416c',
-                  border: '1px solid rgba(255,65,108,0.4)',
+                  background: 'rgba(124, 58, 237,0.15)',
+                  color: '#7c3aed',
+                  border: '1px solid rgba(124, 58, 237,0.4)',
                   borderRadius: 10,
                   cursor: 'pointer',
                   fontWeight: 600,
@@ -268,7 +260,7 @@ const VenuesPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <p style={{ color: '#888', fontSize: 14, marginBottom: 24 }}>
+            <p style={{ color: 'var(--ccc-text-muted)', fontSize: 14, marginBottom: 24 }}>
               {data.length} salle{data.length > 1 ? 's' : ''} disponible{data.length > 1 ? 's' : ''}
             </p>
             <div

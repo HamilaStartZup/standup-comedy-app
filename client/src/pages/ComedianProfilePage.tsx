@@ -11,13 +11,13 @@ import ExportDataSection from '../components/ExportDataSection';
 import ReportComedianModal from '../components/ReportComedianModal';
 import api from '../services/api';
 
-const ACCENT = '#e85d75';
-const ACCENT_GRADIENT = 'linear-gradient(135deg, #e85d75, #c13057)';
-const CARD_BG = '#1a1d27';
-const BORDER = '#2a2d3a';
-const SEPARATOR = '#22253a';
-const LABEL_COLOR = '#777';
-const VALUE_COLOR = '#e0e0e0';
+const ACCENT = 'var(--ccc-accent)';
+const ACCENT_GRADIENT = 'var(--ccc-accent-gradient)';
+const CARD_BG = 'var(--ccc-bg-elevated)';
+const BORDER = 'var(--ccc-border-subtle)';
+const SEPARATOR = 'var(--ccc-border-subtle)';
+const LABEL_COLOR = 'var(--ccc-text-muted)';
+const VALUE_COLOR = 'var(--ccc-text-secondary)';
 
 function ComedianProfilePage() {
   const { id } = useParams<{ id?: string }>();
@@ -58,9 +58,9 @@ function ComedianProfilePage() {
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#fff',
+    color: 'var(--ccc-text-primary)',
     padding: '20px',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+    background: 'var(--ccc-bg-gradient)',
   };
 
   const wrapperStyle: CSSProperties = {
@@ -78,7 +78,8 @@ function ComedianProfilePage() {
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
-    border: `1px solid ${BORDER}`,
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     flexWrap: 'wrap',
     gap: 16,
   };
@@ -127,7 +128,8 @@ function ComedianProfilePage() {
     padding: 4,
     display: 'flex',
     marginBottom: 16,
-    border: `1px solid ${BORDER}`,
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
   };
 
   const tabButtonStyle = (active: boolean): CSSProperties => ({
@@ -140,14 +142,15 @@ function ComedianProfilePage() {
     fontSize: 14,
     transition: 'all 0.2s',
     background: active ? ACCENT_GRADIENT : 'transparent',
-    color: active ? '#fff' : '#777',
+    color: active ? '#fff' : 'var(--ccc-text-muted)',
   });
 
   const contentCardStyle: CSSProperties = {
     background: CARD_BG,
     borderRadius: 16,
     padding: 24,
-    border: `1px solid ${BORDER}`,
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     marginBottom: 16,
   };
 
@@ -207,7 +210,8 @@ function ComedianProfilePage() {
 
   const modifierButtonStyle: CSSProperties = {
     background: 'transparent',
-    border: `1px solid ${BORDER}`,
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: 12,
     padding: '12px 20px',
     color: '#666',
@@ -281,7 +285,7 @@ function ComedianProfilePage() {
     return (
       <div style={mainContainerStyle}>
         <Navbar />
-        <div style={{ ...wrapperStyle, textAlign: 'center', padding: '40px', color: '#888' }}>
+        <div style={{ ...wrapperStyle, textAlign: 'center', padding: '40px', color: 'var(--ccc-text-muted)' }}>
           Chargement du profil...
         </div>
       </div>
@@ -299,7 +303,7 @@ function ComedianProfilePage() {
               {!user?.avatarUrl && (user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : '—')}
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 20, color: '#fff', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontWeight: 700, fontSize: 20, color: 'var(--ccc-text-primary)', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {user ? `${user.firstName} ${user.lastName}` : '—'}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -309,7 +313,7 @@ function ComedianProfilePage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', flexShrink: 0, justifyContent: isMobile ? 'flex-start' : 'flex-end' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0, justifyContent: isMobile ? 'flex-start' : 'flex-end' }}>
             {fromApplications && (
               <button
                 type="button"

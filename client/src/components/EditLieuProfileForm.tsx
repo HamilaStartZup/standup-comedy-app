@@ -130,7 +130,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
 
   if (!isOpen) return null;
   if (isLoading || !currentUser) {
-    return <div style={{ color: '#fff', textAlign: 'center', marginTop: 40 }}>Chargement du profil...</div>;
+    return <div style={{ color: 'var(--ccc-text-primary)', textAlign: 'center', marginTop: 40 }}>Chargement du profil...</div>;
   }
 
   const formContainerStyle: CSSProperties = {
@@ -138,17 +138,17 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     padding: '30px',
     borderRadius: '10px',
-    boxShadow: '0 5px 15px rgba(0, 0, 0, 0.5)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.12)',
     width: '90%',
     maxWidth: '700px',
     zIndex: 2000,
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     maxHeight: '90vh',
     overflowY: 'auto',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    border: '1px solid var(--ccc-border-subtle)',
   };
 
   const overlayStyle: CSSProperties = {
@@ -163,7 +163,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
 
   const titleStyle: CSSProperties = {
     fontSize: '2em',
-    color: '#ff416c',
+    color: '#7c3aed',
     marginBottom: '20px',
     textAlign: 'center',
   };
@@ -247,14 +247,14 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
               <img
                 src={previewImage}
                 alt="Aperçu"
-                style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #ff416c' }}
+                style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #7c3aed' }}
               />
             </div>
           )}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
             <label style={{
               padding: '8px 16px',
-              background: 'linear-gradient(to right, #ff416c, #ff4b2b)',
+              background: 'var(--ccc-accent-gradient)',
               color: 'white',
               borderRadius: '8px',
               cursor: 'pointer',

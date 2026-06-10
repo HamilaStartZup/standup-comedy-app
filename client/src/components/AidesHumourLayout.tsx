@@ -12,6 +12,8 @@ export default function AidesHumourLayout({ children }: { children: React.ReactN
         padding: '20px',
         paddingBottom: 60,
         boxSizing: 'border-box',
+        background: 'var(--ccc-bg-gradient)',
+        color: 'var(--ccc-text-primary)',
       }}
     >
       <Navbar />

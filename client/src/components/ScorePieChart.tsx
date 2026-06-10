@@ -156,7 +156,7 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
             boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08)',
             maxHeight: '85vh',
             overflowY: 'auto',
-            border: '1px solid rgba(255, 65, 108, 0.2)',
+            border: '1px solid rgba(124, 58, 237, 0.2)',
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -174,7 +174,7 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
                 width: '40px',
                 height: '40px',
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                background: 'var(--ccc-accent-gradient)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -209,8 +209,8 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
                 transition: 'all 0.2s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 65, 108, 0.2)';
-                e.currentTarget.style.color = '#ff416c';
+                e.currentTarget.style.background = 'rgba(124, 58, 237, 0.2)';
+                e.currentTarget.style.color = '#7c3aed';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
@@ -223,17 +223,17 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
 
           {/* Score global highlight */}
           <div style={{
-            background: 'linear-gradient(135deg, rgba(255, 65, 108, 0.15) 0%, rgba(255, 75, 43, 0.15) 100%)',
+            background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(255, 75, 43, 0.15) 100%)',
             borderRadius: '12px',
             padding: '20px',
             marginBottom: '24px',
-            border: '1px solid rgba(255, 65, 108, 0.25)',
+            border: '1px solid rgba(124, 58, 237, 0.25)',
             textAlign: 'center'
           }}>
             <div style={{
               fontSize: '42px',
               fontWeight: 800,
-              background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+              background: 'var(--ccc-accent-gradient)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -502,22 +502,22 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
               padding: '14px 20px',
               borderRadius: '10px',
               border: 'none',
-              background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+              background: 'var(--ccc-accent-gradient)',
               color: '#ffffff',
               fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'all 0.2s ease',
-              boxShadow: '0 4px 15px rgba(255, 65, 108, 0.3)',
+              boxShadow: '0 4px 15px rgba(124, 58, 237, 0.3)',
               marginTop: '8px'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 65, 108, 0.4)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.4)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 65, 108, 0.3)';
+              e.currentTarget.style.boxShadow = '0 4px 15px rgba(124, 58, 237, 0.3)';
             }}
           >
             Fermer

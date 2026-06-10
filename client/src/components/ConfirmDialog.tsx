@@ -37,13 +37,13 @@ const ConfirmDialog = ({
   };
 
   const dialogStyle: CSSProperties = {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     borderRadius: '12px',
     padding: '24px',
     maxWidth: '400px',
     width: '90%',
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.12)',
+    border: '1px solid var(--ccc-border-subtle)',
   };
 
   const headerStyle: CSSProperties = {
@@ -56,7 +56,7 @@ const ConfirmDialog = ({
   const titleStyle: CSSProperties = {
     fontSize: '18px',
     fontWeight: '600',
-    color: '#fff',
+    color: 'var(--ccc-text-primary)',
     margin: 0,
   };
 
@@ -73,7 +73,7 @@ const ConfirmDialog = ({
   };
 
   const messageStyle: CSSProperties = {
-    color: '#ccc',
+    color: 'var(--ccc-text-secondary)',
     fontSize: '14px',
     lineHeight: '1.6',
     marginBottom: '24px',
@@ -98,14 +98,14 @@ const ConfirmDialog = ({
 
   const cancelButtonStyle: CSSProperties = {
     ...baseButtonStyle,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    color: '#fff',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'var(--ccc-bg-surface)',
+    color: 'var(--ccc-text-primary)',
+    border: '1px solid var(--ccc-border-medium)',
   };
 
   const confirmButtonStyle: CSSProperties = {
     ...baseButtonStyle,
-    backgroundColor: isDangerous ? '#dc3545' : '#ff416c',
+    backgroundColor: isDangerous ? '#dc3545' : '#7c3aed',
     color: '#fff',
   };
 

@@ -5,8 +5,9 @@ const VenueCardSkeleton: React.FC = () => {
   return (
     <div
       style={{
-        background: '#1a1a2e',
-        border: '1px solid rgba(255,255,255,0.1)',
+        background: 'var(--ccc-bg-elevated)',
+        border: '1px solid var(--ccc-border-subtle)',
+        boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
         borderRadius: 16,
         overflow: 'hidden',
       }}

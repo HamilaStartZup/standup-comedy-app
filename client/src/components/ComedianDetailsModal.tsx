@@ -154,10 +154,10 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
 
   const sectionTitleStyle: CSSProperties = {
     fontSize: '1.3em',
-    color: '#ff416c',
+    color: '#7c3aed',
     marginTop: '20px',
     marginBottom: '15px',
-    borderBottom: '2px solid #ff416c',
+    borderBottom: '2px solid #7c3aed',
     paddingBottom: '8px',
     fontWeight: 'bold'
   };
@@ -320,7 +320,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
             {/* Réseaux sociaux */}
             {(comedian.profile?.socialLinks?.youtube || comedian.profile?.socialLinks?.instagram || comedian.profile?.socialLinks?.facebook) && (
               <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                <h4 style={{ color: '#ff416c', marginBottom: '10px', fontSize: '1em' }}>📱 Réseaux sociaux</h4>
+                <h4 style={{ color: '#7c3aed', marginBottom: '10px', fontSize: '1em' }}>📱 Réseaux sociaux</h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                   {comedian.profile?.socialLinks?.youtube && (
                     <a 
@@ -328,13 +328,13 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                       target="_blank" 
                       rel="noopener noreferrer"
                       style={{ 
-                        color: '#ff416c', 
+                        color: '#7c3aed', 
                         textDecoration: 'none',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '5px',
                         padding: '5px 10px',
-                        backgroundColor: 'rgba(255, 65, 108, 0.1)',
+                        backgroundColor: 'rgba(124, 58, 237, 0.1)',
                         borderRadius: '5px'
                       }}
                     >
@@ -347,13 +347,13 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                       target="_blank" 
                       rel="noopener noreferrer"
                       style={{ 
-                        color: '#ff416c', 
+                        color: '#7c3aed', 
                         textDecoration: 'none',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '5px',
                         padding: '5px 10px',
-                        backgroundColor: 'rgba(255, 65, 108, 0.1)',
+                        backgroundColor: 'rgba(124, 58, 237, 0.1)',
                         borderRadius: '5px'
                       }}
                     >
@@ -366,13 +366,13 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                       target="_blank" 
                       rel="noopener noreferrer"
                       style={{ 
-                        color: '#ff416c', 
+                        color: '#7c3aed', 
                         textDecoration: 'none',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '5px',
                         padding: '5px 10px',
-                        backgroundColor: 'rgba(255, 65, 108, 0.1)',
+                        backgroundColor: 'rgba(124, 58, 237, 0.1)',
                         borderRadius: '5px'
                       }}
                     >
@@ -398,7 +398,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                marginBottom: '15px',
                border: '1px solid rgba(255, 255, 255, 0.1)'
              }}>
-               <h4 style={{ color: '#ff416c', marginBottom: '10px', fontSize: '1.1em' }}>🎯 Candidatures</h4>
+               <h4 style={{ color: '#7c3aed', marginBottom: '10px', fontSize: '1.1em' }}>🎯 Candidatures</h4>
                
                {loading && (
                  <div style={{ textAlign: 'center', color: '#aaa', padding: '10px' }}>
@@ -480,7 +480,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
               marginBottom: '15px',
               border: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
-              <h4 style={{ color: '#ff416c', marginBottom: '10px', fontSize: '1.1em' }}>🎭 Évènements</h4>
+              <h4 style={{ color: '#7c3aed', marginBottom: '10px', fontSize: '1.1em' }}>🎭 Évènements</h4>
               
               {((freshComedianStats?.totalEvents !== undefined) || (comedian.stats.totalEvents !== undefined)) && (
                 <div style={infoRowStyle}>

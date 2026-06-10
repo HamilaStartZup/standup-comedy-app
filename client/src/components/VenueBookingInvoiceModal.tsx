@@ -139,7 +139,7 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
               onClick={handlePrint}
               style={{
                 padding: '8px 16px',
-                background: 'linear-gradient(135deg, #ff416c, #ff4b2b)',
+                background: 'var(--ccc-accent-gradient)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 8,

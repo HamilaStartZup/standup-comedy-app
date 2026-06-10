@@ -132,7 +132,7 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
     textAlign: 'center',
     marginBottom: '20px',
     paddingBottom: '15px',
-    borderBottom: '2px solid #ff416c'
+    borderBottom: '2px solid #7c3aed'
   };
 
   const statsContainerStyle: CSSProperties = {
@@ -161,7 +161,7 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
     padding: '8px 16px',
     borderRadius: '20px',
     border: 'none',
-    backgroundColor: isActive ? '#ff416c' : 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: isActive ? '#7c3aed' : 'rgba(255, 255, 255, 0.2)',
     color: '#ffffff',
     cursor: 'pointer',
     fontSize: '14px',

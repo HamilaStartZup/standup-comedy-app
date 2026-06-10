@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 const LANDING_CSS = `
-  .landing-dark { --primary: #FF5A7E; --primary-hover: #E04969; --primary-light: #FFF1F3; --secondary: #00B8D9; --accent: #FFB800; --dark: #1A1D29; --text-primary: #F1F5F9; --text-secondary: rgba(255,255,255,0.75); --bg-light: rgba(255,255,255,0.04); --bg-white: #FFFFFF; --border: rgba(255,255,255,0.12); --shadow-sm: 0 1px 2px rgba(0,0,0,0.2); --shadow-md: 0 4px 6px rgba(0,0,0,0.2); --shadow-lg: 0 10px 15px rgba(0,0,0,0.2); --shadow-xl: 0 20px 25px rgba(0,0,0,0.2); --shadow-2xl: 0 25px 50px rgba(0,0,0,0.3); }
+  .landing-dark { --primary: #7c3aed; --primary-hover: #6d28d9; --primary-light: rgba(124, 58, 237, 0.12); --secondary: #a78bfa; --accent: #a78bfa; --dark: #1e293b; --text-primary: #1e293b; --text-secondary: #475569; --bg-light: rgba(15, 23, 42, 0.05); --bg-white: #ffffff; --border: rgba(15, 23, 42, 0.08); --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06); --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.08); --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1); --shadow-xl: 0 20px 25px rgba(15, 23, 42, 0.12); --shadow-2xl: 0 25px 50px rgba(15, 23, 42, 0.15); }
   .landing-dark * { box-sizing: border-box; }
   .landing-dark .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
   @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
@@ -11,30 +11,30 @@ const LANDING_CSS = `
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
   .landing-dark .animate-in { animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .landing-dark .delay-1 { animation-delay: 0.1s; opacity: 0; } .landing-dark .delay-2 { animation-delay: 0.2s; opacity: 0; } .landing-dark .delay-3 { animation-delay: 0.3s; opacity: 0; } .landing-dark .delay-4 { animation-delay: 0.4s; opacity: 0; }
-  .landing-dark header { padding: 16px 0; position: fixed; top: 0; left: 0; right: 0; background: rgba(26, 29, 41, 0.95); backdrop-filter: blur(20px); z-index: 1000; border-bottom: 1px solid var(--border); }
+  .landing-dark header { padding: 16px 0; position: fixed; top: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(20px); z-index: 1000; border-bottom: 1px solid var(--border); }
   .landing-dark .header-content { display: flex; justify-content: space-between; align-items: center; }
-  .landing-dark .logo { display: flex; align-items: center; justify-content: center; text-decoration: none; cursor: pointer; background: rgba(26, 29, 41, 1); border-radius: 12px; padding: 0; border: none; }
+  .landing-dark .logo { display: flex; align-items: center; justify-content: center; text-decoration: none; cursor: pointer; background: transparent; border-radius: 12px; padding: 0; border: none; }
   .landing-dark .logo img { height: 95px; width: auto; display: block; }
   .landing-dark .header-nav { display: flex; gap: 32px; align-items: center; }
   .landing-dark .nav-link { color: var(--text-secondary); text-decoration: none; font-weight: 600; font-size: 15px; transition: color 0.2s; }
   .landing-dark .nav-link:hover { color: var(--primary); }
   .landing-dark .header-buttons { display: flex; gap: 12px; }
   .landing-dark .btn { padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600; font-size: 15px; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-family: 'Sora', sans-serif; }
-  .landing-dark .btn-primary { background: linear-gradient(135deg, var(--primary), #FF7A92); color: white; box-shadow: 0 4px 12px rgba(255, 90, 126, 0.3); }
-  .landing-dark .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255, 90, 126, 0.4); }
-  .landing-dark .btn-secondary { background: transparent; color: var(--text-primary); border: 2px solid var(--border); }
+  .landing-dark .btn-primary { background: var(--ccc-accent-gradient); color: white; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }
+  .landing-dark .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(124, 58, 237, 0.4); background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%); }
+  .landing-dark .btn-secondary { background: transparent; color: var(--text-primary); border: 2px solid rgba(15, 23, 42, 0.14); }
   .landing-dark .btn-secondary:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); }
   .landing-dark .hero { padding: 140px 0 120px; background: transparent; position: relative; overflow: hidden; }
   .landing-dark .hero-content { display: grid; grid-template-columns: 1.2fr 1fr; gap: 80px; align-items: center; position: relative; z-index: 1; }
   .landing-dark .hero-text { max-width: 600px; }
-  .landing-dark .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(255,255,255,0.08); border: 1.5px solid var(--border); border-radius: 100px; font-size: 14px; font-weight: 600; margin-bottom: 24px; color: var(--text-secondary); }
+  .landing-dark .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--primary-light); border: 1.5px solid var(--border); border-radius: 100px; font-size: 14px; font-weight: 600; margin-bottom: 24px; color: var(--text-secondary); }
   .landing-dark .hero-badge .dot { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
   .landing-dark .hero h1 { font-size: clamp(2.5rem, 5vw, 68px); font-weight: 800; line-height: 1.1; margin-bottom: 24px; color: var(--text-primary); letter-spacing: -0.03em; font-family: 'Sora', sans-serif; }
-  .landing-dark .hero-gradient { background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .landing-dark .hero-gradient { background: var(--ccc-accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
   .landing-dark .hero-subtitle { font-size: clamp(1rem, 2vw, 22px); font-weight: 400; color: var(--text-secondary); margin-bottom: 32px; line-height: 1.6; }
   .landing-dark .hero-ctas { display: flex; gap: 16px; margin-bottom: 0; flex-wrap: wrap; }
   .landing-dark .btn-large { padding: 18px 36px; font-size: 17px; border-radius: 14px; }
-  .landing-dark .section-divider { width: 100%; max-width: 1280px; margin: 32px auto 0; padding: 0 24px; box-sizing: border-box; border: none; border-top: 1px solid rgba(255,255,255,0.12); height: 0; }
+  .landing-dark .section-divider { width: 100%; max-width: 1280px; margin: 32px auto 0; padding: 0 24px; box-sizing: border-box; border: none; border-top: 1px solid var(--border); height: 0; }
   .landing-dark .section-divider.hero-divider { margin-top: 32px; margin-bottom: 0; }
   .landing-dark .section-divider.after-section { margin-top: 48px; }
   .landing-dark .hero-stats { display: flex; gap: 40px; padding-top: 32px; flex-wrap: wrap; }
@@ -57,19 +57,19 @@ const LANDING_CSS = `
   .landing-dark .emoji-1 { top: 60px; right: -40px; } .landing-dark .emoji-2 { bottom: 100px; right: -20px; animation-delay: 1s; } .landing-dark .emoji-3 { top: 200px; left: -30px; animation-delay: 0.5s; }
   .landing-dark .role-cards-section { padding: 100px 0; background: transparent; }
   .landing-dark .section-header { text-align: center; max-width: 800px; margin: 0 auto 80px; }
-  .landing-dark .section-badge { display: inline-block; padding: 10px 20px; background: rgba(255,255,255,0.08); border: 1.5px solid var(--border); border-radius: 100px; font-size: 18px; font-weight: 700; margin-bottom: 20px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--primary); }
+  .landing-dark .section-badge { display: inline-block; padding: 10px 20px; background: var(--primary-light); border: 1.5px solid var(--border); border-radius: 100px; font-size: 18px; font-weight: 700; margin-bottom: 20px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--primary); }
   .landing-dark .section-title { font-size: clamp(2rem, 4vw, 52px); font-weight: 800; margin-bottom: 20px; letter-spacing: -0.02em; color: var(--text-primary); line-height: 1.1; font-family: 'Sora', sans-serif; }
   .landing-dark .section-description { font-size: 20px; color: var(--text-secondary); line-height: 1.7; }
   .landing-dark .role-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 60px; }
   .landing-dark .role-card { background: white; border: 2px solid var(--border); border-radius: 24px; padding: 40px; cursor: pointer; transition: all 0.4s; position: relative; overflow: hidden; color: #1a1a1a; }
   .landing-dark .role-card:hover { transform: translateY(-12px); box-shadow: var(--shadow-2xl); border-color: var(--primary); }
-  .landing-dark .role-icon { width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary-light), #FFE8EC); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 24px; }
+  .landing-dark .role-icon { width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary-light), rgba(167, 139, 250, 0.2)); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 24px; }
   .landing-dark .role-card h3 { font-size: 24px; font-weight: 700; margin-bottom: 16px; color: #1a1a1a; }
   .landing-dark .role-features { list-style: none; padding: 0; margin: 0; }
   .landing-dark .role-features li { padding: 10px 0; padding-left: 28px; position: relative; color: #64748B; font-size: 15px; line-height: 1.6; }
   .landing-dark .role-features li::before { content: '✓'; position: absolute; left: 0; color: var(--primary); font-weight: bold; font-size: 16px; }
-  .landing-dark .role-cta { margin-top: 24px; padding: 12px 24px; background: transparent; border: 2px solid var(--primary); color: var(--primary); border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s; width: 100%; font-family: 'Sora', sans-serif; }
-  .landing-dark .role-cta:hover { background: var(--primary); color: white; }
+  .landing-dark .role-cta { margin-top: 24px; padding: 12px 24px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(255, 75, 43, 0.1)); border: 1px solid rgba(124, 58, 237, 0.3); color: var(--primary); border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s; width: 100%; font-family: 'Sora', sans-serif; box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08); }
+  .landing-dark .role-cta:hover { background: var(--ccc-accent-gradient); border-color: rgba(124, 58, 237, 0.5); color: white; }
   .landing-dark .problem-section { padding: 140px 0; background: transparent; position: relative; overflow: hidden; }
   .landing-dark .problem-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; max-width: 1200px; margin: 0 auto; position: relative; z-index: 2; }
   .landing-dark .comparison-side { background: white; border-radius: 24px; padding: 48px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); position: relative; overflow: hidden; transition: transform 0.3s ease; color: #1a1a1a; }
@@ -98,12 +98,12 @@ const LANDING_CSS = `
   .landing-dark .item-content h4 { font-size: 16px; font-weight: 700; color: #0F172A; margin-bottom: 4px; }
   .landing-dark .item-content p { font-size: 14px; color: #64748B; line-height: 1.5; }
   .landing-dark .comparison-divider { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10; display: flex; align-items: center; justify-content: center; }
-  .landing-dark .divider-arrow { width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary), #FF7A92); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 36px; font-weight: bold; box-shadow: 0 8px 32px rgba(255, 90, 126, 0.4); border: 4px solid white; }
-  @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 20px rgba(255, 90, 126, 0.3), 0 0 40px rgba(255, 90, 126, 0.1); } 50% { box-shadow: 0 0 30px rgba(255, 90, 126, 0.5), 0 0 60px rgba(255, 90, 126, 0.2); } }
+  .landing-dark .divider-arrow { width: 80px; height: 80px; background: var(--ccc-accent-gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 36px; font-weight: bold; box-shadow: 0 8px 32px rgba(124, 58, 237, 0.4); border: 4px solid white; }
+  @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.3), 0 0 40px rgba(124, 58, 237, 0.1); } 50% { box-shadow: 0 0 30px rgba(124, 58, 237, 0.5), 0 0 60px rgba(124, 58, 237, 0.2); } }
   .landing-dark .divider-arrow { animation: glowPulse 2s ease-in-out infinite; }
   .landing-dark .problem-conclusion-new { margin-top: 60px; text-align: center; position: relative; z-index: 2; }
-  .landing-dark .conclusion-card { max-width: 700px; margin: 0 auto; padding: 40px; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); border: 2px solid var(--primary); position: relative; overflow: hidden; color: #1a1a1a; }
-  .landing-dark .conclusion-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px; background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent)); }
+  .landing-dark .conclusion-card { max-width: 700px; margin: 0 auto; padding: 40px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(255, 75, 43, 0.1)); border-radius: 20px; box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08); border: 1px solid rgba(124, 58, 237, 0.3); position: relative; overflow: hidden; color: #1a1a1a; }
+  .landing-dark .conclusion-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px; background: var(--ccc-accent-gradient); }
   .landing-dark .conclusion-icon { width: 64px; height: 64px; margin: 0 auto 20px; background: linear-gradient(135deg, var(--primary-light), white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; }
   .landing-dark .conclusion-text { font-size: 24px; font-weight: 700; color: #0F172A; margin-bottom: 12px; line-height: 1.4; }
   .landing-dark .conclusion-subtext { font-size: 16px; color: #64748B; line-height: 1.6; }
@@ -115,16 +115,19 @@ const LANDING_CSS = `
   .landing-dark .steps-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; position: relative; z-index: 1; }
   .landing-dark .step { background: white; border: 2px solid var(--border); border-radius: 24px; padding: 48px 32px; text-align: center; position: relative; transition: all 0.4s; color: #1a1a1a; }
   .landing-dark .step:hover { transform: translateY(-12px); border-color: var(--primary); box-shadow: var(--shadow-2xl); }
-  .landing-dark .step-number { width: 72px; height: 72px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 28px; font-weight: 800; font-size: 32px; color: white; box-shadow: 0 8px 24px rgba(255, 90, 126, 0.3); }
+  .landing-dark .step-number { width: 72px; height: 72px; background: var(--ccc-accent-gradient); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 28px; font-weight: 800; font-size: 32px; color: white; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.3); }
   .landing-dark .step-icon { font-size: 48px; margin-bottom: 20px; }
   .landing-dark .step h3 { font-size: 22px; font-weight: 700; margin-bottom: 16px; color: #1a1a1a; }
   .landing-dark .step p { color: #64748B; font-size: 16px; line-height: 1.7; }
-  .landing-dark .steps-conclusion { text-align: center; font-size: 24px; font-weight: 700; color: var(--primary); margin-top: 60px; padding: 32px; background: rgba(255,255,255,0.06); border-radius: 20px; border: 2px solid var(--primary); }
+  .landing-dark .steps-conclusion { text-align: center; font-size: 24px; font-weight: 700; color: var(--primary); margin-top: 60px; padding: 32px; background: var(--primary-light); border-radius: 20px; border: 2px solid rgba(124, 58, 237, 0.32); }
   .landing-dark .tutorial-links { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 60px; position: relative; z-index: 1; max-width: 800px; margin-left: auto; margin-right: auto; }
-  .landing-dark .tutorial-link-card { display: block; background: white; border: 2px solid var(--border); border-top: none; border-radius: 24px; overflow: hidden; text-align: center; transition: all 0.4s; color: #1a1a1a; text-decoration: none; padding: 0; margin: 0; font: inherit; }
+  .landing-dark .tutorial-link-card { display: block; width: 100%; background: white; border: 2px solid var(--border); border-radius: 24px; overflow: hidden; text-align: center; transition: all 0.4s; color: #1a1a1a; text-decoration: none; padding: 0; margin: 0; font: inherit; appearance: none; -webkit-appearance: none; }
   .landing-dark .tutorial-link-card:hover { transform: translateY(-8px); border-color: var(--primary); box-shadow: var(--shadow-2xl); color: #1a1a1a; }
-  .landing-dark .tutorial-thumbnail-wrap { position: relative; width: 100%; aspect-ratio: 16/9; background: #0f172a; overflow: hidden; }
-  .landing-dark .tutorial-thumbnail-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .landing-dark .tutorial-thumbnail-wrap { position: relative; width: 100%; aspect-ratio: 16 / 9; min-height: 180px; background: #0f172a; overflow: hidden; }
+  .landing-dark .tutorial-thumbnail-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .landing-dark .tutorial-thumbnail-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.55); font-size: 48px; background: #0f172a; }
+  .landing-dark .tutorial-thumbnail-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 1; }
+  .landing-dark .tutorial-thumbnail-play span { width: 64px; height: 64px; border-radius: 50%; background: rgba(124, 58, 237, 0.92); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; padding-left: 4px; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.45); }
   .landing-dark .tutorial-link-card h3 { font-size: 16px; font-weight: 700; margin: 0; padding: 20px 16px; color: #1a1a1a; line-height: 1.3; }
   .landing-dark .tutorial-link-card { cursor: pointer; }
   .landing-dark .video-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; }
@@ -135,9 +138,9 @@ const LANDING_CSS = `
   @media (max-width: 968px) { .landing-dark .tutorial-links { grid-template-columns: 1fr; } }
   .landing-dark .features-section { padding: 120px 0; background: transparent; }
   .landing-dark .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; margin-top: 80px; }
-  .landing-dark .feature-card { background: rgba(255,255,255,0.06); border-radius: 24px; padding: 48px; border: 2px solid var(--border); transition: all 0.4s; }
+  .landing-dark .feature-card { background: #ffffff; border-radius: 24px; padding: 48px; border: 2px solid var(--border); transition: all 0.4s; box-shadow: var(--shadow-sm); }
   .landing-dark .feature-card:hover { background: white; border-color: var(--primary); box-shadow: var(--shadow-xl); color: #1a1a1a; }
-  .landing-dark .feature-icon { width: 64px; height: 64px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 24px; }
+  .landing-dark .feature-icon { width: 64px; height: 64px; background: var(--ccc-accent-gradient); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 24px; }
   .landing-dark .feature-card h3 { font-size: 24px; font-weight: 700; margin-bottom: 12px; color: var(--text-primary); }
   .landing-dark .feature-card:hover h3 { color: #1a1a1a; }
   .landing-dark .feature-card p { color: var(--text-secondary); font-size: 16px; line-height: 1.7; }
@@ -147,18 +150,18 @@ const LANDING_CSS = `
   .landing-dark .cta-content h2 { font-size: clamp(2rem, 4vw, 56px); font-weight: 800; margin-bottom: 24px; letter-spacing: -0.02em; color: var(--text-primary); line-height: 1.1; font-family: 'Sora', sans-serif; }
   .landing-dark .cta-content p { font-size: 22px; color: var(--text-secondary); margin-bottom: 48px; line-height: 1.6; }
   .landing-dark .cta-buttons { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
-  .landing-dark footer { background: rgba(0,0,0,0.3); color: white; padding: 80px 0 40px; border-top: 1px solid var(--border); }
+  .landing-dark footer { background: transparent; color: var(--text-primary); padding: 80px 0 40px; border-top: 1px solid var(--border); }
   .landing-dark .footer-content { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 60px; }
-  .landing-dark .footer-brand p { color: rgba(255, 255, 255, 0.7); font-size: 15px; line-height: 1.7; }
+  .landing-dark .footer-brand p { color: var(--text-secondary); font-size: 15px; line-height: 1.7; }
   .landing-dark .footer-links h4 { font-size: 14px; font-weight: 700; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--primary); }
   .landing-dark .footer-links ul { list-style: none; padding: 0; margin: 0; }
   .landing-dark .footer-links li { margin-bottom: 14px; }
-  .landing-dark .footer-links a { color: rgba(255, 255, 255, 0.7); text-decoration: none; font-size: 15px; transition: color 0.2s; }
-  .landing-dark .footer-links a:hover { color: white; }
-  .landing-dark .footer-links button.footer-link-btn { color: rgba(255, 255, 255, 0.7); font-size: 15px; background: none; border: none; cursor: pointer; padding: 0; text-align: left; font-family: inherit; transition: color 0.2s; }
-  .landing-dark .footer-links button.footer-link-btn:hover { color: white; }
-  .landing-dark .footer-bottom { text-align: center; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.1); }
-  .landing-dark .footer-bottom p { color: rgba(255, 255, 255, 0.5); font-size: 14px; }
+  .landing-dark .footer-links a { color: var(--text-secondary); text-decoration: none; font-size: 15px; transition: color 0.2s; }
+  .landing-dark .footer-links a:hover { color: var(--primary); }
+  .landing-dark .footer-links button.footer-link-btn { color: var(--text-secondary); font-size: 15px; background: none; border: none; cursor: pointer; padding: 0; text-align: left; font-family: inherit; transition: color 0.2s; }
+  .landing-dark .footer-links button.footer-link-btn:hover { color: var(--primary); }
+  .landing-dark .footer-bottom { text-align: center; padding-top: 40px; border-top: 1px solid var(--border); }
+  .landing-dark .footer-bottom p { color: var(--text-secondary); font-size: 14px; }
   @media (max-width: 968px) { .landing-dark .hero-content { grid-template-columns: 1fr; text-align: center; } .landing-dark .hero-text { max-width: 100%; } .landing-dark .hero-visual { display: none; } .landing-dark .role-cards, .landing-dark .steps-container, .landing-dark .features-grid, .landing-dark .footer-content { grid-template-columns: 1fr; } .landing-dark .header-nav { display: none; } .landing-dark .steps-line { display: none; } }
   @media (max-width: 640px) { .landing-dark .hero-ctas { flex-direction: column; } .landing-dark .hero-stats { flex-direction: column; gap: 20px; } }
 `;
@@ -175,7 +178,31 @@ function getYoutubeVideoId(url: string): string | null {
 
 function youtubeThumbnailUrl(videoId: string | null): string | null {
   if (!videoId) return null;
-  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+}
+
+function TutorialThumbnail({ videoId, label }: { videoId: string | null; label: string }) {
+  const [hasError, setHasError] = useState(false);
+  const thumb = videoId && !hasError ? youtubeThumbnailUrl(videoId) : null;
+
+  return (
+    <div className="tutorial-thumbnail-wrap">
+      {thumb ? (
+        <img
+          src={thumb}
+          alt={label}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setHasError(true)}
+        />
+      ) : (
+        <div className="tutorial-thumbnail-fallback" aria-hidden>▶</div>
+      )}
+      <div className="tutorial-thumbnail-play" aria-hidden>
+        <span>▶</span>
+      </div>
+    </div>
+  );
 }
 
 function LandingPage() {
@@ -227,9 +254,9 @@ function LandingPage() {
       className="landing-dark"
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(to bottom, #1a1a2e 0%, #16213e 40%, #331f41 100%)',
+        background: 'var(--ccc-bg-gradient)',
         fontFamily: "'Sora', -apple-system, BlinkMacSystemFont, sans-serif",
-        color: '#F1F5F9',
+        color: 'var(--ccc-text-primary)',
         lineHeight: 1.6,
         scrollBehavior: 'smooth',
       }}
@@ -261,10 +288,6 @@ function LandingPage() {
         <div className="container">
           <div className="hero-content">
             <div className="hero-text">
-              <div className="hero-badge animate-in">
-                <span className="dot" />
-                Nouvelle plateforme pour le stand-up
-              </div>
               <h1 className="animate-in delay-1">
                 L'app qui connecte<br />
                 <span className="hero-gradient">humoristes, scènes<br />et public</span>
@@ -532,7 +555,6 @@ function LandingPage() {
               {(() => {
                 const urlOrg = YOUTUBE_TUTORIAL_ORGANISATEUR || 'https://youtu.be/tmj67H38i8s';
                 const videoIdOrg = getYoutubeVideoId(urlOrg);
-                const thumbOrg = videoIdOrg ? youtubeThumbnailUrl(videoIdOrg) : null;
                 return (
                   <button
                     type="button"
@@ -540,13 +562,10 @@ function LandingPage() {
                     onClick={() => videoIdOrg && setVideoModalId(videoIdOrg)}
                     aria-label="Voir le tutoriel d'utilisation en tant qu'Organisateur"
                   >
-                    <div className="tutorial-thumbnail-wrap">
-                      {thumbOrg ? (
-                        <img src={thumbOrg} alt="" loading="lazy" />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 48 }}>▶</div>
-                      )}
-                    </div>
+                    <TutorialThumbnail
+                      videoId={videoIdOrg}
+                      label="Miniature du tutoriel organisateur"
+                    />
                     <h3>🎥 Tutoriel d'utilisation de l'application en tant qu'Organisateur</h3>
                   </button>
                 );
@@ -554,7 +573,6 @@ function LandingPage() {
               {(() => {
                 const urlHum = YOUTUBE_TUTORIAL_HUMORISTE || 'https://youtu.be/AxD32X-VnBc';
                 const videoIdHum = getYoutubeVideoId(urlHum);
-                const thumbHum = videoIdHum ? youtubeThumbnailUrl(videoIdHum) : null;
                 return (
                   <button
                     type="button"
@@ -562,13 +580,10 @@ function LandingPage() {
                     onClick={() => videoIdHum && setVideoModalId(videoIdHum)}
                     aria-label="Voir le tutoriel d'utilisation en tant qu'Humoriste"
                   >
-                    <div className="tutorial-thumbnail-wrap">
-                      {thumbHum ? (
-                        <img src={thumbHum} alt="" loading="lazy" />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 48 }}>▶</div>
-                      )}
-                    </div>
+                    <TutorialThumbnail
+                      videoId={videoIdHum}
+                      label="Miniature du tutoriel humoriste"
+                    />
                     <h3>🎥 Tutoriel d'utilisation de l'application en tant qu'Humoriste</h3>
                   </button>
                 );

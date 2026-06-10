@@ -185,9 +185,9 @@ const CalendarPage = () => {
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     padding: '20px',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+    background: 'var(--ccc-bg-gradient)',
   };
 
   const contentWrapperStyle: CSSProperties = {
@@ -202,7 +202,7 @@ const CalendarPage = () => {
       <div style={contentWrapperStyle}>
 
       {isLoading && (
-        <p style={{ textAlign:'center', marginTop:'50px', color:'#ff416c' }}>
+        <p style={{ textAlign:'center', marginTop:'50px', color:'#7c3aed' }}>
           Chargement des événements…
         </p>
       )}
