@@ -2667,108 +2667,68 @@ useEffect(() => {
           </div>
           
           {/* Barre de recherche par lieu et filtre par niveau d'expérience pour les humoristes */}
-          <div
-            style={{
-              marginBottom: '20px',
-              padding: '15px',
-              backgroundColor: 'rgba(0, 0, 0, 0.3)',
-              borderRadius: theme.radius.sm,
-              border: '1px solid #444'
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: '15px',
-                alignItems: isMobile ? 'stretch' : 'flex-end'
-              }}
-            >
-              {/* Recherche par lieu */}
-              <div style={{ flex: isMobile ? undefined : 1, width: isMobile ? '100%' : undefined }}>
-                <label
-                  style={{
-                    display: 'block',
-                    color: theme.colors.text.primary,
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    fontSize: '14px'
-                  }}
-                >
-                  Recherche par lieu
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ville, adresse, lieu..."
-                  value={locationSearch}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationSearch(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: theme.radius.sm,
-                    border: '1px solid #555',
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    color: theme.colors.text.primary,
-                    fontSize: '14px'
-                  }}
-                />
+          <div style={filterSectionWrapStyle}>
+            <div style={{ marginBottom: '20px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  gap: '15px',
+                  alignItems: isMobile ? 'stretch' : 'flex-end'
+                }}
+              >
+                {/* Recherche par lieu */}
+                <div style={{ flex: isMobile ? undefined : 1, width: isMobile ? '100%' : undefined }}>
+                  <label style={filterLabelStyle}>
+                    Recherche par lieu
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ville, adresse, lieu..."
+                    value={locationSearch}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationSearch(e.target.value)}
+                    style={filterFieldStyle}
+                  />
+                </div>
+
+                {/* Filtre par niveau d'expérience */}
+                <div style={{ width: isMobile ? '100%' : '200px' }}>
+                  <label style={filterLabelStyle}>
+                    Niveau d'expérience
+                  </label>
+                  <select
+                    value={experienceFilter}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setExperienceFilter(e.target.value as 'all' | '0-50' | '50-200' | '200+')}
+                    style={filterFieldStyle}
+                  >
+                    <option value="all">Tous les niveaux</option>
+                    <option value="0-50">Débutant (0-50 scènes)</option>
+                    <option value="50-200">Expérimenté (50-200 scènes)</option>
+                    <option value="200+">Pro (200+ scènes)</option>
+                  </select>
+                </div>
+
+                {/* Bouton réinitialiser */}
+                {(locationSearch.trim() || experienceFilter !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setLocationSearch('');
+                      setExperienceFilter('all');
+                    }}
+                    style={{
+                      ...eventCardSurfaceStyle,
+                      padding: '10px 18px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      whiteSpace: 'nowrap',
+                      height: 'fit-content',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Réinitialiser
+                  </button>
+                )}
               </div>
-              
-              {/* Filtre par niveau d'expérience */}
-              <div style={{ width: isMobile ? '100%' : '200px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    color: theme.colors.text.primary,
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    fontSize: '14px'
-                  }}
-                >
-                  Niveau d'expérience
-                </label>
-                <select
-                  value={experienceFilter}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setExperienceFilter(e.target.value as 'all' | '0-50' | '50-200' | '200+')}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: theme.radius.sm,
-                    border: '1px solid #555',
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    color: theme.colors.text.primary,
-                    fontSize: '14px'
-                  }}
-                >
-                  <option value="all">Tous les niveaux</option>
-                  <option value="0-50">Débutant (0-50 scènes)</option>
-                  <option value="50-200">Expérimenté (50-200 scènes)</option>
-                  <option value="200+">Pro (200+ scènes)</option>
-                </select>
-              </div>
-              
-              {/* Bouton réinitialiser */}
-              {(locationSearch.trim() || experienceFilter !== 'all') && (
-                <button
-                  onClick={() => {
-                    setLocationSearch('');
-                    setExperienceFilter('all');
-                  }}
-                  style={{
-                    padding: '10px 18px',
-                    borderRadius: theme.radius.sm,
-                    border: '1px solid #555',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    color: theme.colors.text.primary,
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    whiteSpace: 'nowrap',
-                    height: 'fit-content'
-                  }}
-                >
-                  Réinitialiser
-                </button>
-              )}
             </div>
           </div>
 
