@@ -12,6 +12,7 @@ import { checkGeographicCompatibility } from '../utils/geographicMatching';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages, InfoMessages, ConfirmMessages } from '../services/systemMessages';
 import Pagination from '../components/Pagination';
 import type { PaginationMeta } from '../types/pagination';
+import { theme, pageTitleStyle } from '../styles/theme';
 
 export interface IUser {
   _id: string;
@@ -221,7 +222,7 @@ function ApplicationsPage() {
     enabled: isQueryEnabled,
   });
 
-  const applications = applicationsData?.applications || [];
+  const applications: IApplication[] = applicationsData?.applications || [];
   const serverPagination = applicationsData?.pagination || null;
   const error = applicationsError ? (applicationsError as any).response?.data?.message || (applicationsError as any).message || 'Échec de la récupération des candidatures.' : null;
 
@@ -433,7 +434,7 @@ function ApplicationsPage() {
       node.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const previousOutline = node.style.outline;
       const previousOffset = node.style.outlineOffset;
-      node.style.outline = '3px solid #ff416c';
+      node.style.outline = '3px solid #7c3aed';
       node.style.outlineOffset = '2px';
       setTimeout(() => {
         node.style.outline = previousOutline;
@@ -777,9 +778,9 @@ function ApplicationsPage() {
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#ffffff',
+    color: theme.colors.text.primary,
     padding: isMobile ? '16px 12px' : '20px',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+    background: theme.colors.bg.gradient,
   };
 
   const pageHeaderStyle: CSSProperties = {
@@ -794,14 +795,11 @@ function ApplicationsPage() {
     marginBottom: '30px',
   };
 
-  const titleStyle: CSSProperties = {
-    fontSize: '2.5em',
-    color: '#ff416c',
-  };
+  const titleStyle: CSSProperties = pageTitleStyle;
 
   const subtitleStyle: CSSProperties = {
     fontSize: '1.1em',
-    color: '#aaa',
+    color: theme.colors.text.muted,
     marginBottom: '20px',
   };
 
@@ -809,9 +807,40 @@ function ApplicationsPage() {
     maxWidth: '1200px',
     margin: '0 auto',
     padding: isMobile ? '16px' : '20px',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: '8px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
+  };
+
+  const filterLabelStyle: CSSProperties = {
+    display: 'block',
+    color: theme.colors.text.primary,
+    marginBottom: '8px',
+    fontWeight: 'bold',
+    fontSize: '14px',
+  };
+
+  const eventCardSurfaceStyle: CSSProperties = {
+    backgroundColor: theme.colors.card.default,
+    borderRadius: theme.radius.md,
+    boxShadow: theme.shadow.card,
+    border: `1px solid ${theme.colors.border.onCard}`,
+    color: theme.colors.text.onCard,
+  };
+
+  const filterSelectStyle: CSSProperties = {
+    padding: '10px 18px',
+    outline: 'none',
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+    fontSize: '14px',
+    ...eventCardSurfaceStyle,
+  };
+
+  const filterFieldStyle: CSSProperties = {
+    width: '100%',
+    padding: '10px 18px',
+    fontSize: '14px',
+    outline: 'none',
+    fontFamily: 'inherit',
+    ...eventCardSurfaceStyle,
   };
 
   const applicationsListStyle: CSSProperties = {
@@ -822,11 +851,8 @@ function ApplicationsPage() {
   };
 
   const applicationCardStyle: CSSProperties = {
-    backgroundColor: '#1a1a2e',
-    borderRadius: '12px',
+    ...eventCardSurfaceStyle,
     padding: isMobile ? '16px' : '20px',
-    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.5)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
     alignItems: isMobile ? 'stretch' : 'center',
@@ -838,23 +864,23 @@ function ApplicationsPage() {
 
   /** Fond jaune très clair lorsque la candidature est en attente */
   const applicationCardStylePending: CSSProperties = {
-    backgroundColor: '#FFFDE7',
-    border: '1px solid #FFF9C4',
-    color: '#1a1a1a',
+    backgroundColor: theme.colors.card.pending.bg,
+    border: `1px solid ${theme.colors.card.pending.border}`,
+    color: theme.colors.text.onCard,
   };
 
   /** Fond vert lorsque la candidature est acceptée (comme pour les évènements complets) */
   const applicationCardStyleAccepted: CSSProperties = {
-    backgroundColor: '#E1FFE6',
-    border: '1px solid #c8f0d0',
-    color: '#1a1a1a',
+    backgroundColor: theme.colors.card.complete.bg,
+    border: `1px solid ${theme.colors.card.complete.border}`,
+    color: theme.colors.text.onCard,
   };
 
   /** Fond rouge clair lorsque la candidature est refusée (comme dans la capture) */
   const applicationCardStyleRejected: CSSProperties = {
-    backgroundColor: '#FFEBEE',
-    border: '1px solid #ffcdd2',
-    color: '#1a1a1a',
+    backgroundColor: theme.colors.card.cancelled.bg,
+    border: `1px solid ${theme.colors.card.cancelled.border}`,
+    color: theme.colors.text.onCard,
   };
 
   /** Fond blanc lorsque la candidature est expirée (comme dans la page évènements) */
@@ -934,7 +960,7 @@ function ApplicationsPage() {
 
   const viewProfileInlineButtonStyle: CSSProperties = {
     padding: '8px 14px',
-    borderRadius: '8px',
+    borderRadius: theme.radius.sm,
     border: '1px solid rgba(255, 255, 255, 0.3)',
     background: 'rgba(0, 0, 0, 0.2)',
     color: '#fff',
@@ -1007,7 +1033,7 @@ function ApplicationsPage() {
 
   const comedianApplicationDateBadgeStyle: CSSProperties = {
     padding: '4px 12px',
-    borderRadius: '999px',
+    borderRadius: theme.radius.full,
     border: '1px solid rgba(255, 255, 255, 0.15)',
     color: '#fff',
     fontSize: '0.85em',
@@ -1055,7 +1081,7 @@ function ApplicationsPage() {
     return {
       display: 'inline-block',
       padding: '6px 12px',
-      borderRadius: '6px',
+      borderRadius: theme.radius.sm,
       backgroundColor: (status === 'ACCEPTED' || status === 'REJECTED' || status === 'EXPIRED' || status === 'WITHDRAWN' || status === 'CANCELLED_BY_PLATFORM') ? 'transparent' : backgroundColor,
       color: status === 'ACCEPTED' ? '#28a745' : (status === 'REJECTED' ? '#dc3545' : (status === 'EXPIRED' ? '#999' : (status === 'WITHDRAWN' || status === 'CANCELLED_BY_PLATFORM' ? '#6c757d' : color))),
       fontWeight: 'bold',
@@ -1087,7 +1113,7 @@ function ApplicationsPage() {
 
   const actionButtonStyle: CSSProperties = {
     padding: '8px 15px',
-    borderRadius: '5px',
+    borderRadius: theme.radius.sm,
     border: 'none',
     color: 'white',
     fontWeight: 'bold',
@@ -1138,10 +1164,10 @@ function ApplicationsPage() {
 
   const organizerTabButtonStyle = (isActive: boolean): CSSProperties => ({
     padding: '10px 18px',
-    borderRadius: '999px',
-    border: isActive ? '1px solid #ff4b2b' : '1px solid rgba(255, 255, 255, 0.2)',
-    backgroundColor: isActive ? 'rgba(255, 65, 108, 0.15)' : 'rgba(0, 0, 0, 0.25)',
-    color: isActive ? '#ff4b2b' : '#ddd',
+    borderRadius: theme.radius.full,
+    border: `1px solid ${isActive ? theme.colors.accent.softBorder : theme.colors.border.medium}`,
+    backgroundColor: isActive ? theme.colors.accent.soft : theme.colors.bg.surface,
+    color: isActive ? theme.colors.accent.primary : theme.colors.text.secondary,
     fontWeight: isActive ? 700 : 500,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
@@ -1152,9 +1178,9 @@ function ApplicationsPage() {
 
   const organizerTabCountStyle: CSSProperties = {
     fontSize: '0.85em',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: theme.colors.bg.surfaceHover,
     padding: '2px 8px',
-    borderRadius: '999px',
+    borderRadius: theme.radius.full,
   };
 
   const filtersRowStyle: CSSProperties = {
@@ -1188,14 +1214,14 @@ function ApplicationsPage() {
 
   const comedianTabButtonStyle = (isActive: boolean): CSSProperties => ({
     padding: '10px 16px',
-    borderRadius: '8px 8px 0 0',
+    borderRadius: `${theme.radius.md} ${theme.radius.md} 0 0`,
     border: 'none',
-    backgroundColor: isActive ? 'rgba(255, 65, 108, 0.2)' : 'transparent',
-    color: isActive ? '#ff416c' : '#aaa',
+    backgroundColor: isActive ? theme.colors.accent.soft : 'transparent',
+    color: isActive ? theme.colors.accent.primary : theme.colors.text.muted,
     fontWeight: isActive ? 'bold' : 'normal',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    borderBottom: isActive ? '2px solid #ff416c' : '2px solid transparent',
+    borderBottom: isActive ? `2px solid ${theme.colors.accent.primary}` : '2px solid transparent',
     fontSize: '0.95em',
   });
 
@@ -1271,7 +1297,7 @@ function ApplicationsPage() {
               <select
                 value={comedianFilter}
                 onChange={e => setComedianFilter(e.target.value)}
-                style={{ padding: '8px', borderRadius: '6px', border: '1px solid #444', background: '#222', color: '#fff', minWidth: 180 }}
+                style={{ ...filterSelectStyle, minWidth: 180 }}
               >
                 <option value="all">Tous les humoristes</option>
                 {uniqueComedians.map(comedian => (
@@ -1282,7 +1308,7 @@ function ApplicationsPage() {
               <select
                 value={sortKey}
                 onChange={e => setSortKey(e.target.value as any)}
-                style={{ padding: '8px', borderRadius: '6px', border: '1px solid #444', background: '#222', color: '#fff', minWidth: 220, marginLeft: 'auto' }}
+                style={{ ...filterSelectStyle, minWidth: 220, marginLeft: 'auto' }}
               >
                 <option value="dateDesc">Trier: Date (plus récent)</option>
                 <option value="dateAsc">Trier: Date (plus ancien)</option>
@@ -1301,7 +1327,7 @@ function ApplicationsPage() {
                   <select
                     value={comedianOrganizerFilter}
                     onChange={e => setComedianOrganizerFilter(e.target.value)}
-                    style={{ padding: '8px', borderRadius: '6px', border: '1px solid #444', background: '#222', color: '#fff', minWidth: 200 }}
+                    style={{ ...filterSelectStyle, minWidth: 200 }}
                   >
                     <option value="all">Tous les organisateurs</option>
                     {acceptedOrganizers.map(org => (
@@ -1311,7 +1337,7 @@ function ApplicationsPage() {
                   <select
                     value={comedianSortKey}
                     onChange={e => setComedianSortKey(e.target.value as 'dateAsc' | 'dateDesc')}
-                    style={{ padding: '8px', borderRadius: '6px', border: '1px solid #444', background: '#222', color: '#fff', minWidth: 200 }}
+                    style={{ ...filterSelectStyle, minWidth: 200 }}
                   >
                     <option value="dateDesc">Trier: Date (plus récent)</option>
                     <option value="dateAsc">Trier: Date (plus ancien)</option>
@@ -1324,7 +1350,7 @@ function ApplicationsPage() {
                 <select
                   value={comedianSortKey}
                   onChange={e => setComedianSortKey(e.target.value as 'dateAsc' | 'dateDesc')}
-                  style={{ padding: '8px', borderRadius: '6px', border: '1px solid #444', background: '#222', color: '#fff', minWidth: 200 }}
+                  style={{ ...filterSelectStyle, minWidth: 200 }}
                 >
                   <option value="dateDesc">Trier: Date (plus récent)</option>
                   <option value="dateAsc">Trier: Date (plus ancien)</option>
@@ -1337,7 +1363,7 @@ function ApplicationsPage() {
                   <select
                     value={archivedOutcomeFilter}
                     onChange={e => setArchivedOutcomeFilter(e.target.value as any)}
-                    style={{ padding: '8px', borderRadius: '6px', border: '1px solid #444', background: '#222', color: '#fff', minWidth: 180 }}
+                    style={{ ...filterSelectStyle, minWidth: 180 }}
                   >
                     <option value="all">Tous les statuts</option>
                     <option value="ACCEPTED">Acceptées</option>
@@ -1347,7 +1373,7 @@ function ApplicationsPage() {
                   <select
                     value={comedianSortKey}
                     onChange={e => setComedianSortKey(e.target.value as 'dateAsc' | 'dateDesc')}
-                    style={{ padding: '8px', borderRadius: '6px', border: '1px solid #444', background: '#222', color: '#fff', minWidth: 200 }}
+                    style={{ ...filterSelectStyle, minWidth: 200 }}
                   >
                     <option value="dateDesc">Trier: Date (plus récent)</option>
                     <option value="dateAsc">Trier: Date (plus ancien)</option>
@@ -1360,15 +1386,7 @@ function ApplicationsPage() {
 
         {/* Barre de recherche par zone d'événement et filtre par niveau d'expérience (organisateur) */}
         {user?.role === 'ORGANIZER' && (
-          <div
-            style={{
-              marginBottom: '20px',
-              padding: '15px',
-              backgroundColor: 'rgba(0, 0, 0, 0.3)',
-              borderRadius: '8px',
-              border: '1px solid #444'
-            }}
-          >
+          <div style={{ marginBottom: '20px' }}>
             <div
               style={{
                 display: 'flex',
@@ -1379,15 +1397,7 @@ function ApplicationsPage() {
             >
               {/* Recherche par zone d'événement */}
               <div style={{ flex: isMobile ? undefined : 1, width: isMobile ? '100%' : undefined }}>
-                <label
-                  style={{
-                    display: 'block',
-                    color: '#ffffff',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    fontSize: '14px'
-                  }}
-                >
+                <label style={filterLabelStyle}>
                   Recherche par zone d'événement
                 </label>
                 <input
@@ -1395,43 +1405,19 @@ function ApplicationsPage() {
                   placeholder="Ville, département, région de l'événement..."
                   value={eventZoneSearch}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEventZoneSearch(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '6px',
-                    border: '1px solid #555',
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    color: '#ffffff',
-                    fontSize: '14px'
-                  }}
+                  style={filterFieldStyle}
                 />
               </div>
               
               {/* Filtre par niveau d'expérience */}
               <div style={{ width: isMobile ? '100%' : '200px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    color: '#ffffff',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    fontSize: '14px'
-                  }}
-                >
+                <label style={filterLabelStyle}>
                   Niveau d'expérience
                 </label>
                 <select
                   value={organizerExperienceFilter}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setOrganizerExperienceFilter(e.target.value as 'all' | '0-50' | '50-200' | '200+')}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '6px',
-                    border: '1px solid #555',
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    color: '#ffffff',
-                    fontSize: '14px'
-                  }}
+                  style={filterFieldStyle}
                 >
                   <option value="all">Tous les niveaux</option>
                   <option value="0-50">Débutant (0-50 scènes)</option>
@@ -1448,15 +1434,13 @@ function ApplicationsPage() {
                     setOrganizerExperienceFilter('all');
                   }}
                   style={{
+                    ...eventCardSurfaceStyle,
                     padding: '10px 18px',
-                    borderRadius: '6px',
-                    border: '1px solid #555',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    color: '#ffffff',
                     cursor: 'pointer',
                     fontSize: '14px',
                     whiteSpace: 'nowrap',
-                    height: 'fit-content'
+                    height: 'fit-content',
+                    fontWeight: 600,
                   }}
                 >
                   Réinitialiser
@@ -1826,13 +1810,13 @@ function ApplicationsPage() {
           onClick={(e) => e.target === e.currentTarget && closeStatusModal()}
         >
           <div style={{
-            backgroundColor: '#1a1a2e',
-            borderRadius: '12px',
+            backgroundColor: theme.colors.bg.elevated,
+            borderRadius: theme.radius.md,
             padding: '24px',
             maxWidth: '500px',
             width: '90%',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: theme.shadow.dropdown,
+            border: `1px solid ${theme.colors.border.subtle}`,
           }}>
             {/* Header avec titre et bouton X */}
             <div style={{
@@ -1844,7 +1828,7 @@ function ApplicationsPage() {
               <h2 style={{
                 fontSize: '20px',
                 fontWeight: '600',
-                color: '#fff',
+                color: theme.colors.text.primary,
                 margin: 0,
               }}>
                 {statusToSet === 'ACCEPTED' ? 'Accepter la candidature' : 'Refuser la candidature'}
@@ -1858,7 +1842,7 @@ function ApplicationsPage() {
                   cursor: 'pointer',
                   fontSize: '20px',
                   padding: '4px 8px',
-                  borderRadius: '6px',
+                  borderRadius: theme.radius.sm,
                   transition: 'all 0.2s',
                 }}
                 aria-label="Fermer"
@@ -1869,7 +1853,7 @@ function ApplicationsPage() {
 
             {/* Description contextuelle */}
             <p style={{
-              color: '#aaa',
+              color: theme.colors.text.muted,
               fontSize: '14px',
               lineHeight: '1.5',
               margin: '0 0 20px 0',
@@ -1881,7 +1865,7 @@ function ApplicationsPage() {
 
             {/* Label et textarea */}
             <label style={{
-              color: '#ccc',
+              color: theme.colors.text.secondary,
               fontWeight: '600',
               display: 'block',
               marginBottom: '10px',
@@ -1900,10 +1884,10 @@ function ApplicationsPage() {
               style={{
                 width: '100%',
                 padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                backgroundColor: '#2d2d44',
-                color: '#fff',
+                borderRadius: theme.radius.sm,
+                border: `1px solid ${theme.colors.border.medium}`,
+                backgroundColor: theme.colors.bg.elevated,
+                color: theme.colors.text.primary,
                 fontSize: '14px',
                 lineHeight: '1.5',
                 resize: 'vertical',
@@ -1923,10 +1907,10 @@ function ApplicationsPage() {
                 onClick={closeStatusModal}
                 style={{
                   padding: '10px 24px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  color: '#fff',
+                  borderRadius: theme.radius.sm,
+                  border: `1px solid ${theme.colors.border.medium}`,
+                  backgroundColor: theme.colors.bg.surface,
+                  color: theme.colors.text.primary,
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
@@ -1939,7 +1923,7 @@ function ApplicationsPage() {
                 onClick={handleConfirmStatus}
                 style={{
                   padding: '10px 24px',
-                  borderRadius: '8px',
+                  borderRadius: theme.radius.sm,
                   border: 'none',
                   backgroundColor: statusToSet === 'ACCEPTED' ? '#28a745' : '#dc3545',
                   color: '#fff',

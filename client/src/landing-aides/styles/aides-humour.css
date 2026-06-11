@@ -19,18 +19,73 @@
   --ah-border-strong: rgba(255, 255, 255, 0.16);
 }
 
-/* Enveloppe pleine page (layout Aides.Humour + navbar) — fond identique partout */
+/* Enveloppe pleine page (layout Aides.Humour + navbar) — alignée sur le thème du site */
 .ah-page {
   min-height: 100vh;
   width: 100%;
-  background: var(--ah-bg);
-  color: var(--ah-text);
+  background: var(--ccc-bg-gradient);
+  color: var(--ccc-text-primary);
   font-family: "Inter", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background-image:
-    radial-gradient(1200px 600px at 80% -10%, rgba(255, 92, 122, 0.12), transparent 60%),
-    radial-gradient(900px 500px at -10% 30%, rgba(91, 200, 230, 0.08), transparent 60%);
-  background-attachment: fixed;
+  --ah-bg: var(--ccc-bg-elevated);
+  --ah-bg-elev: var(--ccc-bg-elevated);
+  --ah-bg-elev-2: var(--ccc-bg-surface);
+  --ah-text: var(--ccc-text-primary);
+  --ah-text-muted: var(--ccc-text-muted);
+  --ah-border: var(--ccc-border-subtle);
+  --ah-border-strong: var(--ccc-border-medium);
+  --ah-accent: var(--ccc-accent);
+  --ah-accent-hover: #6d28d9;
+}
+
+.ah-page .ah-btn-primary {
+  background: var(--ccc-accent-gradient);
+  color: #fff;
+}
+
+.ah-page .ah-btn-primary:hover {
+  background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%);
+}
+
+.ah-page .ah-gradient-text {
+  background: var(--ccc-accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ah-page .ah-badge {
+  background: var(--ccc-accent-soft);
+  color: var(--ccc-accent);
+  border: 1px solid rgba(124, 58, 237, 0.32);
+}
+
+.ah-page .ah-badge-muted {
+  background: var(--ccc-bg-surface);
+  color: var(--ccc-text-muted);
+  border-color: var(--ccc-border-subtle);
+}
+
+.ah-page .ah-card:hover {
+  border-color: rgba(124, 58, 237, 0.45);
+}
+
+.ah-page .text-white {
+  color: var(--ccc-text-primary);
+}
+
+.ah-page .ah-btn-outline {
+  border-color: var(--ccc-border-medium);
+  color: var(--ccc-text-primary);
+}
+
+.ah-page .ah-btn-outline:hover {
+  background: var(--ccc-bg-surface);
+  border-color: rgba(124, 58, 237, 0.32);
+}
+
+.ah-page footer a:hover {
+  color: var(--ccc-text-primary);
 }
 
 /* Aligner la navbar app sur le même rendu que les autres pages (évite décalage Tailwind sur h2) */
@@ -40,14 +95,10 @@
 
 /* Wrapper racine — contenu principal (souvent à l’intérieur de .ah-page) */
 .ah-root {
-  background: var(--ah-bg);
-  color: var(--ah-text);
+  background: var(--ccc-bg-gradient);
+  color: var(--ccc-text-primary);
   font-family: "Inter", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background-image:
-    radial-gradient(1200px 600px at 80% -10%, rgba(255, 92, 122, 0.12), transparent 60%),
-    radial-gradient(900px 500px at -10% 30%, rgba(91, 200, 230, 0.08), transparent 60%);
-  background-attachment: fixed;
   min-height: 100vh;
   width: 100%;
 }
@@ -114,12 +165,14 @@
 /* Carte CTA — fond dégradé sombre */
 .ah-card.ah-card-cta {
   background: linear-gradient(135deg, #1a2042 0%, #141a2e 100%);
-  color: var(--ah-text);
+  color: #ffffff;
   border-color: var(--ah-border);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
-.ah-card.ah-card-cta .text-white { color: var(--ah-text); }
-.ah-card.ah-card-cta [class*="text-[var(--ah-text-muted)]"] { color: var(--ah-text-muted); }
+.ah-card.ah-card-cta .text-white { color: #ffffff; }
+.ah-page .ah-card.ah-card-cta .text-white { color: #ffffff; }
+.ah-card.ah-card-cta [class*="text-[var(--ah-text-muted)]"] { color: #cbd5e1; }
+.ah-page .ah-card.ah-card-cta [class*="text-[var(--ah-text-muted)]"] { color: #cbd5e1; }
 .ah-card.ah-card-cta [class*="border-[var(--ah-border)]"] { border-color: var(--ah-border); }
 
 /* Badges */

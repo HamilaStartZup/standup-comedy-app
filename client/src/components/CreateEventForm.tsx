@@ -6,6 +6,7 @@ import { usePostalCodeValidation } from '../hooks/usePostalCodeValidation';
 import { useMyBookings } from '../hooks/useMyBookings';
 import { X, ChevronDown, MapPin, Calendar, Users } from 'lucide-react';
 import api, { getVenueBookingIdsInUse, uploadEventImage } from '../services/api';
+import { toLocalDateString as toLocalDateStringUtil, generateRecurringDates } from '../utils/recurrenceDates';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages } from '../services/systemMessages';
 import type { IVenueBooking } from '../types/venue';
 
@@ -142,6 +143,18 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   }, [myVenueBookings]);
 
   const [selectedVenueBookingId, setSelectedVenueBookingId] = useState('');
+  const [selectedVenueBookingGroupId, setSelectedVenueBookingGroupId] = useState('');
+
+  const confirmedVenueBookingGroups = useMemo(() => {
+    const groups = new Map<string, IVenueBooking[]>();
+    for (const b of confirmedVenueBookings) {
+      if (!b.bookingGroupId) continue;
+      const list = groups.get(b.bookingGroupId) ?? [];
+      list.push(b);
+      groups.set(b.bookingGroupId, list);
+    }
+    return groups;
+  }, [confirmedVenueBookings]);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -246,8 +259,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   }, [eventDurationMinutes]);
 
   // Formater une date en YYYY-MM-DD en heure locale (évite le décalage UTC qui affichait le jour précédent)
-  const toLocalDateString = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const toLocalDateString = toLocalDateStringUtil;
 
   /** Calcule l'heure et la date de fin à partir de la date de début, l'heure de début et la durée (événement unique). */
   const computeEndFromDuration = (
@@ -275,40 +287,12 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
       setRecurringDates([]);
       return;
     }
-    const start = new Date(recurrenceStartDate + 'T12:00:00');
-    const end = new Date(recurrenceEndDate + 'T12:00:00');
-    if (end < start) {
-      setRecurringDates([]);
-      return;
-    }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const dates: string[] = [];
-    if (recurrenceType === 'daily') {
-      const d = new Date(start);
-      d.setHours(0, 0, 0, 0);
-      while (d <= end) {
-        if (d >= today) dates.push(toLocalDateString(d));
-        d.setDate(d.getDate() + 1);
-      }
-    } else if (recurrenceType === 'weekly') {
-      const days = recurrenceWeeklyDays.length > 0 ? recurrenceWeeklyDays : [start.getDay()];
-      const d = new Date(start);
-      d.setHours(0, 0, 0, 0);
-      while (d <= end) {
-        if (d >= today && days.includes(d.getDay())) dates.push(toLocalDateString(d));
-        d.setDate(d.getDate() + 1);
-      }
-    } else if (recurrenceType === 'monthly') {
-      const d = new Date(start);
-      d.setHours(0, 0, 0, 0);
-      const dayOfMonth = d.getDate();
-      while (d <= end) {
-        if (d >= today) dates.push(toLocalDateString(d));
-        d.setMonth(d.getMonth() + 1);
-        d.setDate(Math.min(dayOfMonth, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
-      }
-    }
+    const dates = generateRecurringDates({
+      type: recurrenceType as any,
+      startDate: recurrenceStartDate,
+      endDate: recurrenceEndDate,
+      weeklyDays: recurrenceWeeklyDays,
+    });
     setRecurringDates(dates);
   }, [eventType, recurrenceStartDate, recurrenceEndDate, recurrenceType, recurrenceWeeklyDays]);
 
@@ -1137,7 +1121,19 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
       };
 
       let response;
-      if (eventType === 'recurring' && recurringDates.length > 0) {
+      if (selectedVenueBookingGroupId) {
+        // Chemin Org B récurrent — génération depuis un lot de réservations confirmées
+        const groupBookings = confirmedVenueBookingGroups.get(selectedVenueBookingGroupId) ?? [];
+        const firstBooking = groupBookings[0];
+        const eventData = {
+          ...baseEventData,
+          startTime: firstBooking?.startTime ?? formData.startTime,
+          endTime: firstBooking?.endTime ?? effectiveEndTime,
+          venueBookingGroupId: selectedVenueBookingGroupId,
+        };
+        response = await api.post('/events', eventData);
+        showSuccess(`${response.data.count || groupBookings.length} événements créés depuis le lot confirmé !`);
+      } else if (eventType === 'recurring' && recurringDates.length > 0) {
         const dateTimes = recurringDates
           .map((d) => {
             const override = dateTimeOverrides[d];
@@ -1153,7 +1149,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           dateTimes: dateTimes.length > 0 ? dateTimes : undefined,
         };
         response = await api.post('/events', eventData);
-        console.log('✅ Réponse serveur (récurrent):', response.data);
         showSuccess(`${response.data.count || recurringDates.length} événements récurrents créés avec succès !`);
       } else {
         const eventData = {
@@ -1163,7 +1158,6 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           ...(selectedVenueBookingId && { venueBookingId: selectedVenueBookingId }),
         };
         response = await api.post('/events', eventData);
-        console.log('✅ Réponse serveur:', response.data);
         showSuccess(SuccessMessages.EVENT_CREATED);
       }
 
@@ -1204,36 +1198,36 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   };
 
   const formStyle: CSSProperties = {
-    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+    background: 'var(--ccc-bg-elevated)',
     borderRadius: '16px',
     width: '100%',
     maxWidth: isMobile ? '100%' : '800px',
     maxHeight: '90vh',
     overflow: 'auto',
     overflowX: 'hidden', // Empêcher le scroll horizontal
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.12)',
+    border: '1px solid var(--ccc-border-subtle)',
     position: 'relative',
     zIndex: 1
   };
 
   const headerStyle: CSSProperties = {
     padding: isMobile ? '16px' : '24px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    borderBottom: '1px solid var(--ccc-border-subtle)',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     position: isMobile ? 'sticky' : 'static',
     top: 0,
-    background: 'linear-gradient(to bottom, #1a1a2e 0%, #16213e 40%, #331f41 100%)',
+    background: 'var(--ccc-bg-elevated)',
     zIndex: 1
   };
 
   const contentStyle: CSSProperties = {
     padding: isMobile ? '16px' : '24px',
-    color: '#fff',
-    background: 'linear-gradient(to bottom, #1a1a2e 0%, #16213e 40%, #331f41 100%)',
-    boxShadow: '0px 4px 12px 0px rgba(0, 0, 0, 0.15), 0px 4px 12px 0px rgba(0, 0, 0, 0.15)',
+    color: 'var(--ccc-text-primary)',
+    background: 'var(--ccc-bg-elevated)',
+    boxShadow: 'none',
   };
 
   const inputStyle: CSSProperties = {
@@ -1279,7 +1273,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     padding: '10px 12px',
     background: 'transparent',
     border: 'none',
-    color: '#000000',
+    color: 'var(--ccc-text-primary)',
     cursor: 'pointer',
     display: 'flex',
     flexDirection: 'column',
@@ -1301,9 +1295,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   const sectionStyle: CSSProperties = {
     marginTop: '32px',
     padding: '24px',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'var(--ccc-bg-surface)',
     borderRadius: '12px',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    border: '1px solid var(--ccc-border-subtle)',
   };
 
   const sectionTitleStyle: CSSProperties = {
@@ -1312,8 +1306,8 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     gap: '12px',
     marginBottom: '24px',
     paddingBottom: '16px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-    color: '#fff',
+    borderBottom: '1px solid var(--ccc-border-subtle)',
+    color: 'var(--ccc-text-primary)',
     fontSize: '18px',
     fontWeight: '600',
   };
@@ -1324,7 +1318,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     gap: '20px',
   };
 
-  const fieldsLockedByVenueBooking = Boolean(selectedVenueBookingId);
+  const fieldsLockedByVenueBooking = Boolean(selectedVenueBookingId) || Boolean(selectedVenueBookingGroupId);
   const lockedFromReservationStyle: CSSProperties = fieldsLockedByVenueBooking
     ? {
         opacity: 0.55,
@@ -1340,7 +1334,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
         <div style={headerStyle}>
           <h2 style={{ 
             margin: 0, 
-            color: '#fff', 
+            color: 'var(--ccc-text-primary)', 
             fontSize: isMobile ? '20px' : '24px',
             fontWeight: '700'
           }}>
@@ -1349,9 +1343,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
           <button
             onClick={onClose}
             style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: 'none',
-              color: '#fff',
+              background: 'var(--ccc-bg-surface)',
+              border: '1px solid var(--ccc-border-subtle)',
+              color: 'var(--ccc-text-primary)',
               padding: '8px',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -1428,6 +1422,58 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     )}
                   </p>
                 )}
+
+                {/* Sélecteur de lot confirmé (série Org B) */}
+                {confirmedVenueBookingGroups.size > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontWeight: 600, color: '#ffb3c1', fontSize: 14 }}>
+                      — ou — Générer depuis un lot de réservations confirmées (série récurrente)
+                    </label>
+                    <select
+                      value={selectedVenueBookingGroupId}
+                      onChange={(e) => {
+                        const groupId = e.target.value;
+                        setSelectedVenueBookingGroupId(groupId);
+                        const bookings = confirmedVenueBookingGroups.get(groupId) ?? [];
+                        if (bookings.length > 0) {
+                          applyVenueBookingToForm(bookings[0]);
+                        }
+                        // Effacer l'ID unitaire — applyVenueBookingToForm le remet, ce setSelectedVenueBookingId('') gagne en dernier dans le batch
+                        setSelectedVenueBookingId('');
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        fontSize: 14,
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: 8,
+                        backgroundColor: 'rgba(255,255,255,0.95)',
+                        color: '#1a1a1a',
+                      }}
+                    >
+                      <option value="">— Choisir un lot —</option>
+                      {[...confirmedVenueBookingGroups.entries()].map(([groupId, bookings]) => {
+                        const first = bookings[0];
+                        const last = bookings[bookings.length - 1];
+                        const label = `${first.venue?.name ?? 'Salle'} · ${bookings.length} date(s) · du ${new Date(first.requestedDate).toLocaleDateString('fr-FR')} au ${new Date(last.requestedDate).toLocaleDateString('fr-FR')}`;
+                        return <option key={groupId} value={groupId}>{label}</option>;
+                      })}
+                    </select>
+
+                    {selectedVenueBookingGroupId && (
+                      <div style={{ marginTop: 10, padding: '10px 14px', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 8, fontSize: 12, color: '#c4b5fd' }}>
+                        <strong>Dates du lot :</strong>
+                        <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {(confirmedVenueBookingGroups.get(selectedVenueBookingGroupId) ?? []).map((b) => (
+                            <span key={b._id} style={{ background: 'rgba(139,92,246,0.2)', borderRadius: 4, padding: '2px 8px' }}>
+                              {new Date(b.requestedDate).toLocaleDateString('fr-FR')}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1435,7 +1481,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
             <div style={{ marginBottom: '32px' }}>
               {/* Titre */}
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                   Titre de l'évènement *
                 </label>
                 <input
@@ -1458,7 +1504,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
               {/* Description */}
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                   Description *
                 </label>
                 <textarea
@@ -1482,7 +1528,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
               {/* Photo de l'événement */}
               <div style={{ marginTop: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                   Photo de l'événement
                 </label>
                 {formData.imageUrl && (
@@ -1525,13 +1571,13 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     width: '100%',
                     padding: '8px',
                     borderRadius: 5,
-                    border: '1px solid #444',
-                    backgroundColor: '#333',
-                    color: '#fff',
+                    border: '1px solid var(--ccc-border-medium)',
+                    backgroundColor: '#ffffff',
+                    color: 'var(--ccc-text-primary)',
                     cursor: uploadingEventImage ? 'wait' : 'pointer',
                   }}
                 />
-                <p style={{ fontSize: '0.85em', color: '#aaa', marginTop: '5px' }}>
+                <p style={{ fontSize: '0.85em', color: 'var(--ccc-text-muted)', marginTop: '5px' }}>
                   Formats acceptés: JPG, PNG, GIF (max 5MB)
                 </p>
               </div>
@@ -1540,11 +1586,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
             {/* Section Localisation */}
             <div style={sectionStyle}>
               <div style={sectionTitleStyle}>
-                <MapPin size={20} style={{ color: '#ff416c' }} />
+                <MapPin size={20} style={{ color: '#7c3aed' }} />
                 <span>Localisation</span>
               </div>
               {fieldsLockedByVenueBooking && (
-                <p style={{ margin: '0 0 16px', fontSize: 13, color: '#aaa', lineHeight: 1.45 }}>
+                <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--ccc-text-muted)', lineHeight: 1.45 }}>
                   Ces champs reprennent votre réservation de salle et ne sont pas modifiables ici. Retirez la réservation
                   sélectionnée en haut du formulaire pour les modifier.
                 </p>
@@ -1552,7 +1598,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
               <div style={{ ...sectionGridStyle, ...lockedFromReservationStyle }}>
                 {/* Lieu/Bar */}
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                     Lieu (nom de la salle) *
                   </label>
                   <input
@@ -1576,7 +1622,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
                 {/* Adresse */}
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                     Adresse *
                   </label>
                   <input
@@ -1608,7 +1654,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
                           <span style={{ fontWeight: 600 }}>{suggestion.label}</span>
-                          <span style={{ fontSize: '0.85em', color: '#aaa' }}>
+                          <span style={{ fontSize: '0.85em', color: 'var(--ccc-text-muted)' }}>
                             {suggestion.postalCode} · {suggestion.city}
                           </span>
                         </button>
@@ -1619,7 +1665,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
                 {/* Code postal */}
                 <div style={{ position: 'relative' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                     Code postal * {isValidatingPostalCode && <span style={{ fontSize: '12px', color: '#888' }}>(validation...)</span>}
                   </label>
                   <input
@@ -1669,7 +1715,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                             padding: '12px',
                             cursor: 'pointer',
                             borderBottom: index < citySuggestions.length - 1 ? '1px solid #333' : 'none',
-                            color: '#ccc',
+                            color: 'var(--ccc-text-secondary)',
                             transition: 'background-color 0.2s'
                           }}
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#333'}
@@ -1684,7 +1730,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
                 {/* Ville */}
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                     Ville *
                   </label>
                   <input
@@ -1708,7 +1754,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
                 {/* Pays */}
                 <div style={{ gridColumn: isMobile ? '1' : '1 / -1' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                     Pays *
                   </label>
                   <input
@@ -1735,18 +1781,18 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
             {/* Section Informations d'évènement */}
             <div style={sectionStyle}>
               <div style={sectionTitleStyle}>
-                <Calendar size={20} style={{ color: '#ff416c' }} />
+                <Calendar size={20} style={{ color: '#7c3aed' }} />
                 <span>Informations d'évènement</span>
               </div>
               {fieldsLockedByVenueBooking && (
-                <p style={{ margin: '0 0 16px', fontSize: 13, color: '#aaa', lineHeight: 1.45 }}>
+                <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--ccc-text-muted)', lineHeight: 1.45 }}>
                   Ces informations reprennent votre réservation de salle et ne sont pas modifiables ici. Retirez la
                   réservation sélectionnée en haut du formulaire pour les modifier.
                 </p>
               )}
               <div style={lockedFromReservationStyle}>
               {/* Choix : Événement unique ou récurrent — deux blocs séparés */}
-              <label style={{ display: 'block', marginBottom: '12px', fontWeight: '500', color: '#ccc' }}>
+              <label style={{ display: 'block', marginBottom: '12px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                 Type d'événement
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
@@ -1756,11 +1802,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     alignItems: 'center',
                     gap: '12px',
                     padding: '16px',
-                    backgroundColor: eventType === 'unique' ? 'rgba(255, 65, 108, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                    backgroundColor: eventType === 'unique' ? 'rgba(124, 58, 237, 0.08)' : 'var(--ccc-bg-surface)',
                     borderRadius: '8px',
-                    border: eventType === 'unique' ? '1px solid rgba(255, 65, 108, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+                    border: eventType === 'unique' ? '1px solid rgba(124, 58, 237, 0.4)' : '1px solid var(--ccc-border-subtle)',
                     cursor: 'pointer',
-                    color: '#fff',
+                    color: 'var(--ccc-text-primary)',
                     transition: 'background-color 0.2s, border-color 0.2s',
                   }}
                 >
@@ -1770,7 +1816,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     checked={eventType === 'unique'}
                     disabled={fieldsLockedByVenueBooking}
                     onChange={() => setEventType('unique')}
-                    style={{ width: '18px', height: '18px', accentColor: '#ff416c', flexShrink: 0 }}
+                    style={{ width: '18px', height: '18px', accentColor: '#7c3aed', flexShrink: 0 }}
                   />
                   <span style={{ fontWeight: '500' }}>Événement unique</span>
                 </label>
@@ -1780,11 +1826,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     alignItems: 'center',
                     gap: '12px',
                     padding: '16px',
-                    backgroundColor: eventType === 'recurring' ? 'rgba(255, 65, 108, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                    backgroundColor: eventType === 'recurring' ? 'rgba(124, 58, 237, 0.08)' : 'var(--ccc-bg-surface)',
                     borderRadius: '8px',
-                    border: eventType === 'recurring' ? '1px solid rgba(255, 65, 108, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+                    border: eventType === 'recurring' ? '1px solid rgba(124, 58, 237, 0.4)' : '1px solid var(--ccc-border-subtle)',
                     cursor: 'pointer',
-                    color: '#fff',
+                    color: 'var(--ccc-text-primary)',
                     transition: 'background-color 0.2s, border-color 0.2s',
                   }}
                 >
@@ -1798,7 +1844,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       setRecurrenceStartDate(formData.date);
                       if (!recurrenceEndDate) setRecurrenceEndDate(formData.date);
                     }}
-                    style={{ width: '18px', height: '18px', accentColor: '#ff416c', flexShrink: 0 }}
+                    style={{ width: '18px', height: '18px', accentColor: '#7c3aed', flexShrink: 0 }}
                   />
                   <span style={{ fontWeight: '500' }}>Événement récurrent</span>
                 </label>
@@ -1807,7 +1853,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
               {eventType === 'unique' ? (
                 <div style={sectionGridStyle}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                       Date *
                     </label>
                     <input
@@ -1827,7 +1873,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                   {/* Date de début et Fin sur la même ligne */}
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                         Date de début *
                       </label>
                       <input
@@ -1843,11 +1889,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       )}
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                         Fin
                       </label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                        <span style={{ color: '#aaa', fontSize: '14px' }}>Le</span>
+                        <span style={{ color: 'var(--ccc-text-muted)', fontSize: '14px' }}>Le</span>
                         <input
                           type="date"
                           value={recurrenceEndDate}
@@ -1870,7 +1916,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                       A lieu
                     </label>
                     <select
@@ -1887,7 +1933,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
                   {recurrenceType === 'weekly' && (
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                         Ces jours-là
                       </label>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -1900,9 +1946,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                             style={{
                               padding: '10px 14px',
                               borderRadius: '8px',
-                              border: recurrenceWeeklyDays.includes(value) ? '1px solid #ff416c' : '1px solid #ccc',
-                              background: recurrenceWeeklyDays.includes(value) ? 'rgba(255, 65, 108, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                              color: '#fff',
+                              border: recurrenceWeeklyDays.includes(value) ? '1px solid #7c3aed' : '1px solid #444',
+                              background: recurrenceWeeklyDays.includes(value) ? 'rgba(124, 58, 237, 0.12)' : 'var(--ccc-bg-surface)',
+                              color: 'var(--ccc-text-primary)',
                               cursor: 'pointer',
                               fontWeight: '500',
                               fontSize: '13px',
@@ -1918,7 +1964,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                   {/* Récap des dates générées + personnalisation des heures par date */}
                   {recurringDates.length > 0 && (
                     <div style={{ marginTop: '8px' }}>
-                      <label style={{ display: 'block', marginBottom: '12px', fontWeight: '500', color: '#ccc' }}>
+                      <label style={{ display: 'block', marginBottom: '12px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                         Dates générées ({recurringDates.length}) — personnaliser les heures par date (optionnel)
                       </label>
                       <div style={{
@@ -1928,9 +1974,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         maxHeight: '280px',
                         overflowY: 'auto',
                         padding: '12px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                        backgroundColor: 'var(--ccc-bg-surface)',
                         borderRadius: '8px',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        border: '1px solid var(--ccc-border-subtle)',
                       }}>
                         {recurringDates.map((dateStr) => {
                           const override = dateTimeOverrides[dateStr];
@@ -1944,13 +1990,13 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                                 alignItems: 'center',
                                 gap: '12px',
                                 padding: '10px 12px',
-                                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                backgroundColor: 'var(--ccc-bg-elevated)',
                                 borderRadius: '6px',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                border: '1px solid var(--ccc-border-subtle)',
                                 flexWrap: 'wrap',
                               }}
                             >
-                              <span style={{ color: '#fff', fontSize: '13px', minWidth: '160px' }}>
+                              <span style={{ color: 'var(--ccc-text-primary)', fontSize: '13px', minWidth: '160px' }}>
                                 {new Date(dateStr).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                               </span>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto' }}>
@@ -1989,7 +2035,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
                 {/* Heure de début - Dropdown personnalisé */}
                 <div ref={startTimeRef} style={{ position: 'relative', zIndex: 100 }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                     Heure de début *
                   </label>
                   <div
@@ -2014,7 +2060,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     <ChevronDown 
                       size={18} 
                       style={{ 
-                        color: '#fff', 
+                        color: 'var(--ccc-text-muted)', 
                         transform: openStartTimeDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
                         transition: 'transform 0.2s ease'
                       }} 
@@ -2027,8 +2073,8 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       left: 0,
                       right: 0,
                       marginTop: '4px',
-                      backgroundColor: '#1a1a2e',
-                      border: '1px solid #ccc',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #444',
                       borderRadius: '8px',
                       maxHeight: '200px',
                       overflowY: 'auto',
@@ -2042,14 +2088,14 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                           style={{
                             padding: '12px 16px',
                             cursor: 'pointer',
-                            color: '#fff',
-                            backgroundColor: formData.startTime === slot.value ? 'rgba(255, 65, 108, 0.3)' : 'transparent',
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                            color: 'var(--ccc-text-primary)',
+                            backgroundColor: formData.startTime === slot.value ? 'rgba(124, 58, 237, 0.12)' : 'transparent',
+                            borderBottom: '1px solid var(--ccc-border-subtle)',
                             transition: 'background-color 0.2s ease'
                           }}
                           onMouseEnter={(e) => {
                             if (formData.startTime !== slot.value) {
-                              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                              e.currentTarget.style.backgroundColor = 'var(--ccc-bg-surface)';
                             }
                           }}
                           onMouseLeave={(e) => {
@@ -2073,7 +2119,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                 {/* Événement unique : Durée — Récurrent : Heure de fin */}
                 {eventType === 'unique' ? (
                   <div style={{ position: 'relative', zIndex: 99 }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                       Durée *
                     </label>
                     <select
@@ -2108,7 +2154,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         label = 'à ' + timePart;
                       }
                       return (
-                        <p style={{ fontSize: '12px', color: '#aaa', marginTop: '6px' }}>
+                        <p style={{ fontSize: '12px', color: 'var(--ccc-text-muted)', marginTop: '6px' }}>
                           Fin : {label}
                         </p>
                       );
@@ -2121,7 +2167,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                   </div>
                 ) : (
                   <div ref={endTimeRef} style={{ position: 'relative', zIndex: 99 }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                       Heure de fin *
                     </label>
                     <div
@@ -2146,7 +2192,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       <ChevronDown 
                         size={18} 
                         style={{ 
-                          color: '#fff', 
+                          color: 'var(--ccc-text-muted)', 
                           transform: openEndTimeDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
                           transition: 'transform 0.2s ease'
                         }} 
@@ -2159,7 +2205,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         left: 0,
                         right: 0,
                         marginTop: '4px',
-                        backgroundColor: '#1a1a2e',
+                        backgroundColor: '#ffffff',
                         border: '1px solid #444',
                         borderRadius: '8px',
                         maxHeight: '200px',
@@ -2174,14 +2220,14 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                             style={{
                               padding: '12px 16px',
                               cursor: 'pointer',
-                              color: '#fff',
-                              backgroundColor: formData.endTime === slot.value ? 'rgba(255, 65, 108, 0.3)' : 'transparent',
-                              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                              color: 'var(--ccc-text-primary)',
+                              backgroundColor: formData.endTime === slot.value ? 'rgba(124, 58, 237, 0.12)' : 'transparent',
+                              borderBottom: '1px solid var(--ccc-border-subtle)',
                               transition: 'background-color 0.2s ease'
                             }}
                             onMouseEnter={(e) => {
                               if (formData.endTime !== slot.value) {
-                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.backgroundColor = 'var(--ccc-bg-surface)';
                               }
                             }}
                             onMouseLeave={(e) => {
@@ -2205,7 +2251,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
                 {/* Type de lieu */}
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                     Type de lieu
                   </label>
                   <select
@@ -2226,7 +2272,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
                 {/* Nombre de places pour spectateur */}
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                     Nombre de places pour spectateur
                   </label>
                   <input
@@ -2256,13 +2302,13 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
             {/* Section Conditions */}
             <div style={sectionStyle}>
               <div style={sectionTitleStyle}>
-                <Users size={20} style={{ color: '#ff416c' }} />
+                <Users size={20} style={{ color: '#7c3aed' }} />
                 <span>Conditions</span>
               </div>
               <div style={sectionGridStyle}>
                 {/* Expérience minimale */}
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                     Expérience minimale (années) *
                   </label>
                   <input
@@ -2286,7 +2332,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
                 {/* Nombre maximum de comédiens */}
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                     Nombre maximum de comédiens *
                   </label>
                   <input
@@ -2310,7 +2356,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
                 {/* Niveau d'expérience requis */}
                 <div style={{ gridColumn: isMobile ? '1' : '1 / -1' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#ccc' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
                     Niveau d'expérience requis
                   </label>
                   <select
@@ -2350,9 +2396,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                 disabled={isSubmitting}
                 style={{
                   ...buttonStyle,
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: '#fff',
-                  border: '1px solid rgba(255, 255, 255, 0.2)'
+                  background: 'var(--ccc-bg-surface)',
+                  color: 'var(--ccc-text-primary)',
+                  border: '1px solid var(--ccc-border-medium)'
                 }}
               >
                 Annuler
@@ -2362,7 +2408,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                 disabled={isSubmitting}
                 style={{
                   ...buttonStyle,
-                  background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                  background: 'var(--ccc-accent-gradient)',
                   color: '#fff',
                   opacity: isSubmitting ? 0.7 : 1
                 }}

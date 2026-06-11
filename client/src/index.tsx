@@ -80,6 +80,15 @@ const VenueOwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) 
   return <>{children}</>;
 };
 
+const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (!user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <>{children}</>;
+};
+
 const ScrollToTop: React.FC = () => {
   const location = useLocation();
   useEffect(() => {
@@ -155,7 +164,7 @@ const AppRouter: React.FC = () => {
       <Route path="/admin/late-cancellations" element={<LateCancellationAlertsPage />} />
       <Route path="/admin/comedian-reports" element={<ComedianReportsPage />} />
       
-<Route path="/calendar" element={<CalendarPage/>} />
+<Route path="/calendar" element={<RequireAuth><CalendarPage/></RequireAuth>} />
       <Route path="/mentions-legales" element={<LegalMentionsPage />} />
       <Route path="/politique-confidentialite" element={<PrivacyPolicyPage />} />
       <Route path="/cgu" element={<TermsOfServicePage />} />
@@ -201,7 +210,7 @@ const DashboardRouter = () => {
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+        background: 'var(--ccc-bg-gradient)',
       }}>
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-500"></div>
       </div>

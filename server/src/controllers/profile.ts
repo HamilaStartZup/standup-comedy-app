@@ -51,13 +51,38 @@ export const getMyProfile = async (req: AuthRequest, res: Response): Promise<any
 export const getUserProfile = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     const { userId } = req.params;
-    const user = await UserModel.findById(userId).select('-password');
+    const viewerId = req.user?.id;
+    const viewerRole = req.user?.role;
+    const isSelf = viewerId === userId;
+    const isAdmin = viewerRole === 'SUPER_ADMIN';
+
+    // Tiers : projection publique (profil scénique + identité de base) sans coordonnées.
+    // Soi-même et SUPER_ADMIN : profil complet.
+    const PUBLIC_FIELDS = 'firstName lastName city role avatarUrl avatar profile stats createdAt';
+    const user = await UserModel.findById(userId).select(isSelf || isAdmin ? '-password' : PUBLIC_FIELDS);
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
 
     // Transform the response to include 'id' for consistency
     const userObj = user.toObject ? user.toObject() : user;
+
+    // Un organisateur peut voir email + téléphone d'un humoriste uniquement
+    // si celui-ci a candidaté à l'un de ses propres événements (besoin de contact).
+    if (!isSelf && !isAdmin && viewerRole === 'ORGANIZER' && user.role === 'COMEDIAN') {
+      const ownedEventIds = await EventModel.find({ organizer: viewerId }).distinct('_id');
+      const hasApplied = ownedEventIds.length > 0 && await ApplicationModel.exists({
+        comedian: userId,
+        event: { $in: ownedEventIds },
+      });
+      if (hasApplied) {
+        const contact = await UserModel.findById(userId).select('email phone').lean();
+        if (contact) {
+          (userObj as any).email = contact.email;
+          (userObj as any).phone = contact.phone;
+        }
+      }
+    }
     const responseData = {
       ...userObj,
       id: user._id,

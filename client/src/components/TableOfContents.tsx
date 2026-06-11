@@ -126,7 +126,7 @@ function TableOfContents({
     backgroundColor: 'rgba(255, 90, 126, 0.2)',
     color: '#FF5A7E',
     fontWeight: 'bold',
-    borderLeftColor: '#ff416c',
+    borderLeftColor: '#7c3aed',
   };
 
   const tocSubLinkStyle: CSSProperties = {
@@ -144,9 +144,9 @@ function TableOfContents({
     width: '56px',
     height: '56px',
     borderRadius: '50%',
-    background: 'linear-gradient(135deg, #ff416c, #FF5A7E)',
+    background: 'linear-gradient(135deg, #7c3aed, #FF5A7E)',
     border: 'none',
-    boxShadow: '0 4px 12px rgba(255, 65, 108, 0.4)',
+    boxShadow: '0 4px 12px rgba(124, 58, 237, 0.4)',
     color: '#ffffff',
     fontSize: '1.5rem',
     cursor: 'pointer',
@@ -173,13 +173,14 @@ function TableOfContents({
     left: 0,
     right: 0,
     maxHeight: '70vh',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     borderTopLeftRadius: '20px',
     borderTopRightRadius: '20px',
     padding: '24px',
     overflowY: 'auto',
     zIndex: 9999,
-    boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.5)',
+    boxShadow: '0 -4px 24px rgba(15, 23, 42, 0.12)',
+    border: '1px solid var(--ccc-border-subtle)',
   };
 
   const mobileHeaderStyle: CSSProperties = {
@@ -192,7 +193,7 @@ function TableOfContents({
   const mobileCloseButtonStyle: CSSProperties = {
     background: 'none',
     border: 'none',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     fontSize: '1.5rem',
     cursor: 'pointer',
     padding: '0',

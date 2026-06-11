@@ -17,8 +17,8 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 48, message = 'C
         style={{
           width: size,
           height: size,
-          border: '4px solid rgba(255,65,108,0.2)',
-          borderTop: '4px solid #ff416c',
+          border: '4px solid rgba(124, 58, 237,0.2)',
+          borderTop: '4px solid #7c3aed',
           borderRadius: '50%',
           animation: 'spin 1s linear infinite',
           margin: '0 auto 16px',

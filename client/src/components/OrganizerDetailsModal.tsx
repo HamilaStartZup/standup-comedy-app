@@ -13,10 +13,10 @@ function OrganizerDetailsModal({ isOpen, onClose, organizer }: OrganizerDetailsM
 
   const sectionTitleStyle: CSSProperties = {
     fontSize: '1.3em',
-    color: '#ff416c',
+    color: '#7c3aed',
     marginTop: '20px',
     marginBottom: '15px',
-    borderBottom: '2px solid #ff416c',
+    borderBottom: '2px solid #7c3aed',
     paddingBottom: '8px',
     fontWeight: 'bold'
   };
@@ -149,7 +149,7 @@ function OrganizerDetailsModal({ isOpen, onClose, organizer }: OrganizerDetailsM
                     target="_blank" 
                     rel="noopener noreferrer"
                     style={{ 
-                      color: '#ff416c', 
+                      color: '#7c3aed', 
                       textDecoration: 'none',
                       wordBreak: 'break-all'
                     }}

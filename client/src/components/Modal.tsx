@@ -1,4 +1,5 @@
 import React, { type CSSProperties } from 'react';
+import { theme } from '../styles/theme';
 
 interface ModalProps {
   isOpen: boolean;
@@ -24,7 +25,7 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: transparentOverlay ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: transparentOverlay ? 'rgba(15, 23, 42, 0.2)' : theme.colors.bg.overlay,
     backdropFilter: 'blur(4px)',
     display: 'flex',
     justifyContent: 'center',
@@ -33,16 +34,16 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
   };
 
   const modalStyle: CSSProperties = {
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+    background: theme.colors.bg.elevated,
     padding: '25px',
-    borderRadius: '12px',
+    borderRadius: theme.radius.md,
     minWidth: 'auto',
     maxWidth: '600px',
     width: '100%',
-    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+    boxShadow: theme.shadow.dropdown,
     position: 'relative',
-    color: '#ffffff',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    color: theme.colors.text.primary,
+    border: `1px solid ${theme.colors.border.subtle}`,
     maxHeight: '85vh',
     overflowY: 'auto',
     overflowX: 'hidden',
@@ -58,7 +59,7 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
     border: 'none',
     fontSize: '1.5em',
     cursor: 'pointer',
-    color: '#ffffff',
+    color: theme.colors.text.muted,
   };
 
   return (
@@ -76,4 +77,4 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
   );
 }
 
-export default Modal; 
+export default Modal;

@@ -5,7 +5,7 @@
 
 /* Variables CSS pour la cohérence */
 :root {
-  --primary-gradient: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+  --primary-gradient: var(--ccc-accent-gradient);
   --secondary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --dark-bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   --mobile-breakpoint: 768px;
@@ -83,7 +83,7 @@ input, textarea, select {
 }
 
 input:focus, textarea:focus, select:focus {
-  outline: 2px solid #ff416c;
+  outline: 2px solid #7c3aed;
   outline-offset: 2px;
 }
 
@@ -262,7 +262,7 @@ input:focus, textarea:focus, select:focus {
 
 /* Better focus states for accessibility */
 .focus-visible:focus {
-  outline: 2px solid #ff416c;
+  outline: 2px solid #7c3aed;
   outline-offset: 2px;
 }
 
@@ -342,7 +342,7 @@ input:focus, textarea:focus, select:focus {
 /* Ensure clickable elements are accessible */
 .clickable {
   cursor: pointer;
-  -webkit-tap-highlight-color: rgba(255, 65, 108, 0.3);
+  -webkit-tap-highlight-color: rgba(124, 58, 237, 0.3);
 }
 
 /* Bottom padding for mobile navigation */

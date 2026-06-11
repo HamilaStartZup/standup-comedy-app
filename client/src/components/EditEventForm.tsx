@@ -545,7 +545,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
 
   const formTitleStyle: CSSProperties = {
     fontSize: '2em',
-    color: '#ff416c',
+    color: '#7c3aed',
     marginBottom: '20px',
   };
 

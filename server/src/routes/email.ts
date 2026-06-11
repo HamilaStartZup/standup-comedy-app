@@ -9,7 +9,7 @@ import {
   getSubscriptionStatus
 } from '../controllers/unsubscribe';
 import { unsubscribeRateLimiter } from '../middleware/rateLimiter';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, authorizeRoles } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -39,20 +39,20 @@ const transporter = nodemailer.createTransport({
  * Envoie un email (protégée)
  * Body: { to, subject, text }
  */
-router.post('/send', (req, res) => sendEmail(req, res, transporter));
+router.post('/send', authMiddleware, authorizeRoles('SUPER_ADMIN'), (req, res) => sendEmail(req, res, transporter));
 
 /**
  * GET /test-config
  * Teste la configuration email
  */
-router.get('/test-config', testEmailConfig);
+router.get('/test-config', authMiddleware, authorizeRoles('SUPER_ADMIN'), testEmailConfig);
 
 /**
  * POST /test-send
  * Envoie un email de test
  * Body: { testEmail }
  */
-router.post('/test-send', testEmailSend);
+router.post('/test-send', authMiddleware, authorizeRoles('SUPER_ADMIN'), testEmailSend);
 
 /**
  * POST /jobs/reminders

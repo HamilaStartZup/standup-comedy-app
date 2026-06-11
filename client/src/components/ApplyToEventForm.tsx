@@ -101,14 +101,15 @@ function ApplyToEventForm({ event, onClose, onApplicationSubmitted }: ApplyToEve
   };
 
   const formContentStyle: CSSProperties = {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     borderRadius: '8px',
     padding: '24px',
     maxWidth: '480px',
     width: '100%',
     margin: '0 16px',
-    color: '#ffffff',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+    color: 'var(--ccc-text-primary)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.12)',
+    border: '1px solid var(--ccc-border-subtle)',
     position: 'relative',
   };
 
@@ -122,11 +123,11 @@ function ApplyToEventForm({ event, onClose, onApplicationSubmitted }: ApplyToEve
   const titleStyle: CSSProperties = {
     fontSize: '1.5em',
     fontWeight: '600',
-    color: '#ff416c',
+    color: '#7c3aed',
   };
 
   const closeButtonStyle: CSSProperties = {
-    color: '#ccc',
+    color: 'var(--ccc-text-muted)',
     fontSize: '1.5em',
     backgroundColor: 'transparent',
     border: 'none',
@@ -180,7 +181,7 @@ function ApplyToEventForm({ event, onClose, onApplicationSubmitted }: ApplyToEve
 
   const submitButtonDynamicStyle: CSSProperties = {
     ...baseButtonStyle,
-    background: hasApplied || applyMutation.isPending ? '#6c757d' : 'linear-gradient(to right, #ff416c, #ff4b2b)',
+    background: hasApplied || applyMutation.isPending ? '#6c757d' : 'var(--ccc-accent-gradient)',
     color: 'white',
     cursor: hasApplied || applyMutation.isPending ? 'not-allowed' : 'pointer',
     opacity: hasApplied || applyMutation.isPending ? 0.7 : 1,
@@ -191,7 +192,7 @@ function ApplyToEventForm({ event, onClose, onApplicationSubmitted }: ApplyToEve
       <div style={formContainerStyle}>
         <div style={formContentStyle}>
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
-            <div style={{ border: '4px solid rgba(255, 255, 255, 0.3)', borderTop: '4px solid #ff416c', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite' }}></div>
+            <div style={{ border: '4px solid rgba(255, 255, 255, 0.3)', borderTop: '4px solid #7c3aed', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite' }}></div>
             <span style={{ marginLeft: '10px', color: '#ccc' }}>Vérification...</span>
             <style>{`
               @keyframes spin {

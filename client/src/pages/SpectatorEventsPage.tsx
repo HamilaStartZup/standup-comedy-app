@@ -45,7 +45,7 @@ export default function SpectatorEventsPage() {
   const [ratingWindowClosed, setRatingWindowClosed] = useState<Record<string, boolean>>({});
   const [eventRatings, setEventRatings] = useState<Record<string, number>>({});
 
-  const { data: myRegistrationsList = [], isLoading: loadingRegistrations } = useQuery({
+  const { data: myRegistrationsRaw, isLoading: loadingRegistrations } = useQuery<IEvent[]>({
     queryKey: ['events', 'spectator', 'myRegistrations'],
     queryFn: async () => {
       const res = await api.get('/events?myRegistrations=true');
@@ -53,6 +53,7 @@ export default function SpectatorEventsPage() {
     },
     enabled: !!user,
   });
+  const myRegistrationsList: IEvent[] = myRegistrationsRaw ?? [];
 
   const { data: favoritesResponse, isLoading: loadingFavorites } = useQuery({
     queryKey: ['event-favorites'],
@@ -121,7 +122,7 @@ export default function SpectatorEventsPage() {
       const node = document.querySelector<HTMLElement>(`[data-event-id="${focusId}"]`);
       if (!node) return;
       node.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      node.style.outline = '3px solid #ff416c';
+      node.style.outline = '3px solid #7c3aed';
       node.style.outlineOffset = '2px';
       setTimeout(() => {
         node.style.outline = '';
@@ -258,13 +259,13 @@ export default function SpectatorEventsPage() {
       <div
         style={{
           minHeight: 'calc(100vh - 60px)',
-          background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
-          color: '#fff',
+          background: 'var(--ccc-bg-gradient)',
+          color: 'var(--ccc-text-primary)',
           padding: '24px',
         }}
       >
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <h1 style={{ marginBottom: 24, fontSize: '1.75rem' }}>Mes évènements</h1>
+          <h1 className="ccc-page-title" style={{ marginBottom: 24 }}>Mes évènements</h1>
 
           {/* Onglets filtre */}
           <div
@@ -289,11 +290,11 @@ export default function SpectatorEventsPage() {
                     borderRadius: 8,
                     border: isActive
                       ? isCancelledTab ? '2px solid #dc3545' : '2px solid #FF5A7E'
-                      : '1px solid rgba(255,255,255,0.3)',
+                      : '1px solid var(--ccc-border-medium)',
                     background: isActive
-                      ? isCancelledTab ? 'rgba(220, 53, 69, 0.25)' : 'rgba(255,90,126,0.25)'
-                      : 'rgba(0,0,0,0.3)',
-                    color: isActive && isCancelledTab ? '#f8d7da' : '#fff',
+                      ? isCancelledTab ? 'rgba(220, 53, 69, 0.12)' : 'var(--ccc-accent-soft)'
+                      : 'var(--ccc-bg-elevated)',
+                    color: isActive && isCancelledTab ? '#dc3545' : isActive ? 'var(--ccc-accent)' : 'var(--ccc-text-secondary)',
                     cursor: 'pointer',
                     fontWeight: isActive ? 600 : 400,
                     fontSize: '0.9rem',
@@ -306,7 +307,7 @@ export default function SpectatorEventsPage() {
           </div>
 
           {isLoading ? (
-            <p style={{ color: 'rgba(255,255,255,0.7)' }}>Chargement…</p>
+            <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
           ) : eventFilter === 'inscrits' ? (
             <Section
               title="Événements auxquels je suis inscrit"
@@ -339,7 +340,7 @@ export default function SpectatorEventsPage() {
             <section style={{ marginBottom: 40 }}>
               <h2 style={{ marginBottom: 16, fontSize: '1.25rem' }}>Événements annulés</h2>
               {registeredCancelled.length === 0 ? (
-                <p style={{ color: 'rgba(255,255,255,0.7)' }}>Aucun événement annulé.</p>
+                <p style={{ color: 'var(--ccc-text-muted)' }}>Aucun événement annulé.</p>
               ) : (
                 <div
                   style={{
@@ -366,7 +367,7 @@ export default function SpectatorEventsPage() {
                       title="Voir les détails"
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                        <h3 style={{ margin: 0, fontSize: '1rem', flex: 1, color: '#1a1a2e', textDecoration: 'underline' }}>{event.title}</h3>
+                        <h3 style={{ margin: 0, fontSize: '1rem', flex: 1, color: 'var(--ccc-text-primary)', textDecoration: 'underline' }}>{event.title}</h3>
                         <span
                           style={{
                             fontSize: '0.75rem',
@@ -380,7 +381,7 @@ export default function SpectatorEventsPage() {
                           Annulé
                         </span>
                       </div>
-                      <p style={{ margin: 0, fontSize: '0.85rem', color: '#555' }}>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ccc-text-secondary)' }}>
                         {new Date(event.date).toLocaleDateString('fr-FR', {
                           weekday: 'short',
                           day: 'numeric',
@@ -389,7 +390,7 @@ export default function SpectatorEventsPage() {
                         })}
                       </p>
                       {event.location?.city && (
-                        <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#666' }}>
+                        <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--ccc-text-muted)' }}>
                           📍 {event.location.city}
                         </p>
                       )}
@@ -482,7 +483,7 @@ function Section({
     <section style={{ marginBottom: 40 }}>
       <h2 style={{ marginBottom: 16, fontSize: '1.25rem' }}>{title}</h2>
       {events.length === 0 ? (
-        <p style={{ color: 'rgba(255,255,255,0.7)' }}>{emptyMessage}</p>
+        <p style={{ color: 'var(--ccc-text-muted)' }}>{emptyMessage}</p>
       ) : (
         <div
           style={{
@@ -559,9 +560,9 @@ function EventCard({
   const canRegister = onRegister && !isRegistered && !isPast && !isCancelled && (placesRemaining === null || placesRemaining > 0);
   const imageUrl = event.imageUrl;
   const hasBg = !!imageUrl;
-  const textColor = hasBg ? '#fff' : '#1a1a2e';
-  const textColorMuted = hasBg ? 'rgba(255,255,255,0.92)' : '#555';
-  const textColorMuted2 = hasBg ? 'rgba(255,255,255,0.88)' : '#666';
+  const textColor = hasBg ? '#fff' : 'var(--ccc-text-primary)';
+  const textColorMuted = hasBg ? 'rgba(255,255,255,0.92)' : 'var(--ccc-text-secondary)';
+  const textColorMuted2 = hasBg ? 'rgba(255,255,255,0.88)' : 'var(--ccc-text-muted)';
   const textShadow = hasBg ? '0 1px 2px rgba(0,0,0,0.8)' : 'none';
 
   return (
@@ -569,11 +570,12 @@ function EventCard({
       data-event-id={event._id}
       style={{
         position: 'relative',
-        background: hasBg ? undefined : '#fff',
+        background: hasBg ? undefined : 'var(--ccc-bg-elevated)',
+        border: hasBg ? undefined : '1px solid var(--ccc-border-subtle)',
+        boxShadow: hasBg ? undefined : '0 4px 24px rgba(15, 23, 42, 0.08)',
         backgroundImage: hasBg ? `url(${imageUrl})` : undefined,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        border: '1px solid rgba(0,0,0,0.1)',
         borderRadius: 12,
         overflow: 'hidden',
         display: 'flex',
@@ -643,7 +645,7 @@ function EventCard({
           )}
         </div>
         {isPast && (
-          <span style={{ fontSize: '0.75rem', color: hasBg ? 'rgba(255,255,255,0.85)' : '#888' }}>Passé</span>
+          <span style={{ fontSize: '0.75rem', color: hasBg ? 'rgba(255,255,255,0.85)' : 'var(--ccc-text-muted)' }}>Passé</span>
         )}
         <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
         {canRegister && (
@@ -711,7 +713,7 @@ function EventCard({
                 borderRadius: 8,
                 border: '1px solid #D4AF37',
                 background: 'linear-gradient(180deg, #FFD700 0%, #D4AF37 100%)',
-                color: '#1a1a2e',
+                color: 'var(--ccc-text-primary)',
                 fontWeight: 600,
                 cursor: 'pointer',
                 fontSize: '0.9rem',

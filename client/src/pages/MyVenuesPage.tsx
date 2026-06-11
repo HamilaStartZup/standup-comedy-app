@@ -5,6 +5,7 @@ import VenueCard from '../components/VenueCard';
 import Navbar from '../components/Navbar';
 import VenuesTabs from '../components/VenuesTabs';
 import { useMyVenues } from '../hooks/useMyVenues';
+import type { IVenue } from '../types/venue';
 import MyVenueCardSkeleton from '../components/skeletons/MyVenueCardSkeleton';
 
 const MyVenuesPage: React.FC = () => {
@@ -12,10 +13,10 @@ const MyVenuesPage: React.FC = () => {
   const { user } = useAuth();
 
   const { data: venuesResponse, isLoading, error } = useMyVenues(user?._id);
-  const myVenues = venuesResponse?.venues ?? [];
+  const myVenues: IVenue[] = venuesResponse?.venues ?? [];
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)', paddingBottom: 60, padding: '20px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ccc-bg-gradient)', color: 'var(--ccc-text-primary)', padding: '20px', paddingBottom: 60 }}>
       <style>{`
         @media (max-width: 640px) {
           .my-venues-header h1 { font-size: 1.8em !important; }
@@ -27,10 +28,10 @@ const MyVenuesPage: React.FC = () => {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px' }}>
         {/* Header */}
         <div className="my-venues-header" style={{ marginBottom: 24 }}>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5em', fontWeight: 800, color: '#ff416c' }}>
+          <h1 className="ccc-page-title" style={{ margin: '0 0 8px 0' }}>
             Salles
           </h1>
-          <p style={{ margin: 0, fontSize: '1.1em', color: '#aaa' }}>
+          <p style={{ margin: 0, fontSize: '1.1em', color: 'var(--ccc-text-muted)' }}>
             Gérez vos salles et les demandes de réservation.
           </p>
         </div>
@@ -43,14 +44,14 @@ const MyVenuesPage: React.FC = () => {
             onClick={() => navigate('/venues/new')}
             style={{
               padding: '12px 28px',
-              background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+              background: 'var(--ccc-accent-gradient)',
               color: '#fff',
               border: 'none',
               borderRadius: 12,
               fontWeight: 700,
               fontSize: 15,
               cursor: 'pointer',
-              boxShadow: '0 4px 16px rgba(255,65,108,0.3)',
+              boxShadow: '0 4px 16px rgba(124, 58, 237,0.3)',
             }}
           >
             + Ajouter une salle
@@ -70,20 +71,20 @@ const MyVenuesPage: React.FC = () => {
             style={{
               textAlign: 'center',
               padding: '64px 24px',
-              border: '1px dashed rgba(255,255,255,0.1)',
+              border: '1px dashed var(--ccc-border-medium)',
               borderRadius: 20,
             }}
           >
             <div style={{ fontSize: 60, marginBottom: 20 }}>🏛️</div>
-            <h3 style={{ color: '#fff', fontSize: 22, marginBottom: 10 }}>Aucune salle pour le moment</h3>
-            <p style={{ color: '#888', fontSize: 15, marginBottom: 28, maxWidth: 400, margin: '0 auto 28px' }}>
+            <h3 style={{ color: 'var(--ccc-text-primary)', fontSize: 22, marginBottom: 10 }}>Aucune salle pour le moment</h3>
+            <p style={{ color: 'var(--ccc-text-muted)', fontSize: 15, marginBottom: 28, maxWidth: 400, margin: '0 auto 28px' }}>
               Ajoutez votre première salle pour commencer à recevoir des demandes de réservation.
             </p>
             <button
               onClick={() => navigate('/venues/new')}
               style={{
                 padding: '14px 32px',
-                background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                background: 'var(--ccc-accent-gradient)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 12,
@@ -97,7 +98,7 @@ const MyVenuesPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <p style={{ color: '#888', fontSize: 14, marginBottom: 24 }}>
+            <p style={{ color: 'var(--ccc-text-muted)', fontSize: 14, marginBottom: 24 }}>
               {myVenues.length} salle{myVenues.length > 1 ? 's' : ''}
             </p>
             <div

@@ -7,6 +7,7 @@ export type VenueBookingPaymentStatus = 'none' | 'pending' | 'paid' | 'refund_pe
 export interface VenueBookingDocument extends Document {
   venue: Types.ObjectId;
   requester: Types.ObjectId;
+  bookingGroupId?: Types.ObjectId;
   requestedDate: Date;
   startTime: string;
   endTime: string;
@@ -31,6 +32,7 @@ const venueBookingSchema = new Schema<VenueBookingDocument>(
   {
     venue: { type: Schema.Types.ObjectId, ref: 'Venue', required: true, index: true },
     requester: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    bookingGroupId: { type: Schema.Types.ObjectId, required: false, index: true },
     requestedDate: { type: Date, required: true },
     startTime: { type: String, required: true },
     endTime: { type: String, required: true },
@@ -51,7 +53,7 @@ const venueBookingSchema = new Schema<VenueBookingDocument>(
     paidAmount: { type: Number, min: 0 },
     paidAt: { type: Date },
     stripePaymentIntentId: { type: String },
-    stripeRefundId: { type: String },
+    stripeRefundId: { type: String, index: true },
     refundedAmount: { type: Number, min: 0 },
     refundedAt: { type: Date },
     paymentDeadlineAt: { type: Date },

@@ -37,16 +37,6 @@ export const upgradeToOrganizer = async (payload: {
   return response.data;
 };
 
-export const switchToLieu = async () => {
-  const response = await api.post('/auth/switch-to-lieu');
-  return response.data;
-};
-
-export const switchToOrganizer = async () => {
-  const response = await api.post('/auth/switch-to-organizer');
-  return response.data;
-};
-
 // Fonctions pour gérer les absences
 export const markAbsence = async (eventId: string, comedianId: string, reason?: string) => {
   const response = await api.post('/absences', { eventId, comedianId, reason });
@@ -452,6 +442,44 @@ export const createBooking = async (venueId: string, data: {
   return response.data;
 };
 
+export const createBookingBatch = async (venueId: string, data: {
+  dates: string[];
+  startTime?: string;
+  endTime?: string;
+  message?: string;
+}): Promise<{ bookingGroupId: string; created: IVenueBooking[]; unavailable: { date: string; reason: string }[] }> => {
+  const response = await api.post<{ bookingGroupId: string; created: IVenueBooking[]; unavailable: { date: string; reason: string }[] }>(
+    `/venues/${venueId}/bookings/batch`,
+    data
+  );
+  return response.data;
+};
+
+export const updateBookingGroupStatus = async (
+  bookingGroupId: string,
+  data: { status: 'ACCEPTED' | 'REFUSED'; excludedBookingIds?: string[]; ownerResponse?: string }
+): Promise<{ updated: IVenueBooking[] }> => {
+  const response = await api.patch<{ updated: IVenueBooking[] }>(`/venues/bookings/group/${bookingGroupId}`, data);
+  return response.data;
+};
+
+export const createVenueGroupCheckoutSession = async (bookingGroupId: string): Promise<{ url: string } | { allFree: true }> => {
+  const response = await api.post<{ url: string } | { allFree: true }>('/stripe/create-venue-group-checkout', { bookingGroupId });
+  return response.data;
+};
+
+/** Confirme le paiement d'un lot de réservations après retour de Stripe (fallback webhook). */
+export const confirmVenueGroupPayment = async (sessionId: string): Promise<{ message: string; bookingGroupId: string; confirmed: number }> => {
+  const response = await api.get<{ message: string; bookingGroupId: string; confirmed: number }>('/stripe/confirm-venue-group-payment', { params: { session_id: sessionId } });
+  return response.data;
+};
+
+/** Confirme un remboursement en attente (fallback si le webhook refund.updated n'est pas reçu, ex. dev local). */
+export const confirmVenueRefund = async (bookingId: string): Promise<{ message: string; paymentStatus: string; refundedAmount?: number }> => {
+  const response = await api.get<{ message: string; paymentStatus: string; refundedAmount?: number }>('/stripe/confirm-venue-refund', { params: { bookingId } });
+  return response.data;
+};
+
 export const listVenueBookings = async (venueId: string): Promise<IVenueBooking[]> => {
   const response = await api.get<{ bookings: IVenueBooking[] }>(`/venues/${venueId}/bookings`);
   return response.data.bookings;
@@ -480,6 +508,12 @@ export const updateBookingStatus = async (bookingId: string, status: 'ACCEPTED' 
 
 export const cancelBooking = async (bookingId: string): Promise<void> => {
   await api.delete(`/venues/bookings/${bookingId}`);
+};
+
+
+export const cancelBookingGroup = async (bookingGroupId: string): Promise<{ cancelled: number }> => {
+  const response = await api.delete<{ cancelled: number }>(`/venues/bookings/group/${bookingGroupId}`);
+  return response.data;
 };
 
 export const cancelBookingByOwner = async (bookingId: string): Promise<void> => {

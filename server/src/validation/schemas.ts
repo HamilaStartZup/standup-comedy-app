@@ -289,7 +289,10 @@ export const createEventSchema = z.object({
   })).optional(),
   imageUrl: z.string().max(2000).optional().transform((v) => (v && v.trim() ? v.trim() : undefined)).refine((v) => !v || /^https?:\/\//i.test(v), { message: 'L\'URL de l\'image doit commencer par http:// ou https://' }),
   venueBookingId: z.string().regex(/^[a-fA-F0-9]{24}$/, { message: 'Identifiant de réservation invalide' }).optional(),
+  venueBookingGroupId: z.string().regex(/^[a-fA-F0-9]{24}$/, { message: 'Identifiant de lot de réservation invalide' }).optional(),
 }).refine((data) => {
+  // Chemin Org B récurrent : venueBookingGroupId suffit, pas de date/isRecurring requis
+  if (data.venueBookingGroupId) return true;
   // Validation : si isRecurring est true, dates doit être présent et date ne doit pas l'être
   if (data.isRecurring === true) {
     if (!data.dates || data.dates.length === 0) {
@@ -306,7 +309,7 @@ export const createEventSchema = z.object({
   }
   return true;
 }, {
-  message: 'Pour un événement unique, fournissez "date". Pour un événement récurrent, fournissez "isRecurring: true" et "dates"',
+  message: 'Pour un événement unique, fournissez "date". Pour un événement récurrent, fournissez "isRecurring: true" et "dates". Pour une série Org B, fournissez "venueBookingGroupId".',
   path: ['date']
 }).refine((data) => {
   const startParts = data.startTime.split(':');
@@ -554,6 +557,24 @@ const optionalTime = z.preprocess(
   z.string().regex(timeRegex).optional()
 );
 
+/** Chaîne vide ou valeur absente ; sinon la valeur (pour champs optionnels type SIRET, URL). */
+const optionalSiret = z.preprocess(
+  (val) => {
+    if (val === undefined || val === null || val === '') return undefined;
+    const cleaned = String(val).replace(/\s/g, '');
+    return cleaned === '' ? undefined : cleaned;
+  },
+  z.string().regex(/^\d{14}$/, 'SIRET invalide (14 chiffres requis)').optional()
+);
+
+const optionalUrl = z.preprocess(
+  (val) => (val === undefined || val === null || val === '' ? '' : val),
+  z.union([
+    z.string().url('URL invalide'),
+    z.literal(''),
+  ]).optional()
+);
+
 const timeRestrictionsSchema = z.object({
   openTime: optionalTime,
   closeTime: optionalTime,
@@ -604,24 +625,25 @@ export const createVenueSchema = z.object({
   minDuration: z.number().min(0).optional(),
   maxDuration: z.number().min(0).optional(),
   acceptedEventTypes: z.array(z.string()).optional(),
+  cancellationPolicy: z.enum(['flexible', 'moderate', 'firm']).optional(),
   cancellationConditions: z.string().optional(),
   houseRules: z.string().optional(),
   timeRestrictions: timeRestrictionsSchema,
   disabledWeekdays: z.array(z.number().int().min(0).max(6)).optional().default([]),
   // Étape 6
   contactName: z.string().optional(),
-  contactEmail: z.string().email().optional(),
+  contactEmail: z.string().email().optional().or(z.string().length(0)),
   contactPhone: z.string().optional(),
   legalStatus: z.string().optional(),
-  siret: z.string().regex(/^\d{14}$/, 'SIRET invalide (14 chiffres requis)').optional().or(z.string().length(0)),
+  siret: optionalSiret,
   invoicingAvailable: z.boolean().optional(),
   companyName: z.string().optional(),
-  website: z.string().url('URL du site invalide').optional().or(z.string().length(0)),
+  website: optionalUrl,
   socialLinks: z.object({
-    youtube: z.string().url().optional().or(z.string().length(0)),
-    instagram: z.string().url().optional().or(z.string().length(0)),
-    facebook: z.string().url().optional().or(z.string().length(0)),
-    twitter: z.string().url().optional().or(z.string().length(0)),
+    youtube: optionalUrl,
+    instagram: optionalUrl,
+    facebook: optionalUrl,
+    twitter: optionalUrl,
   }).optional(),
 });
 
@@ -644,8 +666,36 @@ export const createBookingSchema = z.object({
   return eh * 60 + em > sh * 60 + sm;
 }, { message: "L'heure de fin doit être après l'heure de début", path: ['endTime'] });
 
+export const createBookingBatchSchema = z.object({
+  dates: z.array(
+    z.string().refine((str) => {
+      const date = new Date(`${str}T00:00:00Z`);
+      const now = new Date();
+      const todayUtcMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+      return !isNaN(date.getTime()) && date.getTime() >= todayUtcMs;
+    }, { message: 'Chaque date doit être aujourd\'hui ou dans le futur' })
+  ).min(1).max(100, { message: 'Une série ne peut pas dépasser 100 dates' }).refine(
+    (dates) => new Set(dates.map((d) => d.split('T')[0])).size === dates.length,
+    { message: 'Les dates doivent être uniques' }
+  ),
+  startTime: z.string().regex(timeRegex, { message: 'Format HH:MM requis' }).optional(),
+  endTime: z.string().regex(timeRegex, { message: 'Format HH:MM requis' }).optional(),
+  message: z.string().max(500).optional(),
+}).refine((data) => {
+  if (!data.startTime || !data.endTime) return true;
+  const [sh, sm] = data.startTime.split(':').map(Number);
+  const [eh, em] = data.endTime.split(':').map(Number);
+  return eh * 60 + em > sh * 60 + sm;
+}, { message: "L'heure de fin doit être après l'heure de début", path: ['endTime'] });
+
 export const updateBookingStatusSchema = z.object({
   status: z.enum(['ACCEPTED', 'REFUSED']),
+  ownerResponse: z.string().max(500).optional(),
+});
+
+export const updateBookingGroupStatusSchema = z.object({
+  status: z.enum(['ACCEPTED', 'REFUSED']),
+  excludedBookingIds: z.array(z.string()).optional(),
   ownerResponse: z.string().max(500).optional(),
 });
 

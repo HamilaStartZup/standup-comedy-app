@@ -7,8 +7,10 @@ import { VenueBookingModel } from '../models/VenueBooking';
 import { NotificationModel } from '../models/Notification';
 import mongoose from 'mongoose';
 import { emitVenueBookingPaymentUpdated } from '../services/eventEmitter';
+import { createNotification } from './notification';
 import { computeBookingAmount } from '../utils/venuePricing';
 import { ProcessedStripeEventModel } from '../models/ProcessedStripeEvent';
+import { confirmGroupBookingsPaid, PopulatedGroupBooking } from '../utils/venueBookingHelpers';
 
 const stripe = config.stripe.secretKey ? new Stripe(config.stripe.secretKey) : null;
 
@@ -252,6 +254,34 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
         res.status(500).send('Internal error');
         return;
       }
+    } else if (session.metadata?.type === 'venue_booking_group') {
+      // ── Paiement lot de réservations (série récurrente Org B) ──
+      const bookingGroupId = session.metadata?.bookingGroupId;
+      const userId = session.metadata?.userId;
+
+      if (!bookingGroupId || !userId) {
+        console.error('[Stripe] Metadata venue_booking_group manquant:', session.metadata);
+        res.status(200).send('OK');
+        return;
+      }
+
+      try {
+        const bookings = await VenueBookingModel.find({ bookingGroupId })
+          .populate<{ venue: { _id: mongoose.Types.ObjectId; name: string; owner: mongoose.Types.ObjectId; pricePerEvent: number; pricingType?: string; deposit?: number; extraFees?: { description: string; amount?: number }[] } }>(
+            'venue', 'name owner pricePerEvent pricingType deposit extraFees'
+          );
+
+        await confirmGroupBookingsPaid(bookings as PopulatedGroupBooking[], session.payment_intent as string);
+      } catch (e) {
+        console.error('[Stripe] Erreur confirmation lot après webhook:', e);
+        try {
+          await ProcessedStripeEventModel.deleteOne({ stripeEventId: event.id });
+        } catch (cleanupErr) {
+          console.error('[Stripe] Erreur nettoyage dedup record (groupe):', cleanupErr);
+        }
+        res.status(500).send('Internal error');
+        return;
+      }
     } else {
       // ── Paiement ticket spectateur (flow existant) ──
       const eventId = session.metadata?.eventId;
@@ -317,13 +347,13 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
       return;
     }
 
-    const paymentIntentId = typeof refund.payment_intent === 'string'
-      ? refund.payment_intent
-      : refund.payment_intent?.id;
+    const refundId = refund.id;
 
-    if (paymentIntentId) {
+    if (refundId) {
       try {
-        const booking = await VenueBookingModel.findOne({ stripePaymentIntentId: paymentIntentId })
+        // Rattachement par refund.id (et non par PaymentIntent) : un lot partage un seul
+        // PaymentIntent entre ses N réservations, mais chaque remboursement a son propre id.
+        const booking = await VenueBookingModel.findOne({ stripeRefundId: refundId })
           .populate<{ venue: { _id: mongoose.Types.ObjectId; name: string; owner: mongoose.Types.ObjectId } }>('venue', 'name owner');
 
         if (booking && booking.paymentStatus !== 'refunded') {
@@ -340,21 +370,29 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
             [booking.requester.toString(), (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId }).owner.toString()]
           );
 
-          try {
-            await NotificationModel.create({
-              user: booking.requester,
-              type: 'venue_booking_refunded',
-              title: 'Remboursement effectué',
-              message: `Votre remboursement de ${booking.refundedAmount}€ pour "${booking.venue.name}" a été traité.`,
-              relatedVenue: booking.venue._id,
-              relatedBooking: booking._id,
-              read: false,
-            });
-          } catch (notifError) {
-            console.error('[Stripe] Erreur notification refund.updated:', notifError, { paymentIntentId });
+          // Pour les séries (bookingGroupId), n'envoyer qu'une seule notification au demandeur
+          // (la première fois qu'un booking du groupe est remboursé).
+          const isFirstGroupRefund = booking.bookingGroupId
+            ? (await VenueBookingModel.countDocuments({
+                bookingGroupId: booking.bookingGroupId,
+                paymentStatus: 'refunded',
+                _id: { $ne: booking._id },
+              })) === 0
+            : true;
+
+          if (isFirstGroupRefund) {
+            await createNotification(
+              booking.requester.toString(),
+              'venue_booking_refunded',
+              'Remboursement effectué',
+              `Votre remboursement de ${booking.refundedAmount}€ pour "${booking.venue.name}" a été traité.`,
+              undefined, undefined, undefined,
+              (booking.venue as { _id: mongoose.Types.ObjectId })._id.toString(),
+              booking._id.toString()
+            );
           }
 
-          console.log('[Stripe] Remboursement confirmé via webhook:', paymentIntentId);
+          console.log('[Stripe] Remboursement confirmé via webhook:', refundId);
         }
       } catch (e) {
         console.error('[Stripe] Erreur traitement refund.updated:', e);
@@ -653,5 +691,267 @@ export const confirmVenueBookingPayment = async (req: AuthRequest, res: Response
   } catch (error: any) {
     console.error('Stripe confirmVenueBookingPayment error:', error);
     res.status(500).json({ message: 'Erreur lors de la confirmation du paiement' });
+  }
+};
+
+/**
+ * Crée une session Stripe Checkout groupée pour un lot de réservations ACCEPTED.
+ * Si toutes sont gratuites/CONFIRMED, renvoie { allFree: true } sans créer de session.
+ * expires_at = min(min(paymentDeadlineAt du lot), now+24h), planché à now+30min (décision 3).
+ */
+export const createVenueGroupCheckoutSession = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!stripe) {
+      res.status(503).json({ message: 'Paiement non configuré' });
+      return;
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Non authentifié' });
+      return;
+    }
+
+    const { bookingGroupId } = req.body as { bookingGroupId: string };
+    if (!bookingGroupId || !mongoose.Types.ObjectId.isValid(bookingGroupId)) {
+      res.status(400).json({ message: 'bookingGroupId invalide' });
+      return;
+    }
+
+    const bookings = await VenueBookingModel.find({
+      bookingGroupId,
+      requester: userId,
+      status: 'ACCEPTED',
+      paymentStatus: { $ne: 'paid' },
+    }).populate<{ venue: { _id: mongoose.Types.ObjectId; name: string; owner: mongoose.Types.ObjectId; pricePerEvent: number; pricingType?: string; deposit?: number; extraFees?: { description: string; amount?: number }[] } }>(
+      'venue', 'name owner pricePerEvent pricingType deposit extraFees'
+    );
+
+    if (bookings.length === 0) {
+      res.status(404).json({ message: 'Aucune réservation ACCEPTED non payée pour ce lot' });
+      return;
+    }
+
+    // Pré-calcul par réservation pour éviter un double appel computeBookingAmount
+    type ComputedAmount = { amount: number; requiresPayment: boolean };
+    const bookingAmounts = new Map<string, ComputedAmount>();
+    for (const booking of bookings) {
+      bookingAmounts.set(
+        booking._id.toString(),
+        computeBookingAmount(
+          { pricePerEvent: booking.venue.pricePerEvent, pricingType: booking.venue.pricingType as any, deposit: booking.venue.deposit, extraFees: booking.venue.extraFees },
+          { startTime: booking.startTime, endTime: booking.endTime }
+        )
+      );
+    }
+
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+    let hasPayable = false;
+    let minDeadline: Date | undefined;
+
+    for (const booking of bookings) {
+      const { amount, requiresPayment } = bookingAmounts.get(booking._id.toString())!;
+      if (!requiresPayment || amount === 0) continue;
+
+      hasPayable = true;
+      const dateStr = new Date(booking.requestedDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      lineItems.push({
+        price_data: {
+          currency: 'eur',
+          product_data: { name: `Réservation — ${booking.venue.name} — ${dateStr}` },
+          unit_amount: Math.round(amount * 100),
+        },
+        quantity: 1,
+      });
+
+      if (booking.paymentDeadlineAt) {
+        if (!minDeadline || booking.paymentDeadlineAt < minDeadline) {
+          minDeadline = booking.paymentDeadlineAt;
+        }
+      }
+    }
+
+    if (!hasPayable) {
+      res.status(200).json({ allFree: true });
+      return;
+    }
+
+    const now = Date.now();
+    const expiresAtMs = Math.max(
+      now + 35 * 60 * 1000,
+      Math.min(
+        minDeadline ? minDeadline.getTime() : now + 24 * 60 * 60 * 1000,
+        now + 24 * 60 * 60 * 1000
+      )
+    );
+    const expiresAt = Math.floor(expiresAtMs / 1000);
+
+    const baseUrl = config.frontend.url.replace(/\/$/, '');
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      line_items: lineItems,
+      success_url: `${baseUrl}/my-bookings?payment=success&type=group&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/my-bookings?payment=cancelled`,
+      client_reference_id: userId,
+      expires_at: expiresAt,
+      metadata: {
+        type: 'venue_booking_group',
+        bookingGroupId,
+        userId,
+      },
+    });
+
+    for (const booking of bookings) {
+      const { requiresPayment } = bookingAmounts.get(booking._id.toString())!;
+      if (!requiresPayment) continue;
+      booking.paymentStatus = 'pending';
+      booking.stripeSessionId = session.id;
+      await booking.save();
+    }
+
+    res.status(200).json({ url: session.url });
+  } catch (error: any) {
+    console.error('Stripe createVenueGroupCheckoutSession error:', error);
+    res.status(500).json({ message: 'Erreur lors de la création du paiement groupé' });
+  }
+};
+
+/**
+ * Confirme le paiement d'un lot de réservations après retour de Stripe.
+ * Fallback si le webhook est lent ou non configuré (ex. dev local).
+ * Calqué sur la branche webhook 'venue_booking_group' : recalcul du montant
+ * par réservation (jamais session.amount_total, qui est le total de la série)
+ * + garde atomique sur status: 'ACCEPTED' (anti-race avec le webhook).
+ */
+export const confirmVenueGroupPayment = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!stripe) {
+      res.status(503).json({ message: 'Paiement non configuré' });
+      return;
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Non authentifié' });
+      return;
+    }
+
+    const sessionId = (req.query.session_id || req.body?.session_id) as string;
+    if (!sessionId) {
+      res.status(400).json({ message: 'session_id manquant' });
+      return;
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (session.payment_status !== 'paid') {
+      res.status(422).json({ message: 'Paiement non reçu' });
+      return;
+    }
+    if (session.metadata?.userId !== userId) {
+      res.status(403).json({ message: 'Session ne correspond pas à l\'utilisateur' });
+      return;
+    }
+    if (session.metadata?.type !== 'venue_booking_group') {
+      res.status(400).json({ message: 'Type de session invalide' });
+      return;
+    }
+
+    const bookingGroupId = session.metadata?.bookingGroupId;
+    if (!bookingGroupId) {
+      res.status(400).json({ message: 'Données de session invalides' });
+      return;
+    }
+
+    const bookings = await VenueBookingModel.find({ bookingGroupId, requester: userId })
+      .populate<{ venue: { _id: mongoose.Types.ObjectId; name: string; owner: mongoose.Types.ObjectId; pricePerEvent: number; pricingType?: string; deposit?: number; extraFees?: { description: string; amount?: number }[] } }>(
+        'venue', 'name owner pricePerEvent pricingType deposit extraFees'
+      );
+
+    const confirmed = await confirmGroupBookingsPaid(bookings as PopulatedGroupBooking[], session.payment_intent as string);
+
+    res.status(200).json({ message: 'Lot confirmé', bookingGroupId, confirmed });
+  } catch (error: any) {
+    console.error('Stripe confirmVenueGroupPayment error:', error);
+    res.status(500).json({ message: 'Erreur lors de la confirmation du paiement groupé' });
+  }
+};
+
+/**
+ * Confirme un remboursement en attente (fallback si le webhook `refund.updated` n'est pas reçu,
+ * ex. dev local — une annulation ne fait pas revenir l'utilisateur depuis Stripe). Interroge
+ * Stripe par `stripeRefundId` ; si le remboursement a réussi, finalise la réservation. Idempotent.
+ */
+export const confirmVenueRefund = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!stripe) {
+      res.status(503).json({ message: 'Paiement non configuré' });
+      return;
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Non authentifié' });
+      return;
+    }
+
+    const bookingId = (req.query.bookingId || req.body?.bookingId) as string;
+    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
+      res.status(400).json({ message: 'bookingId invalide' });
+      return;
+    }
+
+    const booking = await VenueBookingModel.findById(bookingId)
+      .populate<{ venue: { _id: mongoose.Types.ObjectId; name: string; owner: mongoose.Types.ObjectId } }>('venue', 'name owner');
+    if (!booking) {
+      res.status(404).json({ message: 'Réservation introuvable' });
+      return;
+    }
+    if (booking.requester.toString() !== userId) {
+      res.status(403).json({ message: 'Non autorisé' });
+      return;
+    }
+    if (booking.paymentStatus === 'refunded') {
+      res.status(200).json({ message: 'Déjà remboursé', paymentStatus: 'refunded' });
+      return;
+    }
+    if (booking.paymentStatus !== 'refund_pending' || !booking.stripeRefundId) {
+      res.status(422).json({ message: 'Aucun remboursement en attente' });
+      return;
+    }
+
+    const refund = await stripe.refunds.retrieve(booking.stripeRefundId);
+    if (refund.status !== 'succeeded') {
+      res.status(202).json({ message: 'Remboursement en cours', paymentStatus: 'refund_pending' });
+      return;
+    }
+
+    booking.paymentStatus = 'refunded';
+    booking.refundedAmount = refund.amount / 100;
+    booking.refundedAt = new Date();
+    await booking.save();
+
+    emitVenueBookingPaymentUpdated(
+      booking._id.toString(),
+      booking.venue._id.toString(),
+      booking.status,
+      booking.paymentStatus,
+      [booking.requester.toString(), booking.venue.owner.toString()]
+    );
+
+    await createNotification(
+      booking.requester.toString(),
+      'venue_booking_refunded',
+      'Remboursement effectué',
+      `Votre remboursement de ${booking.refundedAmount}€ pour "${booking.venue.name}" a été traité.`,
+      undefined, undefined, undefined,
+      booking.venue._id.toString(),
+      booking._id.toString()
+    );
+
+    res.status(200).json({ message: 'Remboursement confirmé', paymentStatus: 'refunded', refundedAmount: booking.refundedAmount });
+  } catch (error: any) {
+    console.error('Stripe confirmVenueRefund error:', error);
+    res.status(500).json({ message: 'Erreur lors de la confirmation du remboursement' });
   }
 };

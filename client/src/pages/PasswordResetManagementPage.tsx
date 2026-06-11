@@ -82,24 +82,25 @@ function PasswordResetManagementPage() {
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     padding: '20px',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+    background: 'var(--ccc-bg-gradient)',
   };
 
   const cardStyle: CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     padding: '20px',
     borderRadius: '15px',
     marginBottom: '20px',
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
   };
 
   const buttonStyle: CSSProperties = {
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #ff416c, #ff4b2b)',
+    background: 'var(--ccc-accent-gradient)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -126,7 +127,7 @@ function PasswordResetManagementPage() {
     <div style={mainContainerStyle}>
       <Navbar />
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '2.5em', marginBottom: '30px', textAlign: 'center' }}>
+        <h1 className="ccc-page-title" style={{ marginBottom: '30px', textAlign: 'center' }}>
           🔐 Gestion des Réinitialisations de Mot de Passe
         </h1>
 
@@ -176,7 +177,7 @@ function PasswordResetManagementPage() {
                   style={{
                     ...cardStyle,
                     marginBottom: '15px',
-                    border: '2px solid #ff416c',
+                    border: '2px solid #7c3aed',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>

@@ -7,6 +7,7 @@ import { useUserEvents } from '../hooks/useUserEvents';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { getErrorMessage, WarningMessages } from '../services/systemMessages';
+import { pageTitleStyle } from '../styles/theme';
 
 interface EventStats {
   totalEvents: number;
@@ -130,48 +131,48 @@ const Dashboard = () => {
   // Styles de base pour le conteneur principal
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     padding: '20px',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)', // Dégradé du login
+    background: 'var(--ccc-bg-gradient)',
   };
 
   // Styles pour l'en-tête du tableau de bord
   const dashboardHeaderStyle: CSSProperties = {
-    fontSize: '3rem',
-    fontWeight: 'bold',
+    ...pageTitleStyle,
     textAlign: 'center',
     marginBottom: '40px',
-    background: 'linear-gradient(135deg, #ff4b2b, #ff416c)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    textShadow: '0 4px 8px rgba(255, 75, 43, 0.3)',
   };
+
+  const DASHBOARD_CARD_HEIGHT = '320px';
 
   // Styles pour la grille des cartes
   const cardsGridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gridAutoRows: DASHBOARD_CARD_HEIGHT,
     gap: '30px',
     maxWidth: '1400px',
     margin: '0 auto',
+    alignItems: 'stretch',
   };
 
   // Style de base pour toutes les cartes
   const cardStyle: CSSProperties = {
-    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))',
-    backdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255, 255, 255, 0.18)',
+    background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(255, 75, 43, 0.1))',
+    border: '1px solid rgba(124, 58, 237, 0.3)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: '20px',
     padding: '30px',
-    boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)',
     transition: 'all 0.3s ease',
     position: 'relative',
     overflow: 'hidden',
+    height: DASHBOARD_CARD_HEIGHT,
+    boxSizing: 'border-box',
   };
 
   const cardTitleStyle: CSSProperties = {
     fontSize: '1.1rem',
-    color: '#B0B0B0',
+    color: 'var(--ccc-text-muted)',
     marginBottom: '10px',
     fontWeight: '500',
   };
@@ -179,7 +180,7 @@ const Dashboard = () => {
   const cardValueStyle: CSSProperties = {
     fontSize: '2.5rem',
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     marginBottom: '5px',
   };
 
@@ -189,31 +190,67 @@ const Dashboard = () => {
   };
 
   const superAdminCardLayoutStyle: CSSProperties = {
+    display: 'grid',
+    gridTemplateRows: '1fr 1fr 1fr',
     textAlign: 'center',
+    height: '100%',
+    width: '100%',
+    minHeight: 0,
+  };
+
+  const cardRowTopStyle: CSSProperties = {
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
-    gap: '12px'
+    justifyContent: 'center',
+    width: '100%',
+    padding: '0 4px',
+    minHeight: 0,
+    overflow: 'hidden',
+  };
+
+  const cardRowCenterStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    minHeight: 0,
+    overflow: 'hidden',
+  };
+
+  const cardRowBottomStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'column',
+    width: '100%',
+    fontSize: '1rem',
+    color: '#000000',
+    textAlign: 'center',
+    minHeight: 0,
+    overflow: 'hidden',
   };
 
   const superAdminCardTitleStyle: CSSProperties = {
     fontSize: '1.3rem',
-    color: '#ffffff',
-    marginBottom: '6px',
+    color: '#000000',
+    margin: 0,
     fontWeight: 600,
-    letterSpacing: '0.5px'
+    letterSpacing: '0.5px',
+    lineHeight: 1.3,
   };
 
   const superAdminCardValueStyle: CSSProperties = {
     fontSize: '3.2rem',
     fontWeight: 700,
-    color: '#ffffff',
-    marginBottom: '4px'
+    color: '#000000',
+    margin: 0,
+    lineHeight: 1,
   };
 
   const superAdminCardIconStyle: CSSProperties = {
     fontSize: '3.5rem',
-    opacity: 0.85
+    opacity: 0.85,
+    alignSelf: 'center',
   };
 
   // Styles de cartes avec lueur/clignotement (vert/orange/rouge)
@@ -256,11 +293,25 @@ const Dashboard = () => {
         }}
         onClick={options?.onClick}
       >
-        <div>
-          <p style={isSuperAdminVariant ? superAdminCardTitleStyle : cardTitleStyle}>{title}</p>
-          <p style={isSuperAdminVariant ? superAdminCardValueStyle : cardValueStyle}>{value}</p>
-        </div>
-        <span style={isSuperAdminVariant ? superAdminCardIconStyle : cardIconStyle}>{icon}</span>
+        {isSuperAdminVariant ? (
+          <>
+            <div style={cardRowTopStyle}>
+              <p style={superAdminCardTitleStyle}>{title}</p>
+            </div>
+            <div style={cardRowCenterStyle}>
+              <p style={superAdminCardValueStyle}>{value}</p>
+            </div>
+            <div style={cardRowBottomStyle}>
+              <span style={superAdminCardIconStyle}>{icon}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <p style={cardTitleStyle}>{title}</p>
+            <p style={cardValueStyle}>{value}</p>
+            <span style={cardIconStyle}>{icon}</span>
+          </>
+        )}
       </div>
     );
   };
@@ -327,7 +378,7 @@ const Dashboard = () => {
             boxShadow: '0 4px 12px rgba(220, 53, 69, 0.2)'
           }}>
             <h2 style={{
-              color: '#ff416c',
+              color: '#7c3aed',
               fontSize: '1.5em',
               marginBottom: '20px',
               display: 'flex',
@@ -479,18 +530,18 @@ const Dashboard = () => {
                       padding: '10px 20px',
                       borderRadius: '8px',
                       border: '1px solid rgba(255, 255, 255, 0.3)',
-                      background: 'rgba(255, 65, 108, 0.2)',
-                      color: '#ff416c',
+                      background: 'rgba(124, 58, 237, 0.2)',
+                      color: '#7c3aed',
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       fontSize: '0.95em',
                       transition: 'all 0.2s ease'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 65, 108, 0.3)';
+                      e.currentTarget.style.background = 'rgba(124, 58, 237, 0.3)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 65, 108, 0.2)';
+                      e.currentTarget.style.background = 'rgba(124, 58, 237, 0.2)';
                     }}
                   >
                     Voir toutes les notifications ({presenceAlertsUnacknowledgedCount + pendingReportsCount})
@@ -632,15 +683,16 @@ const Dashboard = () => {
                 }} 
                 onClick={() => navigate('/applications')}
               >
-                <div>
+                <div style={cardRowTopStyle}>
                   <p style={superAdminCardTitleStyle}>Humoristes postulants</p>
-                  <p style={superAdminCardValueStyle}>{totalHumoristApplicants}</p>
-                  <div style={{ fontSize: '1rem', color: '#B0B0B0', marginTop: '10px', textAlign: 'center' }}>
-                    <div>✅ Acceptées: {eventStats?.acceptedApplications || 0} ({acceptedPercentage}%)</div>
-                    <div>❌ Refusées: {eventStats?.rejectedApplications || 0} ({rejectedPercentage}%)</div>
-                  </div>
                 </div>
-                <span style={superAdminCardIconStyle}>👥</span>
+                <div style={cardRowCenterStyle}>
+                  <p style={superAdminCardValueStyle}>{totalHumoristApplicants}</p>
+                </div>
+                <div style={cardRowBottomStyle}>
+                  <div>✅ Acceptées: {eventStats?.acceptedApplications || 0} ({acceptedPercentage}%)</div>
+                  <div>❌ Refusées: {eventStats?.rejectedApplications || 0} ({rejectedPercentage}%)</div>
+                </div>
               </div>
               {renderCard('Évènements créés', eventStats?.totalEvents || 0, '🎪', {
                 variant: 'superAdmin',
@@ -656,21 +708,23 @@ const Dashboard = () => {
                   ...cardStyle,
                   ...superAdminCardLayoutStyle,
                   cursor: 'pointer',
-                  background: 'linear-gradient(135deg, rgba(255,65,108,0.15), rgba(255,75,43,0.1))',
-                  border: '1px solid rgba(255,65,108,0.3)',
                 }}
                 onClick={() => navigate('/my-venues')}
               >
-                <div>
+                <div style={cardRowTopStyle}>
                   <p style={superAdminCardTitleStyle}>Mes salles</p>
-                  <p style={{ ...superAdminCardValueStyle, fontSize: '1.1rem', color: '#fff', marginTop: 6 }}>
+                </div>
+                <div style={cardRowCenterStyle}>
+                  <p style={{ ...superAdminCardValueStyle, fontSize: '1.1rem' }}>
                     Louer & gérer
                   </p>
-                  <p style={{ fontSize: '0.85rem', color: '#aaa', marginTop: 8, lineHeight: 1.4 }}>
+                </div>
+                <div style={cardRowBottomStyle}>
+                  <p style={{ fontSize: '0.85rem', color: '#333333', lineHeight: 1.4, textAlign: 'center', margin: '0 0 8px' }}>
                     Mettez vos salles en location et gérez les demandes de réservation.
                   </p>
+                  <span style={superAdminCardIconStyle}>🏢</span>
                 </div>
-                <span style={superAdminCardIconStyle}>🏢</span>
               </div>
             </>
           )}

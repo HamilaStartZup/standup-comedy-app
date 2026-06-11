@@ -11,9 +11,9 @@ const VenuesTabs: React.FC = () => {
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: '10px 22px',
-    background: active ? 'rgba(255,65,108,0.15)' : 'transparent',
-    color: active ? '#ff416c' : '#aaa',
-    border: active ? '1px solid rgba(255,65,108,0.35)' : '1px solid transparent',
+    background: active ? 'rgba(124, 58, 237,0.15)' : 'transparent',
+    color: active ? '#7c3aed' : '#aaa',
+    border: active ? '1px solid rgba(124, 58, 237,0.35)' : '1px solid transparent',
     borderRadius: 24,
     cursor: 'pointer',
     fontSize: 14,

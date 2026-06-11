@@ -14,8 +14,6 @@ import {
   reactivateUser,
   deleteUser,
   upgradeToOrganizer,
-  switchToLieu,
-  switchToOrganizer,
 } from '../controllers/auth';
 import { authMiddleware, authorizeRoles } from '../middleware/auth';
 import { validate } from '../middleware/validation';
@@ -45,7 +43,5 @@ router.patch('/users/:userId/reactivate', authMiddleware, authorizeRoles('SUPER_
 router.delete('/users/:userId', authMiddleware, authorizeRoles('SUPER_ADMIN'), deleteUser);
 
 router.post('/upgrade-to-organizer', authMiddleware, validate(upgradeToOrganizerSchema), upgradeToOrganizer);
-router.post('/switch-to-lieu', authMiddleware, authorizeRoles('ORGANIZER'), switchToLieu);
-router.post('/switch-to-organizer', authMiddleware, authorizeRoles('LIEU'), switchToOrganizer);
 
 export default router; 

@@ -84,7 +84,7 @@ const VenueDetailPage: React.FC = () => {
 
   if (isVenueLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)', paddingBottom: 60, padding: '20px' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--ccc-bg-gradient)', color: 'var(--ccc-text-primary)', padding: '20px' }}>
         <Navbar />
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px' }}>
           <VenueDetailSkeleton />
@@ -98,7 +98,7 @@ const VenueDetailPage: React.FC = () => {
       <div
         style={{
           minHeight: '100vh',
-          background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+          background: 'var(--ccc-bg-gradient)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -111,9 +111,9 @@ const VenueDetailPage: React.FC = () => {
             style={{
               marginTop: 16,
               padding: '10px 24px',
-              background: 'rgba(255,65,108,0.15)',
-              color: '#ff416c',
-              border: '1px solid rgba(255,65,108,0.4)',
+              background: 'rgba(124, 58, 237,0.15)',
+              color: '#7c3aed',
+              border: '1px solid rgba(124, 58, 237,0.4)',
               borderRadius: 10,
               cursor: 'pointer',
               fontWeight: 600,
@@ -127,7 +127,7 @@ const VenueDetailPage: React.FC = () => {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)', paddingBottom: 60, padding: '20px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ccc-bg-gradient)', color: 'var(--ccc-text-primary)', padding: '20px' }}>
       <style>{`
         @media (max-width: 768px) {
           .venue-detail-grid { grid-template-columns: 1fr !important; }
@@ -145,10 +145,10 @@ const VenueDetailPage: React.FC = () => {
             onClick={() => navigate('/venues')}
             style={{
               background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ccc-border-medium)',
               borderRadius: 8,
               padding: '8px 14px',
-              color: '#aaa',
+              color: 'var(--ccc-text-muted)',
               cursor: 'pointer',
               fontSize: 14,
               flexShrink: 0,
@@ -157,7 +157,7 @@ const VenueDetailPage: React.FC = () => {
           >
             ← Salles
           </button>
-          <span className="venue-breadcrumb-path" style={{ color: '#555', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span className="venue-breadcrumb-path" style={{ color: 'var(--ccc-text-muted)', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {venue.city} / {venue.name}
           </span>
         </div>
@@ -165,7 +165,7 @@ const VenueDetailPage: React.FC = () => {
 
       {/* Onglets propriétaire */}
       {isOwner && (
-        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+        <div style={{ borderBottom: '1px solid var(--ccc-border-subtle)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
           <div
             style={{
               maxWidth: 1100,
@@ -190,8 +190,8 @@ const VenueDetailPage: React.FC = () => {
                   padding: '16px 20px',
                   background: 'transparent',
                   border: 'none',
-                  borderBottom: activeTab === tab.key ? '2px solid #ff416c' : '2px solid transparent',
-                  color: activeTab === tab.key ? '#ff416c' : '#888',
+                  borderBottom: activeTab === tab.key ? '2px solid var(--ccc-accent)' : '2px solid transparent',
+                  color: activeTab === tab.key ? 'var(--ccc-accent)' : 'var(--ccc-text-muted)',
                   cursor: 'pointer',
                   fontSize: 14,
                   fontWeight: activeTab === tab.key ? 700 : 400,
@@ -237,7 +237,7 @@ const VenueDetailPage: React.FC = () => {
               }}
             >
               <h3 style={{ margin: '0 0 8px 0', color: '#ef4444', fontSize: 16 }}>Zone dangereuse</h3>
-              <p style={{ margin: '0 0 16px 0', color: '#888', fontSize: 13 }}>
+              <p style={{ margin: '0 0 16px 0', color: 'var(--ccc-text-muted)', fontSize: 13 }}>
                 La suppression de cette salle est irréversible et annulera toutes les réservations associées.
               </p>
               <button
@@ -282,7 +282,7 @@ const VenueDetailPage: React.FC = () => {
                       position: 'relative',
                       borderRadius: 16,
                       overflow: 'hidden',
-                      background: '#1a1a2e',
+                      background: 'var(--ccc-bg-elevated)',
                       aspectRatio: '16/9',
                       marginBottom: 10,
                       userSelect: 'none',
@@ -320,13 +320,13 @@ const VenueDetailPage: React.FC = () => {
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
-                            color: '#fff',
+                            color: 'var(--ccc-text-primary)',
                             fontSize: 18,
                             lineHeight: 1,
                             backdropFilter: 'blur(4px)',
                             transition: 'background 0.15s',
                           }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,65,108,0.7)')}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124, 58, 237,0.7)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.55)')}
                         >
                           ‹
@@ -349,13 +349,13 @@ const VenueDetailPage: React.FC = () => {
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
-                            color: '#fff',
+                            color: 'var(--ccc-text-primary)',
                             fontSize: 18,
                             lineHeight: 1,
                             backdropFilter: 'blur(4px)',
                             transition: 'background 0.15s',
                           }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,65,108,0.7)')}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124, 58, 237,0.7)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.55)')}
                         >
                           ›
@@ -372,7 +372,7 @@ const VenueDetailPage: React.FC = () => {
                             borderRadius: 20,
                             padding: '4px 12px',
                             fontSize: 12,
-                            color: '#ccc',
+                            color: 'var(--ccc-text-secondary)',
                             fontWeight: 600,
                           }}
                         >
@@ -398,7 +398,7 @@ const VenueDetailPage: React.FC = () => {
                                 width: i === activePhoto ? 20 : 8,
                                 height: 8,
                                 borderRadius: 4,
-                                background: i === activePhoto ? '#ff416c' : 'rgba(255,255,255,0.4)',
+                                background: i === activePhoto ? '#7c3aed' : 'rgba(255,255,255,0.4)',
                                 border: 'none',
                                 cursor: 'pointer',
                                 padding: 0,
@@ -422,7 +422,7 @@ const VenueDetailPage: React.FC = () => {
                             width: 64,
                             height: 44,
                             padding: 0,
-                            border: i === activePhoto ? '2px solid #ff416c' : '2px solid transparent',
+                            border: i === activePhoto ? '2px solid #7c3aed' : '2px solid transparent',
                             borderRadius: 8,
                             overflow: 'hidden',
                             cursor: 'pointer',
@@ -447,7 +447,7 @@ const VenueDetailPage: React.FC = () => {
                 <div
                   style={{
                     borderRadius: 16,
-                    background: 'linear-gradient(135deg, #111 0%, #1a1a1a 100%)',
+                    background: 'var(--ccc-bg-surface)',
                     aspectRatio: '16/9',
                     display: 'flex',
                     alignItems: 'center',
@@ -463,18 +463,18 @@ const VenueDetailPage: React.FC = () => {
               {/* Titre et badge */}
               <div style={{ marginBottom: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                  <h1 style={{ margin: 0, fontSize: 'clamp(22px, 4vw, 32px)', fontWeight: 800, color: '#fff' }}>
+                  <h1 className="ccc-page-title" style={{ margin: 0, fontSize: 'clamp(1.75rem, 4vw, 2.5em)' }}>
                     {venue.name}
                   </h1>
                   <span
                     style={{
                       padding: '4px 14px',
-                      background: 'rgba(255,65,108,0.15)',
-                      border: '1px solid rgba(255,65,108,0.3)',
+                      background: 'rgba(124, 58, 237,0.15)',
+                      border: '1px solid rgba(124, 58, 237,0.3)',
                       borderRadius: 20,
                       fontSize: 12,
                       fontWeight: 700,
-                      color: '#ff416c',
+                      color: '#7c3aed',
                       textTransform: 'uppercase',
                       letterSpacing: '0.04em',
                       whiteSpace: 'nowrap',
@@ -483,7 +483,7 @@ const VenueDetailPage: React.FC = () => {
                     {VENUE_TYPE_LABELS[venue.venueType] || venue.venueType}
                   </span>
                 </div>
-                <p style={{ margin: 0, fontSize: 15, color: '#aaa' }}>
+                <p style={{ margin: 0, fontSize: 15, color: 'var(--ccc-text-muted)' }}>
                   📍 {venue.address}, {venue.postalCode} {venue.city}, {venue.country}
                 </p>
               </div>
@@ -496,36 +496,36 @@ const VenueDetailPage: React.FC = () => {
                   gap: 24,
                   marginBottom: 24,
                   padding: '16px 20px',
-                  background: '#1a1a2e',
+                  background: 'var(--ccc-bg-elevated)',
                   borderRadius: 12,
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  border: '1px solid var(--ccc-border-subtle)',
                 }}
               >
                 <div style={{ textAlign: 'center' }}>
-                  <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#ff416c' }}>
+                  <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#7c3aed' }}>
                     {venue.capacity}
                   </p>
-                  <p style={{ margin: 0, fontSize: 11, color: '#888', textTransform: 'uppercase' }}>
+                  <p style={{ margin: 0, fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>
                     Places
                   </p>
                 </div>
-                <div style={{ width: 1, background: 'rgba(255,255,255,0.08)' }} />
+                <div style={{ width: 1, background: 'var(--ccc-border-subtle)' }} />
                 <div style={{ textAlign: 'center' }}>
-                  <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#ff416c' }}>
+                  <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#7c3aed' }}>
                     {venue.pricePerEvent.toLocaleString('fr-FR')} €
                   </p>
-                  <p style={{ margin: 0, fontSize: 11, color: '#888', textTransform: 'uppercase' }}>
+                  <p style={{ margin: 0, fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>
                     {getPricingLabel(venue.pricingType).startsWith('/') ? getPricingLabel(venue.pricingType).substring(1) : getPricingLabel(venue.pricingType)}
                   </p>
                 </div>
                 {venue.equipment?.length > 0 && (
                   <>
-                    <div style={{ width: 1, background: 'rgba(255,255,255,0.08)' }} />
+                    <div style={{ width: 1, background: 'var(--ccc-border-subtle)' }} />
                     <div style={{ textAlign: 'center' }}>
-                      <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#ff416c' }}>
+                      <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#7c3aed' }}>
                         {venue.equipment.length}
                       </p>
-                      <p style={{ margin: 0, fontSize: 11, color: '#888', textTransform: 'uppercase' }}>
+                      <p style={{ margin: 0, fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>
                         Équipements
                       </p>
                     </div>
@@ -535,10 +535,10 @@ const VenueDetailPage: React.FC = () => {
 
               {/* Description */}
               <div style={{ marginBottom: 24 }}>
-                <h3 style={{ margin: '0 0 12px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>
+                <h3 style={{ margin: '0 0 12px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>
                   Description
                 </h3>
-                <p style={{ margin: 0, fontSize: 15, color: '#ccc', lineHeight: 1.7 }}>
+                <p style={{ margin: 0, fontSize: 15, color: 'var(--ccc-text-secondary)', lineHeight: 1.7 }}>
                   {venue.description}
                 </p>
               </div>
@@ -546,7 +546,7 @@ const VenueDetailPage: React.FC = () => {
               {/* Équipements */}
               {venue.equipment?.length > 0 && (
                 <div style={{ marginBottom: 24 }}>
-                  <h3 style={{ margin: '0 0 12px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>
+                  <h3 style={{ margin: '0 0 12px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>
                     Équipements
                   </h3>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -555,11 +555,11 @@ const VenueDetailPage: React.FC = () => {
                         key={item}
                         style={{
                           padding: '6px 14px',
-                          background: 'rgba(255,65,108,0.1)',
-                          border: '1px solid rgba(255,65,108,0.25)',
+                          background: 'rgba(124, 58, 237,0.1)',
+                          border: '1px solid rgba(124, 58, 237,0.25)',
                           borderRadius: 20,
                           fontSize: 13,
-                          color: '#ff8fa3',
+                          color: 'var(--ccc-text-primary)',
                         }}
                       >
                         {item}
@@ -571,22 +571,22 @@ const VenueDetailPage: React.FC = () => {
 
               {/* Politique d'annulation */}
               {venue.cancellationPolicy && (
-                <div style={{ marginBottom: 24, padding: '20px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04)' }}>
+                <div style={{ marginBottom: 24, padding: '20px', background: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 16, boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff416c' }} />
-                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#fff' }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#7c3aed' }} />
+                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--ccc-text-primary)' }}>
                       Politique d'annulation
                     </h3>
                   </div>
-                  <p style={{ margin: '0 0 10px 0', fontSize: 13, fontWeight: 700, color: '#ffb0c2' }}>
+                  <p style={{ margin: '0 0 10px 0', fontSize: 13, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>
                     {CANCELLATION_POLICY_LABELS[venue.cancellationPolicy]}
                   </p>
-                  <div style={{ display: 'grid', gap: 10, padding: '14px', background: 'rgba(255,65,108,0.08)', borderRadius: 14, border: '1px solid rgba(255,65,108,0.12)' }}>
-                    <p style={{ margin: 0, fontSize: 14, color: '#e5e7eb', lineHeight: 1.8 }}>
+                  <div style={{ display: 'grid', gap: 10, padding: '14px', background: 'rgba(124, 58, 237,0.08)', borderRadius: 14, border: '1px solid rgba(124, 58, 237,0.12)' }}>
+                    <p style={{ margin: 0, fontSize: 14, color: 'var(--ccc-text-primary)', lineHeight: 1.8 }}>
                       {CANCELLATION_POLICY_DESCRIPTIONS[venue.cancellationPolicy]}
                     </p>
-                    <p style={{ margin: 0, fontSize: 13, color: '#d1d5db', lineHeight: 1.75 }}>
-                      <strong style={{ color: '#fff' }}>Période de grâce :</strong> remboursement intégral si vous annulez dans les 24h suivant votre réservation et à 7 jours ou plus de l'événement.
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--ccc-text-primary)', lineHeight: 1.75 }}>
+                      <strong>Période de grâce :</strong> remboursement intégral si vous annulez dans les 24h suivant votre réservation et à 7 jours ou plus de l'événement.
                     </p>
                   </div>
                 </div>
@@ -596,48 +596,48 @@ const VenueDetailPage: React.FC = () => {
               <>
                   {/* Caractéristiques détaillées */}
                   {(venue.seatedCapacity || venue.standingCapacity || venue.stageArea || venue.configurationType || venue.dressingRooms !== undefined || venue.accessiblePMR !== undefined || venue.parkingAvailable !== undefined) && (
-                    <div style={{ marginBottom: 24, padding: '20px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16 }}>
-                      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>Caractéristiques</h3>
+                    <div style={{ marginBottom: 24, padding: '20px', background: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 16, boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}>
+                      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>Caractéristiques</h3>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
                         {venue.seatedCapacity && (
-                          <div style={{ padding: '10px 14px', background: '#1a1a2e', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
-                            <p style={{ margin: '0 0 4px', fontSize: 11, color: '#888', textTransform: 'uppercase' }}>Places assises</p>
-                            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>{venue.seatedCapacity}</p>
+                          <div style={{ padding: '10px 14px', background: 'var(--ccc-bg-elevated)', borderRadius: 10, border: '1px solid var(--ccc-border-subtle)' }}>
+                            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>Places assises</p>
+                            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>{venue.seatedCapacity}</p>
                           </div>
                         )}
                         {venue.standingCapacity && (
-                          <div style={{ padding: '10px 14px', background: '#1a1a2e', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
-                            <p style={{ margin: '0 0 4px', fontSize: 11, color: '#888', textTransform: 'uppercase' }}>Places debout</p>
-                            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>{venue.standingCapacity}</p>
+                          <div style={{ padding: '10px 14px', background: 'var(--ccc-bg-elevated)', borderRadius: 10, border: '1px solid var(--ccc-border-subtle)' }}>
+                            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>Places debout</p>
+                            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>{venue.standingCapacity}</p>
                           </div>
                         )}
                         {venue.stageArea && (
-                          <div style={{ padding: '10px 14px', background: '#1a1a2e', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
-                            <p style={{ margin: '0 0 4px', fontSize: 11, color: '#888', textTransform: 'uppercase' }}>Surface scène</p>
-                            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>{venue.stageArea} m²</p>
+                          <div style={{ padding: '10px 14px', background: 'var(--ccc-bg-elevated)', borderRadius: 10, border: '1px solid var(--ccc-border-subtle)' }}>
+                            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>Surface scène</p>
+                            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>{venue.stageArea} m²</p>
                           </div>
                         )}
                         {venue.configurationType && (
-                          <div style={{ padding: '10px 14px', background: '#1a1a2e', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
-                            <p style={{ margin: '0 0 4px', fontSize: 11, color: '#888', textTransform: 'uppercase' }}>Configuration</p>
-                            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff', textTransform: 'capitalize' }}>{venue.configurationType}</p>
+                          <div style={{ padding: '10px 14px', background: 'var(--ccc-bg-elevated)', borderRadius: 10, border: '1px solid var(--ccc-border-subtle)' }}>
+                            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>Configuration</p>
+                            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)', textTransform: 'capitalize' }}>{venue.configurationType}</p>
                           </div>
                         )}
                         {venue.dressingRooms !== undefined && venue.dressingRooms > 0 && (
-                          <div style={{ padding: '10px 14px', background: '#1a1a2e', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
-                            <p style={{ margin: '0 0 4px', fontSize: 11, color: '#888', textTransform: 'uppercase' }}>Loges</p>
-                            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>{venue.dressingRooms}</p>
+                          <div style={{ padding: '10px 14px', background: 'var(--ccc-bg-elevated)', borderRadius: 10, border: '1px solid var(--ccc-border-subtle)' }}>
+                            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>Loges</p>
+                            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>{venue.dressingRooms}</p>
                           </div>
                         )}
                         {venue.accessiblePMR && (
-                          <div style={{ padding: '10px 14px', background: '#1a1a2e', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
-                            <p style={{ margin: '0 0 4px', fontSize: 11, color: '#888', textTransform: 'uppercase' }}>Accessibilité</p>
+                          <div style={{ padding: '10px 14px', background: 'var(--ccc-bg-elevated)', borderRadius: 10, border: '1px solid var(--ccc-border-subtle)' }}>
+                            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>Accessibilité</p>
                             <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#10b981' }}>♿ PMR</p>
                           </div>
                         )}
                         {venue.parkingAvailable && (
-                          <div style={{ padding: '10px 14px', background: '#1a1a2e', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
-                            <p style={{ margin: '0 0 4px', fontSize: 11, color: '#888', textTransform: 'uppercase' }}>Parking</p>
+                          <div style={{ padding: '10px 14px', background: 'var(--ccc-bg-elevated)', borderRadius: 10, border: '1px solid var(--ccc-border-subtle)' }}>
+                            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>Parking</p>
                             <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#10b981' }}>✓ Disponible</p>
                           </div>
                         )}
@@ -647,51 +647,51 @@ const VenueDetailPage: React.FC = () => {
 
                   {/* Conditions de réservation */}
                   {(venue.bookingMode || venue.minBookingDelay || venue.minDuration || venue.maxDuration || venue.deposit || venue.extraFees?.length || venue.acceptedEventTypes?.length) && (
-                    <div style={{ marginBottom: 24, padding: '20px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16 }}>
-                      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>Conditions de réservation</h3>
+                    <div style={{ marginBottom: 24, padding: '20px', background: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 16, boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}>
+                      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>Conditions de réservation</h3>
                       <div style={{ display: 'grid', gap: 10 }}>
                         {venue.bookingMode && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <span style={{ fontSize: 13, color: '#888' }}>Mode de réservation</span>
-                            <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{venue.bookingMode === 'manual' ? 'Manuel (validation requise)' : 'Automatique'}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)' }}>Mode de réservation</span>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-secondary)', fontWeight: 600 }}>{venue.bookingMode === 'manual' ? 'Manuel (validation requise)' : 'Automatique'}</span>
                           </div>
                         )}
                         {venue.minBookingDelay && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <span style={{ fontSize: 13, color: '#888' }}>Délai min. de réservation</span>
-                            <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{venue.minBookingDelay} jour(s)</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)' }}>Délai min. de réservation</span>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-secondary)', fontWeight: 600 }}>{venue.minBookingDelay} jour(s)</span>
                           </div>
                         )}
                         {venue.minDuration && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <span style={{ fontSize: 13, color: '#888' }}>Durée min.</span>
-                            <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{venue.minDuration}h</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)' }}>Durée min.</span>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-secondary)', fontWeight: 600 }}>{venue.minDuration}h</span>
                           </div>
                         )}
                         {venue.maxDuration && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <span style={{ fontSize: 13, color: '#888' }}>Durée max.</span>
-                            <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{venue.maxDuration}h</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)' }}>Durée max.</span>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-secondary)', fontWeight: 600 }}>{venue.maxDuration}h</span>
                           </div>
                         )}
                         {venue.deposit && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <span style={{ fontSize: 13, color: '#888' }}>Caution</span>
-                            <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{venue.deposit} €</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)' }}>Caution</span>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-secondary)', fontWeight: 600 }}>{venue.deposit} €</span>
                           </div>
                         )}
                         {venue.extraFees && venue.extraFees.length > 0 && (
-                          <div style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <span style={{ fontSize: 13, color: '#888', display: 'block', marginBottom: 6 }}>Frais supplémentaires</span>
+                          <div style={{ padding: '8px 0', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)', display: 'block', marginBottom: 6 }}>Frais supplémentaires</span>
                             {venue.extraFees.map((fee, i) => (
                               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
-                                <span style={{ fontSize: 13, color: '#ccc' }}>{fee.description}</span>
-                                <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{(fee.amount ?? 0).toFixed(2)} {venue.currency || 'EUR'}</span>
+                                <span style={{ fontSize: 13, color: 'var(--ccc-text-secondary)' }}>{fee.description}</span>
+                                <span style={{ fontSize: 13, color: 'var(--ccc-text-secondary)', fontWeight: 600 }}>{(fee.amount ?? 0).toFixed(2)} {venue.currency || 'EUR'}</span>
                               </div>
                             ))}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                              <span style={{ fontSize: 12, color: '#888' }}>Total</span>
-                              <span style={{ fontSize: 13, color: '#ff416c', fontWeight: 700 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--ccc-border-subtle)' }}>
+                              <span style={{ fontSize: 12, color: 'var(--ccc-text-muted)' }}>Total</span>
+                              <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 700 }}>
                                 {venue.extraFees.reduce((sum, f) => sum + (f.amount ?? 0), 0).toFixed(2)} {venue.currency || 'EUR'}
                               </span>
                             </div>
@@ -699,10 +699,10 @@ const VenueDetailPage: React.FC = () => {
                         )}
                         {(venue.acceptedEventTypes?.length ?? 0) > 0 && (
                           <div style={{ padding: '8px 0' }}>
-                            <span style={{ fontSize: 13, color: '#888', display: 'block', marginBottom: 8 }}>Types d'événements acceptés</span>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)', display: 'block', marginBottom: 8 }}>Types d'événements acceptés</span>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                               {venue.acceptedEventTypes!.map((t) => (
-                                <span key={t} style={{ padding: '4px 12px', background: 'rgba(255,65,108,0.1)', border: '1px solid rgba(255,65,108,0.25)', borderRadius: 20, fontSize: 12, color: '#ff8fa3' }}>{t}</span>
+                                <span key={t} style={{ padding: '4px 12px', background: 'rgba(124, 58, 237,0.1)', border: '1px solid rgba(124, 58, 237,0.25)', borderRadius: 20, fontSize: 12, color: 'var(--ccc-text-primary)' }}>{t}</span>
                               ))}
                             </div>
                           </div>
@@ -713,33 +713,33 @@ const VenueDetailPage: React.FC = () => {
 
                   {/* Règlement intérieur */}
                   {venue.houseRules && (
-                    <div style={{ marginBottom: 24, padding: '20px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16 }}>
-                      <h3 style={{ margin: '0 0 12px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>Règlement intérieur</h3>
-                      <p style={{ margin: 0, fontSize: 14, color: '#ccc', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{venue.houseRules}</p>
+                    <div style={{ marginBottom: 24, padding: '20px', background: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 16, boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}>
+                      <h3 style={{ margin: '0 0 12px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>Règlement intérieur</h3>
+                      <p style={{ margin: 0, fontSize: 14, color: 'var(--ccc-text-secondary)', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{venue.houseRules}</p>
                     </div>
                   )}
 
                   {/* Contact */}
                   {(venue.contactName || venue.contactEmail || venue.contactPhone) && (
-                    <div style={{ marginBottom: 24, padding: '20px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16 }}>
-                      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>Contact</h3>
+                    <div style={{ marginBottom: 24, padding: '20px', background: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 16, boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}>
+                      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>Contact</h3>
                       <div style={{ display: 'grid', gap: 8 }}>
                         {venue.contactName && (
                           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                             <span style={{ fontSize: 16 }}>👤</span>
-                            <span style={{ fontSize: 14, color: '#ccc' }}>{venue.contactName}</span>
+                            <span style={{ fontSize: 14, color: 'var(--ccc-text-secondary)' }}>{venue.contactName}</span>
                           </div>
                         )}
                         {venue.contactEmail && (
                           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                             <span style={{ fontSize: 16 }}>✉️</span>
-                            <a href={`mailto:${venue.contactEmail}`} style={{ fontSize: 14, color: '#ff8fa3', textDecoration: 'none' }}>{venue.contactEmail}</a>
+                            <a href={`mailto:${venue.contactEmail}`} style={{ fontSize: 14, color: 'var(--ccc-text-primary)', textDecoration: 'none' }}>{venue.contactEmail}</a>
                           </div>
                         )}
                         {venue.contactPhone && (
                           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                             <span style={{ fontSize: 16 }}>📞</span>
-                            <a href={`tel:${venue.contactPhone}`} style={{ fontSize: 14, color: '#ff8fa3', textDecoration: 'none' }}>{venue.contactPhone}</a>
+                            <a href={`tel:${venue.contactPhone}`} style={{ fontSize: 14, color: 'var(--ccc-text-primary)', textDecoration: 'none' }}>{venue.contactPhone}</a>
                           </div>
                         )}
                       </div>
@@ -752,27 +752,27 @@ const VenueDetailPage: React.FC = () => {
                     const hasEstablishmentInfo = !!(venue.companyName || venue.website || hasSocialLinks);
                     if (!hasEstablishmentInfo) return null;
                     return (
-                      <div style={{ marginBottom: 24, padding: '20px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16 }}>
-                        <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>Établissement</h3>
+                      <div style={{ marginBottom: 24, padding: '20px', background: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 16, boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}>
+                        <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>Établissement</h3>
                         <div style={{ display: 'grid', gap: 10 }}>
                           {venue.companyName && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                              <span style={{ fontSize: 13, color: '#888' }}>Nom</span>
-                              <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{venue.companyName}</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
+                              <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)' }}>Nom</span>
+                              <span style={{ fontSize: 13, color: 'var(--ccc-text-secondary)', fontWeight: 600 }}>{venue.companyName}</span>
                             </div>
                           )}
                           {venue.website && safeUrl(venue.website) && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                              <span style={{ fontSize: 13, color: '#888' }}>Site web</span>
-                              <a href={safeUrl(venue.website)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#ff8fa3', textDecoration: 'none' }}>{venue.website}</a>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
+                              <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)' }}>Site web</span>
+                              <a href={safeUrl(venue.website)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: 'var(--ccc-text-primary)', textDecoration: 'none' }}>{venue.website}</a>
                             </div>
                           )}
                           {hasSocialLinks && (
                             <div style={{ display: 'flex', gap: 12, padding: '8px 0', flexWrap: 'wrap' }}>
-                              {venue.socialLinks?.youtube && safeUrl(venue.socialLinks.youtube) && <a href={safeUrl(venue.socialLinks.youtube)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#ff8fa3' }}>YouTube</a>}
-                              {venue.socialLinks?.instagram && safeUrl(venue.socialLinks.instagram) && <a href={safeUrl(venue.socialLinks.instagram)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#ff8fa3' }}>Instagram</a>}
-                              {venue.socialLinks?.facebook && safeUrl(venue.socialLinks.facebook) && <a href={safeUrl(venue.socialLinks.facebook)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#ff8fa3' }}>Facebook</a>}
-                              {venue.socialLinks?.twitter && safeUrl(venue.socialLinks.twitter) && <a href={safeUrl(venue.socialLinks.twitter)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#ff8fa3' }}>Twitter / X</a>}
+                              {venue.socialLinks?.youtube && safeUrl(venue.socialLinks.youtube) && <a href={safeUrl(venue.socialLinks.youtube)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: 'var(--ccc-text-primary)' }}>YouTube</a>}
+                              {venue.socialLinks?.instagram && safeUrl(venue.socialLinks.instagram) && <a href={safeUrl(venue.socialLinks.instagram)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: 'var(--ccc-text-primary)' }}>Instagram</a>}
+                              {venue.socialLinks?.facebook && safeUrl(venue.socialLinks.facebook) && <a href={safeUrl(venue.socialLinks.facebook)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: 'var(--ccc-text-primary)' }}>Facebook</a>}
+                              {venue.socialLinks?.twitter && safeUrl(venue.socialLinks.twitter) && <a href={safeUrl(venue.socialLinks.twitter)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: 'var(--ccc-text-primary)' }}>Twitter / X</a>}
                             </div>
                           )}
                         </div>
@@ -782,24 +782,24 @@ const VenueDetailPage: React.FC = () => {
 
                   {/* Infos légales */}
                   {(venue.legalStatus || venue.siret || venue.invoicingAvailable) && (
-                    <div style={{ marginBottom: 24, padding: '20px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16 }}>
-                      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>Informations légales</h3>
+                    <div style={{ marginBottom: 24, padding: '20px', background: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 16, boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}>
+                      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>Informations légales</h3>
                       <div style={{ display: 'grid', gap: 10 }}>
                         {venue.legalStatus && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <span style={{ fontSize: 13, color: '#888' }}>Statut juridique</span>
-                            <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{venue.legalStatus}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)' }}>Statut juridique</span>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-secondary)', fontWeight: 600 }}>{venue.legalStatus}</span>
                           </div>
                         )}
                         {venue.siret && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <span style={{ fontSize: 13, color: '#888' }}>SIRET</span>
-                            <span style={{ fontSize: 13, color: '#ccc', fontWeight: 600 }}>{venue.siret}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)' }}>SIRET</span>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-secondary)', fontWeight: 600 }}>{venue.siret}</span>
                           </div>
                         )}
                         {venue.invoicingAvailable && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                            <span style={{ fontSize: 13, color: '#888' }}>Facturation</span>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)' }}>Facturation</span>
                             <span style={{ fontSize: 13, color: '#10b981', fontWeight: 600 }}>✓ Disponible</span>
                           </div>
                         )}
@@ -828,7 +828,7 @@ const VenueDetailPage: React.FC = () => {
                 )}
 
                 {hasActiveBookings && (
-                  <div style={{ display: 'flex', borderBottom: '1px solid #2a2a4a', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', borderBottom: '1px solid var(--ccc-border-medium)', marginBottom: 16 }}>
                     {(['history', 'form'] as const).map((tab) => (
                       <button
                         key={tab}
@@ -836,8 +836,8 @@ const VenueDetailPage: React.FC = () => {
                         style={{
                           flex: 1, padding: '10px 0', background: 'none', border: 'none',
                           cursor: 'pointer', fontSize: 12, fontWeight: 700,
-                          color: visitorTab === tab ? '#e05c5c' : '#666',
-                          borderBottom: visitorTab === tab ? '2px solid #e05c5c' : '2px solid transparent',
+                          color: visitorTab === tab ? 'var(--ccc-accent)' : 'var(--ccc-text-muted)',
+                          borderBottom: visitorTab === tab ? '2px solid var(--ccc-accent)' : '2px solid transparent',
                         }}
                       >
                         {tab === 'history' ? 'Mes réservations' : 'Nouvelle réservation'}

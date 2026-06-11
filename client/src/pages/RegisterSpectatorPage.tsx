@@ -245,18 +245,18 @@ function RegisterSpectatorPage() {
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: '100vh',
-    backgroundColor: '#1a1a2e',
-    backgroundImage: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
-    color: '#ffffff',
+    background: 'var(--ccc-bg-gradient)',
+    color: 'var(--ccc-text-primary)',
     fontFamily: 'Arial, sans-serif',
     textAlign: 'center',
   };
 
   const containerStyle: CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
     padding: '40px',
     borderRadius: '15px',
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     maxWidth: '500px',
     width: '90%',
   };
@@ -266,9 +266,9 @@ function RegisterSpectatorPage() {
     padding: '12px 10px',
     margin: '10px 0',
     borderRadius: '8px',
-    border: '1px solid #444',
-    backgroundColor: '#2c2c4d',
-    color: '#ffffff',
+    border: '1px solid var(--ccc-border-medium)',
+    backgroundColor: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     fontSize: '1em',
     outline: 'none',
   };
@@ -289,7 +289,7 @@ function RegisterSpectatorPage() {
   };
 
   const linkStyle: CSSProperties = {
-    color: '#28a745',
+    color: 'var(--ccc-accent)',
     textDecoration: 'none',
     fontWeight: 'bold',
     marginTop: '10px',
@@ -338,10 +338,10 @@ function RegisterSpectatorPage() {
           Continuer avec Google
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '10px 0 20px', color: 'rgba(255,255,255,0.4)', fontSize: '0.9em' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '10px 0 20px', color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
           ou
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
@@ -352,7 +352,7 @@ function RegisterSpectatorPage() {
               placeholder="Prénom *"
               value={formData.firstName}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.firstName ? '#ef4444' : '#444' }}
+              style={{ ...inputStyle, borderColor: errors.firstName ? '#ef4444' : 'var(--ccc-border-medium)' }}
             />
             {errors.firstName && <div style={errorStyle}>{errors.firstName}</div>}
           </div>
@@ -364,7 +364,7 @@ function RegisterSpectatorPage() {
               placeholder="Nom *"
               value={formData.lastName}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.lastName ? '#ef4444' : '#444' }}
+              style={{ ...inputStyle, borderColor: errors.lastName ? '#ef4444' : 'var(--ccc-border-medium)' }}
             />
             {errors.lastName && <div style={errorStyle}>{errors.lastName}</div>}
           </div>
@@ -376,7 +376,7 @@ function RegisterSpectatorPage() {
               placeholder="E-mail *"
               value={formData.email}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.email ? '#ef4444' : '#444' }}
+              style={{ ...inputStyle, borderColor: errors.email ? '#ef4444' : 'var(--ccc-border-medium)' }}
             />
             {errors.email && <div style={errorStyle}>{errors.email}</div>}
           </div>
@@ -388,7 +388,7 @@ function RegisterSpectatorPage() {
               placeholder="Téléphone (optionnel)"
               value={formData.phone}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.phone ? '#ef4444' : '#444' }}
+              style={{ ...inputStyle, borderColor: errors.phone ? '#ef4444' : 'var(--ccc-border-medium)' }}
             />
             {errors.phone && <div style={errorStyle}>{errors.phone}</div>}
           </div>
@@ -400,13 +400,13 @@ function RegisterSpectatorPage() {
               placeholder="Ville de résidence *"
               value={formData.city}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.city ? '#ef4444' : '#444' }}
+              style={{ ...inputStyle, borderColor: errors.city ? '#ef4444' : 'var(--ccc-border-medium)' }}
             />
             {errors.city && <div style={errorStyle}>{errors.city}</div>}
           </div>
 
           <div>
-            <label style={{ display: 'block', textAlign: 'left', marginBottom: 4, fontSize: '0.9em', color: 'rgba(255,255,255,0.85)' }}>
+            <label style={{ display: 'block', textAlign: 'left', marginBottom: 4, fontSize: '0.9em', color: 'var(--ccc-text-secondary)' }}>
               Date de naissance *
             </label>
             <input
@@ -415,7 +415,7 @@ function RegisterSpectatorPage() {
               value={formData.birthDate}
               onChange={handleChange}
               max={new Date().toISOString().split('T')[0]}
-              style={{ ...inputStyle, borderColor: errors.birthDate ? '#ef4444' : '#444' }}
+              style={{ ...inputStyle, borderColor: errors.birthDate ? '#ef4444' : 'var(--ccc-border-medium)' }}
             />
             {errors.birthDate && <div style={errorStyle}>{errors.birthDate}</div>}
           </div>
@@ -429,17 +429,17 @@ function RegisterSpectatorPage() {
               onChange={handleChange}
               onFocus={() => setPasswordFocused(true)}
               onBlur={() => setPasswordFocused(false)}
-              style={{ ...inputStyle, borderColor: errors.password ? '#ef4444' : '#444' }}
+              style={{ ...inputStyle, borderColor: errors.password ? '#ef4444' : 'var(--ccc-border-medium)' }}
             />
             {errors.password && <div style={errorStyle}>{errors.password}</div>}
             {passwordFocused && (
               <div style={{
                 padding: '8px 12px',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                backgroundColor: 'var(--ccc-bg-surface)',
                 borderRadius: '8px',
                 fontSize: '0.8em',
                 marginTop: '4px',
-                border: '1px solid rgba(255,255,255,0.1)',
+                border: '1px solid var(--ccc-border-subtle)',
               }}>
                 <div style={{ color: passwordValidation.length ? '#28a745' : '#dc3545', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                   {passwordValidation.length ? '✓' : '✗'} 8 caractères min.
@@ -463,7 +463,7 @@ function RegisterSpectatorPage() {
               onChange={handleChange}
               style={{
                 ...inputStyle,
-                borderColor: errors.confirmPassword ? '#ef4444' : '#444',
+                borderColor: errors.confirmPassword ? '#ef4444' : 'var(--ccc-border-medium)',
               }}
             />
             {errors.confirmPassword && (
@@ -493,7 +493,7 @@ function RegisterSpectatorPage() {
                   cursor: 'pointer',
                 }}
               />
-              <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
+              <span style={{ color: 'var(--ccc-text-secondary)' }}>
                 J'accepte les <Link to="/cgu" style={linkStyle}>CGU</Link> et la{' '}
                 <Link to="/politique-confidentialite" style={linkStyle}>
                   politique de confidentialité
@@ -518,10 +518,10 @@ function RegisterSpectatorPage() {
       </div>
 
       {oauthModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#1e1e3a', border: '1px solid #444', borderRadius: 15, padding: 32, maxWidth: 480, width: '90%', color: '#fff', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '1.3em' }}>Finalise ton inscription</h3>
-            <p style={{ margin: '0 0 20px', color: 'rgba(255,255,255,0.65)', fontSize: '0.9em' }}>Quelques infos pour compléter ton profil de spectateur</p>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 15, padding: 32, maxWidth: 480, width: '90%', color: 'var(--ccc-text-primary)', boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '1.3em', color: 'var(--ccc-accent)' }}>Finalise ton inscription</h3>
+            <p style={{ margin: '0 0 20px', color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>Quelques infos pour compléter ton profil de spectateur</p>
 
             <div>
               <input
@@ -529,7 +529,7 @@ function RegisterSpectatorPage() {
                 placeholder="Prénom *"
                 value={oauthData.firstName}
                 onChange={(e) => { setOauthData(p => ({ ...p, firstName: e.target.value })); setOauthErrors(p => ({ ...p, firstName: '' })); }}
-                style={{ ...inputStyle, borderColor: oauthErrors.firstName ? '#ef4444' : '#444' }}
+                style={{ ...inputStyle, borderColor: oauthErrors.firstName ? '#ef4444' : 'var(--ccc-border-medium)' }}
               />
               {oauthErrors.firstName && <div style={errorStyle}>{oauthErrors.firstName}</div>}
             </div>
@@ -540,7 +540,7 @@ function RegisterSpectatorPage() {
                 placeholder="Nom *"
                 value={oauthData.lastName}
                 onChange={(e) => { setOauthData(p => ({ ...p, lastName: e.target.value })); setOauthErrors(p => ({ ...p, lastName: '' })); }}
-                style={{ ...inputStyle, borderColor: oauthErrors.lastName ? '#ef4444' : '#444' }}
+                style={{ ...inputStyle, borderColor: oauthErrors.lastName ? '#ef4444' : 'var(--ccc-border-medium)' }}
               />
               {oauthErrors.lastName && <div style={errorStyle}>{oauthErrors.lastName}</div>}
             </div>
@@ -551,7 +551,7 @@ function RegisterSpectatorPage() {
                 placeholder="Téléphone (optionnel)"
                 value={oauthData.phone}
                 onChange={(e) => { setOauthData(p => ({ ...p, phone: e.target.value })); setOauthErrors(p => ({ ...p, phone: '' })); }}
-                style={{ ...inputStyle, borderColor: oauthErrors.phone ? '#ef4444' : '#444' }}
+                style={{ ...inputStyle, borderColor: oauthErrors.phone ? '#ef4444' : 'var(--ccc-border-medium)' }}
               />
               {oauthErrors.phone && <div style={errorStyle}>{oauthErrors.phone}</div>}
             </div>
@@ -562,13 +562,13 @@ function RegisterSpectatorPage() {
                 placeholder="Ville de résidence *"
                 value={oauthData.city}
                 onChange={(e) => { setOauthData(p => ({ ...p, city: e.target.value })); setOauthErrors(p => ({ ...p, city: '' })); }}
-                style={{ ...inputStyle, borderColor: oauthErrors.city ? '#ef4444' : '#444' }}
+                style={{ ...inputStyle, borderColor: oauthErrors.city ? '#ef4444' : 'var(--ccc-border-medium)' }}
               />
               {oauthErrors.city && <div style={errorStyle}>{oauthErrors.city}</div>}
             </div>
 
             <div>
-              <label style={{ display: 'block', textAlign: 'left', marginBottom: 4, fontSize: '0.9em', color: 'rgba(255,255,255,0.85)' }}>
+              <label style={{ display: 'block', textAlign: 'left', marginBottom: 4, fontSize: '0.9em', color: 'var(--ccc-text-secondary)' }}>
                 Date de naissance *
               </label>
               <input
@@ -576,7 +576,7 @@ function RegisterSpectatorPage() {
                 value={oauthData.birthDate}
                 onChange={(e) => { setOauthData(p => ({ ...p, birthDate: e.target.value })); setOauthErrors(p => ({ ...p, birthDate: '' })); }}
                 max={new Date().toISOString().split('T')[0]}
-                style={{ ...inputStyle, borderColor: oauthErrors.birthDate ? '#ef4444' : '#444' }}
+                style={{ ...inputStyle, borderColor: oauthErrors.birthDate ? '#ef4444' : 'var(--ccc-border-medium)' }}
               />
               {oauthErrors.birthDate && <div style={errorStyle}>{oauthErrors.birthDate}</div>}
             </div>
@@ -589,7 +589,7 @@ function RegisterSpectatorPage() {
                   onChange={(e) => { setOauthTerms(e.target.checked); setOauthErrors(p => ({ ...p, terms: '' })); }}
                   style={{ marginTop: 3, width: 16, height: 16 }}
                 />
-                <span style={{ color: 'rgba(255,255,255,0.85)' }}>
+                <span style={{ color: 'var(--ccc-text-secondary)' }}>
                   J'accepte les <Link to="/cgu" target="_blank" style={linkStyle}>CGU</Link> et la <Link to="/politique-confidentialite" target="_blank" style={linkStyle}>politique de confidentialité</Link> *
                 </span>
               </label>

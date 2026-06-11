@@ -157,7 +157,7 @@ export default function Home() {
       <section id="a-propos" className="mx-auto max-w-7xl px-6 py-20">
         <div className="ah-card ah-card-cta p-10 md:p-14 text-center">
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-            Prêt·e à trouver{" "}
+            <span className="text-white">Prêt·e à trouver</span>{" "}
             <span className="ah-gradient-text">votre prochaine aide</span> ?
           </h2>
           <p className="mt-4 text-[var(--ah-text-muted)] max-w-xl mx-auto">

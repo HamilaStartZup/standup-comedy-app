@@ -11,13 +11,13 @@ import ExportDataSection from '../components/ExportDataSection';
 import ReportComedianModal from '../components/ReportComedianModal';
 import api from '../services/api';
 
-const ACCENT = '#e85d75';
-const ACCENT_GRADIENT = 'linear-gradient(135deg, #e85d75, #c13057)';
-const CARD_BG = '#1a1d27';
-const BORDER = '#2a2d3a';
-const SEPARATOR = '#22253a';
-const LABEL_COLOR = '#777';
-const VALUE_COLOR = '#e0e0e0';
+const ACCENT = 'var(--ccc-accent)';
+const ACCENT_GRADIENT = 'var(--ccc-accent-gradient)';
+const CARD_BG = 'var(--ccc-bg-elevated)';
+const BORDER = 'var(--ccc-border-subtle)';
+const SEPARATOR = 'var(--ccc-border-subtle)';
+const LABEL_COLOR = 'var(--ccc-text-muted)';
+const VALUE_COLOR = 'var(--ccc-text-secondary)';
 
 function ComedianProfilePage() {
   const { id } = useParams<{ id?: string }>();
@@ -58,9 +58,9 @@ function ComedianProfilePage() {
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#fff',
+    color: 'var(--ccc-text-primary)',
     padding: '20px',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+    background: 'var(--ccc-bg-gradient)',
   };
 
   const wrapperStyle: CSSProperties = {
@@ -78,7 +78,8 @@ function ComedianProfilePage() {
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
-    border: `1px solid ${BORDER}`,
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     flexWrap: 'wrap',
     gap: 16,
   };
@@ -111,13 +112,14 @@ function ComedianProfilePage() {
     letterSpacing: '0.06em',
   };
 
-  const statBoxStyle: CSSProperties = {
-    background: 'rgba(232,93,117,0.1)',
-    border: '1px solid rgba(232,93,117,0.25)',
-    borderRadius: 12,
-    padding: '12px 20px',
-    textAlign: 'center',
-    minWidth: 90,
+  const statPillStyle: CSSProperties = {
+    background: 'rgba(232,93,117,0.08)',
+    color: ACCENT,
+    border: '1px solid rgba(232,93,117,0.4)',
+    borderRadius: 20,
+    padding: '2px 10px',
+    fontSize: 11,
+    fontWeight: 600,
   };
 
   const tabsContainerStyle: CSSProperties = {
@@ -126,7 +128,8 @@ function ComedianProfilePage() {
     padding: 4,
     display: 'flex',
     marginBottom: 16,
-    border: `1px solid ${BORDER}`,
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
   };
 
   const tabButtonStyle = (active: boolean): CSSProperties => ({
@@ -139,14 +142,15 @@ function ComedianProfilePage() {
     fontSize: 14,
     transition: 'all 0.2s',
     background: active ? ACCENT_GRADIENT : 'transparent',
-    color: active ? '#fff' : '#777',
+    color: active ? '#fff' : 'var(--ccc-text-muted)',
   });
 
   const contentCardStyle: CSSProperties = {
     background: CARD_BG,
     borderRadius: 16,
     padding: 24,
-    border: `1px solid ${BORDER}`,
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     marginBottom: 16,
   };
 
@@ -206,7 +210,8 @@ function ComedianProfilePage() {
 
   const modifierButtonStyle: CSSProperties = {
     background: 'transparent',
-    border: `1px solid ${BORDER}`,
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: 12,
     padding: '12px 20px',
     color: '#666',
@@ -222,15 +227,17 @@ function ComedianProfilePage() {
     color: '#dc3545',
   };
 
-  const infoFields = [
-    { label: 'Prénom', value: user?.firstName || 'Non défini', fieldName: 'firstName' },
-    { label: 'Nom', value: user?.lastName || 'Non défini', fieldName: 'lastName' },
-    { label: 'Email', value: user?.email || 'Non défini', isEmail: true, fieldName: 'email' },
-    { label: 'Ville', value: user?.city || 'Non défini', fieldName: 'city' },
-    { label: 'Téléphone', value: user?.phone || 'Non défini', fieldName: 'phone' },
-    { label: 'Genre', value: user?.gender === 'femme' ? 'Femme' : user?.gender === 'homme' ? 'Homme' : 'Non défini', fieldName: 'gender' },
-    { label: 'Adresse', value: user?.address || 'Non définie', fieldName: 'address' },
+  const allInfoFields = [
+    { label: 'Prénom', value: user?.firstName || 'Non défini', fieldName: 'firstName', present: !!user?.firstName },
+    { label: 'Nom', value: user?.lastName || 'Non défini', fieldName: 'lastName', present: !!user?.lastName },
+    { label: 'Email', value: user?.email || 'Non défini', isEmail: true, fieldName: 'email', present: !!user?.email },
+    { label: 'Ville', value: user?.city || 'Non défini', fieldName: 'city', present: !!user?.city },
+    { label: 'Téléphone', value: user?.phone || 'Non défini', fieldName: 'phone', present: !!user?.phone },
+    { label: 'Genre', value: user?.gender === 'femme' ? 'Femme' : user?.gender === 'homme' ? 'Homme' : 'Non défini', fieldName: 'gender', present: !!user?.gender },
+    { label: 'Adresse', value: user?.address || 'Non définie', fieldName: 'address', present: !!user?.address },
   ];
+  // En consultation d'un profil tiers, masquer les champs sans valeur (pas d'affichage "Non défini").
+  const infoFields = isViewingOtherProfile ? allInfoFields.filter((f) => f.present) : allInfoFields;
 
   const experienceLabel = (() => {
     const scenes = user?.profile?.numberOfScenes;
@@ -242,7 +249,7 @@ function ComedianProfilePage() {
   })();
 
   const comedyStyleLabel = user?.profile?.comedyStyle?.length
-    ? user.profile.comedyStyle.map(s => {
+    ? user.profile.comedyStyle.map((s: string) => {
         const labels: Record<string, string> = {
           'stand-up': 'Stand up',
           'improvisation': 'Improvisation',
@@ -254,7 +261,7 @@ function ComedianProfilePage() {
     : 'Non spécifié';
 
   const langLabel = user?.profile?.performanceLanguages?.length
-    ? user.profile.performanceLanguages.map(l => {
+    ? user.profile.performanceLanguages.map((l: string) => {
         const labels: Record<string, string> = {
           francais: 'Français', arabe: 'Arabe', anglais: 'Anglais', italien: 'Italien', espagnol: 'Espagnol',
         };
@@ -263,7 +270,7 @@ function ComedianProfilePage() {
     : 'Non spécifié';
 
   const mobilityLabel = user?.profile?.mobilityZone?.length
-    ? user.profile.mobilityZone.map(z => `${z.type === 'ville' ? 'Ville' : z.type === 'departement' ? 'Département' : 'Région'}: ${z.value}`).join(', ')
+    ? user.profile.mobilityZone.map((z: { type: string; value: string }) => `${z.type === 'ville' ? 'Ville' : z.type === 'departement' ? 'Département' : 'Région'}: ${z.value}`).join(', ')
     : 'Non spécifié';
 
   const profilFields = [
@@ -278,7 +285,7 @@ function ComedianProfilePage() {
     return (
       <div style={mainContainerStyle}>
         <Navbar />
-        <div style={{ ...wrapperStyle, textAlign: 'center', padding: '40px', color: '#888' }}>
+        <div style={{ ...wrapperStyle, textAlign: 'center', padding: '40px', color: 'var(--ccc-text-muted)' }}>
           Chargement du profil...
         </div>
       </div>
@@ -296,22 +303,17 @@ function ComedianProfilePage() {
               {!user?.avatarUrl && (user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : '—')}
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 20, color: '#fff', marginBottom: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 20, color: 'var(--ccc-text-primary)', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {user ? `${user.firstName} ${user.lastName}` : '—'}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <span style={badgeStyle}>HUMORISTE</span>
+                <span style={statPillStyle}>✓ {user?.stats?.applicationsAccepted ?? 0} candidatures acceptées</span>
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
-            <div style={statBoxStyle}>
-              <div style={{ color: ACCENT, fontSize: 26, fontWeight: 700 }}>
-                {user?.stats?.applicationsAccepted ?? 0}
-              </div>
-              <div style={{ color: '#888', fontSize: 12, marginTop: 2 }}>Candidatures acceptées</div>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0, justifyContent: isMobile ? 'flex-start' : 'flex-end' }}>
             {fromApplications && (
               <button
                 type="button"

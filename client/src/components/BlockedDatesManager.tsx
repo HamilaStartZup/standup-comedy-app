@@ -213,9 +213,9 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
                   }))}
                   style={{
                     padding: '5px 12px',
-                    background: 'rgba(255,65,108,0.12)',
-                    color: '#ff416c',
-                    border: '1px solid rgba(255,65,108,0.3)',
+                    background: 'rgba(124, 58, 237,0.12)',
+                    color: '#7c3aed',
+                    border: '1px solid rgba(124, 58, 237,0.3)',
                     borderRadius: 8,
                     cursor: 'pointer',
                     fontSize: 12,
@@ -235,9 +235,9 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
                   }))}
                   style={{
                     padding: '5px 12px',
-                    background: 'rgba(255,65,108,0.12)',
-                    color: '#ff416c',
-                    border: '1px solid rgba(255,65,108,0.3)',
+                    background: 'rgba(124, 58, 237,0.12)',
+                    color: '#7c3aed',
+                    border: '1px solid rgba(124, 58, 237,0.3)',
                     borderRadius: 8,
                     cursor: 'pointer',
                     fontSize: 12,
@@ -305,8 +305,8 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
             style={{
               padding: '10px 24px',
               background: isSubmitting
-                ? 'rgba(255,65,108,0.4)'
-                : 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                ? 'rgba(124, 58, 237,0.4)'
+                : 'var(--ccc-accent-gradient)',
               color: '#fff',
               border: 'none',
               borderRadius: 10,
@@ -335,7 +335,7 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {(data || []).map((blocked) => (
+            {(data || []).map((blocked: IVenueBlockedDate) => (
               <div
                 key={blocked._id}
                 className="blocked-date-row"

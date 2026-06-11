@@ -8,13 +8,13 @@ import EmailPreferences from '../components/EmailPreferences';
 import DeleteAccountSection from '../components/DeleteAccountSection';
 import ExportDataSection from '../components/ExportDataSection';
 import UpgradeToOrganizerForm from '../components/UpgradeToOrganizerForm';
-const ACCENT = '#e85d75';
-const ACCENT_GRADIENT = 'linear-gradient(135deg, #e85d75, #c13057)';
-const CARD_BG = '#1a1d27';
-const BORDER = '#2a2d3a';
-const SEPARATOR = '#22253a';
-const LABEL_COLOR = '#777';
-const VALUE_COLOR = '#e0e0e0';
+const ACCENT = 'var(--ccc-accent)';
+const ACCENT_GRADIENT = 'var(--ccc-accent-gradient)';
+const CARD_BG = 'var(--ccc-bg-elevated)';
+const BORDER = 'var(--ccc-border-subtle)';
+const SEPARATOR = 'var(--ccc-border-subtle)';
+const LABEL_COLOR = 'var(--ccc-text-muted)';
+const VALUE_COLOR = 'var(--ccc-text-secondary)';
 
 function LieuProfilePage() {
   const { user: authUser, refreshUser } = useAuth();
@@ -44,9 +44,9 @@ function LieuProfilePage() {
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#fff',
+    color: 'var(--ccc-text-primary)',
     padding: '20px',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+    background: 'var(--ccc-bg-gradient)',
   };
 
   const wrapperStyle: CSSProperties = {
@@ -65,6 +65,7 @@ function LieuProfilePage() {
     justifyContent: 'space-between',
     marginBottom: 16,
     border: `1px solid ${BORDER}`,
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     flexWrap: 'wrap',
     gap: 16,
   };
@@ -102,6 +103,7 @@ function LieuProfilePage() {
     borderRadius: 16,
     padding: 24,
     border: `1px solid ${BORDER}`,
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     marginBottom: 16,
   };
 
@@ -156,6 +158,7 @@ function LieuProfilePage() {
   const modifierButtonStyle: CSSProperties = {
     background: 'transparent',
     border: `1px solid ${BORDER}`,
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: 12,
     padding: '12px 20px',
     color: '#666',
@@ -186,7 +189,7 @@ function LieuProfilePage() {
               {!user?.avatarUrl && (user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : 'LI')}
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 20, color: '#fff', marginBottom: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 20, color: 'var(--ccc-text-primary)', marginBottom: 6 }}>
                 {user ? `${user.firstName} ${user.lastName}` : '—'}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -221,7 +224,7 @@ function LieuProfilePage() {
                   background: '#e85d75',
                   border: 'none',
                   borderRadius: '8px',
-                  color: '#fff',
+                  color: 'var(--ccc-text-primary)',
                   cursor: isUpgrading ? 'not-allowed' : 'pointer',
                   fontWeight: 600,
                   fontSize: '14px',

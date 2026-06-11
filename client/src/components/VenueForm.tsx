@@ -350,9 +350,9 @@ const VenueForm: React.FC<VenueFormProps> = ({
   const chipStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 18px',
     borderRadius: 24,
-    border: active ? '1px solid #ff416c' : '1px solid rgba(255,255,255,0.15)',
-    background: active ? 'rgba(255,65,108,0.15)' : 'transparent',
-    color: active ? '#ff416c' : '#aaa',
+    border: active ? '1px solid #7c3aed' : '1px solid rgba(255,255,255,0.15)',
+    background: active ? 'rgba(124, 58, 237,0.15)' : 'transparent',
+    color: active ? '#7c3aed' : '#aaa',
     fontSize: 13,
     cursor: 'pointer',
     fontWeight: active ? 600 : 400,
@@ -371,13 +371,13 @@ const VenueForm: React.FC<VenueFormProps> = ({
             type="button"
             onClick={() => onRemove(i)}
             aria-label="Supprimer la photo"
-            style={{ position: 'absolute', top: -6, right: -6, width: 24, height: 24, background: '#ef4444', color: '#fff', border: '2px solid #1a1a2e', borderRadius: '50%', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}
+            style={{ position: 'absolute', top: -6, right: -6, width: 24, height: 24, background: '#ef4444', color: '#fff', border: '2px solid #ffffff', borderRadius: '50%', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}
           >
             ✕
           </button>
         </div>
       ))}
-      <label style={{ width: 120, height: 84, border: '2px dashed rgba(255,65,108,0.4)', borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ff416c', gap: 4 }}>
+      <label style={{ width: 120, height: 84, border: '2px dashed rgba(124, 58, 237,0.4)', borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#7c3aed', gap: 4 }}>
         <span style={{ fontSize: 24 }}>{photoUploading ? '⏳' : '+'}</span>
         <span style={{ fontSize: 11, color: '#888' }}>Ajouter</span>
         <input type="file" accept="image/*" onChange={onAdd} style={{ display: 'none' }} disabled={photoUploading} />
@@ -454,7 +454,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <button type="button" onClick={handleGeocode} disabled={isGeocoding || !formData.address || !formData.city}
-            style={{ padding: '10px 20px', background: 'rgba(255,65,108,0.15)', color: '#ff416c', border: '1px solid rgba(255,65,108,0.3)', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            style={{ padding: '10px 20px', background: 'rgba(124, 58, 237,0.15)', color: '#7c3aed', border: '1px solid rgba(124, 58, 237,0.3)', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
             {isGeocoding ? '⏳ Détection...' : '📍 Détecter automatiquement'}
           </button>
           {formData.latitude !== '' && formData.longitude !== '' && !geocodeError && (
@@ -541,7 +541,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
   // ── Étape 3 : Équipements ──────────────────────────────────────────────
   const renderStep3 = () => (
     <div style={sectionStyle}>
-      <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#ff416c' }}>Équipements</h3>
+      <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Équipements</h3>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
         {EQUIPMENT_OPTIONS.map((item) => (
           <button key={item} type="button" onClick={() => toggleArrayItem('equipment', item)} style={chipStyle(formData.equipment.includes(item))}>
@@ -560,7 +560,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
   const renderStep4 = () => (
     <>
       <div style={sectionStyle}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#ff416c' }}>Tarification</h3>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Tarification</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
           <div>
             <label style={labelStyle}>{formData.pricingType === 'pourcentage_billetterie' ? 'Pourcentage reversé (%) *' : 'Prix *'}</label>
@@ -648,9 +648,9 @@ const VenueForm: React.FC<VenueFormProps> = ({
                 type="button"
                 onClick={() => set('extraFees', formData.extraFees.filter((_, i) => i !== idx))}
                 style={{
-                  background: 'rgba(255,65,108,0.15)',
-                  border: '1px solid rgba(255,65,108,0.3)',
-                  color: '#ff416c',
+                  background: 'rgba(124, 58, 237,0.15)',
+                  border: '1px solid rgba(124, 58, 237,0.3)',
+                  color: '#7c3aed',
                   borderRadius: 8,
                   width: 36,
                   height: 46,
@@ -704,7 +704,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
         </div>
       </div>
       <div style={sectionStyle}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#ff416c' }}>Restrictions horaires</h3>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Restrictions horaires</h3>
 
         {formData.pricingType === 'heure' && (
           <div>
@@ -889,7 +889,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
       </div>
 
       <div style={sectionStyle}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#ff416c' }}>Types d'événements acceptés</h3>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Types d'événements acceptés</h3>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {ACCEPTED_EVENT_TYPES.map((item) => (
             <button key={item} type="button" onClick={() => toggleArrayItem('acceptedEventTypes', item)} style={chipStyle(formData.acceptedEventTypes.includes(item))}>
@@ -899,7 +899,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
         </div>
       </div>
       <div style={sectionStyle}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#ff416c' }}>Conditions & Règles</h3>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Conditions & Règles</h3>
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Politique d'annulation</label>
           <select value={formData.cancellationPolicy} onChange={(e) => set('cancellationPolicy', e.target.value as IVenue['cancellationPolicy'])} style={inputStyle}>
@@ -1010,14 +1010,14 @@ const VenueForm: React.FC<VenueFormProps> = ({
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: '50%',
-                  background: i < step ? '#10b981' : i === step ? '#ff416c' : 'rgba(255,255,255,0.1)',
+                  background: i < step ? '#10b981' : i === step ? '#7c3aed' : 'rgba(255,255,255,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: '#fff', fontSize: 13, fontWeight: 700,
                   flexShrink: 0,
                 }}>
                   {i < step ? '✓' : i + 1}
                 </div>
-                <span style={{ fontSize: 12, color: i === step ? '#ff416c' : i < step ? '#10b981' : '#888', whiteSpace: 'nowrap', fontWeight: i === step ? 600 : 400 }}>{label}</span>
+                <span style={{ fontSize: 12, color: i === step ? '#7c3aed' : i < step ? '#10b981' : '#888', whiteSpace: 'nowrap', fontWeight: i === step ? 600 : 400 }}>{label}</span>
                 {i < totalSteps - 1 && (
                   <div style={{ height: 1, background: i < step ? '#10b981' : 'rgba(255,255,255,0.1)', flex: 1 }} />
                 )}
@@ -1038,17 +1038,17 @@ const VenueForm: React.FC<VenueFormProps> = ({
         {flat ? (
           // Mode flat : toutes les sections sur une seule page
           <>
-            <h3 style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 700, color: '#ff416c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Informations générales</h3>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Informations générales</h3>
             {renderStep0()}
-            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#ff416c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Localisation</h3>
+            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Localisation</h3>
             {renderStep1()}
-            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#ff416c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Caractéristiques</h3>
+            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Caractéristiques</h3>
             {renderStep2()}
-            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#ff416c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Équipements</h3>
+            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Équipements</h3>
             {renderStep3()}
-            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#ff416c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Conditions de réservation</h3>
+            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Conditions de réservation</h3>
             {renderStep4()}
-            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#ff416c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Contact & Légal</h3>
+            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Contact & Légal</h3>
             {renderStep5()}
           </>
         ) : (
@@ -1084,7 +1084,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
               disabled={isSubmitting}
               style={{
                 padding: '12px 32px',
-                background: isSubmitting ? 'rgba(255,65,108,0.5)' : 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                background: isSubmitting ? 'rgba(124, 58, 237,0.5)' : 'var(--ccc-accent-gradient)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 12,
@@ -1101,7 +1101,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
               onClick={goNext}
               style={{
                 padding: '12px 32px',
-                background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                background: 'var(--ccc-accent-gradient)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 12,
