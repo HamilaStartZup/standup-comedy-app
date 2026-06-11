@@ -88,13 +88,18 @@ const PriceBreakdown: React.FC<{ breakdown: PriceBreakdownData; currency: string
   const { base, hours, depositAmount, extraFeesList, extraFeesTotal, total } = breakdown;
   const hasExtras = depositAmount > 0 || extraFeesTotal > 0;
 
+  const boxStyle: React.CSSProperties = {
+    background: 'var(--ccc-bg-surface)',
+    border: '1px solid var(--ccc-border-subtle)',
+    borderRadius: 10,
+    padding: '10px 14px',
+    fontSize: 13,
+    color: 'var(--ccc-text-primary)',
+  };
+
   if (!hasExtras) {
     return (
-      <span style={{
-        display: 'inline-block', padding: '6px 14px',
-        background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)',
-        borderRadius: 8, fontSize: 13, color: '#6ee7b7', fontWeight: 600,
-      }}>
+      <span style={{ ...boxStyle, display: 'inline-block', fontWeight: 600 }}>
         {hours !== null
           ? `Prix estimé : ${total.toLocaleString('fr-FR')} ${currency} (${hours} h × ${base / hours} ${currency}/h)`
           : `Prix : ${total.toLocaleString('fr-FR')} ${currency}`}
@@ -103,32 +108,29 @@ const PriceBreakdown: React.FC<{ breakdown: PriceBreakdownData; currency: string
   }
 
   return (
-    <div style={{
-      background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
-      borderRadius: 10, padding: '12px 14px', fontSize: 13,
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, color: '#ccc' }}>
+    <div style={boxStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
         <span>{hours !== null ? `Location (${hours} h × ${base / hours} ${currency}/h)` : 'Location'}</span>
         <span style={{ fontWeight: 600 }}>{base.toLocaleString('fr-FR')} {currency}</span>
       </div>
       {depositAmount > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, color: '#ccc' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
           <span>Caution</span>
           <span style={{ fontWeight: 600 }}>{depositAmount.toLocaleString('fr-FR')} {currency}</span>
         </div>
       )}
       {extraFeesList.map((fee, i) => (
-        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, color: '#ccc' }}>
+        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
           <span>{fee.description || 'Frais supplémentaire'}</span>
           <span style={{ fontWeight: 600 }}>{(fee.amount ?? 0).toLocaleString('fr-FR')} {currency}</span>
         </div>
       ))}
       <div style={{
         display: 'flex', justifyContent: 'space-between', paddingTop: 8,
-        marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.12)',
+        marginTop: 4, borderTop: '1px solid var(--ccc-border-subtle)',
       }}>
-        <span style={{ color: '#fff', fontWeight: 700 }}>Total à payer</span>
-        <span style={{ color: '#7c3aed', fontWeight: 800, fontSize: 15 }}>{total.toLocaleString('fr-FR')} {currency}</span>
+        <span style={{ fontWeight: 700 }}>Total à payer</span>
+        <span style={{ fontWeight: 800, fontSize: 15 }}>{total.toLocaleString('fr-FR')} {currency}</span>
       </div>
     </div>
   );

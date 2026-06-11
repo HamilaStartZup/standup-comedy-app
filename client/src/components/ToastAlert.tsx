@@ -47,6 +47,7 @@ function ToastAlert({ id, message, type, onDismiss, autoDismiss }: ToastAlertPro
     height: '28px',
     borderRadius: '50%',
     backgroundColor: colors.bg,
+    color: '#fff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -59,13 +60,13 @@ function ToastAlert({ id, message, type, onDismiss, autoDismiss }: ToastAlertPro
     flex: 1,
     fontSize: '0.9em',
     lineHeight: '1.4',
-    color: '#e5e5e5',
+    color: 'var(--ccc-text-primary)',
   };
 
   const closeButtonStyle: CSSProperties = {
     background: 'none',
     border: 'none',
-    color: autoDismiss ? '#666' : '#999',
+    color: 'var(--ccc-text-muted)',
     fontSize: '1.4em',
     cursor: 'pointer',
     padding: '4px',
@@ -80,8 +81,8 @@ function ToastAlert({ id, message, type, onDismiss, autoDismiss }: ToastAlertPro
       <button
         style={closeButtonStyle}
         onClick={() => onDismiss(id)}
-        onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
-        onMouseLeave={(e) => e.currentTarget.style.color = autoDismiss ? '#666' : '#999'}
+        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--ccc-text-primary)'}
+        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--ccc-text-muted)'}
         title="Fermer"
       >
         ×
