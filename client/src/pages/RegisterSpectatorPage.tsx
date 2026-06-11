@@ -324,7 +324,6 @@ function RegisterSpectatorPage() {
         <h2>Inscription Spectateur</h2>
         <p>Créez votre compte pour découvrir les plateaux et réserver vos places</p>
 
-        {/* Inscription Google désactivée temporairement (problème d'authentification), bloc commenté pour ne plus s'afficher au rendu :
         <button
           type="button"
           onClick={() => handleSocialRegister('google')}
@@ -344,7 +343,6 @@ function RegisterSpectatorPage() {
           ou
           <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
         </div>
-        */}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
           <div>

@@ -245,7 +245,6 @@ function RegisterOrganizerPage() {
         <h2>Inscription Organisateur</h2>
         <p>Créez votre compte pour gérer vos plateaux et événements</p>
 
-        {/* Inscription Google désactivée temporairement (problème d'authentification), bloc commenté pour ne plus s'afficher au rendu :
         <button
           type="button"
           onClick={() => handleSocialRegister('google')}
@@ -265,7 +264,6 @@ function RegisterOrganizerPage() {
           ou
           <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
         </div>
-        */}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
           <div>
