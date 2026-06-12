@@ -234,6 +234,32 @@ export const revokeKeycloakTokens = async (
 };
 
 /**
+ * Termine la session SSO Keycloak (back-channel logout, client confidentiel).
+ * Le POST sur /logout avec le refresh_token + credentials détruit la session
+ * côté serveur — contrairement à /revoke qui n'invalide que le token.
+ * Non bloquant : les erreurs sont loguées sans être relancées.
+ */
+export const endKeycloakSession = async (refreshToken: string): Promise<void> => {
+  try {
+    await axios.post(
+      `${config.keycloak.issuer}/protocol/openid-connect/logout`,
+      new URLSearchParams({
+        client_id: config.keycloak.clientId,
+        client_secret: config.keycloak.clientSecret,
+        refresh_token: refreshToken,
+      }),
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 5000,
+      }
+    );
+    console.log('🔒 [OAuth] Keycloak session terminated (back-channel logout)');
+  } catch (error: any) {
+    console.error('⚠️ [OAuth] Failed to terminate Keycloak session:', error?.response?.data || error?.message);
+  }
+};
+
+/**
  * Delete a Keycloak user via the Admin API.
  * Must be called when our application rejects a login that already created a Keycloak user
  * (account_not_found, account_mismatch) to avoid leaving orphaned users in Keycloak.
