@@ -11,14 +11,31 @@ const LANDING_CSS = `
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
   .landing-dark .animate-in { animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .landing-dark .delay-1 { animation-delay: 0.1s; opacity: 0; } .landing-dark .delay-2 { animation-delay: 0.2s; opacity: 0; } .landing-dark .delay-3 { animation-delay: 0.3s; opacity: 0; } .landing-dark .delay-4 { animation-delay: 0.4s; opacity: 0; }
-  .landing-dark header { padding: 16px 0; position: fixed; top: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(20px); z-index: 1000; border-bottom: 1px solid var(--border); }
-  .landing-dark .header-content { display: flex; justify-content: space-between; align-items: center; }
-  .landing-dark .logo { display: flex; align-items: center; justify-content: center; text-decoration: none; cursor: pointer; background: transparent; border-radius: 12px; padding: 0; border: none; }
-  .landing-dark .logo img { height: 95px; width: auto; display: block; }
+  .landing-dark header { padding: 16px 0; padding-top: max(16px, env(safe-area-inset-top)); position: fixed; top: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 1000; border-bottom: 1px solid var(--border); }
+  .landing-dark .header-content { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; }
+  .landing-dark .logo { display: flex; align-items: center; justify-content: center; text-decoration: none; cursor: pointer; background: transparent; border-radius: 12px; padding: 0; border: none; flex-shrink: 0; }
+  .landing-dark .logo img { height: 95px; width: auto; display: block; max-width: min(200px, 55vw); object-fit: contain; }
   .landing-dark .header-nav { display: flex; gap: 32px; align-items: center; }
   .landing-dark .nav-link { color: var(--text-secondary); text-decoration: none; font-weight: 600; font-size: 15px; transition: color 0.2s; }
   .landing-dark .nav-link:hover { color: var(--primary); }
-  .landing-dark .header-buttons { display: flex; gap: 12px; }
+  .landing-dark .header-buttons { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+  .landing-dark .mobile-menu-btn { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1.5px solid var(--border); border-radius: 12px; background: white; cursor: pointer; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+  .landing-dark .mobile-menu-btn span { display: block; width: 20px; height: 2px; background: var(--text-primary); border-radius: 2px; position: relative; transition: background 0.2s; }
+  .landing-dark .mobile-menu-btn span::before, .landing-dark .mobile-menu-btn span::after { content: ''; position: absolute; left: 0; width: 20px; height: 2px; background: var(--text-primary); border-radius: 2px; transition: transform 0.25s ease, top 0.25s ease; }
+  .landing-dark .mobile-menu-btn span::before { top: -6px; }
+  .landing-dark .mobile-menu-btn span::after { top: 6px; }
+  .landing-dark .mobile-menu-btn.is-open span { background: transparent; }
+  .landing-dark .mobile-menu-btn.is-open span::before { top: 0; transform: rotate(45deg); }
+  .landing-dark .mobile-menu-btn.is-open span::after { top: 0; transform: rotate(-45deg); }
+  .landing-dark .mobile-nav-backdrop { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); z-index: 998; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+  .landing-dark .mobile-nav-backdrop.is-open { opacity: 1; pointer-events: auto; }
+  .landing-dark .mobile-nav { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 999; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-lg); padding: calc(72px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom)); flex-direction: column; gap: 8px; max-height: 100dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; transform: translateY(-8px); opacity: 0; pointer-events: none; transition: transform 0.25s ease, opacity 0.25s ease; }
+  .landing-dark .mobile-nav.is-open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .landing-dark .mobile-nav-link { display: block; padding: 14px 16px; color: var(--text-primary); text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 12px; transition: background 0.2s, color 0.2s; -webkit-tap-highlight-color: transparent; }
+  .landing-dark .mobile-nav-link:hover, .landing-dark .mobile-nav-link:active { background: var(--bg-light); color: var(--primary); }
+  .landing-dark .mobile-nav-divider { height: 1px; background: var(--border); margin: 8px 0; }
+  .landing-dark .mobile-nav-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .landing-dark .mobile-nav-buttons .btn { width: 100%; padding: 14px 20px; font-size: 15px; }
   .landing-dark .btn { padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600; font-size: 15px; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-family: 'Sora', sans-serif; }
   .landing-dark .btn-primary { background: var(--ccc-accent-gradient); color: white; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }
   .landing-dark .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(124, 58, 237, 0.4); background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%); }
@@ -162,8 +179,31 @@ const LANDING_CSS = `
   .landing-dark .footer-links button.footer-link-btn:hover { color: var(--primary); }
   .landing-dark .footer-bottom { text-align: center; padding-top: 40px; border-top: 1px solid var(--border); }
   .landing-dark .footer-bottom p { color: var(--text-secondary); font-size: 14px; }
-  @media (max-width: 968px) { .landing-dark .hero-content { grid-template-columns: 1fr; text-align: center; } .landing-dark .hero-text { max-width: 100%; } .landing-dark .hero-visual { display: none; } .landing-dark .role-cards, .landing-dark .steps-container, .landing-dark .features-grid, .landing-dark .footer-content { grid-template-columns: 1fr; } .landing-dark .header-nav { display: none; } .landing-dark .steps-line { display: none; } }
-  @media (max-width: 640px) { .landing-dark .hero-ctas { flex-direction: column; } .landing-dark .hero-stats { flex-direction: column; gap: 20px; } }
+  @media (max-width: 968px) {
+    .landing-dark .container { padding: 0 16px; }
+    .landing-dark header { padding: 10px 0; padding-top: max(10px, env(safe-area-inset-top)); }
+    .landing-dark .logo img { height: 52px; max-width: 160px; }
+    .landing-dark .header-nav, .landing-dark .header-buttons { display: none; }
+    .landing-dark .mobile-menu-btn, .landing-dark .mobile-nav-backdrop, .landing-dark .mobile-nav { display: flex; }
+    .landing-dark .hero { padding: 108px 0 80px; }
+    .landing-dark .hero-content { grid-template-columns: 1fr; text-align: center; }
+    .landing-dark .hero-text { max-width: 100%; }
+    .landing-dark .hero-visual { display: none; }
+    .landing-dark .role-cards, .landing-dark .steps-container, .landing-dark .features-grid, .landing-dark .footer-content { grid-template-columns: 1fr; }
+    .landing-dark .steps-line { display: none; }
+    .landing-dark .role-cards-section, .landing-dark .how-section, .landing-dark .features-section, .landing-dark .cta-section { padding: 72px 0; }
+    .landing-dark .problem-section { padding: 72px 0; }
+    .landing-dark .section-header { margin-bottom: 48px; }
+    .landing-dark .section-description { font-size: 17px; }
+  }
+  @media (max-width: 640px) {
+    .landing-dark .hero-ctas { flex-direction: column; }
+    .landing-dark .hero-stats { flex-direction: column; gap: 20px; }
+    .landing-dark .btn-large { width: 100%; }
+    .landing-dark .cta-buttons .btn { width: 100%; }
+    .landing-dark footer { padding: 48px 0 32px; padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+    .landing-dark .footer-brand img { height: 64px !important; }
+  }
 `;
 
 const YOUTUBE_TUTORIAL_ORGANISATEUR = ''; // À remplir : lien YouTube "tutoriel s'inscrire en tant qu'organisateur"
@@ -208,6 +248,9 @@ function TutorialThumbnail({ videoId, label }: { videoId: string | null; label: 
 function LandingPage() {
   const navigate = useNavigate();
   const [videoModalId, setVideoModalId] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   useEffect(() => {
     if (!videoModalId) return;
@@ -215,6 +258,18 @@ function LandingPage() {
     window.addEventListener('keydown', onEscape);
     return () => window.removeEventListener('keydown', onEscape);
   }, [videoModalId]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') closeMobileMenu(); };
+    window.addEventListener('keydown', onEscape);
+    return () => window.removeEventListener('keydown', onEscape);
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileMenuOpen]);
 
   // Scroll vers "Choisissez votre profil" quand on arrive avec #roles (ex: lien "Inscris-toi" depuis la page login)
   useEffect(() => {
@@ -233,12 +288,22 @@ function LandingPage() {
 
   const goRegister = () => navigate('/register');
   const scrollToRoles = () => {
+    closeMobileMenu();
     const section = document.getElementById('roles');
     if (!section) return;
     const cards = section.querySelector('.role-cards');
     const target = cards || section;
     const headerOffset = 80;
     const y = target.getBoundingClientRect().top + window.scrollY - headerOffset;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  };
+
+  const scrollToSection = (id: string) => {
+    closeMobileMenu();
+    const section = document.getElementById(id);
+    if (!section) return;
+    const headerOffset = 80;
+    const y = section.getBoundingClientRect().top + window.scrollY - headerOffset;
     window.scrollTo({ top: y, behavior: 'smooth' });
   };
   const goLogin = () => navigate('/login');
@@ -266,10 +331,15 @@ function LandingPage() {
       <header>
         <div className="container">
           <div className="header-content">
-            <button type="button" className="logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Accueil">
+            <button
+              type="button"
+              className="logo"
+              onClick={() => { closeMobileMenu(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              aria-label="Accueil"
+            >
               <img src="/logo-connect-comedy-club.png" alt="Connect Comedy Club" />
             </button>
-            <nav className="header-nav">
+            <nav className="header-nav" aria-label="Navigation principale">
               <a href="#fonctionnement" className="nav-link">Comment ça marche</a>
               <a href="#roles" className="nav-link">Pour qui</a>
               <a href="#avantages" className="nav-link">Avantages </a>
@@ -280,9 +350,42 @@ function LandingPage() {
               <button type="button" className="btn btn-secondary" onClick={goLogin}>Se connecter</button>
               <button type="button" className="btn btn-primary" onClick={scrollToRoles}>S'inscrire</button>
             </div>
+            <button
+              type="button"
+              className={`mobile-menu-btn${mobileMenuOpen ? ' is-open' : ''}`}
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="landing-mobile-nav"
+            >
+              <span />
+            </button>
           </div>
         </div>
       </header>
+
+      <div
+        className={`mobile-nav-backdrop${mobileMenuOpen ? ' is-open' : ''}`}
+        onClick={closeMobileMenu}
+        aria-hidden="true"
+      />
+      <nav
+        id="landing-mobile-nav"
+        className={`mobile-nav${mobileMenuOpen ? ' is-open' : ''}`}
+        aria-label="Menu mobile"
+        aria-hidden={!mobileMenuOpen}
+      >
+        <a href="#fonctionnement" className="mobile-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection('fonctionnement'); }}>Comment ça marche</a>
+        <a href="#roles" className="mobile-nav-link" onClick={(e) => { e.preventDefault(); scrollToRoles(); }}>Pour qui</a>
+        <a href="#avantages" className="mobile-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection('avantages'); }}>Avantages</a>
+        <Link to="/a-propos" className="mobile-nav-link" onClick={closeMobileMenu}>À propos</Link>
+        <div className="mobile-nav-divider" />
+        <div className="mobile-nav-buttons">
+          <Link to="/login?redirect=/aides" className="btn btn-primary" onClick={closeMobileMenu}>Dispositif de financement</Link>
+          <button type="button" className="btn btn-secondary" onClick={() => { closeMobileMenu(); goLogin(); }}>Se connecter</button>
+          <button type="button" className="btn btn-primary" onClick={scrollToRoles}>S&apos;inscrire</button>
+        </div>
+      </nav>
 
       <section className="hero">
         <div className="container">
