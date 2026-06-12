@@ -91,13 +91,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Non-blocking
     }
 
-    // If OAuth session, also logout from Keycloak
-    if (id_token) {
-      try {
-        await logoutFromKeycloak(id_token, false);
-      } catch (error) {
-        console.error('Keycloak logout error:', error);
-      }
+    // Toujours appeler le logout Keycloak : le serveur termine la session via le
+    // cookie kc_rt, indépendamment de l'id_token (perdu au rechargement de page).
+    try {
+      await logoutFromKeycloak(id_token, false);
+    } catch (error) {
+      console.error('Keycloak logout error:', error);
     }
 
     navigate('/');
