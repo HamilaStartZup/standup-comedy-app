@@ -4,7 +4,6 @@ import { createApplicationSchema, updateApplicationStatusSchema } from '../valid
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import {
   createApplication,
-  getEventApplications,
   updateApplicationStatus,
   getComedianApplications,
   checkApplicationExists,

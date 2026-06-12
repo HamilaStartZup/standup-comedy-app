@@ -11,6 +11,7 @@ import {
   getUserInfo,
   buildLogoutUrl,
   revokeKeycloakTokens,
+  endKeycloakSession,
   deleteKeycloakUser,
   isKeycloakEnabled,
   verifyIdToken,
@@ -359,10 +360,22 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     const { id_token } = req.body;
     const postLogoutRedirectUri = `${config.frontend.url}`;
 
+    // Back-channel logout : termine la session Keycloak côté serveur via le
+    // refresh_token chiffré stocké dans le cookie kc_rt (indépendant du navigateur).
+    const encryptedRefreshToken = req.cookies?.kc_rt;
+    if (encryptedRefreshToken) {
+      try {
+        await endKeycloakSession(decrypt(encryptedRefreshToken));
+      } catch (sessionError) {
+        console.warn('⚠️ [OAuth] Échec terminaison session Keycloak au logout:', sessionError);
+      }
+    }
+
     const logoutUrl = await buildLogoutUrl(id_token, postLogoutRedirectUri);
 
-    // Clear the HttpOnly JWT cookie on logout
+    // Clear the HttpOnly cookies on logout
     res.clearCookie('auth_token', getAuthCookieOptions());
+    res.clearCookie('kc_rt', getAuthCookieOptions());
 
     res.json({ logoutUrl });
   } catch (error) {
@@ -413,6 +426,15 @@ export const exchange = async (req: Request, res: Response): Promise<void> => {
       res.cookie('auth_token', tempAuth.token, {
         ...getAuthCookieOptions(),
         maxAge: 60 * 60 * 1000,
+      });
+    }
+
+    // Conserve le refresh_token Keycloak (déjà chiffré) pour permettre au serveur
+    // de terminer la session Keycloak au logout, sans dépendre de l'id_token côté client.
+    if (tempAuth.refreshToken) {
+      res.cookie('kc_rt', tempAuth.refreshToken, {
+        ...getAuthCookieOptions(),
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       });
     }
 

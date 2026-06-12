@@ -197,6 +197,7 @@ export interface IVenueBooking {
   _id: string;
   venue: IVenue;
   requester: IUserData;
+  bookingGroupId?: string;
   requestedDate: string;
   startTime: string;
   endTime: string;

@@ -68,12 +68,12 @@ export default function Aides() {
           placeholder="Rechercher une aide, un organisme, un mot-clé…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="md:col-span-3 w-full bg-[var(--ah-bg)] border border-[var(--ah-border)] rounded-lg px-4 py-3 text-sm text-white placeholder:text-[var(--ah-text-muted)] focus:outline-none focus:border-[var(--ah-accent)] transition"
+          className="md:col-span-3 w-full bg-[var(--ah-bg)] border border-[var(--ah-border)] rounded-lg px-4 py-3 text-sm text-[var(--ah-text)] placeholder:text-[var(--ah-text-muted)] focus:outline-none focus:border-[var(--ah-accent)] transition"
         />
         <select
           value={profil}
           onChange={(e) => setProfil(e.target.value as ProfilUtilisateur | "all")}
-          className="bg-[var(--ah-bg)] border border-[var(--ah-border)] rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[var(--ah-accent)] transition"
+          className="bg-[var(--ah-bg)] border border-[var(--ah-border)] rounded-lg px-4 py-3 text-sm text-[var(--ah-text)] focus:outline-none focus:border-[var(--ah-accent)] transition"
         >
           <option value="all">Tous les profils</option>
           {PROFILS.map((p) => (
@@ -85,7 +85,7 @@ export default function Aides() {
         <select
           value={categorie}
           onChange={(e) => setCategorie(e.target.value)}
-          className="bg-[var(--ah-bg)] border border-[var(--ah-border)] rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[var(--ah-accent)] transition"
+          className="bg-[var(--ah-bg)] border border-[var(--ah-border)] rounded-lg px-4 py-3 text-sm text-[var(--ah-text)] focus:outline-none focus:border-[var(--ah-accent)] transition"
         >
           <option value="all">Toutes les catégories</option>
           {CATEGORIES.map((c) => (

@@ -90,18 +90,18 @@ function LoginOrganisateur() {
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: '100vh',
-    backgroundColor: '#1a1a2e',
-    backgroundImage: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
-    color: '#ffffff',
+    background: 'var(--ccc-bg-gradient)',
+    color: 'var(--ccc-text-primary)',
     fontFamily: 'Arial, sans-serif',
     textAlign: 'center',
   };
 
   const containerStyle: CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
     padding: '40px',
     borderRadius: '15px',
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     maxWidth: '400px',
     width: '90%',
   };
@@ -111,9 +111,9 @@ function LoginOrganisateur() {
     padding: '12px 10px',
     margin: '10px 0',
     borderRadius: '8px',
-    border: '1px solid #444',
-    backgroundColor: '#2c2c4d',
-    color: '#ffffff',
+    border: '1px solid var(--ccc-border-medium)',
+    backgroundColor: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     fontSize: '1em',
     outline: 'none',
     boxSizing: 'border-box',
@@ -125,7 +125,7 @@ function LoginOrganisateur() {
     margin: '20px 0',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #ff416c, #ff4b2b)',
+    background: 'var(--ccc-accent-gradient)',
     color: 'white',
     fontSize: '1.2em',
     fontWeight: 'bold',
@@ -137,7 +137,7 @@ function LoginOrganisateur() {
   };
 
   const linkStyle: CSSProperties = {
-    color: '#ff416c',
+    color: 'var(--ccc-accent)',
     textDecoration: 'none',
     fontWeight: 'bold',
     marginTop: '10px',
@@ -153,7 +153,7 @@ function LoginOrganisateur() {
       <div style={containerStyle}>
         <div style={iconStyle}>🎭</div>
         <h2 className="text-2xl font-bold mb-2">Bon retour, organisateur !T2</h2>
-        <p className="text-gray-400 mb-8 text-sm">
+        <p style={{ color: 'var(--ccc-text-muted)', marginBottom: '32px', fontSize: '0.875rem' }}>
           Connecte-toi pour gérer tes évènements et découvrir de nouveaux talents.
         </p>
         <form onSubmit={handleSubmitLogin} style={{ display: 'flex', flexDirection: 'column' }}>
@@ -166,7 +166,7 @@ function LoginOrganisateur() {
             autoComplete="email"
             style={{
               ...inputStyle,
-              borderColor: loginError ? '#dc3545' : '#444'
+              borderColor: loginError ? '#dc3545' : 'var(--ccc-border-medium)'
             }}
             required
           />
@@ -179,7 +179,7 @@ function LoginOrganisateur() {
             autoComplete="current-password"
             style={{
               ...inputStyle,
-              borderColor: loginError ? '#dc3545' : '#444'
+              borderColor: loginError ? '#dc3545' : 'var(--ccc-border-medium)'
             }}
             required
           />
@@ -225,7 +225,7 @@ function LoginOrganisateur() {
             <div style={{
               marginBottom: '15px',
               padding: '8px',
-              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              backgroundColor: 'var(--ccc-bg-surface)',
               borderRadius: '5px',
               fontSize: '0.8em',
               textAlign: 'left'
@@ -275,9 +275,9 @@ function LoginOrganisateur() {
               margin: '25px 0 20px',
               gap: '15px',
             }}>
-              <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, #555)' }} />
-              <span style={{ color: '#aaa', fontSize: '0.85em', whiteSpace: 'nowrap' }}>ou continuer avec</span>
-              <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, #555)' }} />
+              <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, var(--ccc-border-medium))' }} />
+              <span style={{ color: 'var(--ccc-text-muted)', fontSize: '0.85em', whiteSpace: 'nowrap' }}>ou continuer avec</span>
+              <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, var(--ccc-border-medium))' }} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px' }}>

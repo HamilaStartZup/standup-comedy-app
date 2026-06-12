@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import api, { acknowledgePresenceAlert, triggerPresenceCheck } from '../services/api';
 import { getErrorMessage, ErrorMessages, ConfirmMessages } from '../services/systemMessages';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { pageTitleStyle } from '../styles/theme';
 
 interface PresenceAlert {
   _id: string;
@@ -95,9 +96,9 @@ const PresenceAlertsPage = () => {
   // Styles
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     padding: '20px',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+    background: 'var(--ccc-bg-gradient)',
   };
 
   const pageHeaderStyle: CSSProperties = {
@@ -111,26 +112,27 @@ const PresenceAlertsPage = () => {
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: '2.5em',
-    color: '#ff416c',
+    ...pageTitleStyle,
     margin: 0,
   };
 
   const contentStyle: CSSProperties = {
     maxWidth: '1200px',
     margin: '0 auto',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: '8px',
     padding: '20px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
   };
 
   const alertCardStyle: CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: '12px',
     padding: '20px',
     marginBottom: '15px',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
@@ -164,14 +166,14 @@ const PresenceAlertsPage = () => {
     gap: '20px',
     flexWrap: 'wrap',
     fontSize: '0.95em',
-    color: '#ccc',
+    color: 'var(--ccc-text-muted)',
   };
 
   const buttonStyle: CSSProperties = {
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #ff416c, #ff4b2b)',
+    background: 'var(--ccc-accent-gradient)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',

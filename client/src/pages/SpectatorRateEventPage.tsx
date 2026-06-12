@@ -17,7 +17,7 @@ function StarRating({
   /** 'dark' = empty star light (sur fond sombre), 'light' = empty star gris (sur fond blanc) */
   variant?: 'dark' | 'light';
 }) {
-  const emptyColor = variant === 'light' ? '#ccc' : 'rgba(255,255,255,0.35)';
+  const emptyColor = variant === 'light' ? 'var(--ccc-text-faint)' : 'rgba(255,255,255,0.35)';
   const filledColor = '#FFD700';
   return (
     <span style={{ display: 'inline-flex', gap: 2 }}>
@@ -132,8 +132,8 @@ export default function SpectatorRateEventPage() {
 
   const pageStyle: React.CSSProperties = {
     minHeight: 'calc(100vh - 60px)',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
-    color: '#fff',
+    background: 'var(--ccc-bg-gradient)',
+    color: 'var(--ccc-text-primary)',
     padding: '24px',
   };
 
@@ -143,8 +143,9 @@ export default function SpectatorRateEventPage() {
   };
 
   const cardStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.08)',
-    border: '1px solid rgba(255,255,255,0.15)',
+    background: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: 12,
     padding: 24,
     marginBottom: 20,
@@ -154,13 +155,14 @@ export default function SpectatorRateEventPage() {
     marginBottom: 8,
     fontSize: '1.25rem',
     fontWeight: 600,
+    color: 'var(--ccc-text-primary)',
   };
 
   const labelStyle: React.CSSProperties = {
     display: 'block',
     marginBottom: 8,
     fontSize: '0.95rem',
-    color: 'rgba(255,255,255,0.9)',
+    color: 'var(--ccc-text-secondary)',
   };
 
   if (user?.role !== 'SPECTATOR') {
@@ -169,7 +171,7 @@ export default function SpectatorRateEventPage() {
         <Navbar />
         <div style={pageStyle}>
           <div style={containerStyle}>
-            <p style={{ color: 'rgba(255,255,255,0.8)' }}>Réservé aux spectateurs.</p>
+            <p style={{ color: 'var(--ccc-text-secondary)' }}>Réservé aux spectateurs.</p>
             <button type="button" onClick={() => navigate(-1)} style={{ marginTop: 16, padding: '8px 16px', borderRadius: 8 }}>
               Retour
             </button>
@@ -190,10 +192,10 @@ export default function SpectatorRateEventPage() {
             style={{
               marginBottom: 24,
               padding: '8px 12px',
-              background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.2)',
+              background: 'var(--ccc-bg-elevated)',
+              border: '1px solid var(--ccc-border-medium)',
               borderRadius: 8,
-              color: '#fff',
+              color: 'var(--ccc-text-primary)',
               cursor: 'pointer',
               fontSize: '0.9rem',
             }}
@@ -202,16 +204,16 @@ export default function SpectatorRateEventPage() {
           </button>
 
           {loading ? (
-            <p style={{ color: 'rgba(255,255,255,0.8)' }}>Chargement…</p>
+            <p style={{ color: 'var(--ccc-text-secondary)' }}>Chargement…</p>
           ) : !data ? (
-            <p style={{ color: 'rgba(255,255,255,0.8)' }}>Événement non disponible.</p>
+            <p style={{ color: 'var(--ccc-text-secondary)' }}>Événement non disponible.</p>
           ) : (
             <form onSubmit={handleSubmit}>
-              <h1 style={{ marginBottom: 24, fontSize: '1.75rem' }}>Noter l&apos;événement</h1>
+              <h1 className="ccc-page-title" style={{ marginBottom: 24 }}>Noter l&apos;événement</h1>
 
               <div style={cardStyle}>
                 <h2 style={{ ...titleStyle, color: '#FFD700' }}>{data.event.title}</h2>
-                <p style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.75)' }}>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--ccc-text-muted)' }}>
                   {new Date(data.event.date).toLocaleDateString('fr-FR', {
                     weekday: 'long',
                     day: 'numeric',
@@ -235,7 +237,7 @@ export default function SpectatorRateEventPage() {
                 </h2>
                 {data.participants.length > 0 ? (
                   <>
-                    <p style={{ marginBottom: 16, fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>
+                    <p style={{ marginBottom: 16, fontSize: '0.9rem', color: 'var(--ccc-text-secondary)' }}>
                       Donnez une note de 1 à 5 étoiles à chaque humoriste.
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -247,7 +249,7 @@ export default function SpectatorRateEventPage() {
                             alignItems: 'center',
                             gap: 16,
                             padding: 16,
-                            background: '#fff',
+                            background: 'var(--ccc-bg-elevated)',
                             borderRadius: 12,
                             border: '1px solid #e5e7eb',
                             boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
@@ -276,7 +278,7 @@ export default function SpectatorRateEventPage() {
                             )}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, fontSize: '1rem', color: '#1a1a2e' }}>
+                            <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--ccc-text-primary)' }}>
                               {p.firstName} {p.lastName}
                             </div>
                             <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
@@ -296,7 +298,7 @@ export default function SpectatorRateEventPage() {
                     </div>
                   </>
                 ) : (
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.75)' }}>
+                  <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--ccc-text-muted)' }}>
                     Aucun humoriste n&apos;a été enregistré comme participant à cet événement. Vous pouvez enregistrer uniquement la note globale de l&apos;événement ci-dessus.
                   </p>
                 )}
@@ -311,7 +313,7 @@ export default function SpectatorRateEventPage() {
                     borderRadius: 8,
                     border: 'none',
                     background: eventRating >= 1 ? '#FFD700' : 'rgba(255,215,0,0.4)',
-                    color: '#1a1a2e',
+                    color: 'var(--ccc-text-primary)',
                     fontWeight: 600,
                     cursor: submitting || eventRating < 1 ? 'not-allowed' : 'pointer',
                     fontSize: '1rem',
@@ -325,9 +327,9 @@ export default function SpectatorRateEventPage() {
                   style={{
                     padding: '12px 24px',
                     borderRadius: 8,
-                    border: '1px solid rgba(255,255,255,0.3)',
-                    background: 'transparent',
-                    color: '#fff',
+                    border: '1px solid var(--ccc-border-medium)',
+                    background: 'var(--ccc-bg-elevated)',
+                    color: 'var(--ccc-text-primary)',
                     cursor: 'pointer',
                     fontSize: '1rem',
                   }}

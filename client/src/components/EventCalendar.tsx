@@ -155,60 +155,67 @@ const EventCalendar = ({
     boxSizing: 'border-box'
   };
 
+  const surfaceBoxStyle: CSSProperties = {
+    background: 'var(--ccc-bg-surface)',
+    border: '1px solid var(--ccc-border-subtle)',
+    borderRadius: 10,
+  };
+
   const calendarHeaderStyle: CSSProperties = {
+    ...surfaceBoxStyle,
     display:'flex',
     flexDirection: screenSize === 'mobile' ? 'column' : 'row',
     justifyContent:'space-between',
     alignItems:'center',
     marginBottom:'20px',
     padding:'15px',
-    backgroundColor:'rgba(0,0,0,0.3)',
-    borderRadius:'10px',
     gap: screenSize === 'mobile' ? '12px' : '0'
   };
 
   const monthTitleStyle: CSSProperties = {
     fontSize: getResponsiveValue('1.2em', '1.3em', '1.5em'),
     fontWeight:'bold',
-    color:'#ff416c',
+    color:'#7c3aed',
     textAlign: screenSize === 'mobile' ? 'center' : 'left'
   };
 
   const navButtonStyle: CSSProperties = {
     padding: getResponsiveValue('10px 14px', '8px 16px', '8px 16px'),
     borderRadius:'8px',
-    border:'1px solid rgba(255,255,255,0.2)',
-    background:'rgba(255,65,108,0.2)',
-    color:'#ff416c',
+    border:'1px solid var(--ccc-border-subtle)',
+    background:'var(--ccc-bg-elevated)',
+    color:'#7c3aed',
     fontWeight:'bold',
     cursor:'pointer',
     fontSize:'0.9em',
     transition:'all 0.2s ease',
     minWidth:'44px',
     minHeight:'44px',
-    WebkitTapHighlightColor:'rgba(255,65,108,0.3)'
+    WebkitTapHighlightColor:'rgba(124, 58, 237,0.3)'
   };
 
   const viewButtonStyle: CSSProperties = {
     padding:'6px 12px',
     marginLeft:'6px',
     borderRadius:'6px',
-    border:'1px solid #ff416c',
+    border:'1px solid #7c3aed',
     backgroundColor:'transparent',
-    color:'#ff416c',
+    color:'#7c3aed',
     cursor:'pointer',
     fontSize: getResponsiveValue('0.75em', '0.8em', '0.85em'),
     fontWeight:'bold',
     minWidth:'44px',
     minHeight:'44px',
-    WebkitTapHighlightColor:'rgba(255,65,108,0.3)'
+    WebkitTapHighlightColor:'rgba(124, 58, 237,0.3)'
   };
 
   const calendarGridStyle: CSSProperties = {
+    ...surfaceBoxStyle,
     display:'grid',
     gridTemplateColumns:`repeat(${viewMode==='month'?7:days.length},1fr)`,
     gap: getResponsiveValue('4px', '6px', '8px'),
     marginBottom:'20px',
+    padding: '14px',
     overflowX: screenSize === 'mobile' && viewMode === 'week' ? 'auto' : 'visible',
     WebkitOverflowScrolling: 'touch',
     scrollSnapType: screenSize === 'mobile' && viewMode === 'week' ? 'x mandatory' : 'none'
@@ -218,25 +225,26 @@ const EventCalendar = ({
     padding:'10px',
     textAlign:'center',
     fontWeight:'bold',
-    color:'#ff416c',
+    color:'#7c3aed',
     fontSize: getResponsiveValue('0.75em', '0.85em', '0.9em'),
-    backgroundColor:'rgba(0,0,0,0.2)',
-    borderRadius:'6px'
+    backgroundColor:'var(--ccc-bg-elevated)',
+    borderRadius:'6px',
+    border: '1px solid var(--ccc-border-subtle)',
   };
 
   const dayCellStyle = (todayFlag:boolean): CSSProperties => ({
     minHeight: getResponsiveValue('60px', '80px', '100px'),
     padding:'8px',
-    backgroundColor: todayFlag?'rgba(255,65,108,0.15)':'rgba(0,0,0,0.2)',
+    backgroundColor: todayFlag ? 'rgba(124, 58, 237, 0.12)' : 'var(--ccc-bg-elevated)',
     borderRadius:'8px',
-    border: todayFlag?'2px solid #ff416c':'1px solid rgba(255,255,255,0.1)',
+    border: todayFlag ? '2px solid #7c3aed' : '1px solid var(--ccc-border-subtle)',
     position:'relative'
   });
 
   const dayNumberStyle: CSSProperties = {
     fontSize: getResponsiveValue('0.75em', '0.85em', '0.9em'),
     fontWeight:'bold',
-    color:'#fff',
+    color:'var(--ccc-text-primary)',
     marginBottom:'4px'
   };
 

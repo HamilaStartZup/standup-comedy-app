@@ -19,7 +19,7 @@ function ApplicationDetailsModal({ isOpen, onClose, application }: ApplicationDe
 
   const sectionTitleStyle: CSSProperties = {
     fontSize: '1.2em',
-    color: '#ff416c',
+    color: '#7c3aed',
     marginTop: '15px',
     marginBottom: '10px',
     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',

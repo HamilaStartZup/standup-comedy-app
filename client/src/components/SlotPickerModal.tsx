@@ -81,8 +81,9 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
   };
 
   const dialogStyle: React.CSSProperties = {
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
-    border: '1px solid #374151',
+    background: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 12px 40px rgba(15, 23, 42, 0.12)',
     borderRadius: 16,
     padding: 24,
     width: '100%',
@@ -95,7 +96,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
   const closeBtnStyle: React.CSSProperties = {
     width: '100%',
     padding: '10px',
-    background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+    background: 'var(--ccc-accent-gradient)',
     color: '#fff',
     border: 'none',
     borderRadius: 10,
@@ -166,8 +167,8 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
     return (
       <div role="dialog" aria-modal style={overlayStyle} onClick={onClose}>
         <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
-          <p style={{ margin: '0 0 2px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>Choisir un créneau</p>
-          <p style={{ margin: '0 0 8px 0', fontSize: 12, color: '#888' }}>Sélectionnez un ou plusieurs créneaux d'1h</p>
+          <p style={{ margin: '0 0 2px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>Choisir un créneau</p>
+          <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ccc-text-muted)' }}>Sélectionnez un ou plusieurs créneaux d'1h</p>
           {durConstraints && (
             <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#f59e0b', fontWeight: 600 }}>{durConstraints}</p>
           )}
@@ -189,9 +190,9 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
                     width: '100%',
                     padding: '12px 16px',
                     borderRadius: 10,
-                    border: isSel ? '1px solid #ec4899' : '1px solid #374151',
-                    background: isSel ? 'rgba(236,72,153,0.15)' : '#1f2937',
-                    color: disabled ? '#6b7280' : isSel ? '#ec4899' : '#f3f4f6',
+                    border: isSel ? '1px solid var(--ccc-accent)' : '1px solid var(--ccc-border-medium)',
+                    background: isSel ? 'var(--ccc-accent-soft)' : 'var(--ccc-bg-surface)',
+                    color: disabled ? 'var(--ccc-text-faint)' : isSel ? 'var(--ccc-accent)' : 'var(--ccc-text-primary)',
                     fontSize: 14,
                     textAlign: 'left',
                     cursor: disabled ? 'not-allowed' : 'pointer',
@@ -263,9 +264,9 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
   const cardStyle = (active: boolean, disabled: boolean): React.CSSProperties => ({
     padding: '16px',
     borderRadius: 10,
-    border: active ? '1px solid #ec4899' : '1px solid #374151',
-    background: active ? 'rgba(236,72,153,0.15)' : '#1f2937',
-    color: disabled ? '#6b7280' : active ? '#ec4899' : '#f3f4f6',
+    border: active ? '1px solid var(--ccc-accent)' : '1px solid var(--ccc-border-medium)',
+    background: active ? 'var(--ccc-accent-soft)' : 'var(--ccc-bg-surface)',
+    color: disabled ? 'var(--ccc-text-faint)' : active ? 'var(--ccc-accent)' : 'var(--ccc-text-primary)',
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.4 : 1,
     marginBottom: 10,
@@ -278,7 +279,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
   return (
     <div role="dialog" aria-modal style={overlayStyle} onClick={onClose}>
       <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
-        <p style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>Choisir un créneau</p>
+        <p style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>Choisir un créneau</p>
         {!hasAvailable ? (
           <p style={{ color: '#f97316', fontSize: 13, margin: '0 0 12px' }}>
             Aucun créneau disponible pour cette date.
@@ -296,7 +297,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
                 onClick={() => { if (!matinBlocked) { onSelect({ startTime: mS, endTime: mE, label: 'matin' }); onClose(); } }}
               >
                 <div style={{ fontWeight: 700, marginBottom: 4 }}>Matin</div>
-                <div style={{ fontSize: 12, color: matinBlocked ? '#6b7280' : '#9ca3af' }}>{mS} – {mE}{matinBlocked ? ' — indisponible' : ''}</div>
+                <div style={{ fontSize: 12, color: matinBlocked ? 'var(--ccc-text-faint)' : 'var(--ccc-text-muted)' }}>{mS} – {mE}{matinBlocked ? ' — indisponible' : ''}</div>
               </button>
             )}
             {apremOn && (
@@ -310,7 +311,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
                 onClick={() => { if (!apremBlocked) { onSelect({ startTime: aS, endTime: aE, label: 'aprem' }); onClose(); } }}
               >
                 <div style={{ fontWeight: 700, marginBottom: 4 }}>Après-midi</div>
-                <div style={{ fontSize: 12, color: apremBlocked ? '#6b7280' : '#9ca3af' }}>{aS} – {aE}{apremBlocked ? ' — indisponible' : ''}</div>
+                <div style={{ fontSize: 12, color: apremBlocked ? 'var(--ccc-text-faint)' : 'var(--ccc-text-muted)' }}>{aS} – {aE}{apremBlocked ? ' — indisponible' : ''}</div>
               </button>
             )}
           </>

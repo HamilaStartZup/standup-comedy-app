@@ -6,6 +6,7 @@ import { useAlert } from '../hooks/useAlert';
 import { useNavigate } from 'react-router-dom';
 import api, { updateComedianReport } from '../services/api';
 import { getErrorMessage, ErrorMessages, SuccessMessages } from '../services/systemMessages';
+import { pageTitleStyle } from '../styles/theme';
 
 interface ComedianReport {
   _id: string;
@@ -108,9 +109,9 @@ const ComedianReportsPage = () => {
   // Styles
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     padding: '20px',
-    background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
+    background: 'var(--ccc-bg-gradient)',
   };
 
   const pageHeaderStyle: CSSProperties = {
@@ -124,18 +125,18 @@ const ComedianReportsPage = () => {
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: '2.5em',
-    color: '#ff416c',
+    ...pageTitleStyle,
     margin: 0,
   };
 
   const contentStyle: CSSProperties = {
     maxWidth: '1200px',
     margin: '0 auto',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: '8px',
     padding: '20px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
   };
 
   const filterStyle: CSSProperties = {
@@ -147,11 +148,12 @@ const ComedianReportsPage = () => {
   };
 
   const reportCardStyle: CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'var(--ccc-bg-elevated)',
+    border: '1px solid var(--ccc-border-subtle)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: '12px',
     padding: '20px',
     marginBottom: '15px',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
     cursor: 'pointer',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
   };
@@ -314,35 +316,36 @@ const ComedianReportsPage = () => {
         >
           <div
             style={{
-              background: '#1a1a2e',
+              background: 'var(--ccc-bg-elevated)',
               padding: '30px',
               borderRadius: '12px',
               maxWidth: '600px',
               width: '100%',
               maxHeight: '90vh',
               overflow: 'auto',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
+              border: '1px solid var(--ccc-border-subtle)',
+              boxShadow: '0 4px 24px rgba(15, 23, 42, 0.12)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ color: '#ff4b2b', marginBottom: '20px' }}>Gérer le signalement</h2>
 
             <div style={{ marginBottom: '20px' }}>
-              <p style={{ color: '#fff', marginBottom: '5px' }}>
+              <p style={{ color: 'var(--ccc-text-primary)', marginBottom: '5px' }}>
                 <strong>Humoriste:</strong> {selectedReport.comedian.firstName} {selectedReport.comedian.lastName}
               </p>
-              <p style={{ color: '#aaa', fontSize: '0.9em', marginBottom: '5px' }}>
+              <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', marginBottom: '5px' }}>
                 {selectedReport.comedian.email}
               </p>
-              <p style={{ color: '#fff', marginBottom: '5px' }}>
+              <p style={{ color: 'var(--ccc-text-primary)', marginBottom: '5px' }}>
                 <strong>Signalé par:</strong> {selectedReport.reporter.firstName} {selectedReport.reporter.lastName}
               </p>
-              <p style={{ color: '#fff', marginBottom: '5px' }}>
+              <p style={{ color: 'var(--ccc-text-primary)', marginBottom: '5px' }}>
                 <strong>Raison:</strong> {reasonLabels[selectedReport.reason]}
               </p>
               {selectedReport.description && (
-                <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '6px' }}>
-                  <p style={{ color: '#aaa', fontSize: '0.9em', margin: 0 }}>
+                <div style={{ marginTop: '10px', padding: '10px', background: 'var(--ccc-bg-surface)', borderRadius: '6px' }}>
+                  <p style={{ color: 'var(--ccc-text-secondary)', fontSize: '0.9em', margin: 0 }}>
                     <strong>Description:</strong> {selectedReport.description}
                   </p>
                 </div>
@@ -350,7 +353,7 @@ const ComedianReportsPage = () => {
             </div>
 
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', color: '#fff', marginBottom: '10px', fontWeight: 'bold' }}>
+              <label style={{ display: 'block', color: 'var(--ccc-text-primary)', marginBottom: '10px', fontWeight: 'bold' }}>
                 Statut *
               </label>
               <select
@@ -360,9 +363,9 @@ const ComedianReportsPage = () => {
                   width: '100%',
                   padding: '10px',
                   borderRadius: '6px',
-                  border: '1px solid #555',
-                  background: '#222',
-                  color: '#fff',
+                  border: '1px solid var(--ccc-border-medium)',
+                  background: '#ffffff',
+                  color: 'var(--ccc-text-primary)',
                   fontSize: '14px'
                 }}
               >
@@ -380,9 +383,9 @@ const ComedianReportsPage = () => {
                 style={{
                   padding: '10px 20px',
                   borderRadius: '6px',
-                  border: '1px solid #555',
-                  background: '#333',
-                  color: '#fff',
+                  border: '1px solid var(--ccc-border-medium)',
+                  background: 'var(--ccc-bg-surface)',
+                  color: 'var(--ccc-text-primary)',
                   fontWeight: 'bold',
                   cursor: 'pointer'
                 }}

@@ -258,6 +258,17 @@ export const getErrorMessage = (error: any, contextualFallback?: string): string
     return serverMessage;
   }
 
+  // 1b. Zod / middleware validation details (ex. SIRET, photos)
+  const validationErrors = error?.response?.data?.errors;
+  if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+    const details = validationErrors
+      .map((entry: { message?: string }) => entry?.message)
+      .filter((msg): msg is string => Boolean(msg));
+    if (details.length > 0) {
+      return details.join(', ');
+    }
+  }
+
   // 2. Contextual fallback
   if (contextualFallback) {
     return contextualFallback;

@@ -2,26 +2,28 @@ import { Response, Request } from 'express';
 import mongoose from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
 import { VenueModel, CancellationPolicy } from '../models/Venue';
-import { VenueBookingModel, VenueBookingDocument } from '../models/VenueBooking';
+import { VenueBookingModel, VenueBookingDocument, VenueBookingStatus } from '../models/VenueBooking';
 import { VenueBlockedDateModel } from '../models/VenueBlockedDate';
 import { NotificationModel } from '../models/Notification';
 import { stripe } from './stripe';
+import { EventModel, EventDocument } from '../models/Event';
+import { cancelEventInternal, notifySeriesCancellation } from '../services/eventCancellation';
 import { config } from '../config/env';
 import {
   emitVenueBookingStatusChanged,
   emitVenueBookingPaymentUpdated,
 } from '../services/eventEmitter';
+import { createNotification } from './notification';
 import { computeBookingAmount } from '../utils/venuePricing';
 import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
-
-// Vérifie si deux plages horaires se chevauchent (même date)
-function timesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean {
-  const toMinutes = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    return h * 60 + m;
-  };
-  return toMinutes(aStart) < toMinutes(bEnd) && toMinutes(bStart) < toMinutes(aEnd);
-}
+import {
+  timesOverlap,
+  computePaymentDeadlineAt,
+  decideInitialBookingStatus,
+  checkSlotConflict,
+  checkSlotConflictBatch,
+} from '../utils/venueBookingHelpers';
+import { parseCalendarDate, calendarWeekday, isCalendarDatePast } from '../utils/calendarDate';
 
 function hasBookingEnded(requestedDate: Date, endTime: string): boolean {
   const [endHour, endMinute] = endTime.split(':').map(Number);
@@ -104,6 +106,124 @@ async function processStripeRefund(
     booking.paymentStatus = 'refund_pending';
     console.error('[Venue] Échec remboursement Stripe automatique:', err, { bookingId: booking._id });
   }
+}
+
+// ─── Helper : remboursement d'annulation selon la politique de la salle ──────
+
+/** Champs nécessaires au calcul/déclenchement du remboursement (sans dépendre du populate de `venue`). */
+type CancellableBooking = Pick<
+  VenueBookingDocument,
+  'status' | 'paymentStatus' | 'requestedDate' | 'startTime' | 'paidAmount' | 'createdAt'
+  | 'stripePaymentIntentId' | 'stripeRefundId' | 'refundedAmount' | 'refundedAt' | '_id'
+>;
+
+/**
+ * Applique le remboursement d'annulation à une réservation CONFIRMED & payée selon `policy`.
+ * No-op sinon. Ne touche pas au statut (l'appelant pose CANCELLED_*). Réutilisé par
+ * l'annulation unitaire et l'annulation de série.
+ */
+async function applyBookingCancellationRefund(
+  booking: CancellableBooking,
+  policy: CancellationPolicy
+): Promise<void> {
+  if (booking.status !== 'CONFIRMED' || booking.paymentStatus !== 'paid') return;
+  const eventDatetime = new Date(booking.requestedDate);
+  const [startH, startM] = booking.startTime.split(':').map(Number);
+  eventDatetime.setUTCHours(startH, startM, 0, 0);
+  const { refundAmount, refundPercent, reason } = calculateRefundAmount(
+    booking.paidAmount!,
+    policy,
+    eventDatetime,
+    booking.createdAt
+  );
+  if (refundPercent > 0) {
+    await processStripeRefund(booking, refundAmount);
+    console.log(`[Venue] Remboursement ${refundPercent}% (${reason}):`, booking._id);
+  } else {
+    console.log('[Venue] Annulation sans remboursement (' + reason + '):', booking._id);
+  }
+}
+
+// ─── Cascade ADR 0002 : annulation réservation → événement lié (sens unique) ──
+
+/**
+ * Annule l'événement lié à une réservation (s'il existe). Sens unique booking → event.
+ * Isolé : un échec n'interrompt jamais l'annulation de la réservation ni une boucle batch.
+ * `skipNotify` permet de différer les notifications lors d'une annulation de série.
+ * Retourne l'EventDocument annulé si trouvé (pour collecte dans cancelBookingGroup).
+ */
+async function cascadeCancelLinkedEvent(
+  bookingId: unknown,
+  reason?: string,
+  options: { skipNotify?: boolean } = {}
+): Promise<import('../models/Event').EventDocument | null> {
+  try {
+    const event = await EventModel.findOne({ venueBookingId: bookingId as mongoose.Types.ObjectId });
+    if (event) {
+      await cancelEventInternal(event, reason, options);
+      return event;
+    }
+  } catch (err) {
+    console.error('[Venue] Échec cascade annulation événement lié:', err, { bookingId });
+  }
+  return null;
+}
+
+/**
+ * Annule une réservation (par id) avec remboursement selon la politique de sa salle, puis
+ * cascade l'annulation de l'événement lié. Réutilisable hors HTTP (annulation de série Org A
+ * côté événements, qui reste défensive vis-à-vis d'occurrences Org B). No-op si la réservation
+ * est introuvable ou déjà dans un état terminal.
+ */
+interface CancelledBookingInfo {
+  venueId: string;
+  ownerId: string;
+  venueName: string;
+  requesterId: string;
+  wasRefunded: boolean;
+  cancelledEvent: EventDocument | null;
+}
+
+export async function cancelBookingWithRefund(
+  bookingId: unknown,
+  options: { skipNotify?: boolean } = {}
+): Promise<CancelledBookingInfo | null> {
+  const booking = await VenueBookingModel.findById(bookingId as mongoose.Types.ObjectId)
+    .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string; cancellationPolicy?: CancellationPolicy } }>(
+      'venue', 'cancellationPolicy owner name'
+    );
+  if (!booking || !['PENDING', 'ACCEPTED', 'CONFIRMED'].includes(booking.status)) return null;
+
+  // Expirer une session de paiement en cours (empêche de payer une réservation annulée)
+  if (booking.stripeSessionId && booking.paymentStatus === 'pending' && stripe) {
+    try {
+      await stripe.checkout.sessions.expire(booking.stripeSessionId);
+    } catch (stripeErr) {
+      console.error('[Venue] Erreur expiration session Stripe (annulation série):', stripeErr, { bookingId: booking._id });
+    }
+  }
+
+  const policy: CancellationPolicy = booking.venue?.cancellationPolicy ?? 'moderate';
+  await applyBookingCancellationRefund(booking, policy);
+  booking.status = 'CANCELLED_BY_REQUESTER';
+  await booking.save();
+
+  const venueId = booking.venue._id.toString();
+  const ownerId = booking.venue.owner.toString();
+  const venueName = booking.venue.name;
+  const requesterId = booking.requester.toString();
+
+  emitVenueBookingStatusChanged(
+    booking._id.toString(),
+    venueId,
+    booking.status,
+    booking.paymentStatus,
+    [requesterId, ownerId]
+  );
+
+  const cancelledEvent = await cascadeCancelLinkedEvent(booking._id, undefined, options);
+
+  return { venueId, ownerId, venueName, requesterId, wasRefunded: booking.paymentStatus === 'refunded', cancelledEvent };
 }
 
 // ─── Créer une demande de réservation ────────────────────────────────────────
@@ -210,80 +330,25 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
       }
     }
 
-    // Vérifier que la date/créneau n'est pas bloqué par le propriétaire
-    const dayStart = new Date(date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(date);
-    dayEnd.setHours(23, 59, 59, 999);
-
-    const blockedDates = await VenueBlockedDateModel.find({
-      venue: venueId,
-      date: { $gte: dayStart, $lte: dayEnd },
-    });
-
-    const isBlocked = blockedDates.some((b) => {
-      // Blocage journée entière
-      if (!b.startTime || !b.endTime) return true;
-      // Pour les types à créneau fixe non sélectionnable, les blocs partiels n'ont pas d'effet
-      const fixedSlotTypes = ['journee', 'soiree', 'forfait', 'gratuit', 'pourcentage_billetterie'];
-      if (fixedSlotTypes.includes(pricingType || '')) return false;
-      // Pour heure et demi_journee : vérifier le chevauchement horaire
-      return timesOverlap(b.startTime, b.endTime, startTime!, endTime!);
-    });
-
-    if (isBlocked) {
-      res.status(409).json({ message: 'La salle est indisponible à cette date ou sur ce créneau' });
+    const slotCheck = await checkSlotConflict(venueId, date, startTime, endTime, pricingType);
+    if (slotCheck.ok === false) {
+      res.status(409).json({ message: slotCheck.reason });
       return;
     }
 
-    // Vérifier qu'il n'y a pas de réservation ACCEPTED/CONFIRMED qui chevauche le créneau demandé
-    // NOTE: cette vérification n'est pas atomique avec le create() ci-dessous.
-    // En haute concurrence, deux requêtes simultanées peuvent passer ce check et créer un conflit.
-    // Mitigation possible : transaction MongoDB (nécessite replica set).
-    const acceptedBookings = await VenueBookingModel.find({
-      venue: venueId,
-      status: { $in: ['ACCEPTED', 'CONFIRMED'] },
-      requestedDate: { $gte: dayStart, $lte: dayEnd },
-    });
-
-    const hasConflict = acceptedBookings.some((b) =>
-      timesOverlap(b.startTime, b.endTime, startTime!, endTime!)
-    );
-
-    if (hasConflict) {
-      res.status(409).json({ message: 'La salle est déjà réservée sur ce créneau' });
-      return;
-    }
-
-    const { amount, requiresPayment } = computeBookingAmount(
+    const { amount } = computeBookingAmount(
       { pricePerEvent: venue.pricePerEvent, pricingType: pricingType as any, deposit: venue.deposit, extraFees: venue.extraFees },
       { startTime, endTime }
     );
 
+    const { status: initialStatus, paymentDeadlineAt } = decideInitialBookingStatus(
+      venue,
+      date,
+      startTime!,
+      endTime!
+    );
+
     const isAutomatic = venue.bookingMode === 'automatic';
-
-    let initialStatus = 'PENDING';
-    let paymentDeadlineAt: Date | undefined;
-
-    if (isAutomatic) {
-      if (!requiresPayment) {
-        initialStatus = 'CONFIRMED';
-      } else {
-        initialStatus = 'ACCEPTED';
-        const [startHour, startMinute] = startTime!.split(':').map(Number);
-        const deadline72h = new Date(Date.now() + 72 * 60 * 60 * 1000);
-        if (!isNaN(startHour) && !isNaN(startMinute)) {
-          const eventStart = new Date(date);
-          eventStart.setUTCHours(startHour, startMinute, 0, 0);
-          const deadlineBeforeEvent = new Date(eventStart.getTime() - 6 * 60 * 60 * 1000);
-          const minDeadline = new Date(Date.now() + 60 * 60 * 1000);
-          const chosen = deadline72h < deadlineBeforeEvent ? deadline72h : deadlineBeforeEvent;
-          paymentDeadlineAt = chosen < minDeadline ? minDeadline : chosen;
-        } else {
-          paymentDeadlineAt = deadline72h;
-        }
-      }
-    }
 
     const booking = await VenueBookingModel.create({
       venue: venueId,
@@ -348,6 +413,174 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
     res.status(201).json({ booking });
   } catch (error) {
     console.error('Erreur createBooking:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+};
+
+// ─── Réservation par lot (série récurrente Org B) ────────────────────────────
+
+export const createBookingBatch = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const requesterId = req.user?.id;
+    const { venueId } = req.params;
+
+    if (!requesterId) {
+      res.status(401).json({ message: 'Non authentifié' });
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(venueId)) {
+      res.status(400).json({ message: 'ID de salle invalide' });
+      return;
+    }
+
+    const venue = await VenueModel.findById(venueId);
+    if (!venue || !venue.isActive || venue.isDeleted) {
+      res.status(404).json({ message: 'Salle introuvable ou indisponible' });
+      return;
+    }
+
+    if (venue.owner.toString() === requesterId) {
+      res.status(403).json({ message: 'Vous ne pouvez pas réserver votre propre salle' });
+      return;
+    }
+
+    const { dates, message } = req.body as { dates: string[]; message?: string };
+    let { startTime, endTime } = req.body as { startTime?: string; endTime?: string };
+
+    const pricingType = venue.pricingType as string | undefined;
+
+    // Normaliser startTime/endTime selon le pricingType si non fournis
+    if (!startTime || !endTime) {
+      const tr = venue.timeRestrictions;
+      if (pricingType === 'soiree') {
+        startTime = startTime ?? (tr?.soireeStart || '18:00');
+        endTime = endTime ?? (tr?.soireeEnd || '23:59');
+      } else {
+        startTime = startTime ?? (tr?.openTime || '00:00');
+        endTime = endTime ?? (tr?.closeTime || '23:59');
+      }
+    }
+
+    const bookingGroupId = new mongoose.Types.ObjectId();
+    const isAutomatic = venue.bookingMode === 'automatic';
+
+    // Non-transactionnel par choix (ADR 0001) : chaque réservation est indépendante.
+    const created: VenueBookingDocument[] = [];
+    const unavailable: { date: string; reason: string }[] = [];
+
+    const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+
+    // Pré-filtrage (weekday + time) avant le slot check batch (2 requêtes pour N dates)
+    type DateEntry = { dateStr: string; date: Date; needsSlotCheck: boolean; earlyReject?: string };
+    const entries: DateEntry[] = dates.map((dateStr) => {
+      const date = parseCalendarDate(dateStr);
+      if (venue.disabledWeekdays && venue.disabledWeekdays.includes(calendarWeekday(dateStr))) {
+        return { dateStr, date, needsSlotCheck: false, earlyReject: 'Cette salle n\'est pas disponible ce jour-là.' };
+      }
+      const tr = venue.timeRestrictions;
+      if (tr && startTime && endTime && pricingType === 'heure' && tr.openTime && tr.closeTime) {
+        if (toMinutes(startTime) < toMinutes(tr.openTime) || toMinutes(endTime) > toMinutes(tr.closeTime)) {
+          return { dateStr, date, needsSlotCheck: false, earlyReject: `Les réservations à l'heure sont possibles uniquement entre ${tr.openTime} et ${tr.closeTime}.` };
+        }
+      }
+      return { dateStr, date, needsSlotCheck: true };
+    });
+
+    const slotCheckEntries = entries.filter((e) => e.needsSlotCheck);
+    const slotResults = await checkSlotConflictBatch(
+      venueId,
+      slotCheckEntries.map((e) => ({ date: e.date, startTime: startTime ?? undefined, endTime: endTime ?? undefined, pricingType: pricingType ?? undefined }))
+    );
+    const slotResultMap = new Map(slotCheckEntries.map((e, i) => [e.dateStr, slotResults[i]]));
+
+    for (const { dateStr, date, needsSlotCheck, earlyReject } of entries) {
+      if (!needsSlotCheck) {
+        unavailable.push({ date: dateStr, reason: earlyReject! });
+        continue;
+      }
+
+      const slotCheck = slotResultMap.get(dateStr)!;
+      if (slotCheck.ok === false) {
+        unavailable.push({ date: dateStr, reason: slotCheck.reason });
+        continue;
+      }
+
+      const { status: initialStatus, paymentDeadlineAt } = decideInitialBookingStatus(
+        venue,
+        date,
+        startTime!,
+        endTime!
+      );
+
+      const booking = await VenueBookingModel.create({
+        venue: venueId,
+        requester: requesterId,
+        bookingGroupId,
+        requestedDate: date,
+        startTime,
+        endTime,
+        message,
+        status: initialStatus,
+        ...(paymentDeadlineAt && { paymentDeadlineAt }),
+      });
+
+      emitVenueBookingStatusChanged(
+        booking._id.toString(),
+        venueId,
+        booking.status,
+        booking.paymentStatus,
+        [requesterId, venue.owner.toString()]
+      );
+
+      created.push(booking);
+    }
+
+    // Une seule notification par destinataire pour l'ensemble de la série
+    if (created.length > 0) {
+      const n = created.length;
+      const firstBooking = created[0];
+      const label = n > 1 ? `série de ${n} créneaux` : 'réservation';
+      if (!isAutomatic) {
+        await createNotification(
+          venue.owner.toString(),
+          'venue_booking_request',
+          'Nouvelle demande de réservation',
+          `Une demande de ${label} a été faite pour votre salle "${venue.name}".`,
+          undefined, undefined, undefined,
+          venue._id.toString(),
+          firstBooking._id.toString()
+        );
+      } else if (firstBooking.status === 'CONFIRMED') {
+        await createNotification(
+          requesterId,
+          'venue_booking_confirmed',
+          'Réservation confirmée',
+          n > 1
+            ? `Vos ${n} réservations pour "${venue.name}" ont été confirmées automatiquement (aucun paiement requis).`
+            : `Votre réservation pour "${venue.name}" a été confirmée automatiquement (aucun paiement requis).`,
+          undefined, undefined, undefined,
+          venue._id.toString(),
+          firstBooking._id.toString()
+        );
+      } else {
+        await createNotification(
+          requesterId,
+          'venue_booking_payment_required',
+          'Réservation acceptée — paiement requis',
+          n > 1
+            ? `Vos ${n} réservations pour "${venue.name}" ont été acceptées automatiquement. Vous avez 72h pour effectuer le paiement.`
+            : `Votre réservation pour "${venue.name}" a été acceptée automatiquement. Vous avez 72h pour effectuer le paiement.`,
+          undefined, undefined, undefined,
+          venue._id.toString(),
+          firstBooking._id.toString()
+        );
+      }
+    }
+
+    res.status(201).json({ bookingGroupId, created, unavailable });
+  } catch (error) {
+    console.error('Erreur createBookingBatch:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 };
@@ -440,7 +673,7 @@ export const myBookings = async (req: AuthRequest, res: Response): Promise<void>
     const bookings = await VenueBookingModel.find(findFilter)
       .populate(
         'venue',
-        'name city address postalCode country venueType capacity description shortDescription pricePerEvent cancellationPolicy isDeleted pricingType deposit extraFees currency latitude longitude photos'
+        'name city address postalCode country venueType capacity description shortDescription pricePerEvent cancellationPolicy isDeleted pricingType deposit extraFees currency latitude longitude photos companyName siret contactEmail contactPhone'
       )
       .populate('requester', requesterFields)
       .sort({ createdAt: -1 });
@@ -482,6 +715,43 @@ export const getMyVenueBookings = async (req: AuthRequest, res: Response): Promi
     res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 };
+
+// ─── Helpers réutilisables accept/refuse ─────────────────────────────────────
+
+type VenueForPricing = {
+  pricePerEvent: number;
+  pricingType?: string;
+  deposit?: number;
+  extraFees?: { description: string; amount?: number }[];
+};
+
+type BookingMutable = {
+  startTime: string;
+  endTime: string;
+  requestedDate: Date;
+  status: VenueBookingStatus;
+  paymentDeadlineAt?: Date;
+};
+
+function acceptBooking(
+  booking: BookingMutable,
+  venue: VenueForPricing
+): void {
+  const { requiresPayment } = computeBookingAmount(
+    { pricePerEvent: venue.pricePerEvent, pricingType: venue.pricingType as any, deposit: venue.deposit, extraFees: venue.extraFees },
+    { startTime: booking.startTime, endTime: booking.endTime }
+  );
+  if (!requiresPayment) {
+    booking.status = 'CONFIRMED';
+  } else {
+    booking.status = 'ACCEPTED';
+    booking.paymentDeadlineAt = computePaymentDeadlineAt(booking.requestedDate, booking.startTime);
+  }
+}
+
+function refuseBooking(booking: BookingMutable): void {
+  booking.status = 'REFUSED';
+}
 
 // ─── Accepter / Refuser une réservation (propriétaire) ───────────────────────
 
@@ -553,34 +823,15 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
 
     if (ownerResponse) booking.ownerResponse = ownerResponse;
 
-    // Si acceptation : vérifier si le paiement est nécessaire
     if (status === 'ACCEPTED') {
       const venueDoc = await VenueModel.findById(booking.venue._id);
-      const { requiresPayment } = computeBookingAmount(
-        { pricePerEvent: venueDoc?.pricePerEvent ?? 0, pricingType: venueDoc?.pricingType as any, deposit: venueDoc?.deposit, extraFees: venueDoc?.extraFees },
-        { startTime: booking.startTime, endTime: booking.endTime }
-      );
-      if (!requiresPayment) {
-        // Salle gratuite ou pourcentage billetterie → confirmer directement
-        booking.status = 'CONFIRMED';
-      } else {
-        booking.status = 'ACCEPTED';
-        const [startHour, startMinute] = booking.startTime.split(':').map(Number);
-        const deadline72h = new Date(Date.now() + 72 * 60 * 60 * 1000);
-        if (isNaN(startHour) || isNaN(startMinute)) {
-          console.error('[updateBookingStatus] Format startTime invalide:', booking.startTime, { bookingId });
-          booking.paymentDeadlineAt = deadline72h;
-        } else {
-          const eventStart = new Date(booking.requestedDate);
-          eventStart.setUTCHours(startHour, startMinute, 0, 0);
-          const deadlineBeforeEvent = new Date(eventStart.getTime() - 6 * 60 * 60 * 1000);
-          const minDeadline = new Date(Date.now() + 60 * 60 * 1000); // minimum 1h
-          const chosen = deadline72h < deadlineBeforeEvent ? deadline72h : deadlineBeforeEvent;
-          booking.paymentDeadlineAt = chosen < minDeadline ? minDeadline : chosen;
-        }
+      if (!venueDoc) {
+        res.status(409).json({ message: 'Cette salle n\'existe plus, impossible d\'accepter la réservation' });
+        return;
       }
+      acceptBooking(booking, venueDoc);
     } else {
-      booking.status = status;
+      refuseBooking(booking);
     }
     await booking.save();
 
@@ -604,7 +855,7 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
           relatedBooking: booking._id,
           read: false,
         });
-      } else if (booking.status === 'CONFIRMED') {
+      } else if ((booking.status as VenueBookingStatus) === 'CONFIRMED') {
         // Salle gratuite ou pourcentage billetterie → notification de confirmation sans paiement
         await NotificationModel.create({
           user: booking.requester,
@@ -640,6 +891,162 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
   }
 };
 
+// ─── Répondre à un lot de réservations (propriétaire LIEU) ──────────────────
+
+export const updateBookingGroupStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const ownerId = req.user?.id;
+    const { bookingGroupId } = req.params;
+    const { status, excludedBookingIds = [], ownerResponse } = req.body as {
+      status: 'ACCEPTED' | 'REFUSED';
+      excludedBookingIds?: string[];
+      ownerResponse?: string;
+    };
+
+    if (!ownerId) {
+      res.status(401).json({ message: 'Non authentifié' });
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(bookingGroupId)) {
+      res.status(400).json({ message: 'ID de groupe invalide' });
+      return;
+    }
+
+    // Charger les réservations PENDING du groupe
+    const pendingBookings = await VenueBookingModel.find({
+      bookingGroupId,
+      status: 'PENDING',
+    }).populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string; pricePerEvent: number; pricingType?: string; deposit?: number; extraFees?: any[] } }>(
+      'venue',
+      'owner name pricePerEvent pricingType deposit extraFees'
+    );
+
+    if (pendingBookings.length === 0) {
+      res.status(404).json({ message: 'Aucune réservation PENDING trouvée pour ce groupe' });
+      return;
+    }
+
+    // Vérifier que le propriétaire possède la salle du groupe
+    const firstVenueOwner = pendingBookings[0].venue.owner;
+    if (firstVenueOwner.toString() !== ownerId) {
+      res.status(403).json({ message: 'Non autorisé à modifier ces réservations' });
+      return;
+    }
+
+    const updated: typeof pendingBookings = [];
+
+    // Compteurs par issue pour la notif groupée post-boucle
+    type NotifCtx = { requesterId: string; venueId: string; venueName: string; firstBookingId: string };
+    let refusedCount = 0;
+    let acceptedCount = 0;
+    let confirmedCount = 0;
+    let groupCtx: NotifCtx | null = null;
+
+    // Pré-chargement batch des conflits de créneau pour les bookings non exclus (2 requêtes au lieu de N)
+    const toSlotCheck = pendingBookings.filter((b) => !excludedBookingIds.includes(b._id.toString()) && status !== 'REFUSED');
+    const batchSlotResults = await checkSlotConflictBatch(
+      pendingBookings[0].venue._id.toString(),
+      toSlotCheck.map((b) => ({ date: b.requestedDate, startTime: b.startTime, endTime: b.endTime, pricingType: b.venue.pricingType }))
+    );
+    const slotCheckMap = new Map(toSlotCheck.map((b, i) => [b._id.toString(), batchSlotResults[i]]));
+
+    for (const booking of pendingBookings) {
+      const isExcluded = excludedBookingIds.includes(booking._id.toString());
+
+      if (ownerResponse) booking.ownerResponse = ownerResponse;
+
+      if (isExcluded || status === 'REFUSED') {
+        refuseBooking(booking);
+      } else {
+        // NOTE: non atomique (cf. commentaire dans checkSlotConflict)
+        const slotCheck = slotCheckMap.get(booking._id.toString())!;
+        if (slotCheck.ok === false) {
+          refuseBooking(booking);
+          booking.ownerResponse = booking.ownerResponse
+            ? `${booking.ownerResponse} — ${slotCheck.reason}`
+            : slotCheck.reason;
+        } else {
+          acceptBooking(booking, booking.venue);
+        }
+      }
+
+      await booking.save();
+
+      emitVenueBookingStatusChanged(
+        booking._id.toString(),
+        booking.venue._id.toString(),
+        booking.status,
+        booking.paymentStatus,
+        [booking.requester.toString(), ownerId]
+      );
+
+      updated.push(booking);
+
+      const bookingStatus = booking.status as VenueBookingStatus;
+      groupCtx = groupCtx ?? {
+        requesterId: booking.requester.toString(),
+        venueId: booking.venue._id.toString(),
+        venueName: booking.venue.name,
+        firstBookingId: booking._id.toString(),
+      };
+      if (bookingStatus === 'REFUSED') refusedCount++;
+      else if (bookingStatus === 'CONFIRMED') confirmedCount++;
+      else if (bookingStatus === 'ACCEPTED') acceptedCount++;
+    }
+
+    // Une seule notification par issue — jamais N fois la même cloche
+    if (groupCtx) {
+      const ctx = groupCtx;
+      const s = (n: number) => (n > 1 ? 's' : '');
+      if (refusedCount > 0) {
+        await createNotification(
+          ctx.requesterId,
+          'venue_booking_response',
+          'Réservation refusée',
+          refusedCount > 1
+            ? `${refusedCount} de vos demandes de réservation pour "${ctx.venueName}" ont été refusées.`
+            : `Votre demande de réservation pour "${ctx.venueName}" a été refusée.`,
+          undefined, undefined, undefined,
+          ctx.venueId,
+          ctx.firstBookingId
+        );
+      }
+      if (confirmedCount > 0) {
+        await createNotification(
+          ctx.requesterId,
+          'venue_booking_confirmed',
+          'Réservation confirmée',
+          confirmedCount > 1
+            ? `${confirmedCount} réservation${s(confirmedCount)} pour "${ctx.venueName}" ont été confirmées (aucun paiement requis).`
+            : `Votre réservation pour "${ctx.venueName}" a été confirmée (aucun paiement requis).`,
+          undefined, undefined, undefined,
+          ctx.venueId,
+          ctx.firstBookingId
+        );
+      }
+      if (acceptedCount > 0) {
+        await createNotification(
+          ctx.requesterId,
+          'venue_booking_payment_required',
+          'Réservation acceptée — paiement requis',
+          acceptedCount > 1
+            ? `${acceptedCount} réservation${s(acceptedCount)} pour "${ctx.venueName}" ont été acceptées. Vous avez 72h pour effectuer le paiement.`
+            : `Votre réservation pour "${ctx.venueName}" a été acceptée. Vous avez 72h pour effectuer le paiement.`,
+          undefined, undefined, undefined,
+          ctx.venueId,
+          ctx.firstBookingId
+        );
+      }
+    }
+
+    res.status(200).json({ updated });
+  } catch (error) {
+    console.error('Erreur updateBookingGroupStatus:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+};
+
 // ─── Annuler une réservation (demandeur) ─────────────────────────────────────
 
 export const cancelBooking = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -658,7 +1065,7 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     const booking = await VenueBookingModel.findById(bookingId)
-      .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy } }>('venue', 'cancellationPolicy owner');
+      .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string; cancellationPolicy: CancellationPolicy } }>('venue', 'cancellationPolicy owner name');
     if (!booking) {
       res.status(404).json({ message: 'Réservation introuvable' });
       return;
@@ -685,53 +1092,61 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     // Remboursement si booking confirmé et payé — selon la politique d'annulation de la salle
-    if (booking.status === 'CONFIRMED' && booking.paymentStatus === 'paid') {
-      const eventDatetime = new Date(booking.requestedDate);
-      const [startH, startM] = booking.startTime.split(':').map(Number);
-      eventDatetime.setUTCHours(startH, startM, 0, 0);
-
-      const policy: CancellationPolicy = (booking.venue as { _id: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy }).cancellationPolicy ?? 'moderate';
-      const { refundAmount, refundPercent, reason } = calculateRefundAmount(
-        booking.paidAmount!,
-        policy,
-        eventDatetime,
-        booking.createdAt
-      );
-
-      if (refundPercent > 0) {
-        await processStripeRefund(booking, refundAmount);
-        console.log(`[Venue] Remboursement ${refundPercent}% (${reason}):`, booking._id);
-      } else {
-        console.log('[Venue] Annulation sans remboursement (' + reason + '):', booking._id);
-      }
-    }
+    const venueInfo = booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string; cancellationPolicy: CancellationPolicy };
+    const policy: CancellationPolicy = venueInfo.cancellationPolicy ?? 'moderate';
+    await applyBookingCancellationRefund(booking, policy);
 
     booking.status = 'CANCELLED_BY_REQUESTER';
     await booking.save();
 
-    // Notification pour le requester en cas d'annulation d'un booking confirmé
-    if (booking.paymentStatus === 'refunded') {
-      try {
-        await NotificationModel.create({
-          user: booking.requester,
-          type: 'venue_booking_cancelled_by_requester',
-          title: 'Réservation annulée — remboursement effectué',
-          message: `Votre réservation a été annulée. Remboursement de ${booking.refundedAmount ?? booking.paidAmount}€ en cours.`,
-          relatedBooking: booking._id,
-          read: false,
-        });
-      } catch (notifError) {
-        console.error('Erreur notification cancelBooking refund:', notifError, { bookingId });
-      }
-    }
+    // Cascade ADR 0002 : l'événement lié (s'il existe) est annulé
+    await cascadeCancelLinkedEvent(booking._id);
 
     emitVenueBookingStatusChanged(
       booking._id.toString(),
-      (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy })._id.toString(),
+      venueInfo._id.toString(),
       booking.status,
       booking.paymentStatus,
-      [requesterId, (booking.venue as { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; cancellationPolicy: CancellationPolicy }).owner?.toString() || ''].filter(Boolean)
+      [requesterId, venueInfo.owner?.toString() || ''].filter(Boolean)
     );
+
+    // Notification propriétaire :
+    // - Booking sans groupe → notif immédiate
+    // - Booking dans un groupe → notif uniquement quand le dernier créneau du groupe est annulé
+    const ownerId = venueInfo.owner?.toString();
+    if (ownerId) {
+      if (!booking.bookingGroupId) {
+        const d = booking.requestedDate;
+        const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        await createNotification(
+          ownerId,
+          'venue_booking_cancelled_by_requester',
+          'Réservation annulée par le demandeur',
+          `Une réservation pour "${venueInfo.name}" le ${dateStr} a été annulée. Le créneau est de nouveau disponible.`,
+          undefined, undefined, undefined,
+          venueInfo._id.toString(),
+          booking._id.toString()
+        );
+      } else {
+        // Dernier booking du groupe annulé ? → 1 notif groupée pour le proprio
+        const remaining = await VenueBookingModel.countDocuments({
+          bookingGroupId: booking.bookingGroupId,
+          status: { $in: ['PENDING', 'ACCEPTED', 'CONFIRMED'] },
+        });
+        if (remaining === 0) {
+          const total = await VenueBookingModel.countDocuments({ bookingGroupId: booking.bookingGroupId });
+          await createNotification(
+            ownerId,
+            'venue_booking_cancelled_by_requester',
+            'Série de réservations annulée par le demandeur',
+            `La série de ${total} réservation${total > 1 ? 's' : ''} pour "${venueInfo.name}" a été annulée. ${total > 1 ? `${total} créneaux sont` : 'Le créneau est'} de nouveau disponible${total > 1 ? 's' : ''}.`,
+            undefined, undefined, undefined,
+            venueInfo._id.toString(),
+            booking._id.toString()
+          );
+        }
+      }
+    }
 
     res.status(200).json({
       message: 'Réservation annulée',
@@ -793,6 +1208,9 @@ export const cancelBookingByOwner = async (req: AuthRequest, res: Response): Pro
     booking.status = 'CANCELLED_BY_OWNER';
     if (reason) booking.ownerResponse = reason;
     await booking.save();
+
+    // Cascade ADR 0002 : l'événement lié perd sa salle → annulé
+    await cascadeCancelLinkedEvent(booking._id, 'Salle annulée par le LIEU');
 
     emitVenueBookingStatusChanged(
       booking._id.toString(),
@@ -902,6 +1320,8 @@ export const blockDate = async (req: AuthRequest, res: Response): Promise<void> 
           ? `Salle indisponible ce jour-là. Motif : ${reason}`
           : 'Salle indisponible ce jour-là.';
         await booking.save();
+        // Cascade ADR 0002 : l'événement lié perd sa salle → annulé
+        await cascadeCancelLinkedEvent(booking._id, 'Salle indisponible (date bloquée par le LIEU)');
         return booking;
       })
     );
@@ -1233,6 +1653,8 @@ export const refundVenueBookings = async (venueId: string): Promise<{ refunded: 
         booking.status = 'CANCELLED_BY_OWNER';
         booking.ownerResponse = 'La salle a été supprimée par le propriétaire. Remboursement intégral en cours.';
         await booking.save();
+        // Cascade ADR 0002 : l'événement lié perd sa salle → annulé
+        await cascadeCancelLinkedEvent(booking._id, 'Salle supprimée par le LIEU');
         refunded++;
 
         emitVenueBookingStatusChanged(
@@ -1286,7 +1708,7 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
     let expiredCount = 0;
     let reminderCount = 0;
 
-    // Step A — Expire overdue bookings
+    // Step A — Expire overdue bookings (groupes traités en bloc)
     const overdueBookings = await VenueBookingModel.find({
       status: 'ACCEPTED',
       paymentDeadlineAt: { $lte: now },
@@ -1294,84 +1716,160 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
       .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string } | null }>('venue', 'owner name')
       .populate<{ requester: { _id: mongoose.Types.ObjectId; firstName: string; lastName: string } }>('requester', 'firstName lastName');
 
+    const processedGroups = new Set<string>();
+
     for (const booking of overdueBookings) {
       try {
-        // Expire Stripe session if pending
-        if (booking.stripeSessionId && booking.paymentStatus === 'pending' && stripe) {
-          try {
-            await stripe.checkout.sessions.expire(booking.stripeSessionId);
-            console.log('[PaymentTimeout] Session Stripe expirée:', booking.stripeSessionId);
-          } catch (stripeErr) {
-            console.error('[PaymentTimeout] Erreur expiration session Stripe:', stripeErr, { bookingId: booking._id });
+        const groupId = booking.bookingGroupId?.toString();
+
+        if (groupId) {
+          if (processedGroups.has(groupId)) continue;
+          processedGroups.add(groupId);
+
+          const siblings = await VenueBookingModel.find({
+            bookingGroupId: booking.bookingGroupId,
+            status: 'ACCEPTED',
+          })
+            .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string } | null }>('venue', 'owner name')
+            .populate<{ requester: { _id: mongoose.Types.ObjectId; firstName: string; lastName: string } }>('requester', 'firstName lastName');
+
+          const sessionSibling = siblings.find(s => s.stripeSessionId && s.paymentStatus === 'pending');
+          if (sessionSibling?.stripeSessionId && stripe) {
+            try {
+              await stripe.checkout.sessions.expire(sessionSibling.stripeSessionId);
+              console.log('[PaymentTimeout] Session Stripe groupe expirée:', sessionSibling.stripeSessionId);
+            } catch (stripeErr) {
+              console.error('[PaymentTimeout] Erreur expiration session Stripe groupe:', stripeErr, { groupId });
+            }
           }
-        }
 
-        // Atomic update to prevent race condition with Stripe webhook confirmation
-        const expired = await VenueBookingModel.findOneAndUpdate(
-          { _id: booking._id, status: 'ACCEPTED' },
-          { status: 'EXPIRED' },
-          { new: true }
-        );
-        if (!expired) {
-          console.log('[PaymentTimeout] Booking déjà transitionné, skip:', booking._id);
-          continue;
-        }
-        expiredCount++;
+          let groupExpiredCount = 0;
+          for (const sibling of siblings) {
+            try {
+              const expired = await VenueBookingModel.findOneAndUpdate(
+                { _id: sibling._id, status: 'ACCEPTED' },
+                { status: 'EXPIRED' },
+                { new: true }
+              );
+              if (!expired) {
+                console.log('[PaymentTimeout] Booking groupe déjà transitionné, skip:', sibling._id);
+                continue;
+              }
+              groupExpiredCount++;
+              expiredCount++;
+              if (!sibling.venue) continue;
+              emitVenueBookingPaymentUpdated(
+                sibling._id.toString(),
+                (sibling.venue as any)._id.toString(),
+                'EXPIRED',
+                sibling.paymentStatus,
+                [(sibling.requester as any)._id?.toString() || sibling.requester.toString(), (sibling.venue as any)?.owner?.toString() || ''].filter(Boolean)
+              );
+            } catch (siblingErr) {
+              console.error('[PaymentTimeout] Erreur expiration booking groupe:', siblingErr, { bookingId: sibling._id });
+            }
+          }
 
-        if (!booking.venue) {
-          console.error('[PaymentTimeout] Venue non trouvée pour booking, expiré sans notification:', booking._id);
-          continue;
-        }
+          if (groupExpiredCount === 0) continue;
+          const first = siblings[0];
+          if (!first?.venue) continue;
 
-        emitVenueBookingPaymentUpdated(
-          booking._id.toString(),
-          (booking.venue as any)._id.toString(),
-          'EXPIRED',
-          booking.paymentStatus,
-          [(booking.requester as any)._id?.toString() || booking.requester.toString(), (booking.venue as any)?.owner?.toString() || ''].filter(Boolean)
-        );
+          const venueId = (first.venue as any)._id.toString();
+          const ownerId = (first.venue as any).owner.toString();
+          const venueName = first.venue.name;
+          const requesterId = (first.requester as any)._id?.toString() || first.requester.toString();
+          const requesterName = (first.requester as any)?.firstName
+            ? `${(first.requester as any).firstName} ${(first.requester as any).lastName}`
+            : 'un utilisateur';
+          const n = groupExpiredCount;
+          const plural = n > 1;
 
-        const d = booking.requestedDate;
-        const eventDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+          await createNotification(
+            requesterId,
+            'venue_booking_payment_expired',
+            'Série de réservations expirée',
+            `Votre série de réservations pour "${venueName}" a expiré faute de paiement — ${n} créneau${plural ? 'x' : ''} libéré${plural ? 's' : ''}.`,
+            undefined, undefined, undefined,
+            venueId
+          );
+          await createNotification(
+            ownerId,
+            'venue_booking_payment_expired',
+            'Série de réservations expirée — créneaux disponibles',
+            `La série de réservations de "${requesterName}" pour "${venueName}" a expiré — ${n} créneau${plural ? 'x' : ''} redevien${plural ? 'nent' : 't'} disponible${plural ? 's' : ''}.`,
+            undefined, undefined, undefined,
+            venueId
+          );
 
-        // Notify requester
-        try {
-          await NotificationModel.create({
-            user: booking.requester,
-            type: 'venue_booking_payment_expired',
-            title: 'Réservation expirée',
-            message: `Votre réservation pour "${booking.venue.name}" le ${eventDate} a expiré car le paiement n'a pas été effectué dans les 72h.`,
-            relatedVenue: booking.venue._id,
-            relatedBooking: booking._id,
-            read: false,
-          });
-        } catch (notifError) {
-          console.error('[PaymentTimeout] Erreur notification requester:', notifError, { bookingId: booking._id });
-        }
+        } else {
+          // Booking solo — traitement individuel
+          if (booking.stripeSessionId && booking.paymentStatus === 'pending' && stripe) {
+            try {
+              await stripe.checkout.sessions.expire(booking.stripeSessionId);
+              console.log('[PaymentTimeout] Session Stripe expirée:', booking.stripeSessionId);
+            } catch (stripeErr) {
+              console.error('[PaymentTimeout] Erreur expiration session Stripe:', stripeErr, { bookingId: booking._id });
+            }
+          }
 
-        // Notify owner
-        const requesterName = (booking.requester as any)?.firstName
-          ? `${(booking.requester as any).firstName} ${(booking.requester as any).lastName}`
-          : 'un utilisateur';
-        try {
-          await NotificationModel.create({
-            user: booking.venue.owner,
-            type: 'venue_booking_payment_expired',
-            title: 'Réservation expirée — créneau disponible',
-            message: `La réservation de "${requesterName}" pour "${booking.venue.name}" le ${eventDate} a expiré faute de paiement. Le créneau est de nouveau disponible.`,
-            relatedVenue: booking.venue._id,
-            relatedBooking: booking._id,
-            read: false,
-          });
-        } catch (notifError) {
-          console.error('[PaymentTimeout] Erreur notification owner:', notifError, { bookingId: booking._id });
+          const expired = await VenueBookingModel.findOneAndUpdate(
+            { _id: booking._id, status: 'ACCEPTED' },
+            { status: 'EXPIRED' },
+            { new: true }
+          );
+          if (!expired) {
+            console.log('[PaymentTimeout] Booking déjà transitionné, skip:', booking._id);
+            continue;
+          }
+          expiredCount++;
+
+          if (!booking.venue) {
+            console.error('[PaymentTimeout] Venue non trouvée pour booking, expiré sans notification:', booking._id);
+            continue;
+          }
+
+          emitVenueBookingPaymentUpdated(
+            booking._id.toString(),
+            (booking.venue as any)._id.toString(),
+            'EXPIRED',
+            booking.paymentStatus,
+            [(booking.requester as any)._id?.toString() || booking.requester.toString(), (booking.venue as any)?.owner?.toString() || ''].filter(Boolean)
+          );
+
+          const d = booking.requestedDate;
+          const eventDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+          const venueId = (booking.venue as any)._id.toString();
+          const ownerId = (booking.venue as any).owner.toString();
+          const requesterId = (booking.requester as any)._id?.toString() || booking.requester.toString();
+          const requesterName = (booking.requester as any)?.firstName
+            ? `${(booking.requester as any).firstName} ${(booking.requester as any).lastName}`
+            : 'un utilisateur';
+
+          await createNotification(
+            requesterId,
+            'venue_booking_payment_expired',
+            'Réservation expirée',
+            `Votre réservation pour "${booking.venue.name}" le ${eventDate} a expiré car le paiement n'a pas été effectué dans les 72h.`,
+            undefined, undefined, undefined,
+            venueId,
+            booking._id.toString()
+          );
+          await createNotification(
+            ownerId,
+            'venue_booking_payment_expired',
+            'Réservation expirée — créneau disponible',
+            `La réservation de "${requesterName}" pour "${booking.venue.name}" le ${eventDate} a expiré faute de paiement. Le créneau est de nouveau disponible.`,
+            undefined, undefined, undefined,
+            venueId,
+            booking._id.toString()
+          );
         }
       } catch (bookingErr) {
         console.error('[PaymentTimeout] Erreur traitement booking:', bookingErr, { bookingId: booking._id });
       }
     }
 
-    // Step B — Send 24h reminders
+    // Step B — Rappels 24h (un seul rappel par groupe)
     const reminderDeadline = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const reminderBookings = await VenueBookingModel.find({
       status: 'ACCEPTED',
@@ -1380,6 +1878,8 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
     })
       .populate<{ venue: { _id: mongoose.Types.ObjectId; owner: mongoose.Types.ObjectId; name: string } | null }>('venue', 'owner name');
 
+    const processedReminderGroups = new Set<string>();
+
     for (const booking of reminderBookings) {
       try {
         if (!booking.venue) {
@@ -1387,23 +1887,46 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
           continue;
         }
 
-        const d = booking.requestedDate;
-        const eventDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        const groupId = booking.bookingGroupId?.toString();
 
-        // Save reminder flag first to prevent spam if notification fails then succeeds on retry
-        booking.paymentReminderSentAt = new Date();
-        await booking.save();
+        if (groupId) {
+          if (processedReminderGroups.has(groupId)) continue;
+          processedReminderGroups.add(groupId);
 
-        await NotificationModel.create({
-          user: booking.requester,
-          type: 'venue_booking_payment_reminder',
-          title: 'Rappel — paiement requis',
-          message: `Rappel : votre réservation pour "${booking.venue.name}" le ${eventDate} expire dans 24h. Effectuez le paiement pour confirmer.`,
-          relatedVenue: booking.venue._id,
-          relatedBooking: booking._id,
-          read: false,
-        });
-        reminderCount++;
+          // Poser le flag sur tous les membres du groupe pour éviter les doublons
+          await VenueBookingModel.updateMany(
+            { bookingGroupId: booking.bookingGroupId, status: 'ACCEPTED', paymentReminderSentAt: null },
+            { paymentReminderSentAt: now }
+          );
+
+          await createNotification(
+            booking.requester.toString(),
+            'venue_booking_payment_reminder',
+            'Rappel — paiement de série requis',
+            `Rappel : votre série de réservations pour "${booking.venue.name}" expire dans 24h. Effectuez le paiement pour confirmer.`,
+            undefined, undefined, undefined,
+            (booking.venue as any)._id.toString(),
+            booking._id.toString()
+          );
+          reminderCount++;
+        } else {
+          const d = booking.requestedDate;
+          const eventDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+
+          booking.paymentReminderSentAt = new Date();
+          await booking.save();
+
+          await createNotification(
+            booking.requester.toString(),
+            'venue_booking_payment_reminder',
+            'Rappel — paiement requis',
+            `Rappel : votre réservation pour "${booking.venue.name}" le ${eventDate} expire dans 24h. Effectuez le paiement pour confirmer.`,
+            undefined, undefined, undefined,
+            (booking.venue as any)._id.toString(),
+            booking._id.toString()
+          );
+          reminderCount++;
+        }
 
         emitVenueBookingPaymentUpdated(
           booking._id.toString(),
@@ -1421,6 +1944,86 @@ export const checkPaymentTimeouts = async (req: Request, res: Response): Promise
     res.status(200).json({ expired: expiredCount, reminded: reminderCount });
   } catch (error) {
     console.error('Erreur checkPaymentTimeouts:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+};
+
+// ─── Annulation de série booking-centric (ADR 0004) ──────────────────────────
+
+/**
+ * Annule toutes les réservations non passées d'un groupe (PENDING/ACCEPTED/CONFIRMED),
+ * requester-scoped. Collecte les événements annulés et envoie des notifications groupées
+ * (1 notif proprio + 1 notif/email par participant distinct via notifySeriesCancellation).
+ */
+export const cancelBookingGroup = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const requesterId = req.user?.id;
+    const { bookingGroupId } = req.params;
+
+    if (!requesterId) {
+      res.status(401).json({ message: 'Non authentifié' });
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(bookingGroupId)) {
+      res.status(400).json({ message: 'ID de groupe invalide' });
+      return;
+    }
+
+    const bookings = await VenueBookingModel.find({
+      bookingGroupId,
+      requester: requesterId,
+      status: { $in: ['PENDING', 'ACCEPTED', 'CONFIRMED'] },
+    }).sort({ requestedDate: 1 });
+
+    const cancellable = bookings.filter((b) => {
+      const dateStr = (b.requestedDate as Date).toISOString().slice(0, 10);
+      return !isCalendarDatePast(dateStr);
+    });
+
+    if (cancellable.length === 0) {
+      res.status(404).json({ message: 'Aucune réservation annulable pour ce groupe' });
+      return;
+    }
+
+    let groupInfo: { venueId: string; ownerId: string; venueName: string } | null = null;
+    const cancelledEvents: EventDocument[] = [];
+    let cancelledCount = 0;
+
+    for (const booking of cancellable) {
+      const result = await cancelBookingWithRefund(booking._id, { skipNotify: true });
+      if (!result) continue;
+      cancelledCount++;
+      if (!groupInfo) {
+        groupInfo = { venueId: result.venueId, ownerId: result.ownerId, venueName: result.venueName };
+      }
+      if (result.cancelledEvent) {
+        cancelledEvents.push(result.cancelledEvent);
+      }
+    }
+
+    if (groupInfo && cancelledCount > 0) {
+      const { ownerId, venueId, venueName } = groupInfo;
+      const n = cancelledCount;
+      await createNotification(
+        ownerId,
+        'venue_booking_cancelled_by_requester',
+        'Série de réservations annulée',
+        n > 1
+          ? `${n} réservations pour "${venueName}" ont été annulées par le demandeur. Les créneaux sont de nouveau disponibles.`
+          : `Une réservation pour "${venueName}" a été annulée par le demandeur. Le créneau est de nouveau disponible.`,
+        undefined, undefined, undefined,
+        venueId
+      );
+    }
+
+    if (cancelledEvents.length > 0) {
+      await notifySeriesCancellation(cancelledEvents);
+    }
+
+    res.status(200).json({ cancelled: cancelledCount });
+  } catch (error) {
+    console.error('Erreur cancelBookingGroup:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 };

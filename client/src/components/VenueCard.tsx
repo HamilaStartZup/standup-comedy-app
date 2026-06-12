@@ -19,16 +19,16 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: '#1a1a2e',
-        border: '1px solid rgba(255,255,255,0.1)',
+        background: 'var(--ccc-bg-elevated)',
+        border: '1px solid var(--ccc-border-subtle)',
         borderRadius: 16,
         overflow: 'hidden',
         cursor: 'pointer',
         transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         transform: hovered ? 'translateY(-4px)' : 'none',
         boxShadow: hovered
-          ? '0 8px 32px rgba(255,65,108,0.25)'
-          : '0 2px 8px rgba(0,0,0,0.3)',
+          ? '0 8px 32px rgba(15, 23, 42, 0.12)'
+          : '0 4px 24px rgba(15, 23, 42, 0.08)',
       }}
     >
       {/* Photo */}
@@ -55,7 +55,7 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
               left: 0,
               width: '100%',
               height: '100%',
-              background: 'linear-gradient(135deg, #1a1a2e 0%, #2a1a3e 100%)',
+              background: 'var(--ccc-bg-surface)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -81,7 +81,7 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
             position: 'absolute',
             top: 12,
             left: 12,
-            background: venue.isActive ? 'rgba(255,65,108,0.9)' : 'rgba(128,128,128,0.9)',
+            background: venue.isActive ? 'rgba(124, 58, 237,0.9)' : 'rgba(128,128,128,0.9)',
             color: '#fff',
             fontSize: 11,
             fontWeight: 700,
@@ -102,7 +102,7 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
             margin: '0 0 4px 0',
             fontSize: 17,
             fontWeight: 700,
-            color: '#fff',
+            color: 'var(--ccc-text-primary)',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -110,23 +110,23 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
         >
           {venue.name}
         </h3>
-        <p style={{ margin: '0 0 12px 0', fontSize: 13, color: '#aaa' }}>
+        <p style={{ margin: '0 0 12px 0', fontSize: 13, color: 'var(--ccc-text-muted)' }}>
           📍 {venue.city}
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 13, color: '#bbb' }}>
+          <span style={{ fontSize: 13, color: 'var(--ccc-text-secondary)' }}>
             👥 {venue.capacity} places
           </span>
           <span
             style={{
               fontSize: 15,
               fontWeight: 700,
-              color: '#ff416c',
+              color: '#7c3aed',
             }}
           >
             {venue.pricePerEvent.toLocaleString('fr-FR')} €
-            <span style={{ fontSize: 11, fontWeight: 400, color: '#888' }}>{getPricingLabel(venue.pricingType)}</span>
+            <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--ccc-text-muted)' }}>{getPricingLabel(venue.pricingType)}</span>
           </span>
         </div>
       </div>

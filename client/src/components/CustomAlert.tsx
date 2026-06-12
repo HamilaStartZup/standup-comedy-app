@@ -35,14 +35,14 @@ function CustomAlert({ message, type, onClose }: CustomAlertProps) {
   const colors = getTypeColors();
 
   const alertStyle: CSSProperties = {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     borderRadius: '12px',
     padding: '24px',
     maxWidth: '400px',
     width: '100%',
     margin: '0 16px',
-    color: '#ffffff',
-    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+    color: 'var(--ccc-text-primary)',
+    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.12)',
     border: `2px solid ${colors.border}`,
     animation: 'slideIn 0.3s ease-out',
   };
@@ -71,7 +71,7 @@ function CustomAlert({ message, type, onClose }: CustomAlertProps) {
     flex: 1,
     fontSize: '1em',
     lineHeight: '1.5',
-    color: '#e5e5e5',
+    color: 'var(--ccc-text-secondary)',
   };
 
   const buttonStyle: CSSProperties = {

@@ -38,6 +38,43 @@ export async function getSpectatorCoordinates(user: {
   return null;
 }
 
+async function notifyMatchingSpectators(
+  coords: { lat: number; lon: number },
+  title: string,
+  message: string,
+  relatedEventId: string
+): Promise<number> {
+  const spectators = await UserModel.find({ role: 'SPECTATOR' })
+    .select('_id city latitude longitude spectatorPreferences')
+    .lean();
+
+  let notified = 0;
+  for (const s of spectators) {
+    const prefs = (s as any).spectatorPreferences;
+    const radiusKm = ALLOWED_RADIUS_KM.includes(prefs?.radiusKm) ? prefs.radiusKm : 20;
+    const specCoords = await getSpectatorCoordinates(s as any);
+    if (!specCoords) continue;
+    if (distanceKm(coords.lat, coords.lon, specCoords.lat, specCoords.lon) > radiusKm) continue;
+
+    await createNotification(
+      (s as any)._id.toString(),
+      'new_event',
+      title,
+      message,
+      relatedEventId
+    );
+    notified++;
+
+    if ((s as any).latitude == null || (s as any).longitude == null) {
+      await UserModel.updateOne(
+        { _id: (s as any)._id },
+        { $set: { latitude: specCoords.lat, longitude: specCoords.lon } }
+      );
+    }
+  }
+  return notified;
+}
+
 export async function notifySpectatorsInRadius(
   eventId: string,
   event: {
@@ -54,10 +91,6 @@ export async function notifySpectatorsInRadius(
       return;
     }
 
-    const spectators = await UserModel.find({ role: 'SPECTATOR' })
-      .select('_id city latitude longitude spectatorPreferences')
-      .lean();
-
     const eventTitle = event.title || 'Nouvel événement';
     const eventDate = event.date
       ? new Date(event.date).toLocaleDateString('fr-FR', {
@@ -70,40 +103,51 @@ export async function notifySpectatorsInRadius(
     const title = 'Nouvel événement près de chez vous';
     const message = `${eventTitle}${eventDate ? ` - ${eventDate}` : ''}. Découvrez-le sur l'accueil !`;
 
-    let notified = 0;
-    for (const s of spectators) {
-      const prefs = (s as any).spectatorPreferences;
-      const radiusKm = ALLOWED_RADIUS_KM.includes(prefs?.radiusKm)
-        ? prefs.radiusKm
-        : 20;
-      const specCoords = await getSpectatorCoordinates(s as any);
-      if (!specCoords) continue;
-      const d = distanceKm(coords.lat, coords.lon, specCoords.lat, specCoords.lon);
-      if (d > radiusKm) continue;
-
-      await createNotification(
-        (s as any)._id.toString(),
-        'new_event',
-        title,
-        message,
-        eventId
-      );
-      notified++;
-
-      // Mettre à jour lat/lng du spectateur si pas encore renseignés (pour les prochaines fois)
-      if ((s as any).latitude == null || (s as any).longitude == null) {
-        await UserModel.updateOne(
-          { _id: (s as any)._id },
-          { $set: { latitude: specCoords.lat, longitude: specCoords.lon } }
-        );
-      }
-    }
-
+    const notified = await notifyMatchingSpectators(coords, title, message, eventId);
     if (notified > 0) {
       console.log(`✅ [SpectatorNotif] ${notified} spectateur(s) notifié(s) dans le rayon pour l'événement ${eventId}`);
     }
   } catch (err) {
     console.error('❌ [SpectatorNotif] Erreur:', err);
+  }
+}
+
+export async function notifySpectatorsOfEventSeries(
+  events: Array<{
+    _id: Types.ObjectId;
+    title: string;
+    date: Date;
+    location?: { city?: string; postalCode?: string; latitude?: number; longitude?: number };
+  }>
+): Promise<void> {
+  if (events.length === 0) return;
+  try {
+    const first = events[0];
+    const coords = await getEventCoordinates(first);
+    if (!coords) {
+      console.log('[SpectatorNotif] Série sans coordonnées, notification par rayon ignorée');
+      return;
+    }
+
+    const n = events.length;
+    const firstDate = first.date
+      ? new Date(first.date).toLocaleDateString('fr-FR', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })
+      : '';
+    const eventTitle = first.title || 'Nouvel événement';
+    const title = 'Nouvelle série d\'événements près de chez vous';
+    const message = `Série de ${n} date${n > 1 ? 's' : ''} — ${eventTitle}, à partir du ${firstDate}. Découvrez-la sur l'accueil !`;
+
+    const notified = await notifyMatchingSpectators(coords, title, message, first._id.toString());
+    if (notified > 0) {
+      console.log(`✅ [SpectatorNotif] ${notified} spectateur(s) notifié(s) pour la série (${n} dates, event ${first._id})`);
+    }
+  } catch (err) {
+    console.error('❌ [SpectatorNotif] Erreur série:', err);
   }
 }
 

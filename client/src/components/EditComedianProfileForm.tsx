@@ -238,7 +238,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #ff416c, #ff4b2b)',
+    background: 'var(--ccc-accent-gradient)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -263,7 +263,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
-      <h2 style={{ color: '#ff416c', marginBottom: '20px' }}>Modifier le Profil Humoriste</h2>
+      <h2 style={{ color: '#7c3aed', marginBottom: '20px' }}>Modifier le Profil Humoriste</h2>
       <form onSubmit={handleSubmit}>
         <label style={labelStyle}>Photo de profil</label>
         <div style={{ marginBottom: '15px' }}>
@@ -278,7 +278,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
                   height: '100px',
                   borderRadius: '50%',
                   objectFit: 'cover',
-                  border: '2px solid #ff416c'
+                  border: '2px solid #7c3aed'
                 }}
               />
             </div>
@@ -678,7 +678,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
                               color: '#fff',
                             }}
                             onMouseEnter={(e) => {
-                              (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(255, 65, 108, 0.2)';
+                              (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(124, 58, 237, 0.2)';
                             }}
                             onMouseLeave={(e) => {
                               (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
@@ -713,8 +713,8 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
               padding: '10px 15px',
               borderRadius: '5px',
               border: '1px solid rgba(255, 255, 255, 0.2)',
-              backgroundColor: 'rgba(255, 65, 108, 0.15)',
-              color: '#ff416c',
+              backgroundColor: 'rgba(124, 58, 237, 0.15)',
+              color: '#7c3aed',
               cursor: 'pointer',
               fontSize: '0.9em',
               fontWeight: 'bold',

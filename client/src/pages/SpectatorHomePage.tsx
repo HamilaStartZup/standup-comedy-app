@@ -68,7 +68,7 @@ export default function SpectatorHomePage() {
     return p;
   }, [searchLieu, searchVenueType, searchRadius]);
 
-  const { data: eventsData, isLoading } = useQuery<IEvent[]>({
+  const { data: eventsRaw, isLoading } = useQuery({
     queryKey: ['events', 'spectator', queryParams],
     queryFn: async () => {
       const params = new URLSearchParams(queryParams).toString();
@@ -78,9 +78,10 @@ export default function SpectatorHomePage() {
     },
     enabled: !!user && hasSearchFilter,
   });
+  const eventsData: IEvent[] = eventsRaw ?? [];
 
   // Fetch events the spectator is registered to (includes cancelled ones)
-  const { data: myRegistrationsList = [] as IEvent[], isLoading: loadingRegistrations } = useQuery<IEvent[]>({
+  const { data: regRaw, isLoading: loadingRegistrations } = useQuery({
     queryKey: ['events', 'spectator', 'myRegistrations'],
     queryFn: async () => {
       const res = await api.get('/events?myRegistrations=true');
@@ -88,13 +89,14 @@ export default function SpectatorHomePage() {
     },
     enabled: !!user,
   });
+  const myRegistrationsList: IEvent[] = regRaw ?? [];
 
   // Set of event IDs the user is registered to — reliable source of truth
   const registeredEventIds = useMemo(() => {
     return new Set(myRegistrationsList.map((e: IEvent) => e._id));
   }, [myRegistrationsList]);
 
-  const { data: aroundMeEvents = [] as IEvent[], isLoading: loadingAroundMe } = useQuery<IEvent[]>({
+  const { data: aroundMeRaw, isLoading: loadingAroundMe } = useQuery({
     queryKey: ['events', 'spectator', 'nearMe', user?.city, effectiveRadius],
     queryFn: async () => {
       if (!user?.city?.trim()) return [];
@@ -104,6 +106,7 @@ export default function SpectatorHomePage() {
     },
     enabled: !!user && !!user?.city?.trim(),
   });
+  const aroundMeEvents: IEvent[] = aroundMeRaw ?? [];
 
   const { data: favoritesData } = useQuery({
     queryKey: ['event-favorites'],
@@ -220,13 +223,13 @@ export default function SpectatorHomePage() {
       <div
         style={{
           minHeight: 'calc(100vh - 60px)',
-          background: 'linear-gradient(to bottom right, #1a1a2e, #331f41)',
-          color: '#fff',
+          background: 'var(--ccc-bg-gradient)',
+          color: 'var(--ccc-text-primary)',
           padding: '24px',
         }}
       >
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <h1 style={{ marginBottom: 24, fontSize: '1.75rem' }}>Recherche d'évènements</h1>
+          <h1 className="ccc-page-title" style={{ marginBottom: 24 }}>Recherche d'évènements</h1>
 
           {/* Barre de recherche + filtre événements */}
           <div
@@ -247,9 +250,9 @@ export default function SpectatorHomePage() {
               style={{
                 padding: '12px 16px',
                 borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(0,0,0,0.3)',
-                color: '#fff',
+                border: '1px solid var(--ccc-border-medium)',
+                background: 'var(--ccc-bg-elevated)',
+                color: 'var(--ccc-text-primary)',
                 minWidth: 180,
               }}
             />
@@ -275,9 +278,9 @@ export default function SpectatorHomePage() {
               style={{
                 padding: '12px 16px',
                 borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(0,0,0,0.3)',
-                color: '#fff',
+                border: '1px solid var(--ccc-border-medium)',
+                background: 'var(--ccc-bg-elevated)',
+                color: 'var(--ccc-text-primary)',
                 minWidth: 180,
                 cursor: 'pointer',
               }}
@@ -296,9 +299,9 @@ export default function SpectatorHomePage() {
               style={{
                 padding: '12px 14px',
                 borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(0,0,0,0.3)',
-                color: '#fff',
+                border: '1px solid var(--ccc-border-medium)',
+                background: 'var(--ccc-bg-elevated)',
+                color: 'var(--ccc-text-primary)',
                 fontSize: '0.9rem',
                 cursor: 'pointer',
               }}
@@ -316,9 +319,9 @@ export default function SpectatorHomePage() {
                 style={{
                   padding: '12px 16px',
                   borderRadius: 8,
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  background: 'rgba(0,0,0,0.3)',
-                  color: '#fff',
+                  border: '1px solid var(--ccc-border-medium)',
+                  background: 'var(--ccc-bg-elevated)',
+                  color: 'var(--ccc-text-primary)',
                   cursor: 'pointer',
                   fontSize: '0.9rem',
                 }}
@@ -329,16 +332,16 @@ export default function SpectatorHomePage() {
           </div>
 
           {!hasSearchFilter ? (
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', marginBottom: 24 }}>
+            <p style={{ color: 'var(--ccc-text-muted)', fontStyle: 'italic', marginBottom: 24 }}>
               Recherchez un lieu (ville) ou sélectionnez un type de lieu pour afficher les événements.
             </p>
           ) : (
             <>
               <h2 style={{ marginBottom: 16, fontSize: '1.25rem' }}>Événements à venir</h2>
               {isLoading ? (
-                <p style={{ color: 'rgba(255,255,255,0.7)' }}>Chargement…</p>
+                <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
               ) : upcomingEvents.length === 0 ? (
-                <p style={{ color: 'rgba(255,255,255,0.7)' }}>Aucun événement trouvé.</p>
+                <p style={{ color: 'var(--ccc-text-muted)' }}>Aucun événement trouvé.</p>
               ) : (
                 <div
                   style={{
@@ -371,9 +374,9 @@ export default function SpectatorHomePage() {
             <section style={{ marginBottom: 40 }}>
               <h2 style={{ marginBottom: 16, fontSize: '1.25rem' }}>Inscrits (à venir)</h2>
               {loadingRegistrations ? (
-                <p style={{ color: 'rgba(255,255,255,0.7)' }}>Chargement…</p>
+                <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
               ) : registeredUpcoming.length === 0 ? (
-                <p style={{ color: 'rgba(255,255,255,0.7)' }}>Aucun événement à venir auquel vous êtes inscrit.</p>
+                <p style={{ color: 'var(--ccc-text-muted)' }}>Aucun événement à venir auquel vous êtes inscrit.</p>
               ) : (
                 <div
                   style={{
@@ -414,9 +417,9 @@ export default function SpectatorHomePage() {
                   style={{
                     padding: '8px 12px',
                     borderRadius: 8,
-                    border: '1px solid rgba(255,255,255,0.3)',
-                    background: 'rgba(0,0,0,0.4)',
-                    color: '#fff',
+                    border: '1px solid var(--ccc-border-medium)',
+                    background: 'var(--ccc-bg-elevated)',
+                    color: 'var(--ccc-text-primary)',
                     fontSize: '0.85rem',
                     cursor: updateRadiusMutation.isPending ? 'wait' : 'pointer',
                   }}
@@ -429,9 +432,9 @@ export default function SpectatorHomePage() {
                 </select>
               </div>
               {loadingAroundMe ? (
-                <p style={{ color: 'rgba(255,255,255,0.7)' }}>Chargement…</p>
+                <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
               ) : aroundMeUpcoming.length === 0 ? (
-                <p style={{ color: 'rgba(255,255,255,0.7)' }}>
+                <p style={{ color: 'var(--ccc-text-muted)' }}>
                   Aucun événement à venir dans ce rayon.
                 </p>
               ) : (
@@ -515,20 +518,21 @@ function EventCard({
 
   const imageUrl = (event as any).imageUrl;
   const hasBg = !!imageUrl;
-  const textColor = hasBg ? '#fff' : '#1a1a2e';
-  const textColorMuted = hasBg ? 'rgba(255,255,255,0.92)' : '#555';
-  const textColorMuted2 = hasBg ? 'rgba(255,255,255,0.88)' : '#666';
+  const textColor = hasBg ? '#fff' : 'var(--ccc-text-primary)';
+  const textColorMuted = hasBg ? 'rgba(255,255,255,0.92)' : 'var(--ccc-text-secondary)';
+  const textColorMuted2 = hasBg ? 'rgba(255,255,255,0.88)' : 'var(--ccc-text-muted)';
   const textShadow = hasBg ? '0 1px 2px rgba(0,0,0,0.8)' : 'none';
 
   return (
     <div
       style={{
         position: 'relative',
-        background: hasBg ? undefined : '#fff',
+        background: hasBg ? undefined : 'var(--ccc-bg-elevated)',
+        border: hasBg ? undefined : '1px solid var(--ccc-border-subtle)',
+        boxShadow: hasBg ? undefined : '0 4px 24px rgba(15, 23, 42, 0.08)',
         backgroundImage: hasBg ? `url(${imageUrl})` : undefined,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        border: '1px solid rgba(0,0,0,0.1)',
         borderRadius: 12,
         overflow: 'hidden',
         display: 'flex',
