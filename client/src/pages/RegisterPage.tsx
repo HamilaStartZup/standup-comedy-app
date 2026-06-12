@@ -431,11 +431,13 @@ function RegisterPage() {
               Continuer avec Google
             </button>
 
-        <div style={separatorStyle}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
-          ou
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
-        </div>
+            <div style={separatorStyle}>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
+              ou
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
+            </div>
+          </>
+        )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
           {/* Prénom */}

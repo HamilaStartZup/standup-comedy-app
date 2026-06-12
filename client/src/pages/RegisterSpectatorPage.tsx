@@ -347,11 +347,13 @@ function RegisterSpectatorPage() {
               Continuer avec Google
             </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '10px 0 20px', color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
-          ou
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
-        </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '10px 0 20px', color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
+              ou
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
+            </div>
+          </>
+        )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
           <div>

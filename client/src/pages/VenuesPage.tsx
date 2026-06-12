@@ -5,7 +5,6 @@ import Navbar from '../components/Navbar';
 import VenuesTabs from '../components/VenuesTabs';
 import type { IVenue } from '../types/venue';
 import { VENUE_TYPES } from '../types/venue';
-import type { IVenue } from '../types/venue';
 import { useVenues } from '../hooks/useVenues';
 import VenueCardSkeleton from '../components/skeletons/VenueCardSkeleton';
 import Pagination from '../components/Pagination';
