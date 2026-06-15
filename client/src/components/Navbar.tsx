@@ -191,7 +191,7 @@ function Navbar() {
     if (user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN') {
       items.push({ to: '/venues', label: 'Salles', icon: '🏛️' });
     }
-    if (user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || user?.role === 'SUPER_ADMIN') {
+    if (user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN') {
       items.push({ to: aidesEntryPath, label: 'Aides', icon: '📚' });
     }
 
@@ -237,7 +237,7 @@ function Navbar() {
         {user?.role === 'COMEDIAN' && (
           <Link to="/venues" onMouseEnter={prefetchVenues} className={`nav-link${isLinkActive('/venues') ? ' is-active' : ''}`}>Salles</Link>
         )}
-        {(user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || user?.role === 'SUPER_ADMIN') && (
+        {(user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN') && (
           <Link to={aidesEntryPath} className={`nav-link${isAidesNavActive ? ' is-active' : ''}`}>Aides</Link>
         )}
       </>

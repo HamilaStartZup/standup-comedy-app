@@ -13,6 +13,19 @@ import VenuesTabs from '../components/VenuesTabs';
 import type { IVenueBooking, CancellationPolicy } from '../types/venue';
 import { calculateRefundEstimate, formatRefundMessage, formatRefundReason, type RefundEstimate } from '../utils/cancellationPolicy';
 
+type BookingStatusFilter =
+  | 'ACTIVE'
+  | 'ALL'
+  | 'PENDING'
+  | 'ACCEPTED'
+  | 'CONFIRMED'
+  | 'REFUSED'
+  | 'EXPIRED'
+  | 'CANCELLED_BY_OWNER'
+  | 'CANCELLED_BY_REQUESTER';
+
+const ACTIVE_BOOKING_STATUSES: IVenueBooking['status'][] = ['PENDING', 'ACCEPTED', 'CONFIRMED'];
+
 type DisplayItem =
   | { kind: 'single'; booking: IVenueBooking }
   | { kind: 'group'; groupId: string; bookings: IVenueBooking[] };
@@ -50,7 +63,7 @@ const MyBookingsPage: React.FC = () => {
   const [cancellingGroupId, setCancellingGroupId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'status' | 'date-asc' | 'date-desc' | 'created-desc'>('status');
-  const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDING' | 'ACCEPTED' | 'CONFIRMED' | 'REFUSED' | 'EXPIRED' | 'CANCELLED_BY_OWNER' | 'CANCELLED_BY_REQUESTER'>('ALL');
+  const [filterStatus, setFilterStatus] = useState<BookingStatusFilter>('ACTIVE');
   const [page, setPage] = useState(1);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -272,7 +285,12 @@ const MyBookingsPage: React.FC = () => {
     return 0;
   };
 
-  const matchesStatus = (b: IVenueBooking) => filterStatus === 'ALL' || b.status === filterStatus;
+  const matchesStatus = (b: IVenueBooking) =>
+    filterStatus === 'ALL'
+      ? true
+      : filterStatus === 'ACTIVE'
+        ? ACTIVE_BOOKING_STATUSES.includes(b.status)
+        : b.status === filterStatus;
 
   const recurringGroups = React.useMemo(() => {
     const map = new Map<string, IVenueBooking[]>();
@@ -710,15 +728,16 @@ const MyBookingsPage: React.FC = () => {
                   style={{
                     padding: '10px 14px',
                     background: '#fff',
-                    border: `1px solid ${filterStatus !== 'ALL' ? '#7c3aed' : '#e2e8f0'}`,
+                    border: `1px solid ${filterStatus !== 'ACTIVE' ? '#7c3aed' : '#e2e8f0'}`,
                     borderRadius: 10,
-                    color: filterStatus !== 'ALL' ? '#7c3aed' : '#1a1a1a',
+                    color: filterStatus !== 'ACTIVE' ? '#7c3aed' : '#1a1a1a',
                     fontSize: 14,
                     cursor: 'pointer',
                     outline: 'none',
-                    fontWeight: filterStatus !== 'ALL' ? 600 : 400,
+                    fontWeight: filterStatus !== 'ACTIVE' ? 600 : 400,
                   }}
                 >
+                  <option value="ACTIVE">En attente, acceptées, confirmées</option>
                   <option value="ALL">Tous les statuts</option>
                   <option value="PENDING">En attente</option>
                   <option value="ACCEPTED">Acceptée</option>
