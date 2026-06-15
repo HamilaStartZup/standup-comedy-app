@@ -11,16 +11,11 @@ interface ToastAlertProps {
 function ToastAlert({ id, message, type, onDismiss, autoDismiss }: ToastAlertProps) {
   const getTypeColors = () => {
     switch (type) {
-      case 'success':
-        return { bg: '#10b981', border: '#059669', icon: '✓' };
-      case 'error':
-        return { bg: '#ef4444', border: '#dc2626', icon: '✕' };
-      case 'warning':
-        return { bg: '#f59e0b', border: '#d97706', icon: '⚠' };
-      case 'info':
-        return { bg: '#3b82f6', border: '#2563eb', icon: 'ℹ' };
-      default:
-        return { bg: '#6b7280', border: '#4b5563', icon: '•' };
+      case 'success': return { bg: 'var(--ccc-success)', icon: '✓' };
+      case 'error':   return { bg: 'var(--ccc-error)',   icon: '✕' };
+      case 'warning': return { bg: 'var(--ccc-warning)', icon: '⚠' };
+      case 'info':    return { bg: 'var(--ccc-info)',     icon: 'ℹ' };
+      default:        return { bg: 'var(--ccc-text-muted)', icon: '•' };
     }
   };
 

@@ -23,6 +23,12 @@
   --ccc-border-subtle: rgba(15, 23, 42, 0.08);
   --ccc-border-medium: rgba(15, 23, 42, 0.14);
 
+  /* Semantic states */
+  --ccc-success: #10b981;
+  --ccc-error: #ef4444;
+  --ccc-warning: #f59e0b;
+  --ccc-info: #3b82f6;
+
   /* Radius */
   --ccc-radius-sm: 8px;
   --ccc-radius-md: 12px;
