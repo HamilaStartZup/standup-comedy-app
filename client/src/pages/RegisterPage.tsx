@@ -7,7 +7,7 @@ import { loginWithKeycloak, translateOAuthError } from '../services/oauth';
 import api from '../services/api';
 
 function RegisterPage() {
-  const { registerMutation } = useAuth();
+  const { registerMutation, isOAuthEnabled } = useAuth();
   const { showError } = useAlert();
   const [searchParams] = useSearchParams();
   const urlRole = searchParams.get('role')?.toUpperCase();
@@ -173,8 +173,6 @@ function RegisterPage() {
       }
       // Utilisateur déjà existant (connexion) — cookie HttpOnly posé par le serveur
       if (!result.pendingRegistration) {
-        const profile = await api.get('/profile/me');
-
         window.location.href = '/dashboard';
       }
     } catch (error: any) {
@@ -221,8 +219,6 @@ function RegisterPage() {
         experience: parseInt(oauthData.experience),
         consent: { termsAccepted: true, privacyAccepted: true, isAdult: true },
       });
-      const { token, user } = response.data;
-
       window.location.href = '/dashboard';
     } catch (error: any) {
       showError("Erreur lors de la création du compte. Veuillez réessayer.");
@@ -354,11 +350,11 @@ function RegisterPage() {
     margin: '20px 0',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #28a745, #218838)',
+    background: 'var(--ccc-accent-gradient)',
     color: 'white',
     fontSize: '1.2em',
     fontWeight: 'bold',
-    cursor: 'pointer',
+    cursor: registerMutation.isPending ? 'not-allowed' : 'pointer',
     transition: 'background 0.3s ease',
     opacity: registerMutation.isPending ? 0.7 : 1,
   };
@@ -380,17 +376,19 @@ function RegisterPage() {
 
   const socialButtonBaseStyle: CSSProperties = {
     width: '100%',
-    padding: '12px',
+    padding: '14px 20px',
     marginBottom: '10px',
-    borderRadius: '8px',
+    borderRadius: '10px',
     border: 'none',
-    fontSize: '1em',
-    fontWeight: 'bold',
+    fontSize: '0.95em',
+    fontWeight: '600',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '10px',
+    gap: '12px',
+    transition: 'all 0.2s ease',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
   };
 
   const separatorStyle: CSSProperties = {
@@ -409,25 +407,29 @@ function RegisterPage() {
         <p>Crée ton compte pour rejoindre la communauté</p>
 
         {/* Boutons inscription sociale */}
-        <button
-          type="button"
-          onClick={() => handleSocialRegister('google')}
-          style={{ ...socialButtonBaseStyle, backgroundColor: '#ffffff', color: '#3c4043' }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-          </svg>
-          Continuer avec Google
-        </button>
+        {isOAuthEnabled && (
+          <>
+            <button
+              type="button"
+              onClick={() => handleSocialRegister('google')}
+              style={{ ...socialButtonBaseStyle, backgroundColor: '#ffffff', color: '#3c4043' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continuer avec Google
+            </button>
 
-        <div style={separatorStyle}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
-          ou
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
-        </div>
+            <div style={separatorStyle}>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
+              ou
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ccc-border-subtle)' }} />
+            </div>
+          </>
+        )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
           {/* Prénom */}
