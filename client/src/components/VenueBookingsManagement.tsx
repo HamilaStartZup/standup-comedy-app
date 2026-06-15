@@ -4,6 +4,7 @@ import { listVenueBookings, updateBookingStatus, updateBookingGroupStatus, cance
 import { SuccessMessages, ErrorMessages, getErrorMessage } from '../services/systemMessages';
 import { useAlert } from '../hooks/useAlert';
 import BookingStatusBadge from './BookingStatusBadge';
+import ConfirmDialog from './ConfirmDialog';
 import type { IVenueBooking } from '../types/venue';
 import type { IUserData } from '../types/user';
 
@@ -113,6 +114,8 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [ownerResponse, setOwnerResponse] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  // Réservation dont l'annulation par le lieu attend confirmation
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // État pour la gestion de lots
@@ -157,7 +160,6 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
   };
 
   const handleCancelByOwner = async (bookingId: string) => {
-    if (!window.confirm('Annuler cette réservation acceptée ?')) return;
     setActionLoading(bookingId);
     try {
       await cancelBookingByOwner(bookingId);
@@ -633,7 +635,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
           {/* Annuler si ACCEPTED ou CONFIRMED */}
           {(booking.status === 'ACCEPTED' || booking.status === 'CONFIRMED') && (
             <button
-              onClick={() => handleCancelByOwner(booking._id)}
+              onClick={() => setCancelConfirmId(booking._id)}
               disabled={actionLoading === booking._id}
               style={{
                 padding: '8px 18px',
@@ -654,6 +656,21 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
         </div>
       ))}
       </div>
+
+      <ConfirmDialog
+        isOpen={cancelConfirmId !== null}
+        title="Annuler la réservation"
+        message="Annuler cette réservation acceptée ? Le demandeur en sera notifié."
+        confirmText="Annuler la réservation"
+        cancelText="Retour"
+        isDangerous
+        onConfirm={async () => {
+          if (!cancelConfirmId) return;
+          await handleCancelByOwner(cancelConfirmId);
+          setCancelConfirmId(null);
+        }}
+        onCancel={() => setCancelConfirmId(null)}
+      />
     </div>
   );
 };

@@ -993,11 +993,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
     if (eventType === 'recurring') {
       if (!recurrenceEndDate) {
-        alert('Veuillez indiquer une date de fin pour la récurrence.');
+        showWarning('Veuillez indiquer une date de fin pour la récurrence.');
         return;
       }
       if (recurringDates.length === 0) {
-        alert('Aucune date générée. Vérifiez la date de début, la date de fin et les options (ex. jours de la semaine pour Hebdomadaire).');
+        showWarning('Aucune date générée. Vérifiez la date de début, la date de fin et les options (ex. jours de la semaine pour Hebdomadaire).');
         return;
       }
     }

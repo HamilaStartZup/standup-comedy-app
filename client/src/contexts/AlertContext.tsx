@@ -118,18 +118,14 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({ children }) => {
   }, [dismissAlert]);
 
   const showSuccess = useCallback(
-    (message: string, options?: Omit<AlertOptions, 'type'>) => {
-      console.log('🟢 showSuccess appelé avec message:', message);
-      return showAlert(message, { ...options, type: 'success' });
-    },
+    (message: string, options?: Omit<AlertOptions, 'type'>) =>
+      showAlert(message, { ...options, type: 'success' }),
     [showAlert]
   );
 
   const showError = useCallback(
-    (message: string, options?: Omit<AlertOptions, 'type'>) => {
-      console.log('🔴 showError appelé avec message:', message);
-      return showAlert(message, { ...options, type: 'error' });
-    },
+    (message: string, options?: Omit<AlertOptions, 'type'>) =>
+      showAlert(message, { ...options, type: 'error' }),
     [showAlert]
   );
 

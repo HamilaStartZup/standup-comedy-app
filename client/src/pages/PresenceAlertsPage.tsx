@@ -230,7 +230,7 @@ const PresenceAlertsPage = () => {
 
         <div style={contentStyle}>
           {isLoading && (
-            <p style={{ textAlign: 'center', color: '#aaa' }}>Chargement des alertes...</p>
+            <p style={{ textAlign: 'center', color: 'var(--ccc-text-muted)' }}>Chargement des alertes...</p>
           )}
 
           {error && (

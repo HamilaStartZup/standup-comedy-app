@@ -96,9 +96,9 @@ function GeographicCompatibilityBadge({
 
   if (isChecking) {
     return (
-      <span style={{ 
-        fontSize: '0.75em', 
-        color: '#aaa',
+      <span style={{
+        fontSize: '0.75em',
+        color: 'var(--ccc-text-muted)',
         marginTop: '4px',
         display: 'block'
       }}>
@@ -148,6 +148,8 @@ function ApplicationsPage() {
     message: string;
     onConfirm: () => Promise<void> | void;
   }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  // Id de la candidature dont la confirmation "Je reste inscrit" est en cours (anti double-submit)
+  const [confirmingAppId, setConfirmingAppId] = useState<string | null>(null);
   const [statusToSet, setStatusToSet] = useState<'ACCEPTED' | 'REJECTED' | null>(null);
   const [statusAppId, setStatusAppId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
@@ -905,7 +907,7 @@ function ApplicationsPage() {
 
   const cardDetailStyle: CSSProperties = {
     fontSize: '0.9em',
-    color: '#ccc',
+    color: 'var(--ccc-text-secondary)',
     marginBottom: '5px',
   };
 
@@ -991,7 +993,7 @@ function ApplicationsPage() {
 
   const eventDateStyle: CSSProperties = {
     fontSize: '0.9em',
-    color: '#aaa',
+    color: 'var(--ccc-text-muted)',
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
@@ -1450,13 +1452,13 @@ function ApplicationsPage() {
           </div>
         )}
 
-        {loading && <p style={{ textAlign: 'center', color: '#ccc' }}>Chargement des candidatures...</p>}
+        {loading && <p style={{ textAlign: 'center', color: 'var(--ccc-text-muted)' }}>Chargement des candidatures...</p>}
         {error && <p style={{ textAlign: 'center', color: '#dc3545' }}>Erreur: {error}</p>}
         
         {user?.role === 'COMEDIAN' ? (
           <>
             {!loading && !error && comedianFilteredApplications.length === 0 && (
-              <p style={{ textAlign: 'center', fontSize: '1.2em', color: '#ccc' }}>
+              <p style={{ textAlign: 'center', fontSize: '1.2em', color: 'var(--ccc-text-muted)' }}>
                 {comedianEmptyStates[comedianTab]}
               </p>
             )}
@@ -1491,21 +1493,21 @@ function ApplicationsPage() {
 
                           {/* Heure de l'évènement */}
                           {(app.event.startTime || app.event.endTime) && (
-                            <p style={{ ...cardDetailStyle, margin: 0, marginBottom: '4px', color: (app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? '#64748B' : '#ccc' }}>
+                            <p style={{ ...cardDetailStyle, margin: 0, marginBottom: '4px', color: (app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? '#64748B' : 'var(--ccc-text-secondary)' }}>
                               · Heure: {[app.event.startTime, app.event.endTime].filter(Boolean).join(' – ')}
                             </p>
                           )}
 
                           {/* Lieu */}
                           {app.event?.location && (app.event.location.venue || app.event.location.city || app.event.location.address) && (
-                            <p style={{ ...cardDetailStyle, margin: 0, marginBottom: '4px', color: (app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? '#64748B' : '#ccc' }}>
+                            <p style={{ ...cardDetailStyle, margin: 0, marginBottom: '4px', color: (app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? '#64748B' : 'var(--ccc-text-secondary)' }}>
                               · Lieu: {[app.event.location.venue, app.event.location.city, app.event.location.address].filter(Boolean).join(' — ')}
                             </p>
                           )}
 
                           {/* Durée de l'évènement */}
                           {app.event.requirements?.duration != null && (
-                            <p style={{ ...cardDetailStyle, margin: 0, marginBottom: '4px', color: (app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? '#64748B' : '#ccc' }}>
+                            <p style={{ ...cardDetailStyle, margin: 0, marginBottom: '4px', color: (app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? '#64748B' : 'var(--ccc-text-secondary)' }}>
                               · Durée de l'évènement: {app.event.requirements.duration} min
                             </p>
                           )}
@@ -1522,7 +1524,7 @@ function ApplicationsPage() {
 
                           {/* Ligne 4 : Message (si disponible) */}
                           {app.message && (
-                            <p style={{ ...cardDetailStyle, margin: 0, color: (app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? '#64748B' : '#ccc' }}>
+                            <p style={{ ...cardDetailStyle, margin: 0, color: (app.status === 'PENDING' || app.status === 'ACCEPTED' || app.status === 'REJECTED' || app.status === 'EXPIRED' || (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM')) ? '#64748B' : 'var(--ccc-text-secondary)' }}>
                               · Message: {app.message}
                             </p>
                           )}
@@ -1593,19 +1595,29 @@ function ApplicationsPage() {
                           {user?.role === 'COMEDIAN' && !isEventCancelled(app.event) && comedianTab === 'accepted' && app.status === 'ACCEPTED' && wasEventUpdatedAfterApplication(app) && app.event?.date && isEventUpcoming(app.event.date) && !isEventWithinOneHour(app.event) && (
                             <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                               <button
+                                disabled={confirmingAppId === app._id}
                                 onClick={async (e: React.MouseEvent<HTMLButtonElement>) => {
                                   e.stopPropagation();
+                                  if (confirmingAppId) return;
+                                  setConfirmingAppId(app._id);
                                   try {
                                     await api.patch(`/applications/${app._id}/confirm`, {});
                                     showSuccess(SuccessMessages.APPLICATION_CONFIRMED);
                                     queryClient.invalidateQueries({ queryKey: ['applications'] });
                                   } catch (error) {
                                     showError(ErrorMessages.APPLICATION_CONFIRM_FAILED);
+                                  } finally {
+                                    setConfirmingAppId(null);
                                   }
                                 }}
-                                style={{ ...actionButtonStyle, backgroundColor: '#ff9800' }}
+                                style={{
+                                  ...actionButtonStyle,
+                                  backgroundColor: '#ff9800',
+                                  opacity: confirmingAppId === app._id ? 0.7 : 1,
+                                  cursor: confirmingAppId === app._id ? 'wait' : 'pointer',
+                                }}
                               >
-                                Je reste inscrit
+                                {confirmingAppId === app._id ? 'Confirmation…' : 'Je reste inscrit'}
                               </button>
                               <button
                                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
@@ -1658,7 +1670,7 @@ function ApplicationsPage() {
         ) : (
           <>
             {!loading && !error && getFilteredApplications().length === 0 && (
-              <p style={{ textAlign: 'center', fontSize: '1.2em', color: '#ccc' }}>
+              <p style={{ textAlign: 'center', fontSize: '1.2em', color: 'var(--ccc-text-muted)' }}>
                 Aucune candidature trouvée pour ce filtre.
               </p>
             )}

@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { getErrorMessage, WarningMessages } from '../services/systemMessages';
 import { pageTitleStyle } from '../styles/theme';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 interface EventStats {
   totalEvents: number;
@@ -326,7 +327,7 @@ const Dashboard = () => {
           alignItems: 'center',
           minHeight: 'calc(100vh - 60px)' // Adjust based on navbar height
         }}>
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-500"></div>
+          <LoadingSpinner message="Chargement des statistiques..." />
         </div>
       </div>
     );
@@ -338,12 +339,27 @@ const Dashboard = () => {
         <Navbar />
         <div style={{
           display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: 'calc(100vh - 60px)',
-          color: '#dc3545'
         }}>
-          <p>Erreur lors du chargement des statistiques: {error}</p>
+          <p style={{ color: '#dc3545' }}>Erreur lors du chargement des statistiques: {error}</p>
+          <button
+            onClick={() => refetchStats()}
+            style={{
+              padding: '10px 20px',
+              borderRadius: 8,
+              border: 'none',
+              backgroundColor: '#7c3aed',
+              color: '#fff',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Réessayer
+          </button>
         </div>
       </div>
     );

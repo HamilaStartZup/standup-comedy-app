@@ -217,7 +217,7 @@ const ComedianReportsPage = () => {
           </div>
 
           {isLoading && (
-            <p style={{ textAlign: 'center', color: '#aaa' }}>Chargement des signalements...</p>
+            <p style={{ textAlign: 'center', color: 'var(--ccc-text-muted)' }}>Chargement des signalements...</p>
           )}
 
           {error && (

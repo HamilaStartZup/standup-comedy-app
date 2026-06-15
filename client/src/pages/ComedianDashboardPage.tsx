@@ -7,6 +7,7 @@ import api from '../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { pageTitleStyle } from '../styles/theme';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 function ComedianDashboardPage() {
   const { user } = useAuth();
@@ -26,7 +27,7 @@ function ComedianDashboardPage() {
   }, [location.search, showInfo]);
 
   // Récupère les candidatures de l'humoriste (auth via cookie HttpOnly)
-  const { data: applications } = useQuery({
+  const { data: applications, isLoading, isError, refetch } = useQuery({
     queryKey: ['comedianApplications', user?._id],
     queryFn: async () => {
       if (!user?._id) return [];
@@ -161,24 +162,33 @@ function ComedianDashboardPage() {
           alignItems: 'center',
           minHeight: 'calc(100vh - 60px)'
         }}>
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-500"></div>
+          <LoadingSpinner message="Chargement de votre profil..." />
         </div>
       </div>
     );
   }
+
+  // Pendant le chargement, afficher un tiret plutôt qu'un 0 trompeur
+  const displayCount = (count: number) => (isLoading ? '–' : count);
 
   return (
     <div style={mainContainerStyle}>
       <style>
         {`
           @keyframes greenBlink {
-            0%, 50% { 
+            0%, 50% {
               box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(40, 167, 69, 0.6);
               border: 2px solid rgba(40, 167, 69, 0.3);
             }
-            25%, 75% { 
+            25%, 75% {
               box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 30px rgba(40, 167, 69, 0.9);
               border: 2px solid rgba(40, 167, 69, 0.7);
+            }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .ccc-blink-card {
+              animation: none !important;
+              border: 2px solid rgba(40, 167, 69, 0.5) !important;
             }
           }
         `}
@@ -192,17 +202,49 @@ function ComedianDashboardPage() {
           {/* Ajoutez d'autres onglets si nécessaire */}
         </div>
 
+        {isError && (
+          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <p style={{ color: 'var(--ccc-text-secondary)', marginBottom: 16 }}>
+              Impossible de charger vos candidatures.
+            </p>
+            <button
+              onClick={() => refetch()}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 8,
+                border: 'none',
+                backgroundColor: '#7c3aed',
+                color: '#fff',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Réessayer
+            </button>
+          </div>
+        )}
+        {!isError && (
         <div style={cardsGridStyle}>
           {/* Carte: Évènements à venir (SWAPPED) - Avec effet clignotant vert */}
           <div
+            className="ccc-blink-card"
             style={blinkingCardStyle}
+            role="button"
+            tabIndex={0}
+            aria-label="Voir mes évènements à venir"
             onClick={() => navigate('/events?tab=accepted')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate('/events?tab=accepted');
+              }
+            }}
             onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
             onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
           >
             <div>
               <p style={cardTitleStyle}>Évènements à venir</p>
-              <p style={cardValueStyle}>{upcomingCount}</p>
+              <p style={cardValueStyle}>{displayCount(upcomingCount)}</p>
             </div>
             <span style={{ fontSize: '2.6em', color: '#ff4b2b' }}>✨</span>
           </div>
@@ -211,7 +253,7 @@ function ComedianDashboardPage() {
           <div style={cardStyle}>
             <div>
               <p style={cardTitleStyle}>Candidatures Acceptées</p>
-              <p style={cardValueStyle}>{acceptedCount}</p>
+              <p style={cardValueStyle}>{displayCount(acceptedCount)}</p>
             </div>
             <span style={{ fontSize: '2.6em', color: '#28a745' }}>✅</span>
           </div>
@@ -220,12 +262,14 @@ function ComedianDashboardPage() {
           <div style={cardStyle}>
             <div>
               <p style={cardTitleStyle}>Mes Candidatures</p>
-              <p style={cardValueStyle}>{sentCount}</p>
+              <p style={cardValueStyle}>{displayCount(sentCount)}</p>
             </div>
             <span style={{ fontSize: '2.6em', color: '#7c3aed' }}>📝</span>
           </div>
         </div>
+        )}
         {/* Ajout du camembert */}
+        {!isError && (
         <div style={{ maxWidth: 400, margin: '40px auto 0 auto', backgroundColor: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)', borderRadius: 8, padding: 24 }}>
           <h2 style={{ color: '#7c3aed', textAlign: 'center', marginBottom: 16 }}>Répartition des Candidatures</h2>
           <ResponsiveContainer width="100%" height={300}>
@@ -264,6 +308,7 @@ function ComedianDashboardPage() {
             </PieChart>
           </ResponsiveContainer>
         </div>
+        )}
       </div>
     </div>
   );

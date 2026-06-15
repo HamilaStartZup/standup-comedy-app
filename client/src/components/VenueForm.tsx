@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import LocationPickerMap from './LocationPickerMap';
 import { geocodeAddress } from '../services/api';
+import { useAlert } from '../hooks/useAlert';
 import type { IVenue } from '../types/venue';
 import {
   VENUE_TYPES,
@@ -224,6 +225,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
     ...initialData,
     timeRestrictions: { ...defaultData.timeRestrictions, ...initialData?.timeRestrictions },
   });
+  const { showError } = useAlert();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState('');
@@ -243,7 +245,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert('La photo ne doit pas dépasser 5MB.'); return; }
+    if (file.size > 5 * 1024 * 1024) { showError('La photo ne doit pas dépasser 5MB.'); return; }
     setPhotoUploading(true);
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -252,7 +254,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
       setPhotoUploading(false);
       e.target.value = '';
     };
-    reader.onerror = () => { alert('Impossible de lire la photo.'); setPhotoUploading(false); };
+    reader.onerror = () => { showError('Impossible de lire la photo.'); setPhotoUploading(false); };
     reader.readAsDataURL(file);
   };
 
