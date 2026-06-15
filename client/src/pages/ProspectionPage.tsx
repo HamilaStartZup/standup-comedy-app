@@ -70,6 +70,7 @@ const ProspectionPage: React.FC = () => {
   const [venueDept, setVenueDept] = useState('');
   const [venueType, setVenueType] = useState('');
   const [venueStatus, setVenueStatus] = useState('');
+  const [venueHasEmail, setVenueHasEmail] = useState<'' | 'true' | 'false'>('');
   const [venueSearch, setVenueSearch] = useState('');
   const [enriching, setEnriching] = useState(false);
 
@@ -95,13 +96,14 @@ const ProspectionPage: React.FC = () => {
   });
 
   const { data: venuesData, isLoading: loadingVenues } = useQuery({
-    queryKey: ['prospected-venues', venuePage, venueDept, venueType, venueStatus, venueSearch],
+    queryKey: ['prospected-venues', venuePage, venueDept, venueType, venueStatus, venueHasEmail, venueSearch],
     queryFn: () => listProspectedVenues({
       page: venuePage,
       limit: 15,
       departement: venueDept || undefined,
       type: venueType || undefined,
       emailStatus: venueStatus || undefined,
+      hasEmail: venueHasEmail || undefined,
       search: venueSearch || undefined,
     }),
     enabled: isSuperAdmin,
@@ -591,13 +593,23 @@ const ProspectionPage: React.FC = () => {
                 <option key={value} value={value}>{label}</option>
               ))}
             </select>
+            <select value={venueHasEmail} onChange={(e) => { setVenueHasEmail(e.target.value as '' | 'true' | 'false'); setVenuePage(1); }} style={inputStyle}>
+              <option value="">Tous (email)</option>
+              <option value="true">Avec email</option>
+              <option value="false">Sans email</option>
+            </select>
             <select value={venueStatus} onChange={(e) => { setVenueStatus(e.target.value); setVenuePage(1); }} style={inputStyle}>
-              <option value="">Tous statuts email</option>
+              <option value="">Tous statuts envoi</option>
               {Object.entries(EMAIL_STATUS_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
               ))}
             </select>
           </div>
+          {venuesData && (
+            <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--ccc-text-muted)' }}>
+              {venuesData.pagination.total} lieu(x) correspondant aux filtres
+            </p>
+          )}
 
           {loadingVenues ? (
             <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>

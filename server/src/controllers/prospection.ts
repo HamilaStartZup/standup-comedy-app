@@ -83,18 +83,37 @@ export const listProspectedVenuesHandler = async (req: AuthRequest, res: Respons
   const limit = Math.min(Number(req.query.limit) || 20, 100);
   const skip = (page - 1) * limit;
 
-  const filter: Record<string, unknown> = {};
-  if (req.query.departement) filter['address.departement'] = req.query.departement;
-  if (req.query.type) filter.type = req.query.type;
-  if (req.query.emailStatus) filter.emailStatus = req.query.emailStatus;
+  const andClauses: Record<string, unknown>[] = [];
+
+  if (req.query.departement) andClauses.push({ 'address.departement': req.query.departement });
+  if (req.query.type) andClauses.push({ type: req.query.type });
+  if (req.query.emailStatus) andClauses.push({ emailStatus: req.query.emailStatus });
+
+  if (req.query.hasEmail === 'true') {
+    andClauses.push({ email: { $type: 'string', $gt: '' } });
+  } else if (req.query.hasEmail === 'false') {
+    andClauses.push({
+      $or: [{ email: { $exists: false } }, { email: null }, { email: '' }],
+    });
+  }
+
   if (req.query.search) {
     const q = String(req.query.search);
-    filter.$or = [
-      { name: { $regex: q, $options: 'i' } },
-      { email: { $regex: q, $options: 'i' } },
-      { 'address.city': { $regex: q, $options: 'i' } },
-    ];
+    andClauses.push({
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { email: { $regex: q, $options: 'i' } },
+        { 'address.city': { $regex: q, $options: 'i' } },
+      ],
+    });
   }
+
+  const filter: Record<string, unknown> =
+    andClauses.length === 0
+      ? {}
+      : andClauses.length === 1
+        ? andClauses[0]
+        : { $and: andClauses };
 
   const [venues, total] = await Promise.all([
     ProspectedVenueModel.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit),

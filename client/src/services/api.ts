@@ -659,6 +659,7 @@ export const listProspectedVenues = async (params: {
   departement?: string;
   type?: string;
   emailStatus?: string;
+  hasEmail?: 'true' | 'false';
   search?: string;
 }) => {
   const qs = new URLSearchParams();
@@ -667,6 +668,7 @@ export const listProspectedVenues = async (params: {
   if (params.departement) qs.set('departement', params.departement);
   if (params.type) qs.set('type', params.type);
   if (params.emailStatus) qs.set('emailStatus', params.emailStatus);
+  if (params.hasEmail) qs.set('hasEmail', params.hasEmail);
   if (params.search) qs.set('search', params.search);
   const res = await api.get(`/prospection/venues?${qs.toString()}`);
   return res.data as {
