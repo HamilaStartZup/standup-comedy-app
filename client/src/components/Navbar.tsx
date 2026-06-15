@@ -187,6 +187,7 @@ function Navbar() {
     }
     if (user?.role === 'SUPER_ADMIN') {
       items.push({ to: '/directory', label: 'Répertoire', icon: '👥' });
+      items.push({ to: '/prospection', label: 'Prospection', icon: '📡' });
     }
     if (user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN') {
       items.push({ to: '/venues', label: 'Salles', icon: '🏛️' });
@@ -229,7 +230,10 @@ function Navbar() {
           <Link to="/applications" className={`nav-link${location.pathname === '/applications' ? ' is-active' : ''}`}>Candidatures</Link>
         )}
         {user?.role === 'SUPER_ADMIN' && (
-          <Link to="/directory" className={`nav-link${location.pathname === '/directory' ? ' is-active' : ''}`}>Répertoire</Link>
+          <>
+            <Link to="/directory" className={`nav-link${location.pathname === '/directory' ? ' is-active' : ''}`}>Répertoire</Link>
+            <Link to="/prospection" className={`nav-link${location.pathname === '/prospection' ? ' is-active' : ''}`}>Prospection</Link>
+          </>
         )}
         {user?.role === 'ORGANIZER' && (
           <Link to="/venues" onMouseEnter={prefetchVenues} className={`nav-link${isLinkActive('/venues') ? ' is-active' : ''}`}>Salles</Link>

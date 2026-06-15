@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { IVenue, IVenueBooking, IVenueBlockedDate } from '../types/venue';
+import type { IProspectionConfig, IProspectionRun, IProspectedVenue } from '../types/prospection';
 
 // Configuration automatique de l'URL de base selon l'environnement
 const baseURL =
@@ -619,5 +620,71 @@ export async function geocodeAddress(
   const [lng, lat] = coordinates;
   return { lat, lng };
 }
+
+// ——— Prospection (Super Admin) ———
+
+export const getProspectionConfig = async () => {
+  const res = await api.get('/prospection/config');
+  return res.data as { config: IProspectionConfig; departments: Record<string, string> };
+};
+
+export const patchProspectionConfig = async (payload: Partial<IProspectionConfig>) => {
+  const res = await api.patch('/prospection/config', payload);
+  return res.data as { config: IProspectionConfig };
+};
+
+export const runProspection = async (payload?: {
+  departements?: string[];
+  types?: string[];
+  maxEmails?: number;
+  dryRun?: boolean;
+}) => {
+  const res = await api.post('/prospection/run', payload ?? {});
+  return res.data as { runId: string; message: string };
+};
+
+export const getProspectionRun = async (runId: string) => {
+  const res = await api.get(`/prospection/runs/${runId}`);
+  return res.data as { run: IProspectionRun };
+};
+
+export const listProspectionRuns = async (limit = 20) => {
+  const res = await api.get(`/prospection/runs?limit=${limit}`);
+  return res.data as { runs: IProspectionRun[] };
+};
+
+export const listProspectedVenues = async (params: {
+  page?: number;
+  limit?: number;
+  departement?: string;
+  type?: string;
+  emailStatus?: string;
+  search?: string;
+}) => {
+  const qs = new URLSearchParams();
+  if (params.page) qs.set('page', String(params.page));
+  if (params.limit) qs.set('limit', String(params.limit));
+  if (params.departement) qs.set('departement', params.departement);
+  if (params.type) qs.set('type', params.type);
+  if (params.emailStatus) qs.set('emailStatus', params.emailStatus);
+  if (params.search) qs.set('search', params.search);
+  const res = await api.get(`/prospection/venues?${qs.toString()}`);
+  return res.data as {
+    venues: IProspectedVenue[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  };
+};
+
+export const enrichProspectionVenues = async (payload?: {
+  limit?: number;
+  departements?: string[];
+}) => {
+  const res = await api.post('/prospection/enrich', payload ?? {});
+  return res.data as {
+    message: string;
+    websitesFound: number;
+    emailsEnriched: number;
+  };
+};
 
 export default api;

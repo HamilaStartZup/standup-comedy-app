@@ -7,6 +7,7 @@
     "start": "node --max-old-space-size=400 dist/index.js",
     "dev": "nodemon",
     "seed:super-admin": "ts-node scripts/seedSuperAdmin.ts",
+    "import:prospected-venues": "ts-node scripts/importManualProspectedVenues.ts",
     "generate-secret": "node scripts/generate-secret.js"
   },
   "keywords": [],

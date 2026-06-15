@@ -27,6 +27,7 @@ const PasswordResetManagementPage = lazy(() => import('./pages/PasswordResetMana
 const PresenceAlertsPage = lazy(() => import('./pages/PresenceAlertsPage'))
 const LateCancellationAlertsPage = lazy(() => import('./pages/LateCancellationAlertsPage'))
 const ComedianReportsPage = lazy(() => import('./pages/ComedianReportsPage'))
+const ProspectionPage = lazy(() => import('./pages/ProspectionPage'))
 import LandingPage from './pages/LandingPage'
 const OAuthCallback = lazy(() => import('./pages/OAuthCallback'))
 const CalendarPage = lazy(() => import('./pages/CalendarPage'))
@@ -159,6 +160,7 @@ const AppRouter: React.FC = () => {
       <Route path="/profile/comedian/:id" element={<ComedianProfilePage />} />
       <Route path="/profile/comedian" element={<ComedianProfilePage />} />
       <Route path="/directory" element={<DirectoryPage />} />
+      <Route path="/prospection" element={<ProspectionPage />} />
       <Route path="/admin/password-resets" element={<PasswordResetManagementPage />} />
       <Route path="/admin/presence-alerts" element={<PresenceAlertsPage />} />
       <Route path="/admin/late-cancellations" element={<LateCancellationAlertsPage />} />
