@@ -42,7 +42,7 @@ function PasswordResetManagementPage() {
   }, [user, navigate]);
 
   // Récupérer les demandes avec React Query
-  const { data: requestsData, isLoading: loading } = useQuery({
+  const { data: requestsData, isLoading: loading, isError: isRequestsError, refetch: refetchRequests } = useQuery({
     queryKey: ['password-reset-requests'],
     queryFn: async () => {
       const response = await api.get('/auth/admin/password-reset-requests');
@@ -111,9 +111,9 @@ function PasswordResetManagementPage() {
   const inputStyle: CSSProperties = {
     padding: '10px',
     borderRadius: '8px',
-    border: '1px solid #444',
-    backgroundColor: '#2c2c4d',
-    color: '#ffffff',
+    border: '1px solid var(--ccc-border-medium)',
+    backgroundColor: 'var(--ccc-bg-elevated)',
+    color: 'var(--ccc-text-primary)',
     fontSize: '1em',
     width: '100%',
     marginBottom: '10px',
@@ -159,6 +159,11 @@ function PasswordResetManagementPage() {
           <div style={cardStyle}>
             <p>Chargement des demandes...</p>
           </div>
+        ) : isRequestsError ? (
+          <div style={{ ...cardStyle, textAlign: 'center' }}>
+            <p style={{ color: '#ef4444', marginBottom: 12 }}>Impossible de charger les demandes.</p>
+            <button onClick={() => refetchRequests()} style={{ padding: '10px 20px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Réessayer</button>
+          </div>
         ) : requests.length === 0 ? (
           <div style={cardStyle}>
             <p style={{ textAlign: 'center', fontSize: '1.2em' }}>
@@ -185,16 +190,16 @@ function PasswordResetManagementPage() {
                       <p style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '10px' }}>
                         👤 {request.userId?.firstName} {request.userId?.lastName}
                       </p>
-                      <p style={{ color: '#aaa', marginBottom: '5px' }}>
+                      <p style={{ color: 'var(--ccc-text-muted)', marginBottom: '5px' }}>
                         📧 {request.email}
                       </p>
-                      <p style={{ color: '#aaa', marginBottom: '5px' }}>
+                      <p style={{ color: 'var(--ccc-text-muted)', marginBottom: '5px' }}>
                         🎭 Rôle: {request.userId?.role}
                       </p>
-                      <p style={{ color: '#aaa', marginBottom: '5px' }}>
+                      <p style={{ color: 'var(--ccc-text-muted)', marginBottom: '5px' }}>
                         📅 Demandé le: {new Date(request.requestedAt).toLocaleString('fr-FR')}
                       </p>
-                      <p style={{ color: '#aaa' }}>
+                      <p style={{ color: 'var(--ccc-text-muted)' }}>
                         ⏰ Expire le: {new Date(request.expiresAt).toLocaleString('fr-FR')}
                       </p>
                     </div>
@@ -222,7 +227,7 @@ function PasswordResetManagementPage() {
                                 setSelectedUserId(null);
                                 setNewPassword('');
                               }}
-                              style={{ ...buttonStyle, background: '#6c757d' }}
+                              style={{ ...buttonStyle, background: 'var(--ccc-bg-elevated)', color: 'var(--ccc-text-secondary)' }}
                             >
                               Annuler
                             </button>

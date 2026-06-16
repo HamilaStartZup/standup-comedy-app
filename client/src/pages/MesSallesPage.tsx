@@ -48,14 +48,14 @@ const MesSallesPage: React.FC = () => {
     setHighlightedBookingId(bookingIdParam);
   }, [searchParams]);
 
-  const { data: venuesResponse, isLoading: loadingVenues } = useQuery({
+  const { data: venuesResponse, isLoading: loadingVenues, isError: isVenueError, refetch: refetchVenues } = useQuery({
     queryKey: ['venues', 'mine'],
     queryFn: () => listVenues({ owner: 'me' }),
     retry: 1,
     retryDelay: 1000,
   });
 
-  const { data: bookingsResponse, isLoading: loadingBookings } = useQuery<IVenueBooking[]>({
+  const { data: bookingsResponse, isLoading: loadingBookings, isError: isBookingsError, refetch: refetchBookings } = useQuery<IVenueBooking[]>({
     queryKey: ['venue-owner-bookings'],
     queryFn: myBookings,
     retry: 1,
@@ -272,11 +272,16 @@ const MesSallesPage: React.FC = () => {
 
             {loadingVenues ? (
               <LoadingSpinner message="Chargement de vos salles..." />
+            ) : isVenueError ? (
+              <div style={{ textAlign: 'center', padding: '40px 24px' }}>
+                <p style={{ color: '#ef4444', marginBottom: 12 }}>Impossible de charger vos salles.</p>
+                <button onClick={() => refetchVenues()} style={{ padding: '10px 20px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>Réessayer</button>
+              </div>
             ) : myVenues.length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: '64px 24px',
-                border: '1px dashed rgba(255,255,255,0.1)',
+                border: '1px dashed var(--ccc-border-subtle)',
                 borderRadius: 20,
               }}>
                 <div style={{ fontSize: 60, marginBottom: 20 }}>🏛️</div>
@@ -323,6 +328,11 @@ const MesSallesPage: React.FC = () => {
           <div>
             {loadingBookings ? (
               <LoadingSpinner message="Chargement de vos réservations..." />
+            ) : isBookingsError ? (
+              <div style={{ textAlign: 'center', padding: '40px 24px' }}>
+                <p style={{ color: '#ef4444', marginBottom: 12 }}>Impossible de charger les réservations.</p>
+                <button onClick={() => refetchBookings()} style={{ padding: '10px 20px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>Réessayer</button>
+              </div>
             ) : bookings.length === 0 ? (
               <div style={{
                 textAlign: 'center',
@@ -573,7 +583,7 @@ const MesSallesPage: React.FC = () => {
                     style={{
                       textAlign: 'center',
                       padding: '36px 24px',
-                      border: '1px dashed rgba(255,255,255,0.15)',
+                      border: '1px dashed var(--ccc-border-medium)',
                       borderRadius: 16,
                       color: 'var(--ccc-text-muted)',
                     }}
