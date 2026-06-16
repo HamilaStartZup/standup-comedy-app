@@ -87,7 +87,7 @@ function RatingsSummaryModal({ event, onClose }: { event: IEvent | null; onClose
           Notes — {event.title}
         </h2>
         {isLoading && <p style={{ color: theme.colors.text.muted }}>Chargement des notes…</p>}
-        {error && <p style={{ color: '#dc3545' }}>Impossible de charger les notes.</p>}
+        {error && <p style={{ color: theme.colors.semantic.danger }}>Impossible de charger les notes.</p>}
         {data && !isLoading && (
           <>
             <div style={{ marginBottom: 20, padding: '16px', background: theme.colors.bg.surface, borderRadius: theme.radius.md }}>
@@ -179,7 +179,7 @@ function MyEventsPage() {
   const isQueryEnabled = !authIsLoading && !!user?._id;
 
   // Charger les favoris depuis l'API
-  const { data: eventFavoritesData, refetch: refetchEventFavorites } = useQuery<{ favorites: IEvent[] }, Error>({
+  const { data: eventFavoritesData, refetch: refetchEventFavorites, isError: eventFavoritesError, isLoading: eventFavoritesLoading } = useQuery<{ favorites: IEvent[] }, Error>({
     queryKey: ['eventFavorites', user?._id],
     queryFn: async () => {
       if (!user?._id || user?.role !== 'COMEDIAN') {
@@ -204,7 +204,7 @@ function MyEventsPage() {
   }, [eventFavoritesData, isComedianView]);
 
   // Charger les humoristes favoris (pour les organisateurs) avec React Query
-  const { data: favoriteComediansData, refetch: refetchFavoriteComedians } = useQuery<{ favorites: any[] }, Error>({
+  const { data: favoriteComediansData, refetch: refetchFavoriteComedians, isError: favoriteComediansError, isLoading: favoriteComediansLoading } = useQuery<{ favorites: any[] }, Error>({
     queryKey: ['organizerFavoriteComedians', user?._id],
     queryFn: async () => {
       if (!user?._id || user?.role !== 'ORGANIZER') {
@@ -281,6 +281,8 @@ function MyEventsPage() {
   const [comedianToInvite, setComedianToInvite] = useState<ComedianSearchResult | null>(null);
   const [selectedEventForInvite, setSelectedEventForInvite] = useState<string>('');
   const [isInviting, setIsInviting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [upcomingPage, setUpcomingPage] = useState(1);
   const [eventsPage] = useState(1);
   const [archivedPage, setArchivedPage] = useState(1);
@@ -455,7 +457,7 @@ useEffect(() => {
   }, [location.search, eventsLoading, fetchedEvents]);
 
   // New useQuery for comedian's applications
-  const { data: comedianApplications, isLoading: comedianApplicationsLoading, isError: comedianApplicationsError, error: comedianApplicationsErrorMessage } = useQuery<IApplication[], Error>({
+  const { data: comedianApplications, isLoading: comedianApplicationsLoading, isError: comedianApplicationsError, error: comedianApplicationsErrorMessage, refetch: refetchComedianApplications } = useQuery<IApplication[], Error>({
     queryKey: ['comedianApplications', user?._id],
     queryFn: async () => {
       if (!user?._id) {
@@ -471,7 +473,7 @@ useEffect(() => {
   });
 
   // Charger les scores de recommandation pour les humoristes
-  const { data: recommendationsData, isLoading: recommendationsLoading } = useQuery<{
+  const { data: recommendationsData, isLoading: recommendationsLoading, isError: recommendationsError } = useQuery<{
     recommendations: Array<{
       event: IEvent;
       score: number;
@@ -493,7 +495,7 @@ useEffect(() => {
   });
 
   // Charger les recommandations intelligentes (basées sur l'historique)
-  const { data: smartRecommendationsData, isLoading: smartRecommendationsLoading } = useQuery<SmartRecommendationsResponse, Error>({
+  const { data: smartRecommendationsData, isLoading: smartRecommendationsLoading, isError: smartRecommendationsError, refetch: refetchSmartRecommendations } = useQuery<SmartRecommendationsResponse, Error>({
     queryKey: ['smartRecommendations', user?._id],
     queryFn: async () => {
       if (!user?._id || user?.role !== 'COMEDIAN') {
@@ -1285,16 +1287,20 @@ useEffect(() => {
   const isRecommendationsTab = comedianTab === 'recommendations';
 
   const listIsLoading = isComedianView
-    ? (isRecommendationsTab ? smartRecommendationsLoading : (isFavoritesTab ? eventsLoading : (isOpportunitiesTab ? eventsLoading : comedianApplicationsLoading)))
+    ? (isRecommendationsTab ? smartRecommendationsLoading : (isFavoritesTab ? eventFavoritesLoading : (isOpportunitiesTab ? eventsLoading : comedianApplicationsLoading)))
     : eventsLoading;
 
   const listHasError = isComedianView
-    ? (isFavoritesTab ? eventsError : (isOpportunitiesTab ? eventsError : comedianApplicationsError))
+    ? (isRecommendationsTab ? smartRecommendationsError : (isFavoritesTab ? (eventsError || eventFavoritesError) : (isOpportunitiesTab ? eventsError : comedianApplicationsError)))
     : eventsError;
 
   const listErrorMessage = isComedianView
-    ? (isFavoritesTab ? eventsErrorMessage?.message : (isOpportunitiesTab ? eventsErrorMessage?.message : comedianApplicationsErrorMessage?.message))
+    ? (isRecommendationsTab ? 'Impossible de charger les recommandations.' : (isFavoritesTab ? eventsErrorMessage?.message : (isOpportunitiesTab ? eventsErrorMessage?.message : comedianApplicationsErrorMessage?.message)))
     : eventsErrorMessage?.message;
+
+  const listRefetch = isComedianView
+    ? (isRecommendationsTab ? refetchSmartRecommendations : (isFavoritesTab ? refetchEventFavorites : (isOpportunitiesTab ? refetch : refetchComedianApplications)))
+    : refetch;
 
   const showOrganizerUpcomingSection = !isComedianView && (
     (isOrganizerView && organizerTab === 'upcoming') ||
@@ -1401,7 +1407,7 @@ useEffect(() => {
               <>
                 <button
                   type="button"
-                  style={{ ...menuItemStyle, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+                  style={{ ...menuItemStyle, borderBottom: `1px solid ${theme.colors.border.subtle}` }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenActionsEventId(null);
@@ -1430,7 +1436,7 @@ useEffect(() => {
               <>
                 <button
                   type="button"
-                  style={{ ...menuItemStyle, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+                  style={{ ...menuItemStyle, borderBottom: `1px solid ${theme.colors.border.subtle}` }}
                   onClick={(e) => {
                     e.stopPropagation();
                 setOpenActionsEventId(null);
@@ -1443,7 +1449,7 @@ useEffect(() => {
                 </button>
                 <button
                   type="button"
-                  style={{ ...menuItemStyle, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+                  style={{ ...menuItemStyle, borderBottom: `1px solid ${theme.colors.border.subtle}` }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenActionsEventId(null);
@@ -1456,7 +1462,7 @@ useEffect(() => {
                 </button>
                 <button
                   type="button"
-                  style={{ ...menuItemStyle, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+                  style={{ ...menuItemStyle, borderBottom: `1px solid ${theme.colors.border.subtle}` }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenActionsEventId(null);
@@ -1470,7 +1476,7 @@ useEffect(() => {
                 </button>
                 <button
                   type="button"
-                  style={{ ...menuItemStyle, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+                  style={{ ...menuItemStyle, borderBottom: `1px solid ${theme.colors.border.subtle}` }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenActionsEventId(null);
@@ -1481,30 +1487,23 @@ useEffect(() => {
                 >
                   Voir spectateurs
                 </button>
-                {/* Org B (event adossé à une réservation) : l'annulation se pilote depuis « Mes
-                    réservations » (la réservation est le levier, cf. ADR 0002). On masque donc
-                    « Annuler » côté événement pour ces occurrences/séries. */}
-                {!((groupEvents && groupEvents.length > 0)
-                  ? groupEvents.some((e) => !!e.venueBookingId)
-                  : !!event.venueBookingId) && (
-                  <button
-                    type="button"
-                    style={menuItemStyle}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setOpenActionsEventId(null);
-                      if (groupEvents && groupEvents.length > 0) {
-                        openCancelGroupModal(groupEvents);
-                      } else {
-                        openCancelModal(event);
-                      }
-                    }}
-                    onMouseEnter={(e) => handleMenuItemMouseEnter(e)}
-                    onMouseLeave={handleMenuItemMouseLeave}
-                  >
-                    Annuler
-                  </button>
-                )}
+                <button
+                  type="button"
+                  style={menuItemStyle}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenActionsEventId(null);
+                    if (groupEvents && groupEvents.length > 0) {
+                      openCancelGroupModal(groupEvents);
+                    } else {
+                      openCancelModal(event);
+                    }
+                  }}
+                  onMouseEnter={(e) => handleMenuItemMouseEnter(e)}
+                  onMouseLeave={handleMenuItemMouseLeave}
+                >
+                  Annuler
+                </button>
               </>
             )}
           </div>
@@ -1636,6 +1635,7 @@ useEffect(() => {
 
   const confirmWithdrawApplication = async () => {
     if (!user?._id || !eventToWithdraw) return;
+    setIsWithdrawing(true);
     try {
       const app = comedianApplications?.find((a: IApplication) => a.event && a.event._id === eventToWithdraw._id);
       if (!app) {
@@ -1649,6 +1649,8 @@ useEffect(() => {
       closeWithdrawModal();
     } catch (error: any) {
       showError(getErrorMessage(error, ErrorMessages.APPLICATION_DELETE_FAILED));
+    } finally {
+      setIsWithdrawing(false);
     }
   };
 
@@ -1770,6 +1772,7 @@ useEffect(() => {
       return;
     }
 
+    setIsCancelling(true);
     try {
       let cancelledCount = 0;
       let skippedCount = 0;
@@ -1796,6 +1799,7 @@ useEffect(() => {
     } catch (err: any) {
       showError(err.response?.data?.message || err.message);
     } finally {
+      setIsCancelling(false);
       setShowCancelModal(false);
       setEventToCancel(null);
       setEventsGroupToCancel(null);
@@ -2423,7 +2427,7 @@ useEffect(() => {
         </div>
       ) : eventsError ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '20px' }}>
-          <p style={{ color: '#dc3545', fontSize: '1.2em', marginBottom: '20px' }}>
+          <p style={{ color: theme.colors.semantic.danger, fontSize: '1.2em', marginBottom: '20px' }}>
             Erreur lors du chargement des évènements
           </p>
           <p style={{ color: theme.colors.text.muted, fontSize: '1em', marginBottom: '20px', textAlign: 'center' }}>
@@ -2607,8 +2611,8 @@ useEffect(() => {
                   style={{
                     padding: '8px 15px',
                     borderRadius: theme.radius.sm,
-                    border: '1px solid #555',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: `1px solid ${theme.colors.border.medium}`,
+                    backgroundColor: theme.colors.bg.surface,
                     color: theme.colors.text.primary,
                     cursor: 'pointer',
                     fontSize: '14px',
@@ -2734,7 +2738,17 @@ useEffect(() => {
 
           {/* Liste des événements */}
           {listIsLoading && <p style={emptyStateStyle}>Chargement des évènements...</p>}
-          {listHasError && <p style={{ ...emptyStateStyle, color: '#dc3545' }}>Erreur: {listErrorMessage}</p>}
+          {listHasError && (
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <p style={{ ...emptyStateStyle, color: theme.colors.semantic.danger, marginBottom: 12 }}>Erreur : {listErrorMessage}</p>
+              <button
+                onClick={() => listRefetch()}
+                style={{ padding: '8px 20px', borderRadius: theme.radius.sm, border: 'none', background: theme.colors.accent.gradient, color: theme.colors.text.onAccent, fontSize: '0.9em', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Réessayer
+              </button>
+            </div>
+          )}
           {eventsToDisplay.length === 0 && !listIsLoading && !listHasError && (
             <p style={emptyStateStyle}>{comedianEmptyStates[comedianTab]}</p>
           )}
@@ -3191,13 +3205,13 @@ useEffect(() => {
 
                       {/* Résultats de la recherche */}
                       {isSearchingComedians && (
-                        <p style={{ color: '#28a745', marginTop: '15px', textAlign: 'center' }}>
+                        <p style={{ color: theme.colors.semantic.success, marginTop: '15px', textAlign: 'center' }}>
                           Recherche en cours...
                         </p>
                       )}
 
                       {comedianSearchError && (
-                        <p style={{ color: '#dc3545', marginTop: '15px', textAlign: 'center' }}>
+                        <p style={{ color: theme.colors.semantic.danger, marginTop: '15px', textAlign: 'center' }}>
                           {comedianSearchError}
                         </p>
                       )}
@@ -3210,7 +3224,7 @@ useEffect(() => {
 
                       {comedianSearchResults.length > 0 && (
                         <div style={{ marginTop: '20px' }}>
-                          <h4 style={{ color: '#28a745', marginBottom: '15px' }}>
+                          <h4 style={{ color: theme.colors.semantic.success, marginBottom: '15px' }}>
                             {comedianSearchTotal} humoriste{comedianSearchTotal > 1 ? 's' : ''} trouvé{comedianSearchTotal > 1 ? 's' : ''}
                           </h4>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -3237,19 +3251,20 @@ useEffect(() => {
                                 }}
                                 style={{
                                   padding: '15px',
-                                  backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                                  backgroundColor: theme.colors.bg.elevated,
                                   borderRadius: theme.radius.sm,
-                                  border: '1px solid #444',
+                                  border: `1px solid ${theme.colors.border.medium}`,
+                                  boxShadow: theme.shadow.card,
                                   cursor: 'pointer',
                                   transition: 'all 0.2s ease'
                                 }}
                                 onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'rgba(40, 167, 69, 0.2)';
-                                  e.currentTarget.style.borderColor = '#28a745';
+                                  e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.04)';
+                                  e.currentTarget.style.borderColor = '#7c3aed';
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
-                                  e.currentTarget.style.borderColor = '#444';
+                                  e.currentTarget.style.backgroundColor = '#ffffff';
+                                  e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.14)';
                                 }}
                               >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
@@ -3451,7 +3466,17 @@ useEffect(() => {
                 )}
               </div>
               {listIsLoading && <p style={emptyStateStyle}>Chargement des évènements...</p>}
-              {listHasError && <p style={{ ...emptyStateStyle, color: '#dc3545' }}>Erreur: {listErrorMessage}</p>}
+              {listHasError && (
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <p style={{ ...emptyStateStyle, color: theme.colors.semantic.danger, marginBottom: 12 }}>Erreur : {listErrorMessage}</p>
+              <button
+                onClick={() => listRefetch()}
+                style={{ padding: '8px 20px', borderRadius: theme.radius.sm, border: 'none', background: theme.colors.accent.gradient, color: theme.colors.text.onAccent, fontSize: '0.9em', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Réessayer
+              </button>
+            </div>
+          )}
               {((isOrganizerView && organizerTab === 'upcoming') || (isSuperAdminView && superAdminTab === 'upcoming'))
                 ? (
                   <>
@@ -3525,7 +3550,7 @@ useEffect(() => {
                             <div style={cardHeaderRowStyle}>
                               <div>
                                 <h3 style={eventTitleStyle}>{first?.title}</h3>
-                                <span style={{ fontSize: '0.85em', color: '#64748B' }}>Événement récurrent · {item.events.length} date(s)</span>
+                                <span style={{ fontSize: '0.85em', color: theme.colors.text.muted }}>Événement récurrent · {item.events.length} date(s)</span>
                               </div>
                               <div style={cardHeaderActionsStyle}>
                                 <span style={cardDateBadgeStyle}>Voir les dates</span>
@@ -3560,9 +3585,9 @@ useEffect(() => {
                                   onClick={(e) => { e.stopPropagation(); handleCardClick(event); }}
                                   style={{
                                     padding: '12px 16px',
-                                    backgroundColor: isDateComplete ? '#E1FFE6' : '#f8fafc',
+                                    backgroundColor: isDateComplete ? theme.colors.card.complete.bg : '#f8fafc',
                                     borderRadius: theme.radius.sm,
-                                    border: isDateComplete ? '1px solid #c8f0d0' : '1px solid rgba(0, 0, 0, 0.08)',
+                                    border: isDateComplete ? `1px solid ${theme.colors.card.complete.border}` : `1px solid ${theme.colors.border.subtle}`,
                                     cursor: 'pointer',
                                     display: 'flex',
                                     justifyContent: 'space-between',
@@ -3573,10 +3598,10 @@ useEffect(() => {
                                 >
                                   <div>
                                     <span style={{ ...cardDateBadgeStyle, marginRight: '8px', fontSize: '0.8em' }}>{dateFormatted}</span>
-                                    <span style={{ color: '#1a1a1a' }}>{timeStr}</span>
+                                    <span style={{ color: theme.colors.text.primary }}>{timeStr}</span>
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <span style={{ color: '#64748B', fontSize: '0.9em' }}>{participantsCount}/{maxP} humoristes</span>
+                                    <span style={{ color: theme.colors.text.muted, fontSize: '0.9em' }}>{participantsCount}/{maxP} humoristes</span>
                                     {user?.role === 'ORGANIZER' && renderOrganizerActions(event, 'upcoming', undefined, `upcoming-expanded-${event._id}`)}
                                   </div>
                                 </div>
@@ -3673,7 +3698,7 @@ useEffect(() => {
                 <h2 style={sectionTitleStyle}>Évènements complets</h2>
               </div>
               {eventsLoading && <p style={emptyStateStyle}>Chargement des évènements...</p>}
-              {eventsError && <p style={{ ...emptyStateStyle, color: '#dc3545' }}>Erreur: {eventsErrorMessage?.message}</p>}
+              {eventsError && <p style={{ ...emptyStateStyle, color: theme.colors.semantic.danger }}>Erreur : {eventsErrorMessage?.message}</p>}
               {!eventsLoading && !eventsError && completedUpcomingEvents.length === 0 && (
                 <p style={emptyStateStyle}>Aucun évènement complet à venir.</p>
               )}
@@ -3732,7 +3757,7 @@ useEffect(() => {
         <div ref={archivedSectionRef} style={sectionStyle}>
           <h2 style={sectionTitleStyle}>Évènements archivés</h2>
           {eventsLoading && <p style={emptyStateStyle}>Chargement des évènements...</p>}
-          {eventsError && <p style={{ ...emptyStateStyle, color: '#dc3545' }}>Erreur: {eventsErrorMessage?.message}</p>}
+          {eventsError && <p style={{ ...emptyStateStyle, color: theme.colors.semantic.danger }}>Erreur: {eventsErrorMessage?.message}</p>}
           {!eventsLoading && !eventsError && archivedEventsToShow.length === 0 && (
             <p style={emptyStateStyle}>Aucun évènement archivé.</p>
           )}
@@ -3833,7 +3858,7 @@ useEffect(() => {
         <div ref={cancelledSectionRef} style={sectionStyle}>
           <h2 style={sectionTitleStyle}>Évènements annulés</h2>
           {eventsLoading && <p style={emptyStateStyle}>Chargement des évènements...</p>}
-          {eventsError && <p style={{ ...emptyStateStyle, color: '#dc3545' }}>Erreur: {eventsErrorMessage?.message}</p>}
+          {eventsError && <p style={{ ...emptyStateStyle, color: theme.colors.semantic.danger }}>Erreur: {eventsErrorMessage?.message}</p>}
           {!eventsLoading && !eventsError && cancelledEvents.length === 0 && (
             <p style={emptyStateStyle}>Aucun évènement annulé.</p>
           )}
@@ -3899,7 +3924,19 @@ useEffect(() => {
       {showFavoriteComediansSection && (
         <div style={sectionStyle}>
           <h2 style={sectionTitleStyle}>Humoristes favoris</h2>
-          {favoriteComediansData?.favorites && favoriteComediansData.favorites.length > 0 ? (
+          {favoriteComediansLoading && <p style={emptyStateStyle}>Chargement des humoristes favoris...</p>}
+          {favoriteComediansError && (
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <p style={{ ...emptyStateStyle, color: theme.colors.semantic.danger, marginBottom: 12 }}>Impossible de charger les humoristes favoris.</p>
+              <button
+                onClick={() => refetchFavoriteComedians()}
+                style={{ padding: '8px 20px', borderRadius: theme.radius.sm, border: 'none', background: theme.colors.accent.gradient, color: theme.colors.text.onAccent, fontSize: '0.9em', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Réessayer
+              </button>
+            </div>
+          )}
+          {!favoriteComediansLoading && !favoriteComediansError && (favoriteComediansData?.favorites && favoriteComediansData.favorites.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
               {favoriteComediansData.favorites.map((comedian: any) => (
                 <div
@@ -3924,19 +3961,20 @@ useEffect(() => {
                   }}
                   style={{
                     padding: '15px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                    backgroundColor: theme.colors.bg.elevated,
                     borderRadius: theme.radius.sm,
-                    border: '1px solid #444',
+                    border: `1px solid ${theme.colors.border.medium}`,
+                    boxShadow: theme.shadow.card,
                     cursor: 'pointer',
                     transition: 'all 0.2s ease'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(40, 167, 69, 0.2)';
-                    e.currentTarget.style.borderColor = '#28a745';
+                    e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.04)';
+                    e.currentTarget.style.borderColor = '#7c3aed';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
-                    e.currentTarget.style.borderColor = '#444';
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.14)';
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
@@ -4027,7 +4065,7 @@ useEffect(() => {
             <p style={{ color: theme.colors.text.muted, marginTop: '20px', textAlign: 'center' }}>
               Aucun humoriste en favoris pour le moment. Utilisez la recherche d'humoristes pour en ajouter.
             </p>
-          )}
+          ))}
         </div>
       )}
 
@@ -4064,8 +4102,8 @@ useEffect(() => {
                 return (
                   <>
                     <div style={{ marginBottom: '20px', padding: '16px', ...eventCardStyle }}>
-                      <h3 style={{ margin: '0 0 8px 0', color: '#1a1a1a', fontSize: '1.2em' }}>{firstEvent?.title}</h3>
-                      <p style={{ margin: 0, color: '#64748B', fontSize: '0.9em' }}>
+                      <h3 style={{ margin: '0 0 8px 0', color: theme.colors.text.primary, fontSize: '1.2em' }}>{firstEvent?.title}</h3>
+                      <p style={{ margin: 0, color: theme.colors.text.muted, fontSize: '0.9em' }}>
                         {firstEvent?.location?.venue} — {firstEvent?.location?.city} · {eventsInGroup.length} date(s)
                       </p>
                     </div>
@@ -4096,8 +4134,8 @@ useEffect(() => {
                           >
                             <div style={{ flex: 1 }}>
                               <div style={{ ...cardDateBadgeStyle, marginBottom: '8px', display: 'inline-block' }}>{dateFormatted}</div>
-                              <div style={{ color: '#1a1a1a', fontWeight: 600, marginBottom: '4px' }}>{timeStr}</div>
-                              <div style={{ color: '#64748B', fontSize: '0.9em' }}>
+                              <div style={{ color: theme.colors.text.primary, fontWeight: 600, marginBottom: '4px' }}>{timeStr}</div>
+                              <div style={{ color: theme.colors.text.muted, fontSize: '0.9em' }}>
                                 {event.location?.venue} · {event.location?.city}
                               </div>
                             </div>
@@ -4105,7 +4143,7 @@ useEffect(() => {
                               <span style={{ ...statusBadgeStyle, opacity: (event.status === 'CANCELLED' || event.status === 'cancelled') ? 0.7 : 1 }}>
                                 {status}
                               </span>
-                              <span style={{ color: '#64748B', fontSize: '0.9em' }}>
+                              <span style={{ color: theme.colors.text.muted, fontSize: '0.9em' }}>
                                 {participantsCount}/{maxP} humoristes
                               </span>
                               {user?.role === 'ORGANIZER' && renderOrganizerActions(event, 'upcoming')}
@@ -4139,12 +4177,12 @@ useEffect(() => {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                           <div>
-                            <h3 style={{ margin: '0 0 6px 0', color: '#1a1a1a', fontSize: '1.1em' }}>{first?.title}</h3>
-                            <p style={{ margin: 0, color: '#64748B', fontSize: '0.9em' }}>
+                            <h3 style={{ margin: '0 0 6px 0', color: theme.colors.text.primary, fontSize: '1.1em' }}>{first?.title}</h3>
+                            <p style={{ margin: 0, color: theme.colors.text.muted, fontSize: '0.9em' }}>
                               {dateFirst} → {dateLast} · {events.length} date(s)
                             </p>
                             {first?.location?.city && (
-                              <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.85em' }}>{first.location.venue} — {first.location.city}</p>
+                              <p style={{ margin: '4px 0 0 0', color: theme.colors.text.muted, fontSize: '0.85em' }}>{first.location.venue} — {first.location.city}</p>
                             )}
                           </div>
                           <span style={{ ...cardDateBadgeStyle, flexShrink: 0 }}>{events.length} date(s)</span>
@@ -4200,7 +4238,12 @@ useEffect(() => {
       {/* Modal d'annulation d'évènement avec raison */}
       <Modal isOpen={showCancelModal} onClose={() => { setShowCancelModal(false); setEventToCancel(null); setEventsGroupToCancel(null); setCancelReason(''); }} title={eventsGroupToCancel?.length ? "Annuler le groupe d'événements" : "Annuler l'évènement"}>
         <div>
-          <p style={{ marginBottom: 12, color: '#ddd' }}>
+          {(eventToCancel?.venueBookingId || eventsGroupToCancel?.some(e => !!e.venueBookingId)) && (
+            <p style={{ marginBottom: 12, padding: '10px 12px', backgroundColor: theme.colors.bg.surface, borderRadius: theme.radius.sm, border: `1px solid ${theme.colors.border.subtle}`, color: theme.colors.text.secondary, fontSize: '0.9em' }}>
+              ℹ️ La réservation de salle reste active. Vous pourrez créer un nouvel événement sur ce créneau.
+            </p>
+          )}
+          <p style={{ marginBottom: 12, color: theme.colors.text.secondary }}>
             {(() => {
               const eventsToCheck = eventsGroupToCancel?.length ? eventsGroupToCancel : (eventToCancel ? [eventToCancel] : []);
               if (eventsToCheck.length === 0) return "";
@@ -4224,11 +4267,11 @@ useEffect(() => {
             style={{ width: '100%', minHeight: 80, padding: 10, borderRadius: theme.radius.sm, border: `1px solid ${theme.colors.border.medium}`, background: theme.colors.bg.surface, color: theme.colors.text.primary }}
           />
           <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-            <button onClick={() => setShowCancelModal(false)} style={{ ...actionButtonStyleSmall, backgroundColor: '#6c757d' }}>
+            <button onClick={() => setShowCancelModal(false)} disabled={isCancelling} style={{ ...actionButtonStyleSmall, backgroundColor: '#6c757d', cursor: isCancelling ? 'not-allowed' : 'pointer' }}>
               Fermer
             </button>
-            <button onClick={confirmCancelEvent} style={{ ...actionButtonStyleSmall, background: theme.colors.accent.gradient }}>
-              Confirmer l'annulation
+            <button onClick={confirmCancelEvent} disabled={isCancelling} style={{ ...actionButtonStyleSmall, background: theme.colors.accent.gradient, opacity: isCancelling ? 0.7 : 1, cursor: isCancelling ? 'not-allowed' : 'pointer' }}>
+              {isCancelling ? 'Annulation...' : "Confirmer l'annulation"}
             </button>
           </div>
         </div>
@@ -4257,7 +4300,7 @@ useEffect(() => {
               const placesLeft = max != null && typeof max === 'number' ? Math.max(0, max - count) : null;
               return (
                 <>
-                  <p style={{ marginBottom: 16, color: '#22c55e', fontSize: '1em' }}>
+                  <p style={{ marginBottom: 16, color: theme.colors.semantic.success, fontSize: '1em' }}>
                     <strong>{count}</strong> personne{count !== 1 ? 's' : ''} inscrite{count !== 1 ? 's' : ''}
                     {placesLeft !== null && (
                       <span style={{ color: theme.colors.text.muted }}> · <strong>{placesLeft}</strong> place{placesLeft !== 1 ? 's' : ''} restante{placesLeft !== 1 ? 's' : ''}</span>
@@ -4428,6 +4471,7 @@ useEffect(() => {
             }}>
               <button
                 onClick={closeWithdrawModal}
+                disabled={isWithdrawing}
                 style={{
                   padding: '10px 24px',
                   borderRadius: theme.radius.sm,
@@ -4435,7 +4479,7 @@ useEffect(() => {
                   backgroundColor: theme.colors.bg.surface,
                   color: theme.colors.text.primary,
                   fontWeight: '600',
-                  cursor: 'pointer',
+                  cursor: isWithdrawing ? 'not-allowed' : 'pointer',
                   transition: 'all 0.2s ease',
                   fontSize: '14px',
                 }}
@@ -4444,6 +4488,7 @@ useEffect(() => {
               </button>
               <button
                 onClick={confirmWithdrawApplication}
+                disabled={isWithdrawing}
                 style={{
                   padding: '10px 24px',
                   borderRadius: theme.radius.sm,
@@ -4451,12 +4496,13 @@ useEffect(() => {
                   backgroundColor: theme.colors.semantic.danger,
                   color: theme.colors.text.onAccent,
                   fontWeight: '600',
-                  cursor: 'pointer',
+                  cursor: isWithdrawing ? 'not-allowed' : 'pointer',
+                  opacity: isWithdrawing ? 0.7 : 1,
                   transition: 'all 0.2s ease',
                   fontSize: '14px',
                 }}
               >
-                ✕ Confirmer le retrait
+                {isWithdrawing ? 'Retrait...' : '✕ Confirmer le retrait'}
               </button>
             </div>
           </div>
