@@ -87,7 +87,7 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Signaler un humoriste">
       {isChecking ? (
-        <p style={{ color: '#aaa', textAlign: 'center' }}>Vérification...</p>
+        <p style={{ color: 'var(--ccc-text-muted)', textAlign: 'center' }}>Vérification...</p>
       ) : hasReported ? (
         <div>
           <p style={{ color: '#ffc107', marginBottom: '20px', textAlign: 'center' }}>
@@ -111,8 +111,8 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
         </div>
       ) : (
         <div>
-          <p style={{ color: '#aaa', marginBottom: '20px' }}>
-            Vous signalez : <strong style={{ color: '#fff' }}>{comedianName}</strong>
+          <p style={{ color: 'var(--ccc-text-muted)', marginBottom: '20px' }}>
+            Vous signalez : <strong style={{ color: 'var(--ccc-text-primary)' }}>{comedianName}</strong>
           </p>
 
           <div style={{ marginBottom: '20px' }}>
@@ -126,9 +126,9 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
                 width: '100%',
                 padding: '10px',
                 borderRadius: '6px',
-                border: '1px solid #555',
-                background: '#222',
-                color: '#fff',
+                border: '1px solid var(--ccc-border-medium)',
+                background: 'var(--ccc-bg-surface)',
+                color: 'var(--ccc-text-primary)',
                 fontSize: '14px'
               }}
             >
@@ -154,15 +154,15 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
                 width: '100%',
                 padding: '10px',
                 borderRadius: '6px',
-                border: '1px solid #555',
-                background: '#222',
-                color: '#fff',
+                border: '1px solid var(--ccc-border-medium)',
+                background: 'var(--ccc-bg-surface)',
+                color: 'var(--ccc-text-primary)',
                 fontSize: '14px',
                 fontFamily: 'inherit',
                 resize: 'vertical'
               }}
             />
-            <p style={{ color: '#aaa', fontSize: '12px', marginTop: '5px' }}>
+            <p style={{ color: 'var(--ccc-text-muted)', fontSize: '12px', marginTop: '5px' }}>
               {description.length}/1000 caractères
             </p>
           </div>
@@ -174,9 +174,9 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
               style={{
                 padding: '10px 20px',
                 borderRadius: '6px',
-                border: '1px solid #555',
-                background: '#333',
-                color: '#fff',
+                border: '1px solid var(--ccc-border-medium)',
+                background: 'var(--ccc-bg-surface)',
+                color: 'var(--ccc-text-primary)',
                 fontWeight: 'bold',
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
                 opacity: isSubmitting ? 0.6 : 1

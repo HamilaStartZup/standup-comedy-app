@@ -82,9 +82,9 @@ function LieuProfilePage() {
   };
 
   const badgeStyle: CSSProperties = {
-    background: 'rgba(232,93,117,0.15)',
+    background: 'var(--ccc-accent-soft)',
     color: ACCENT,
-    border: '1px solid rgba(232,93,117,0.4)',
+    border: '1px solid rgba(124, 58, 237, 0.32)',
     borderRadius: 20,
     padding: '2px 10px',
     fontSize: 11,

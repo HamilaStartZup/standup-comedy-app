@@ -308,7 +308,7 @@ const NotificationDropdown = () => {
                 style={{
                   padding: '4px 10px',
                   borderRadius: '4px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  border: '1px solid var(--ccc-border-subtle)',
                   background: 'rgba(124, 58, 237, 0.2)',
                   color: '#7c3aed',
                   fontSize: '0.75em',
@@ -377,7 +377,7 @@ const NotificationDropdown = () => {
                     </p>
                     <p style={{
                       margin: '3px 0 0 0',
-                      color: '#666',
+                      color: 'var(--ccc-text-muted)',
                       fontSize: '0.7em',
                     }}>
                       {new Date(notification.createdAt).toLocaleDateString('fr-FR', {

@@ -66,7 +66,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
       width: 6px;
     }
     .event-detail-content::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(15, 23, 42, 0.05);
       border-radius: 3px;
     }
     .event-detail-content::-webkit-scrollbar-thumb {

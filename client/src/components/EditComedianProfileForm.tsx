@@ -229,9 +229,9 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
     padding: '10px',
     marginBottom: '15px',
     borderRadius: '5px',
-    border: '1px solid #444',
-    backgroundColor: '#333',
-    color: '#fff',
+    border: '1px solid var(--ccc-border-medium)',
+    backgroundColor: 'var(--ccc-bg-surface)',
+    color: 'var(--ccc-text-primary)',
   };
 
   const buttonStyle: CSSProperties = {
@@ -257,7 +257,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
     display: 'block',
     marginBottom: '5px',
     fontWeight: 'bold',
-    color: '#ff4b2b',
+    color: 'var(--ccc-accent)',
     fontSize: '0.9em',
   };
 
@@ -291,7 +291,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
                 marginBottom: '10px',
                 padding: '8px 12px',
                 borderRadius: '6px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                border: '1px solid var(--ccc-border-subtle)',
                 backgroundColor: 'rgba(220, 53, 69, 0.15)',
                 color: '#ffb3b3',
                 cursor: 'pointer',
@@ -308,13 +308,13 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
               width: '100%',
               padding: '8px',
               borderRadius: '5px',
-              border: '1px solid #444',
-              backgroundColor: '#333',
-              color: '#fff',
+              border: '1px solid var(--ccc-border-medium)',
+              backgroundColor: 'var(--ccc-bg-surface)',
+              color: 'var(--ccc-text-primary)',
               cursor: 'pointer'
             }}
           />
-          <p style={{ fontSize: '0.85em', color: '#aaa', marginTop: '5px' }}>
+          <p style={{ fontSize: '0.85em', color: 'var(--ccc-text-muted)', marginTop: '5px' }}>
             Formats acceptés: JPG, PNG, GIF (max 5MB)
           </p>
         </div>
@@ -436,7 +436,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
             { value: 'plateau', label: 'Plateau (plusieurs artistes se succèdent lors d\'une soirée)' },
             { value: 'sketch', label: 'Sketch (une scène courte pré écrite)' }
           ].map(style => (
-            <label key={style.value} style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '8px', color: '#fff', cursor: 'pointer' }}>
+            <label key={style.value} style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '8px', color: 'var(--ccc-text-primary)', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={formData.profile?.comedyStyle?.includes(style.value as any) || false}
@@ -476,7 +476,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
             { value: 'italien', label: 'Italien' },
             { value: 'espagnol', label: 'Espagnol' }
           ].map(lang => (
-            <label key={lang.value} style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '8px', color: '#fff', cursor: 'pointer' }}>
+            <label key={lang.value} style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '8px', color: 'var(--ccc-text-primary)', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={formData.profile?.performanceLanguages?.includes(lang.value as any) || false}
@@ -507,8 +507,8 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
           ))}
         </div>
         
-        <h3 id="section-mobility" style={{ color: '#ff4b2b', marginTop: '20px', marginBottom: '15px', fontSize: '1.1em' }}>Zone de mobilité</h3>
-        <p style={{ fontSize: '0.85em', color: '#aaa', marginBottom: '15px' }}>
+        <h3 id="section-mobility" style={{ color: 'var(--ccc-accent)', marginTop: '20px', marginBottom: '15px', fontSize: '1.1em' }}>Zone de mobilité</h3>
+        <p style={{ fontSize: '0.85em', color: 'var(--ccc-text-muted)', marginBottom: '15px' }}>
           Indiquez les villes, départements ou régions où vous êtes disponible pour des événements.
         </p>
         <div style={{ marginBottom: '20px' }}>
@@ -516,7 +516,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
             <div key={index} style={{
               marginBottom: '10px',
               padding: '10px',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              backgroundColor: 'var(--ccc-bg-surface)',
               borderRadius: '5px',
             }}>
               {/* Ligne 1 : type + supprimer */}
@@ -566,7 +566,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
                   style={{
                     padding: '8px 12px',
                     borderRadius: '5px',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    border: '1px solid var(--ccc-border-subtle)',
                     backgroundColor: 'rgba(220, 53, 69, 0.15)',
                     color: '#ffb3b3',
                     cursor: 'pointer',
@@ -658,8 +658,8 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
                           top: '100%',
                           left: 0,
                           right: 0,
-                          backgroundColor: '#2a2a2a',
-                          border: '1px solid #444',
+                          backgroundColor: 'var(--ccc-bg-surface)',
+                          border: '1px solid var(--ccc-border-medium)',
                           borderRadius: '4px',
                           maxHeight: '200px',
                           overflowY: 'auto',
@@ -674,8 +674,8 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
                             style={{
                               padding: '10px',
                               cursor: 'pointer',
-                              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                              color: '#fff',
+                              borderBottom: '1px solid var(--ccc-border-subtle)',
+                              color: 'var(--ccc-text-primary)',
                             }}
                             onMouseEnter={(e) => {
                               (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(124, 58, 237, 0.2)';
@@ -685,7 +685,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
                             }}
                           >
                             <div>{suggestion.city}</div>
-                            <div style={{ fontSize: '0.8em', color: '#aaa' }}>{suggestion.postcode}</div>
+                            <div style={{ fontSize: '0.8em', color: 'var(--ccc-text-faint)' }}>{suggestion.postcode}</div>
                           </div>
                         ))}
                       </div>
@@ -712,7 +712,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
             style={{
               padding: '10px 15px',
               borderRadius: '5px',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              border: '1px solid var(--ccc-border-subtle)',
               backgroundColor: 'rgba(124, 58, 237, 0.15)',
               color: '#7c3aed',
               cursor: 'pointer',
@@ -724,7 +724,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
           </button>
         </div>
         
-        <h3 style={{ color: '#ff4b2b', marginTop: '20px', marginBottom: '15px', fontSize: '1.1em' }}>Réseaux sociaux</h3>
+        <h3 style={{ color: 'var(--ccc-accent)', marginTop: '20px', marginBottom: '15px', fontSize: '1.1em' }}>Réseaux sociaux</h3>
         
         <label style={labelStyle}>Lien YouTube</label>
         <input

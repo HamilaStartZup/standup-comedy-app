@@ -85,7 +85,7 @@ const ConfirmDialog = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000,
+    zIndex: 1300,
   };
 
   const dialogStyle: CSSProperties = {

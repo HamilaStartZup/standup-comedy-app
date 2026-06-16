@@ -1,4 +1,5 @@
 import React, { type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { theme } from '../styles/theme';
 
 interface ModalProps {
@@ -30,7 +31,7 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
+    zIndex: 1200,
   };
 
   const modalStyle: CSSProperties = {
@@ -62,7 +63,7 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
     color: theme.colors.text.muted,
   };
 
-  return (
+  return createPortal(
     <div style={overlayStyle} onClick={handleOverlayClick}>
       <style>{`
         .modal-content::-webkit-scrollbar {
@@ -73,7 +74,8 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
         <button onClick={onClose} style={closeButtonStyle}>&times;</button>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

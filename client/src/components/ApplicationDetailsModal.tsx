@@ -13,7 +13,7 @@ function ApplicationDetailsModal({ isOpen, onClose, application }: ApplicationDe
 
   const cardDetailStyle: CSSProperties = {
     fontSize: '0.9em',
-    color: '#ccc',
+    color: 'var(--ccc-text-muted)',
     marginBottom: '5px',
   };
 
@@ -22,7 +22,7 @@ function ApplicationDetailsModal({ isOpen, onClose, application }: ApplicationDe
     color: '#7c3aed',
     marginTop: '15px',
     marginBottom: '10px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    borderBottom: '1px solid var(--ccc-border-subtle)',
     paddingBottom: '5px',
   };
 

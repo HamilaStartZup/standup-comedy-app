@@ -52,16 +52,16 @@ const DeleteAccountSection: React.FC = () => {
   };
 
   const cardStyle: CSSProperties = {
-    backgroundColor: '#1a1d27',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     borderRadius: '16px',
     padding: '24px',
-    border: '1px solid #2a2d3a',
+    border: '1px solid var(--ccc-border-medium)',
     borderLeft: '4px solid #dc3545',
   };
 
   const titleStyle: CSSProperties = {
     fontSize: '1.2em',
-    color: '#fff',
+    color: 'var(--ccc-text-primary)',
     marginBottom: '16px',
     display: 'flex',
     alignItems: 'center',
@@ -71,7 +71,7 @@ const DeleteAccountSection: React.FC = () => {
   const warningBoxStyle: CSSProperties = {
     padding: '14px 16px',
     borderRadius: '8px',
-    background: 'rgba(255, 255, 255, 0.04)',
+    background: 'var(--ccc-bg-surface)',
     borderLeft: '3px solid #dc3545',
     marginBottom: '16px',
   };
@@ -79,7 +79,7 @@ const DeleteAccountSection: React.FC = () => {
   const infoBoxStyle: CSSProperties = {
     padding: '14px 16px',
     borderRadius: '8px',
-    background: 'rgba(255, 255, 255, 0.04)',
+    background: 'var(--ccc-bg-surface)',
     borderLeft: '3px solid #ffc107',
     marginBottom: '16px',
   };
@@ -87,7 +87,7 @@ const DeleteAccountSection: React.FC = () => {
   const successBoxStyle: CSSProperties = {
     padding: '14px 16px',
     borderRadius: '8px',
-    background: 'rgba(255, 255, 255, 0.04)',
+    background: 'var(--ccc-bg-surface)',
     borderLeft: '3px solid #28a745',
     marginBottom: '16px',
   };
@@ -106,9 +106,9 @@ const DeleteAccountSection: React.FC = () => {
     width: '100%',
     padding: '10px 14px',
     borderRadius: '6px',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    background: 'rgba(0, 0, 0, 0.3)',
-    color: '#fff',
+    border: '1px solid var(--ccc-border-medium)',
+    background: 'var(--ccc-bg-surface)',
+    color: 'var(--ccc-text-primary)',
     fontSize: '0.95em',
     marginBottom: '15px',
     boxSizing: 'border-box',
@@ -130,10 +130,10 @@ const DeleteAccountSection: React.FC = () => {
             <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
             Votre demande a été prise en compte
           </p>
-          <p style={{ color: '#aaa', fontSize: '0.9em', marginBottom: '8px' }}>
+          <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', marginBottom: '8px' }}>
             Votre compte sera définitivement supprimé le :
           </p>
-          <p style={{ color: '#fff', fontSize: '1.1em', fontWeight: 'bold', margin: 0 }}>
+          <p style={{ color: 'var(--ccc-text-primary)', fontSize: '1.1em', fontWeight: 'bold', margin: 0 }}>
             {deletionDate.toLocaleDateString('fr-FR', {
               weekday: 'long',
               year: 'numeric',
@@ -148,7 +148,7 @@ const DeleteAccountSection: React.FC = () => {
             <i className="fas fa-lightbulb" style={{ marginRight: '8px' }}></i>
             Vous pouvez annuler cette demande
           </p>
-          <p style={{ color: '#aaa', fontSize: '0.9em', margin: 0 }}>
+          <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', margin: 0 }}>
             Si vous changez d'avis, reconnectez-vous simplement à votre compte dans les 30 prochains jours.
             Votre compte sera automatiquement réactivé.
           </p>
@@ -183,8 +183,8 @@ const DeleteAccountSection: React.FC = () => {
               <i className="fas fa-shield-alt" style={{ marginRight: '8px' }}></i>
               Protection de 30 jours
             </p>
-            <p style={{ color: '#aaa', fontSize: '0.9em', margin: 0 }}>
-              Comme Facebook et Google, nous offrons un délai de grâce de <strong style={{ color: '#fff' }}>30 jours</strong>.
+            <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', margin: 0 }}>
+              Comme Facebook et Google, nous offrons un délai de grâce de <strong style={{ color: 'var(--ccc-text-primary)' }}>30 jours</strong>.
               Pendant cette période, vous pouvez récupérer votre compte en vous reconnectant.
             </p>
           </div>
@@ -194,7 +194,7 @@ const DeleteAccountSection: React.FC = () => {
               <i className="fas fa-exclamation-triangle" style={{ marginRight: '8px' }}></i>
               Après 30 jours, vos données seront définitivement supprimées :
             </p>
-            <ul style={{ color: '#aaa', fontSize: '0.9em', paddingLeft: '20px', margin: 0 }}>
+            <ul style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', paddingLeft: '20px', margin: 0 }}>
               <li>Toutes vos données personnelles</li>
               <li>Vos candidatures et participations</li>
               <li>Vos événements (si organisateur)</li>
@@ -202,8 +202,8 @@ const DeleteAccountSection: React.FC = () => {
             </ul>
           </div>
 
-          <p style={{ color: '#888', fontSize: '0.85em', marginBottom: '15px' }}>
-            <i className="fas fa-balance-scale" style={{ marginRight: '6px', color: '#667eea' }}></i>
+          <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.85em', marginBottom: '15px' }}>
+            <i className="fas fa-balance-scale" style={{ marginRight: '6px', color: 'var(--ccc-accent)' }}></i>
             Conformément au RGPD (Article 17 - Droit à l'effacement), vous pouvez demander la suppression
             de toutes vos données personnelles.
           </p>
@@ -228,10 +228,10 @@ const DeleteAccountSection: React.FC = () => {
               <i className="fas fa-exclamation-circle" style={{ marginRight: '8px' }}></i>
               Confirmation de la demande
             </p>
-            <p style={{ color: '#aaa', fontSize: '0.9em', margin: 0 }}>
+            <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', margin: 0 }}>
               Pour confirmer, veuillez saisir votre adresse email :
               <br />
-              <strong style={{ color: '#fff' }}>{user?.email}</strong>
+              <strong style={{ color: 'var(--ccc-text-primary)' }}>{user?.email}</strong>
             </p>
           </div>
 
@@ -249,7 +249,7 @@ const DeleteAccountSection: React.FC = () => {
               style={{
                 marginBottom: '15px',
                 padding: '12px 15px',
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: 'var(--ccc-bg-surface)',
                 borderRadius: '6px',
                 borderLeft: '3px solid #dc3545',
               }}
@@ -271,8 +271,8 @@ const DeleteAccountSection: React.FC = () => {
               disabled={isDeleting}
               style={{
                 ...buttonStyle,
-                background: 'rgba(255, 255, 255, 0.1)',
-                color: '#fff',
+                background: 'var(--ccc-bg-surface)',
+                color: 'var(--ccc-text-primary)',
               }}
             >
               <i className="fas fa-arrow-left" style={{ marginRight: '8px' }}></i>

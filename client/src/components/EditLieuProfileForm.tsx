@@ -174,16 +174,16 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
     display: 'block',
     marginBottom: '5px',
     fontWeight: 'bold',
-    color: '#ff4b2b',
+    color: 'var(--ccc-accent)',
   };
 
   const inputStyle: CSSProperties = {
     width: '100%',
     padding: '10px',
     borderRadius: '5px',
-    border: '1px solid #555',
-    backgroundColor: '#333',
-    color: '#ffffff',
+    border: '1px solid var(--ccc-border-medium)',
+    backgroundColor: 'var(--ccc-bg-surface)',
+    color: 'var(--ccc-text-primary)',
     boxSizing: 'border-box',
   };
 
@@ -231,7 +231,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
     border: 'none',
     fontSize: '1.5em',
     cursor: 'pointer',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
   };
 
   return (
@@ -241,7 +241,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
         <h2 style={titleStyle}>Modifier le Profil Lieu</h2>
         <form onSubmit={handleSubmit}>
           {/* Photo de profil */}
-          <h3 style={{ color: '#ff4b2b', marginBottom: '15px' }}>Photo de profil</h3>
+          <h3 style={{ color: 'var(--ccc-accent)', marginBottom: '15px' }}>Photo de profil</h3>
           {previewImage && (
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
               <img
@@ -272,7 +272,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
           </div>
 
           {/* Informations */}
-          <h3 style={{ color: '#ff4b2b', marginBottom: '15px' }}>Informations personnelles</h3>
+          <h3 style={{ color: 'var(--ccc-accent)', marginBottom: '15px' }}>Informations personnelles</h3>
           <div style={twoColumnLayout}>
             <div style={inputGroupStyle} id="firstName">
               <label style={labelStyle} htmlFor="firstName">Prénom</label>

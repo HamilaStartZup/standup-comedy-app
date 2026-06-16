@@ -68,10 +68,10 @@ export default function UpgradeToOrganizerForm({ isOpen, onClose, onSuccess }: P
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '10px 14px',
-    background: '#0d0f1a',
-    border: '1px solid #2a2d3e',
+    background: 'var(--ccc-bg-surface)',
+    border: '1px solid var(--ccc-border-medium)',
     borderRadius: '8px',
-    color: '#fff',
+    color: 'var(--ccc-text-primary)',
     fontSize: '14px',
     boxSizing: 'border-box',
   };
@@ -79,27 +79,27 @@ export default function UpgradeToOrganizerForm({ isOpen, onClose, onSuccess }: P
   return (
     <Modal isOpen={isOpen} onClose={handleClose} closeOnOverlayClick={false}>
       <h2 style={{ margin: '0 0 8px', fontSize: '20px' }}>Devenir Organisateur</h2>
-      <p style={{ color: '#8b8fa8', fontSize: '14px', margin: '0 0 24px' }}>
+      <p style={{ color: 'var(--ccc-text-muted)', fontSize: '14px', margin: '0 0 24px' }}>
         Complétez votre profil organisateur
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#8b8fa8' }}>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--ccc-text-muted)' }}>
             Nom de société
           </label>
           <input style={inputStyle} type="text" value={companyName}
             onChange={e => setCompanyName(e.target.value)} placeholder="Ma Société" />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#8b8fa8' }}>
-            Code postal <span style={{ color: '#e85d75' }}>*</span>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--ccc-text-muted)' }}>
+            Code postal <span style={{ color: 'var(--ccc-accent)' }}>*</span>
           </label>
           <input style={inputStyle} type="text" value={postalCode}
             onChange={e => setPostalCode(e.target.value)} placeholder="75001" />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#8b8fa8' }}>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--ccc-text-muted)' }}>
             Description
           </label>
           <textarea style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }}
@@ -107,14 +107,14 @@ export default function UpgradeToOrganizerForm({ isOpen, onClose, onSuccess }: P
             placeholder="Présentez votre activité..." />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#8b8fa8' }}>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--ccc-text-muted)' }}>
             Site web
           </label>
           <input style={inputStyle} type="url" value={website}
             onChange={e => setWebsite(e.target.value)} placeholder="https://..." />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#8b8fa8' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: 'var(--ccc-text-muted)' }}>
             Types de salles
           </label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -125,9 +125,9 @@ export default function UpgradeToOrganizerForm({ isOpen, onClose, onSuccess }: P
                 style={{
                   padding: '6px 12px', borderRadius: '20px', fontSize: '13px', cursor: 'pointer',
                   border: '1px solid',
-                  borderColor: selectedVenueTypes.includes(value) ? '#e85d75' : '#2a2d3e',
-                  background: selectedVenueTypes.includes(value) ? 'rgba(232,93,117,0.15)' : 'transparent',
-                  color: selectedVenueTypes.includes(value) ? '#e85d75' : '#8b8fa8',
+                  borderColor: selectedVenueTypes.includes(value) ? 'var(--ccc-accent)' : 'var(--ccc-border-medium)',
+                  background: selectedVenueTypes.includes(value) ? 'var(--ccc-accent-soft)' : 'transparent',
+                  color: selectedVenueTypes.includes(value) ? 'var(--ccc-accent)' : 'var(--ccc-text-muted)',
                 }}
               >
                 {label}
@@ -136,7 +136,7 @@ export default function UpgradeToOrganizerForm({ isOpen, onClose, onSuccess }: P
           </div>
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#8b8fa8' }}>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--ccc-text-muted)' }}>
             Fréquence d'événements
           </label>
           <select style={inputStyle} value={eventFrequency}
@@ -152,8 +152,8 @@ export default function UpgradeToOrganizerForm({ isOpen, onClose, onSuccess }: P
         <button
           onClick={handleClose}
           style={{
-            padding: '10px 20px', background: 'transparent', border: '1px solid #2a2d3e',
-            borderRadius: '8px', color: '#8b8fa8', cursor: 'pointer',
+            padding: '10px 20px', background: 'transparent', border: '1px solid var(--ccc-border-medium)',
+            borderRadius: '8px', color: 'var(--ccc-text-muted)', cursor: 'pointer',
           }}
         >
           Annuler
@@ -162,7 +162,7 @@ export default function UpgradeToOrganizerForm({ isOpen, onClose, onSuccess }: P
           onClick={handleSubmit}
           disabled={loading}
           style={{
-            padding: '10px 20px', background: '#e85d75', border: 'none',
+            padding: '10px 20px', background: 'var(--ccc-accent)', border: 'none',
             borderRadius: '8px', color: '#fff', cursor: 'pointer',
           }}
         >
