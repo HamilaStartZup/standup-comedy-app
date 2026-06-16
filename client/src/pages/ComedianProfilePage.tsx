@@ -35,7 +35,7 @@ function ComedianProfilePage() {
   const fromApplications = searchParams.get('from') === 'applications';
   const applicationIdFromQuery = searchParams.get('applicationId');
 
-  const { data: profileData, isLoading: loading } = useQuery({
+  const { data: profileData, isLoading: loading, isError, refetch } = useQuery({
     queryKey: ['profile', 'comedian', id],
     queryFn: async () => {
       const response = await api.get<IUserData>(`/profile/${id}`);
@@ -214,7 +214,7 @@ function ComedianProfilePage() {
     boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: 12,
     padding: '12px 20px',
-    color: '#666',
+    color: 'var(--ccc-text-muted)',
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
@@ -223,8 +223,8 @@ function ComedianProfilePage() {
 
   const dangerButtonStyle: CSSProperties = {
     ...modifierButtonStyle,
-    borderColor: '#dc3545',
-    color: '#dc3545',
+    borderColor: 'var(--ccc-error)',
+    color: 'var(--ccc-error)',
   };
 
   const allInfoFields = [
@@ -292,6 +292,24 @@ function ComedianProfilePage() {
     );
   }
 
+  if (isError && isViewingOtherProfile) {
+    return (
+      <div style={mainContainerStyle}>
+        <Navbar />
+        <div style={{ ...wrapperStyle, textAlign: 'center', padding: '40px' }}>
+          <p style={{ color: 'var(--ccc-text-muted)' }}>Impossible de charger ce profil.</p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            style={{ marginTop: 12, padding: '8px 20px', borderRadius: 8, border: '1px solid var(--ccc-border-medium)', background: 'transparent', cursor: 'pointer', color: 'var(--ccc-text-primary)' }}
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={mainContainerStyle}>
       <Navbar />
@@ -325,7 +343,7 @@ function ComedianProfilePage() {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = BORDER;
-                  e.currentTarget.style.color = '#666';
+                  e.currentTarget.style.color = 'var(--ccc-text-muted)';
                 }}
               >
                 ← Retour candidature
@@ -347,7 +365,7 @@ function ComedianProfilePage() {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = BORDER;
-                  e.currentTarget.style.color = '#666';
+                  e.currentTarget.style.color = 'var(--ccc-text-muted)';
                 }}
               >
                 Modifier
@@ -414,7 +432,7 @@ function ComedianProfilePage() {
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.borderColor = BORDER;
-                                e.currentTarget.style.color = '#666';
+                                e.currentTarget.style.color = 'var(--ccc-text-muted)';
                               }}
                             >
                               Modifier
@@ -441,7 +459,7 @@ function ComedianProfilePage() {
                                 }}
                                 onMouseLeave={(e) => {
                                   e.currentTarget.style.borderColor = BORDER;
-                                  e.currentTarget.style.color = '#666';
+                                  e.currentTarget.style.color = 'var(--ccc-text-muted)';
                                 }}
                               >
                                 Modifier
@@ -484,7 +502,7 @@ function ComedianProfilePage() {
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.borderColor = BORDER;
-                                e.currentTarget.style.color = '#666';
+                                e.currentTarget.style.color = 'var(--ccc-text-muted)';
                               }}
                             >
                               Modifier
@@ -509,7 +527,7 @@ function ComedianProfilePage() {
                                 }}
                                 onMouseLeave={(e) => {
                                   e.currentTarget.style.borderColor = BORDER;
-                                  e.currentTarget.style.color = '#666';
+                                  e.currentTarget.style.color = 'var(--ccc-text-muted)';
                                 }}
                               >
                                 Modifier

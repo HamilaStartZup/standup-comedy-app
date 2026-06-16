@@ -256,8 +256,7 @@ export default function SpectatorRateEventPage() {
                             padding: 16,
                             background: 'var(--ccc-bg-elevated)',
                             borderRadius: 12,
-                            border: '1px solid #e5e7eb',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                            border: '1px solid var(--ccc-border-medium)',
                           }}
                         >
                           <div
@@ -286,7 +285,7 @@ export default function SpectatorRateEventPage() {
                             <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--ccc-text-primary)' }}>
                               {p.firstName} {p.lastName}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--ccc-text-muted)', marginTop: 2 }}>
                               HUMORISTE
                             </div>
                           </div>

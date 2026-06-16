@@ -1,5 +1,4 @@
 import { type CSSProperties, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../hooks/useAuth';
 import type { IUserData } from '../types/user';
@@ -7,7 +6,6 @@ import EditLieuProfileForm from '../components/EditLieuProfileForm';
 import EmailPreferences from '../components/EmailPreferences';
 import DeleteAccountSection from '../components/DeleteAccountSection';
 import ExportDataSection from '../components/ExportDataSection';
-import UpgradeToOrganizerForm from '../components/UpgradeToOrganizerForm';
 const ACCENT = 'var(--ccc-accent)';
 const ACCENT_GRADIENT = 'var(--ccc-accent-gradient)';
 const CARD_BG = 'var(--ccc-bg-elevated)';
@@ -18,10 +16,8 @@ const VALUE_COLOR = 'var(--ccc-text-secondary)';
 
 function LieuProfilePage() {
   const { user: authUser, refreshUser } = useAuth();
-  const navigate = useNavigate();
   const [user, setUser] = useState<IUserData | null>(authUser);
   const [isEditing, setIsEditing] = useState(false);
-  const [isUpgrading, setIsUpgrading] = useState(false);
   const [scrollToField, setScrollToField] = useState<string | undefined>(undefined);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -39,8 +35,6 @@ function LieuProfilePage() {
     refreshUser();
     setIsEditing(false);
   };
-
-  const canQuickSwitchToOrganizer = !!user?.canSwitchToLieu && !!user?.organizerProfile;
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
@@ -161,7 +155,7 @@ function LieuProfilePage() {
     boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: 12,
     padding: '12px 20px',
-    color: '#666',
+    color: 'var(--ccc-text-muted)',
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
@@ -176,7 +170,6 @@ function LieuProfilePage() {
     { key: 'city', label: 'Ville', value: user?.city || 'Non défini', fieldId: 'city' },
     { key: 'address', label: 'Adresse', value: user?.address || 'Non défini', fieldId: 'address' },
   ];
-
 
   return (
     <div style={mainContainerStyle}>
@@ -209,31 +202,11 @@ function LieuProfilePage() {
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = BORDER;
-                e.currentTarget.style.color = '#666';
+                e.currentTarget.style.color = 'var(--ccc-text-muted)';
               }}
             >
               Modifier
             </button>
-            {!canQuickSwitchToOrganizer && (
-              <button
-                type="button"
-                onClick={() => setIsUpgrading(true)}
-                disabled={isUpgrading}
-                style={{
-                  padding: '10px 20px',
-                  background: '#e85d75',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'var(--ccc-text-primary)',
-                  cursor: isUpgrading ? 'not-allowed' : 'pointer',
-                  fontWeight: 600,
-                  fontSize: '14px',
-                  opacity: isUpgrading ? 0.7 : 1,
-                }}
-              >
-                Devenir Organisateur
-              </button>
-            )}
           </div>
         </div>
 
@@ -274,7 +247,7 @@ function LieuProfilePage() {
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.borderColor = BORDER;
-                            e.currentTarget.style.color = '#666';
+                            e.currentTarget.style.color = 'var(--ccc-text-muted)';
                           }}
                         >
                           Modifier
@@ -299,7 +272,7 @@ function LieuProfilePage() {
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.borderColor = BORDER;
-                              e.currentTarget.style.color = '#666';
+                              e.currentTarget.style.color = 'var(--ccc-text-muted)';
                             }}
                           >
                             Modifier
@@ -330,18 +303,6 @@ function LieuProfilePage() {
           </>
         )}
       </div>
-      <UpgradeToOrganizerForm
-        isOpen={isUpgrading}
-        onClose={() => setIsUpgrading(false)}
-        onSuccess={async () => {
-          setIsUpgrading(false);
-          try {
-            await refreshUser();
-          } finally {
-            navigate('/dashboard');
-          }
-        }}
-      />
     </div>
   );
 }

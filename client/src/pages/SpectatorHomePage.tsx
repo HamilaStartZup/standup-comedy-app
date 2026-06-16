@@ -25,7 +25,7 @@ function parseEventsResponse(data: any): IEvent[] {
 const RADII = [5, 10, 20, 50] as const;
 
 export default function SpectatorHomePage() {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const { showSuccess, showError, showInfo } = useAlert();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -206,9 +206,7 @@ export default function SpectatorHomePage() {
     return registeredEventIds.has(event._id);
   };
 
-  const openUnregisterConfirm = (eventId: string) => {
-    setUnregisterConfirm({ isOpen: true, eventId });
-  };
+
 
   const handleConfirmUnregister = () => {
     if (unregisterConfirm.eventId) {
@@ -263,7 +261,7 @@ export default function SpectatorHomePage() {
                 padding: '12px 16px',
                 borderRadius: 8,
                 border: 'none',
-                background: 'linear-gradient(135deg, #FF5A7E, #FF7A92)',
+                background: 'var(--ccc-accent-gradient)',
                 color: '#fff',
                 cursor: 'pointer',
                 fontWeight: 600,
@@ -649,8 +647,8 @@ function EventCard({
               padding: '8px 12px',
               borderRadius: 8,
               border: '1px solid #28a745',
-              background: 'rgba(40, 167, 69, 0.2)',
-              color: '#5dd879',
+              background: 'rgba(40, 167, 69, 0.12)',
+              color: '#166534',
               cursor: isRegistering ? 'wait' : 'pointer',
               fontSize: '0.9rem',
             }}

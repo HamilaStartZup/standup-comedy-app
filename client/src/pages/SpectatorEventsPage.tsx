@@ -279,7 +279,6 @@ export default function SpectatorEventsPage() {
           >
             {filterTabs.map((tab) => {
               const isActive = eventFilter === tab.id;
-              const isCancelledTab = tab.id === 'annules';
               return (
                 <button
                   key={tab.id}
@@ -289,12 +288,10 @@ export default function SpectatorEventsPage() {
                     padding: '10px 16px',
                     borderRadius: 8,
                     border: isActive
-                      ? isCancelledTab ? '2px solid #dc3545' : '2px solid #FF5A7E'
+                      ? '2px solid var(--ccc-accent)'
                       : '1px solid var(--ccc-border-medium)',
-                    background: isActive
-                      ? isCancelledTab ? 'rgba(220, 53, 69, 0.12)' : 'var(--ccc-accent-soft)'
-                      : 'var(--ccc-bg-elevated)',
-                    color: isActive && isCancelledTab ? '#dc3545' : isActive ? 'var(--ccc-accent)' : 'var(--ccc-text-secondary)',
+                    background: isActive ? 'var(--ccc-accent-soft)' : 'var(--ccc-bg-elevated)',
+                    color: isActive ? 'var(--ccc-accent)' : 'var(--ccc-text-secondary)',
                     cursor: 'pointer',
                     fontWeight: isActive ? 600 : 400,
                     fontSize: '0.9rem',
