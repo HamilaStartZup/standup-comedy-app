@@ -89,7 +89,7 @@ const DirectoryPage: React.FC = () => {
   }, [searchTerm, roleFilter]);
 
   // Charger les utilisateurs avec React Query (pagination serveur)
-  const { data: usersData, isLoading: loading, refetch: refetchUsers } = useQuery({
+  const { data: usersData, isLoading: loading, isError, refetch: refetchUsers } = useQuery({
     queryKey: ['users', currentPage, debouncedSearch, roleFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -393,6 +393,38 @@ const DirectoryPage: React.FC = () => {
                 margin: '0 auto 20px',
               }}></div>
               <p style={{ color: 'var(--ccc-text-secondary)', fontSize: '18px' }}>Chargement du répertoire...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div style={mainContainerStyle}>
+        <Navbar />
+        <div style={contentStyle}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ color: 'var(--ccc-text-secondary)', fontSize: '18px', marginBottom: '16px' }}>
+                Erreur lors du chargement du répertoire.
+              </p>
+              <button
+                onClick={() => refetchUsers()}
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'var(--ccc-accent-gradient)',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                }}
+              >
+                Réessayer
+              </button>
             </div>
           </div>
         </div>

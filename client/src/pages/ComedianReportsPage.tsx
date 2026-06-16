@@ -160,7 +160,7 @@ const ComedianReportsPage = () => {
 
   const emptyStateStyle: CSSProperties = {
     textAlign: 'center',
-    color: '#aaa',
+    color: 'var(--ccc-text-muted)',
     fontSize: '1.2em',
     padding: '40px',
   };
@@ -185,7 +185,7 @@ const ComedianReportsPage = () => {
         <div style={pageHeaderStyle}>
           <div>
             <h1 style={titleStyle}>Signalements d'Humoristes</h1>
-            <p style={{ color: '#aaa', fontSize: '1.1em' }}>
+            <p style={{ color: 'var(--ccc-text-muted)', fontSize: '1.1em' }}>
               Gérer les signalements effectués par les organisateurs
             </p>
           </div>
@@ -193,16 +193,16 @@ const ComedianReportsPage = () => {
 
         <div style={contentStyle}>
           <div style={filterStyle}>
-            <label style={{ color: '#fff', fontWeight: 'bold' }}>Filtrer par statut:</label>
+            <label style={{ color: 'var(--ccc-text-primary)', fontWeight: 'bold' }}>Filtrer par statut:</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               style={{
                 padding: '8px 12px',
                 borderRadius: '6px',
-                border: '1px solid #555',
-                background: '#222',
-                color: '#fff',
+                border: '1px solid var(--ccc-border-medium)',
+                background: 'var(--ccc-bg-surface)',
+                color: 'var(--ccc-text-primary)',
                 fontSize: '14px'
               }}
             >
@@ -211,7 +211,7 @@ const ComedianReportsPage = () => {
               <option value="validated">Demande de signalement validé</option>
               <option value="rejected">Demande de signalement rejeté</option>
             </select>
-            <span style={{ color: '#aaa', marginLeft: 'auto' }}>
+            <span style={{ color: 'var(--ccc-text-muted)', marginLeft: 'auto' }}>
               {reportsCount} signalement(s)
             </span>
           </div>
@@ -221,9 +221,26 @@ const ComedianReportsPage = () => {
           )}
 
           {error && (
-            <p style={{ textAlign: 'center', color: '#dc3545' }}>
-              Erreur: {(error as any).response?.data?.message || (error as any).message}
-            </p>
+            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <p style={{ color: '#dc3545', marginBottom: '16px' }}>
+                Erreur: {(error as any).response?.data?.message || (error as any).message}
+              </p>
+              <button
+                onClick={() => refetch()}
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: 'var(--ccc-accent-gradient)',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                }}
+              >
+                Réessayer
+              </button>
+            </div>
           )}
 
           {!isLoading && !error && reportsCount === 0 && (
@@ -268,19 +285,19 @@ const ComedianReportsPage = () => {
                           {statusLabels[report.status]}
                         </span>
                       </div>
-                      <p style={{ color: '#aaa', fontSize: '0.9em', margin: '5px 0' }}>
+                      <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', margin: '5px 0' }}>
                         Signalé par: {report.reporter.firstName} {report.reporter.lastName}
                       </p>
-                      <p style={{ color: '#ccc', margin: '5px 0' }}>
+                      <p style={{ color: 'var(--ccc-text-secondary)', margin: '5px 0' }}>
                         <strong>Raison:</strong> {reasonLabels[report.reason]}
                       </p>
                       {report.description && (
-                        <p style={{ color: '#aaa', fontSize: '0.9em', marginTop: '10px', fontStyle: 'italic' }}>
+                        <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', marginTop: '10px', fontStyle: 'italic' }}>
                           "{report.description}"
                         </p>
                       )}
                     </div>
-                    <div style={{ textAlign: 'right', color: '#aaa', fontSize: '0.85em' }}>
+                    <div style={{ textAlign: 'right', color: 'var(--ccc-text-muted)', fontSize: '0.85em' }}>
                       <div>Créé le {new Date(report.createdAt).toLocaleDateString('fr-FR')}</div>
                       {report.reviewedAt && (
                         <div style={{ marginTop: '5px' }}>

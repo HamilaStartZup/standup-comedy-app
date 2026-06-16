@@ -200,7 +200,7 @@ const LateCancellationAlertsPage = () => {
 
   const emptyStateStyle: CSSProperties = {
     textAlign: 'center',
-    color: '#aaa',
+    color: 'var(--ccc-text-muted)',
     fontSize: '1.2em',
     padding: '40px',
   };
@@ -244,7 +244,7 @@ const LateCancellationAlertsPage = () => {
         <div style={pageHeaderStyle}>
           <div>
             <h1 style={titleStyle}>Alertes Annulations Tardives</h1>
-            <p style={{ color: '#aaa', fontSize: '1.1em' }}>
+            <p style={{ color: 'var(--ccc-text-muted)', fontSize: '1.1em' }}>
               Desistements moins de 72h avant l'evenement
             </p>
           </div>
@@ -298,7 +298,7 @@ const LateCancellationAlertsPage = () => {
                         <div style={comedianNameStyle}>
                           {alert.comedian.firstName} {alert.comedian.lastName}
                         </div>
-                        <div style={{ color: '#aaa', fontSize: '0.9em', marginTop: '4px' }}>
+                        <div style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', marginTop: '4px' }}>
                           {alert.comedian.email}
                         </div>
                         <div style={eventTitleStyle}>

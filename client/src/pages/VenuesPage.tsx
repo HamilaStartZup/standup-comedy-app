@@ -39,7 +39,7 @@ const VenuesPage: React.FC = () => {
   const [activeFilters, setActiveFilters] = useState(filtersFromUrl);
   const [page, setPage] = useState(1);
 
-  const { data: venuesResponse, isLoading, error } = useVenues({
+  const { data: venuesResponse, isLoading, error, refetch } = useVenues({
     city: activeFilters.city || undefined,
     venueType: activeFilters.venueType || undefined,
     minCapacity: activeFilters.minCapacity ? parseInt(activeFilters.minCapacity) : undefined,
@@ -222,7 +222,22 @@ const VenuesPage: React.FC = () => {
           </div>
         ) : error ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
-            <p style={{ color: '#ef4444', fontSize: 15 }}>Impossible de charger les salles.</p>
+            <p style={{ color: '#ef4444', fontSize: 15, marginBottom: 16 }}>Impossible de charger les salles.</p>
+            <button
+              onClick={() => refetch()}
+              style={{
+                padding: '10px 24px',
+                borderRadius: 8,
+                border: 'none',
+                background: 'var(--ccc-accent-gradient)',
+                color: 'white',
+                fontSize: 14,
+                fontWeight: 'bold',
+                cursor: 'pointer',
+              }}
+            >
+              Réessayer
+            </button>
           </div>
         ) : !data || data.length === 0 ? (
           <div
