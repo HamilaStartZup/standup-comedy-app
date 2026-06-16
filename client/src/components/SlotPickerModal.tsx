@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import type { IVenueTimeRestrictions } from '../types/venue';
 
 interface SlotPickerModalProps {
@@ -164,7 +165,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
       onClose();
     };
 
-    return (
+    return createPortal(
       <div role="dialog" aria-modal style={overlayStyle} onClick={onClose}>
         <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
           <p style={{ margin: '0 0 2px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>Choisir un créneau</p>
@@ -245,7 +246,8 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
           </button>
           <button type="button" style={closeBtnStyle} onClick={onClose}>Annuler</button>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
@@ -276,7 +278,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
     fontSize: 14,
   });
 
-  return (
+  return createPortal(
     <div role="dialog" aria-modal style={overlayStyle} onClick={onClose}>
       <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <p style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>Choisir un créneau</p>
@@ -318,7 +320,8 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
         )}
         <button type="button" style={closeBtnStyle} onClick={onClose}>Fermer</button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

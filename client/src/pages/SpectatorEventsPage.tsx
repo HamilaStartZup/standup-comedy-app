@@ -45,7 +45,7 @@ export default function SpectatorEventsPage() {
   const [ratingWindowClosed, setRatingWindowClosed] = useState<Record<string, boolean>>({});
   const [eventRatings, setEventRatings] = useState<Record<string, number>>({});
 
-  const { data: myRegistrationsRaw, isLoading: loadingRegistrations } = useQuery<IEvent[]>({
+  const { data: myRegistrationsRaw, isLoading: loadingRegistrations, isError: errorRegistrations } = useQuery<IEvent[]>({
     queryKey: ['events', 'spectator', 'myRegistrations'],
     queryFn: async () => {
       const res = await api.get('/events?myRegistrations=true');
@@ -55,7 +55,7 @@ export default function SpectatorEventsPage() {
   });
   const myRegistrationsList: IEvent[] = myRegistrationsRaw ?? [];
 
-  const { data: favoritesResponse, isLoading: loadingFavorites } = useQuery({
+  const { data: favoritesResponse, isLoading: loadingFavorites, isError: errorFavorites } = useQuery({
     queryKey: ['event-favorites'],
     queryFn: getEventFavorites,
     enabled: !!user,
@@ -305,6 +305,19 @@ export default function SpectatorEventsPage() {
 
           {isLoading ? (
             <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
+          ) : (errorRegistrations || errorFavorites) ? (
+            <div style={{ textAlign: 'center', padding: 60 }}>
+              <p style={{ color: '#ef4444' }}>Impossible de charger vos événements.</p>
+              <button
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ['events'], exact: false });
+                  queryClient.invalidateQueries({ queryKey: ['event-favorites'], exact: false });
+                }}
+                style={{ marginTop: 16, padding: '10px 24px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Réessayer
+              </button>
+            </div>
           ) : eventFilter === 'inscrits' ? (
             <Section
               title="Événements auxquels je suis inscrit"
@@ -355,7 +368,7 @@ export default function SpectatorEventsPage() {
                       onClick={() => setSelectedEvent(event)}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedEvent(event); }}
                       style={{
-                        background: '#fff',
+                        background: 'var(--ccc-bg-elevated)',
                         border: '1px solid rgba(220, 53, 69, 0.4)',
                         borderRadius: 12,
                         padding: 16,

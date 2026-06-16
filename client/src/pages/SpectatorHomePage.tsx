@@ -68,7 +68,7 @@ export default function SpectatorHomePage() {
     return p;
   }, [searchLieu, searchVenueType, searchRadius]);
 
-  const { data: eventsRaw, isLoading } = useQuery({
+  const { data: eventsRaw, isLoading, isError: errorEvents } = useQuery({
     queryKey: ['events', 'spectator', queryParams],
     queryFn: async () => {
       const params = new URLSearchParams(queryParams).toString();
@@ -81,7 +81,7 @@ export default function SpectatorHomePage() {
   const eventsData: IEvent[] = eventsRaw ?? [];
 
   // Fetch events the spectator is registered to (includes cancelled ones)
-  const { data: regRaw, isLoading: loadingRegistrations } = useQuery({
+  const { data: regRaw, isLoading: loadingRegistrations, isError: errorRegistrations } = useQuery({
     queryKey: ['events', 'spectator', 'myRegistrations'],
     queryFn: async () => {
       const res = await api.get('/events?myRegistrations=true');
@@ -96,7 +96,7 @@ export default function SpectatorHomePage() {
     return new Set(myRegistrationsList.map((e) => e._id));
   }, [myRegistrationsList]);
 
-  const { data: aroundMeRaw, isLoading: loadingAroundMe } = useQuery({
+  const { data: aroundMeRaw, isLoading: loadingAroundMe, isError: errorAroundMe } = useQuery({
     queryKey: ['events', 'spectator', 'nearMe', user?.city, effectiveRadius],
     queryFn: async () => {
       if (!user?.city?.trim()) return [];
@@ -338,6 +338,16 @@ export default function SpectatorHomePage() {
               <h2 style={{ marginBottom: 16, fontSize: '1.25rem' }}>Événements à venir</h2>
               {isLoading ? (
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
+              ) : errorEvents ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                  <p style={{ color: '#ef4444', margin: 0 }}>Impossible de charger les événements.</p>
+                  <button
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['events', 'spectator', queryParams] })}
+                    style={{ padding: '8px 20px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
+                  >
+                    Réessayer
+                  </button>
+                </div>
               ) : upcomingEvents.length === 0 ? (
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Aucun événement trouvé.</p>
               ) : (
@@ -373,6 +383,16 @@ export default function SpectatorHomePage() {
               <h2 style={{ marginBottom: 16, fontSize: '1.25rem' }}>Inscrits (à venir)</h2>
               {loadingRegistrations ? (
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
+              ) : errorRegistrations ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                  <p style={{ color: '#ef4444', margin: 0 }}>Impossible de charger vos inscriptions.</p>
+                  <button
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['events', 'spectator', 'myRegistrations'] })}
+                    style={{ padding: '8px 20px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
+                  >
+                    Réessayer
+                  </button>
+                </div>
               ) : registeredUpcoming.length === 0 ? (
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Aucun événement à venir auquel vous êtes inscrit.</p>
               ) : (
@@ -431,6 +451,16 @@ export default function SpectatorHomePage() {
               </div>
               {loadingAroundMe ? (
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
+              ) : errorAroundMe ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                  <p style={{ color: '#ef4444', margin: 0 }}>Impossible de charger les suggestions.</p>
+                  <button
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['events', 'spectator', 'nearMe'] })}
+                    style={{ padding: '8px 20px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
+                  >
+                    Réessayer
+                  </button>
+                </div>
               ) : aroundMeUpcoming.length === 0 ? (
                 <p style={{ color: 'var(--ccc-text-muted)' }}>
                   Aucun événement à venir dans ce rayon.
