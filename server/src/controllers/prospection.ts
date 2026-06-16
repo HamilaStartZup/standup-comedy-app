@@ -76,6 +76,22 @@ export const listProspectionRunsHandler = async (req: AuthRequest, res: Response
   res.json({ runs });
 };
 
+export const clearProspectionRunsHandler = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!assertSuperAdmin(req, res)) return;
+
+  const running = await ProspectionRunModel.countDocuments({ status: 'running' });
+  if (running > 0) {
+    res.status(409).json({ message: 'Impossible d’effacer l’historique pendant une prospection en cours.' });
+    return;
+  }
+
+  const result = await ProspectionRunModel.deleteMany({});
+  res.json({
+    message: 'Historique des exécutions effacé.',
+    deletedCount: result.deletedCount ?? 0,
+  });
+};
+
 export const listProspectedVenuesHandler = async (req: AuthRequest, res: Response): Promise<void> => {
   if (!assertSuperAdmin(req, res)) return;
 

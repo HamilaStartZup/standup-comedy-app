@@ -653,6 +653,11 @@ export const listProspectionRuns = async (limit = 20) => {
   return res.data as { runs: IProspectionRun[] };
 };
 
+export const clearProspectionRuns = async () => {
+  const res = await api.delete('/prospection/runs');
+  return res.data as { message: string; deletedCount: number };
+};
+
 export const listProspectedVenues = async (params: {
   page?: number;
   limit?: number;

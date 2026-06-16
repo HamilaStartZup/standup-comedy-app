@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Navbar from '../components/Navbar';
 import Pagination from '../components/Pagination';
@@ -10,6 +10,7 @@ import {
   runProspection,
   getProspectionRun,
   listProspectionRuns,
+  clearProspectionRuns,
   listProspectedVenues,
   enrichProspectionVenues,
 } from '../services/api';
@@ -59,7 +60,8 @@ const ProspectionPage: React.FC = () => {
 
   const [configForm, setConfigForm] = useState<IProspectionConfig | null>(null);
   const [departments, setDepartments] = useState<Record<string, string>>({});
-  const [deptSearch, setDeptSearch] = useState('');
+  const [pendingDepartments, setPendingDepartments] = useState<string[]>([]);
+  const [isDepartmentsDropdownOpen, setIsDepartmentsDropdownOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
@@ -73,6 +75,7 @@ const ProspectionPage: React.FC = () => {
   const [venueHasEmail, setVenueHasEmail] = useState<'' | 'true' | 'false'>('');
   const [venueSearch, setVenueSearch] = useState('');
   const [enriching, setEnriching] = useState(false);
+  const [clearingRuns, setClearingRuns] = useState(false);
 
   const { data: configData, isLoading: loadingConfig } = useQuery({
     queryKey: ['prospection-config'],
@@ -84,6 +87,7 @@ const ProspectionPage: React.FC = () => {
     if (configData) {
       setConfigForm(configData.config);
       setDepartments(configData.departments);
+      setPendingDepartments(configData.config.cibles.departements);
       setManualMaxEmails(configData.config.envoi.maxEmailsParRun);
     }
   }, [configData]);
@@ -134,20 +138,17 @@ const ProspectionPage: React.FC = () => {
     return () => clearInterval(id);
   }, [activeRunId, queryClient, refetchRuns, showError, showSuccess]);
 
-  const filteredDepartments = useMemo(() => {
-    const q = deptSearch.toLowerCase();
-    return Object.entries(departments).filter(([code, name]) =>
-      !q || code.includes(q) || name.toLowerCase().includes(q)
-    );
-  }, [departments, deptSearch]);
-
-  const toggleDepartment = (code: string) => {
+  const togglePendingDepartment = (code: string) => {
     if (!configForm) return;
-    const current = configForm.cibles.departements;
-    const next = current.includes(code)
-      ? current.filter((d) => d !== code)
-      : [...current, code];
-    setConfigForm({ ...configForm, cibles: { ...configForm.cibles, departements: next } });
+    const nextDepartments = pendingDepartments.includes(code)
+      ? pendingDepartments.filter((d) => d !== code)
+      : [...pendingDepartments, code];
+
+    setPendingDepartments(nextDepartments);
+    setConfigForm({
+      ...configForm,
+      cibles: { ...configForm.cibles, departements: nextDepartments },
+    });
   };
 
   const toggleType = (type: ProspectedVenueType) => {
@@ -223,6 +224,22 @@ const ProspectionPage: React.FC = () => {
     }
   };
 
+  const handleClearRuns = async () => {
+    const confirmed = window.confirm('Effacer tout l’historique des exécutions ? Cette action est irréversible.');
+    if (!confirmed) return;
+
+    setClearingRuns(true);
+    try {
+      const result = await clearProspectionRuns();
+      showSuccess(`${result.deletedCount} exécution(s) supprimée(s).`);
+      refetchRuns();
+    } catch (err) {
+      showError(getErrorMessage(err, 'Impossible d’effacer l’historique'));
+    } finally {
+      setClearingRuns(false);
+    }
+  };
+
   if (!isSuperAdmin) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--ccc-bg-gradient)' }}>
@@ -262,31 +279,72 @@ const ProspectionPage: React.FC = () => {
         {/* Mode */}
         <section style={cardStyle}>
           <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Mode</h2>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            {(['manuel', 'auto'] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setConfigForm({ ...configForm, mode })}
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: 10,
-                  border: `2px solid ${configForm.mode === mode ? '#7c3aed' : 'var(--ccc-border-medium)'}`,
-                  background: configForm.mode === mode ? 'rgba(124,58,237,0.12)' : 'transparent',
-                  color: configForm.mode === mode ? '#7c3aed' : 'var(--ccc-text-primary)',
-                  fontWeight: configForm.mode === mode ? 700 : 400,
-                  cursor: 'pointer',
-                }}
-              >
-                {mode === 'auto' ? 'Automatique (cron)' : 'Manuel'}
-              </button>
-            ))}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(320px, 1.4fr) minmax(220px, 1fr)',
+              gap: 16,
+            }}
+          >
+            <div
+              style={{
+                border: '1px solid var(--ccc-border-subtle)',
+                borderRadius: 12,
+                padding: 14,
+                background: 'var(--ccc-bg-surface)',
+              }}
+            >
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {(['manuel', 'auto'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setConfigForm({ ...configForm, mode })}
+                    style={{
+                      padding: '10px 20px',
+                      borderRadius: 10,
+                      border: `2px solid ${configForm.mode === mode ? '#7c3aed' : 'var(--ccc-border-medium)'}`,
+                      background: configForm.mode === mode ? 'rgba(124,58,237,0.12)' : 'transparent',
+                      color: configForm.mode === mode ? '#7c3aed' : 'var(--ccc-text-primary)',
+                      fontWeight: configForm.mode === mode ? 700 : 500,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {mode === 'auto' ? 'Automatique (cron)' : 'Manuel'}
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--ccc-text-muted)', margin: '12px 0 0' }}>
+                {configForm.mode === 'auto'
+                  ? 'Le cron enverra des emails selon la fréquence configurée ci-dessous.'
+                  : 'Seul le bouton « Lancer la prospection » déclenche un envoi.'}
+              </p>
+            </div>
+
+            <div
+              style={{
+                border: '1px solid var(--ccc-border-subtle)',
+                borderRadius: 12,
+                padding: 14,
+                background: 'var(--ccc-bg-surface)',
+                display: 'grid',
+                gap: 8,
+                alignContent: 'start',
+              }}
+            >
+              <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--ccc-text-muted)' }}>
+                Aperçu
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>
+                {configForm.mode === 'auto' ? 'Automatique (cron)' : 'Manuel'}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--ccc-text-secondary)' }}>
+                {configForm.mode === 'auto'
+                  ? `Jours actifs: ${configForm.cron.joursActifs.length || 0} • Heure: ${configForm.cron.heureEnvoi}`
+                  : 'Déclenchement à la demande uniquement'}
+              </div>
+            </div>
           </div>
-          <p style={{ fontSize: 13, color: 'var(--ccc-text-muted)', marginTop: 12 }}>
-            {configForm.mode === 'auto'
-              ? 'Le cron enverra des emails selon la fréquence configurée ci-dessous.'
-              : 'Seul le bouton « Lancer la prospection » déclenche un envoi.'}
-          </p>
         </section>
 
         {/* Fréquence cron */}
@@ -362,35 +420,83 @@ const ProspectionPage: React.FC = () => {
             </div>
           </div>
           <div>
-            <span style={labelStyle}>Départements ({configForm.cibles.departements.length} sélectionné(s))</span>
-            <input
-              type="text"
-              placeholder="Rechercher un département…"
-              value={deptSearch}
-              onChange={(e) => setDeptSearch(e.target.value)}
-              style={{ ...inputStyle, marginBottom: 10, maxWidth: 320 }}
-            />
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-              gap: 6,
-              maxHeight: 200,
-              overflowY: 'auto',
-              padding: 8,
-              border: '1px solid var(--ccc-border-subtle)',
-              borderRadius: 10,
-            }}>
-              {filteredDepartments.map(([code, name]) => (
-                <label key={code} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={configForm.cibles.departements.includes(code)}
-                    onChange={() => toggleDepartment(code)}
-                  />
-                  <span>{code} — {name}</span>
-                </label>
-              ))}
+            <span style={labelStyle}>Départements ({pendingDepartments.length} sélectionné(s))</span>
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setIsDepartmentsDropdownOpen((open) => !open)}
+                style={{
+                  ...inputStyle,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                }}
+              >
+                <span>
+                  {pendingDepartments.length === 0
+                    ? 'Choisir des départements'
+                    : `${pendingDepartments.length} département(s) sélectionné(s)`}
+                </span>
+                <span style={{ opacity: 0.7 }}>{isDepartmentsDropdownOpen ? '▲' : '▼'}</span>
+              </button>
+
+              {isDepartmentsDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    zIndex: 20,
+                    top: 'calc(100% + 6px)',
+                    left: 0,
+                    right: 0,
+                    maxHeight: 260,
+                    overflowY: 'auto',
+                    border: '1px solid var(--ccc-border-medium)',
+                    borderRadius: 10,
+                    background: 'var(--ccc-bg-elevated)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.16)',
+                    padding: 6,
+                  }}
+                >
+                  {Object.entries(departments).map(([code, name]) => {
+                    const selected = pendingDepartments.includes(code);
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => togglePendingDepartment(code)}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          textAlign: 'left',
+                          padding: '7px 8px',
+                          borderRadius: 8,
+                          border: 'none',
+                          background: selected ? 'rgba(124,58,237,0.12)' : 'transparent',
+                          color: selected ? '#6d28d9' : 'var(--ccc-text-primary)',
+                          cursor: 'pointer',
+                          fontSize: 13,
+                        }}
+                      >
+                        <span style={{ width: 14, fontWeight: 700 }}>{selected ? '✓' : ''}</span>
+                        <span>{code} — {name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+            <p style={{ fontSize: 12, color: 'var(--ccc-text-muted)', marginTop: 8 }}>
+              Résumé :{' '}
+              {pendingDepartments.length === 0
+                ? 'aucun département sélectionné'
+                : pendingDepartments
+                  .map((code) => `${code} — ${departments[code]}`)
+                  .join(', ')}
+            </p>
           </div>
         </section>
 
@@ -503,7 +609,26 @@ const ProspectionPage: React.FC = () => {
 
         {/* Historique runs */}
         <section style={cardStyle}>
-          <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Historique des exécutions</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+            <h2 style={{ margin: 0, fontSize: 18 }}>Historique des exécutions</h2>
+            <button
+              type="button"
+              onClick={handleClearRuns}
+              disabled={clearingRuns || runs.length === 0}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 8,
+                border: '1px solid #dc2626',
+                background: 'transparent',
+                color: '#dc2626',
+                fontWeight: 600,
+                cursor: clearingRuns || runs.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: clearingRuns || runs.length === 0 ? 0.5 : 1,
+              }}
+            >
+              {clearingRuns ? 'Suppression…' : 'Effacer l’historique'}
+            </button>
+          </div>
           {runs.length === 0 ? (
             <p style={{ color: 'var(--ccc-text-muted)' }}>Aucune exécution pour le moment.</p>
           ) : (
@@ -573,13 +698,20 @@ const ProspectionPage: React.FC = () => {
               {enriching ? 'Enrichissement…' : 'Enrichir sites & emails (30)'}
             </button>
           </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(220px, 1fr))',
+              gap: 10,
+              marginBottom: 16,
+            }}
+          >
             <input
               type="text"
               placeholder="Rechercher…"
               value={venueSearch}
               onChange={(e) => { setVenueSearch(e.target.value); setVenuePage(1); }}
-              style={{ ...inputStyle, flex: 1, minWidth: 180 }}
+              style={{ ...inputStyle, gridColumn: '1 / -1' }}
             />
             <select value={venueDept} onChange={(e) => { setVenueDept(e.target.value); setVenuePage(1); }} style={inputStyle}>
               <option value="">Tous départements</option>
