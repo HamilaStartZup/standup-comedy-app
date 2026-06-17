@@ -302,7 +302,7 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
                         borderRadius: '4px',
                         marginTop: '8px',
                         fontSize: '13px',
-                        color: '#ddd'
+                        color: 'var(--ccc-text-subtle)'
                       }}>
                         💬 Message: {app.message}
                       </div>

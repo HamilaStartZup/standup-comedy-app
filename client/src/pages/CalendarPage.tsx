@@ -208,7 +208,7 @@ const CalendarPage = () => {
       )}
       {isError && (
         <div style={{ textAlign:'center', marginTop:'50px' }}>
-          <p style={{ color:'#dc3545', marginBottom: '12px' }}>
+          <p style={{ color:'var(--ccc-error)', marginBottom: '12px' }}>
             Erreur lors du chargement des événements.
           </p>
           <button

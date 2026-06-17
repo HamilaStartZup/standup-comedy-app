@@ -219,7 +219,7 @@ const MesSallesPage: React.FC = () => {
             style={{
               padding: '12px 24px',
               background: activeTab === 'salles' ? 'var(--ccc-accent-gradient)' : 'transparent',
-              color: activeTab === 'salles' ? '#fff' : 'var(--ccc-text-muted)',
+              color: activeTab === 'salles' ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-muted)',
               border: 'none',
               borderRadius: '10px 10px 0 0',
               fontWeight: 600,
@@ -236,7 +236,7 @@ const MesSallesPage: React.FC = () => {
             style={{
               padding: '12px 24px',
               background: activeTab === 'reservations' ? 'var(--ccc-accent-gradient)' : 'transparent',
-              color: activeTab === 'reservations' ? '#fff' : 'var(--ccc-text-muted)',
+              color: activeTab === 'reservations' ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-muted)',
               border: 'none',
               borderRadius: '10px 10px 0 0',
               fontWeight: 600,
@@ -257,7 +257,7 @@ const MesSallesPage: React.FC = () => {
                 style={{
                   padding: '12px 28px',
                   background: 'var(--ccc-accent-gradient)',
-                  color: '#fff',
+                  color: 'var(--ccc-text-on-accent)',
                   border: 'none',
                   borderRadius: 12,
                   fontWeight: 700,
@@ -274,8 +274,8 @@ const MesSallesPage: React.FC = () => {
               <LoadingSpinner message="Chargement de vos salles..." />
             ) : isVenueError ? (
               <div style={{ textAlign: 'center', padding: '40px 24px' }}>
-                <p style={{ color: '#ef4444', marginBottom: 12 }}>Impossible de charger vos salles.</p>
-                <button onClick={() => refetchVenues()} style={{ padding: '10px 20px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>Réessayer</button>
+                <p style={{ color: 'var(--ccc-error)', marginBottom: 12 }}>Impossible de charger vos salles.</p>
+                <button onClick={() => refetchVenues()} style={{ padding: '10px 20px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>Réessayer</button>
               </div>
             ) : myVenues.length === 0 ? (
               <div style={{
@@ -294,7 +294,7 @@ const MesSallesPage: React.FC = () => {
                   style={{
                     padding: '14px 32px',
                     background: 'var(--ccc-accent-gradient)',
-                    color: '#fff',
+                    color: 'var(--ccc-text-on-accent)',
                     border: 'none',
                     borderRadius: 12,
                     fontWeight: 700,
@@ -330,8 +330,8 @@ const MesSallesPage: React.FC = () => {
               <LoadingSpinner message="Chargement de vos réservations..." />
             ) : isBookingsError ? (
               <div style={{ textAlign: 'center', padding: '40px 24px' }}>
-                <p style={{ color: '#ef4444', marginBottom: 12 }}>Impossible de charger les réservations.</p>
-                <button onClick={() => refetchBookings()} style={{ padding: '10px 20px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>Réessayer</button>
+                <p style={{ color: 'var(--ccc-error)', marginBottom: 12 }}>Impossible de charger les réservations.</p>
+                <button onClick={() => refetchBookings()} style={{ padding: '10px 20px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>Réessayer</button>
               </div>
             ) : bookings.length === 0 ? (
               <div style={{
@@ -363,16 +363,16 @@ const MesSallesPage: React.FC = () => {
                               ← Retour aux réservations
                             </button>
 
-                            <div style={{ marginBottom: 20, padding: 16, backgroundColor: '#fff', borderRadius: 20, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                            <div style={{ marginBottom: 20, padding: 16, backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 20, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                               <div>
                                 <h3 style={{ margin: '0 0 8px 0', color: '#1a1a1a', fontSize: '1.2em' }}>
                                   {first.requester?.firstName} {first.requester?.lastName}
                                 </h3>
-                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9em' }}>
+                                <p style={{ margin: 0, color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
                                   📍 {first.venue?.name} · {first.venue?.city} · {groupBookings.length} date(s)
                                 </p>
                                 {first.message && (
-                                  <p style={{ margin: '10px 0 0', fontSize: 13, color: '#475569', fontStyle: 'italic', background: '#f8fafc', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid rgba(124, 58, 237,0.5)' }}>
+                                  <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ccc-text-secondary)', fontStyle: 'italic', background: '#f8fafc', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid rgba(124, 58, 237,0.5)' }}>
                                     "{first.message}"
                                   </p>
                                 )}
@@ -389,7 +389,7 @@ const MesSallesPage: React.FC = () => {
                                   <div
                                     key={b._id}
                                     data-booking-id={b._id}
-                                    style={{ backgroundColor: '#fff', borderRadius: 20, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, opacity: past ? 0.7 : 1, flexWrap: 'wrap' }}
+                                    style={{ backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 20, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, opacity: past ? 0.7 : 1, flexWrap: 'wrap' }}
                                   >
                                     <div style={{ flex: 1, minWidth: 200, display: 'flex', alignItems: 'center', gap: 12 }}>
                                       {isRespondingGroup && b.status === 'PENDING' && (
@@ -424,8 +424,8 @@ const MesSallesPage: React.FC = () => {
                             {hasPending && (
                               <div style={{ marginTop: 20 }}>
                                 {isRespondingGroup ? (
-                                  <div style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)' }}>
-                                    <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 8px 0' }}>
+                                  <div style={{ backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 16, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)' }}>
+                                    <p style={{ fontSize: 12, color: 'var(--ccc-text-muted)', margin: '0 0 8px 0' }}>
                                       Cochez les dates à inclure dans l'acceptation (décocher = refuser cette date).
                                     </p>
                                     <textarea
@@ -439,20 +439,20 @@ const MesSallesPage: React.FC = () => {
                                       <button
                                         onClick={() => handleGroupAction(selectedGroupId, 'ACCEPTED')}
                                         disabled={groupActionLoadingId === selectedGroupId}
-                                        style={{ padding: '9px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: groupActionLoadingId === selectedGroupId ? 0.6 : 1 }}
+                                        style={{ padding: '9px 20px', background: '#059669', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: groupActionLoadingId === selectedGroupId ? 0.6 : 1 }}
                                       >
                                         ✓ Accepter le lot
                                       </button>
                                       <button
                                         onClick={() => handleGroupAction(selectedGroupId, 'REFUSED')}
                                         disabled={groupActionLoadingId === selectedGroupId}
-                                        style={{ padding: '9px 20px', background: '#fff', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: groupActionLoadingId === selectedGroupId ? 0.6 : 1 }}
+                                        style={{ padding: '9px 20px', background: 'var(--ccc-btn-secondary-bg)', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: groupActionLoadingId === selectedGroupId ? 0.6 : 1 }}
                                       >
                                         ✕ Refuser tout
                                       </button>
                                       <button
                                         onClick={resetGroupResponse}
-                                        style={{ padding: '9px 20px', background: 'transparent', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 10, cursor: 'pointer', fontSize: 13 }}
+                                        style={{ padding: '9px 20px', background: 'transparent', color: 'var(--ccc-text-muted)', border: '1px solid #e2e8f0', borderRadius: 10, cursor: 'pointer', fontSize: 13 }}
                                       >
                                         Annuler
                                       </button>
@@ -461,7 +461,7 @@ const MesSallesPage: React.FC = () => {
                                 ) : (
                                   <button
                                     onClick={() => setIsRespondingGroup(true)}
-                                    style={{ padding: '10px 22px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
+                                    style={{ padding: '10px 22px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
                                   >
                                     Répondre au lot
                                   </button>
@@ -490,14 +490,14 @@ const MesSallesPage: React.FC = () => {
                             <div
                               key={groupId}
                               onClick={() => { setSelectedGroupId(groupId); resetGroupResponse(); }}
-                              style={{ backgroundColor: '#fff', borderRadius: 20, padding: '16px 20px', boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', cursor: 'pointer' }}
+                              style={{ backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 20, padding: '16px 20px', boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', cursor: 'pointer' }}
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                                 <div>
                                   <h3 style={{ margin: '0 0 6px 0', color: '#1a1a1a', fontSize: '1.1em' }}>
                                     {first?.requester?.firstName} {first?.requester?.lastName}
                                   </h3>
-                                  <p style={{ margin: 0, color: '#64748b', fontSize: '0.9em' }}>
+                                  <p style={{ margin: 0, color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
                                     📍 {first?.venue?.name} · {first?.venue?.city} · {groupBookings.length} date(s)
                                   </p>
                                   <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.82em' }}>
@@ -619,7 +619,7 @@ const MesSallesPage: React.FC = () => {
                       data-booking-id={booking._id}
                       className={isHighlighted ? 'is-highlighted' : undefined}
                       style={{
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--ccc-bg-elevated)',
                         borderRadius: 20,
                         padding: 20,
                         boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
@@ -633,7 +633,7 @@ const MesSallesPage: React.FC = () => {
                           <h3 style={{ margin: '0 0 4px 0', fontSize: 18, fontWeight: 700, color: '#1a1a1a' }}>
                             {booking.venue?.name || 'Salle'}
                           </h3>
-                          <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>
+                          <p style={{ margin: 0, fontSize: 13, color: 'var(--ccc-text-muted)' }}>
                             📍 {booking.venue?.city} · {booking.venue?.address}
                           </p>
                         </div>
@@ -656,19 +656,19 @@ const MesSallesPage: React.FC = () => {
                       {/* Meta grid */}
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, padding: '14px 16px', background: 'rgba(0,0,0,0.03)', borderRadius: 12, marginBottom: 14 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <span style={{ fontSize: '0.72em', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</span>
+                          <span style={{ fontSize: '0.72em', color: 'var(--ccc-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</span>
                           <span style={{ fontSize: '0.95em', color: '#1a1a1a', fontWeight: 600 }}>
                             {new Date(booking.requestedDate).toLocaleDateString('fr-FR')}
                           </span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <span style={{ fontSize: '0.72em', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horaire</span>
+                          <span style={{ fontSize: '0.72em', color: 'var(--ccc-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horaire</span>
                           <span style={{ fontSize: '0.95em', color: '#1a1a1a', fontWeight: 600 }}>
                             {booking.startTime} – {booking.endTime}
                           </span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <span style={{ fontSize: '0.72em', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Demandeur</span>
+                          <span style={{ fontSize: '0.72em', color: 'var(--ccc-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Demandeur</span>
                           <span style={{ fontSize: '0.95em', color: '#1a1a1a', fontWeight: 500 }}>
                             {booking.requester?.firstName} {booking.requester?.lastName}
                           </span>
@@ -735,14 +735,14 @@ const MesSallesPage: React.FC = () => {
                           <button
                             onClick={() => handleBookingStatusAction(booking._id, 'ACCEPTED')}
                             disabled={actionLoadingId === booking._id}
-                            style={{ padding: '9px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: actionLoadingId === booking._id ? 0.6 : 1 }}
+                            style={{ padding: '9px 20px', background: '#059669', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: actionLoadingId === booking._id ? 0.6 : 1 }}
                           >
                             ✓ Accepter
                           </button>
                           <button
                             onClick={() => handleBookingStatusAction(booking._id, 'REFUSED')}
                             disabled={actionLoadingId === booking._id}
-                            style={{ padding: '9px 20px', background: '#fff', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: actionLoadingId === booking._id ? 0.6 : 1 }}
+                            style={{ padding: '9px 20px', background: 'var(--ccc-btn-secondary-bg)', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: actionLoadingId === booking._id ? 0.6 : 1 }}
                           >
                             ✕ Refuser
                           </button>

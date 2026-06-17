@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 const LANDING_CSS = `
-  .landing-dark { --primary: #7c3aed; --primary-hover: #6d28d9; --primary-light: rgba(124, 58, 237, 0.12); --secondary: #a78bfa; --accent: #a78bfa; --dark: #1e293b; --text-primary: #1e293b; --text-secondary: #475569; --bg-light: rgba(15, 23, 42, 0.05); --bg-white: #ffffff; --border: rgba(15, 23, 42, 0.08); --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06); --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.08); --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1); --shadow-xl: 0 20px 25px rgba(15, 23, 42, 0.12); --shadow-2xl: 0 25px 50px rgba(15, 23, 42, 0.15); }
+  .landing-dark { --primary: var(--ccc-accent); --primary-hover: #6d28d9; --primary-light: rgba(124, 58, 237, 0.12); --secondary: #a78bfa; --accent: #a78bfa; --dark: #1e293b; --text-primary: #1e293b; --text-secondary: var(--ccc-text-secondary); --bg-light: rgba(15, 23, 42, 0.05); --bg-white: #ffffff; --border: rgba(15, 23, 42, 0.08); --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06); --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.08); --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1); --shadow-xl: 0 20px 25px rgba(15, 23, 42, 0.12); --shadow-2xl: 0 25px 50px rgba(15, 23, 42, 0.15); }
   .landing-dark * { box-sizing: border-box; }
   .landing-dark .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
   @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
@@ -67,9 +67,9 @@ const LANDING_CSS = `
   .landing-dark .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
   .landing-dark .avatar { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; font-size: 24px; }
   .landing-dark .card-info h4 { font-size: 16px; font-weight: 700; color: #1a1a1a; }
-  .landing-dark .card-info p { font-size: 13px; color: #64748B; }
+  .landing-dark .card-info p { font-size: 13px; color: var(--ccc-text-muted); }
   .landing-dark .card-badge { display: inline-block; padding: 4px 10px; background: var(--primary-light); color: var(--primary); border-radius: 6px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
-  .landing-dark .card-details { font-size: 14px; color: #64748B; line-height: 1.6; }
+  .landing-dark .card-details { font-size: 14px; color: var(--ccc-text-muted); line-height: 1.6; }
   .landing-dark .floating-emoji { position: absolute; font-size: 48px; animation: float 4s ease-in-out infinite; }
   .landing-dark .emoji-1 { top: 60px; right: -40px; } .landing-dark .emoji-2 { bottom: 100px; right: -20px; animation-delay: 1s; } .landing-dark .emoji-3 { top: 200px; left: -30px; animation-delay: 0.5s; }
   .landing-dark .role-cards-section { padding: 100px 0; background: transparent; }
@@ -83,7 +83,7 @@ const LANDING_CSS = `
   .landing-dark .role-icon { width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary-light), rgba(167, 139, 250, 0.2)); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 24px; }
   .landing-dark .role-card h3 { font-size: 24px; font-weight: 700; margin-bottom: 16px; color: #1a1a1a; }
   .landing-dark .role-features { list-style: none; padding: 0; margin: 0; }
-  .landing-dark .role-features li { padding: 10px 0; padding-left: 28px; position: relative; color: #64748B; font-size: 15px; line-height: 1.6; }
+  .landing-dark .role-features li { padding: 10px 0; padding-left: 28px; position: relative; color: var(--ccc-text-muted); font-size: 15px; line-height: 1.6; }
   .landing-dark .role-features li::before { content: '✓'; position: absolute; left: 0; color: var(--primary); font-weight: bold; font-size: 16px; }
   .landing-dark .role-cta { margin-top: 24px; padding: 12px 24px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(255, 75, 43, 0.1)); border: 1px solid rgba(124, 58, 237, 0.3); color: var(--primary); border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s; width: 100%; font-family: 'Sora', sans-serif; box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08); }
   .landing-dark .role-cta:hover { background: var(--ccc-accent-gradient); border-color: rgba(124, 58, 237, 0.5); color: white; }
@@ -113,7 +113,7 @@ const LANDING_CSS = `
   .landing-dark .before-side .item-icon { background: white; border: 2px solid #FFE5EB; }
   .landing-dark .after-side .item-icon { background: white; border: 2px solid #D4F4DD; }
   .landing-dark .item-content h4 { font-size: 16px; font-weight: 700; color: #0F172A; margin-bottom: 4px; }
-  .landing-dark .item-content p { font-size: 14px; color: #64748B; line-height: 1.5; }
+  .landing-dark .item-content p { font-size: 14px; color: var(--ccc-text-muted); line-height: 1.5; }
   .landing-dark .comparison-divider { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10; display: flex; align-items: center; justify-content: center; }
   .landing-dark .divider-arrow { width: 80px; height: 80px; background: var(--ccc-accent-gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 36px; font-weight: bold; box-shadow: 0 8px 32px rgba(124, 58, 237, 0.4); border: 4px solid white; }
   @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.3), 0 0 40px rgba(124, 58, 237, 0.1); } 50% { box-shadow: 0 0 30px rgba(124, 58, 237, 0.5), 0 0 60px rgba(124, 58, 237, 0.2); } }
@@ -123,7 +123,7 @@ const LANDING_CSS = `
   .landing-dark .conclusion-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px; background: var(--ccc-accent-gradient); }
   .landing-dark .conclusion-icon { width: 64px; height: 64px; margin: 0 auto 20px; background: linear-gradient(135deg, var(--primary-light), white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; }
   .landing-dark .conclusion-text { font-size: 24px; font-weight: 700; color: #0F172A; margin-bottom: 12px; line-height: 1.4; }
-  .landing-dark .conclusion-subtext { font-size: 16px; color: #64748B; line-height: 1.6; }
+  .landing-dark .conclusion-subtext { font-size: 16px; color: var(--ccc-text-muted); line-height: 1.6; }
   @media (max-width: 968px) { .landing-dark .problem-comparison { grid-template-columns: 1fr; gap: 60px; } .landing-dark .comparison-divider { transform: translate(-50%, -50%) rotate(90deg); } .landing-dark .comparison-side { padding: 32px; } }
   @media (max-width: 640px) { .landing-dark .comparison-heading { font-size: 24px; } .landing-dark .comparison-side { padding: 24px; } .landing-dark .conclusion-text { font-size: 20px; } }
   .landing-dark .how-section { padding: 120px 0; background: transparent; }
@@ -135,7 +135,7 @@ const LANDING_CSS = `
   .landing-dark .step-number { width: 72px; height: 72px; background: var(--ccc-accent-gradient); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 28px; font-weight: 800; font-size: 32px; color: white; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.3); }
   .landing-dark .step-icon { font-size: 48px; margin-bottom: 20px; }
   .landing-dark .step h3 { font-size: 22px; font-weight: 700; margin-bottom: 16px; color: #1a1a1a; }
-  .landing-dark .step p { color: #64748B; font-size: 16px; line-height: 1.7; }
+  .landing-dark .step p { color: var(--ccc-text-muted); font-size: 16px; line-height: 1.7; }
   .landing-dark .steps-conclusion { text-align: center; font-size: 24px; font-weight: 700; color: var(--primary); margin-top: 60px; padding: 32px; background: var(--primary-light); border-radius: 20px; border: 2px solid rgba(124, 58, 237, 0.32); }
   .landing-dark .tutorial-links { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 60px; position: relative; z-index: 1; max-width: 800px; margin-left: auto; margin-right: auto; }
   .landing-dark .tutorial-link-card { display: block; width: 100%; background: white; border: 2px solid var(--border); border-radius: 24px; overflow: hidden; text-align: center; transition: all 0.4s; color: #1a1a1a; text-decoration: none; padding: 0; margin: 0; font: inherit; appearance: none; -webkit-appearance: none; }
@@ -144,7 +144,7 @@ const LANDING_CSS = `
   .landing-dark .tutorial-thumbnail-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
   .landing-dark .tutorial-thumbnail-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.55); font-size: 48px; background: #0f172a; }
   .landing-dark .tutorial-thumbnail-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 1; }
-  .landing-dark .tutorial-thumbnail-play span { width: 64px; height: 64px; border-radius: 50%; background: rgba(124, 58, 237, 0.92); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; padding-left: 4px; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.45); }
+  .landing-dark .tutorial-thumbnail-play span { width: 64px; height: 64px; border-radius: 50%; background: rgba(124, 58, 237, 0.92); color: var(--ccc-text-on-accent); display: flex; align-items: center; justify-content: center; font-size: 26px; padding-left: 4px; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.45); }
   .landing-dark .tutorial-link-card h3 { font-size: 16px; font-weight: 700; margin: 0; padding: 20px 16px; color: #1a1a1a; line-height: 1.3; }
   .landing-dark .tutorial-link-card { cursor: pointer; }
   .landing-dark .video-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; }
@@ -155,13 +155,13 @@ const LANDING_CSS = `
   @media (max-width: 968px) { .landing-dark .tutorial-links { grid-template-columns: 1fr; } }
   .landing-dark .features-section { padding: 120px 0; background: transparent; }
   .landing-dark .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; margin-top: 80px; }
-  .landing-dark .feature-card { background: #ffffff; border-radius: 24px; padding: 48px; border: 2px solid var(--border); transition: all 0.4s; box-shadow: var(--shadow-sm); }
+  .landing-dark .feature-card { background: var(--ccc-bg-elevated); border-radius: 24px; padding: 48px; border: 2px solid var(--border); transition: all 0.4s; box-shadow: var(--shadow-sm); }
   .landing-dark .feature-card:hover { background: white; border-color: var(--primary); box-shadow: var(--shadow-xl); color: #1a1a1a; }
   .landing-dark .feature-icon { width: 64px; height: 64px; background: var(--ccc-accent-gradient); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 24px; }
   .landing-dark .feature-card h3 { font-size: 24px; font-weight: 700; margin-bottom: 12px; color: var(--text-primary); }
   .landing-dark .feature-card:hover h3 { color: #1a1a1a; }
   .landing-dark .feature-card p { color: var(--text-secondary); font-size: 16px; line-height: 1.7; }
-  .landing-dark .feature-card:hover p { color: #64748B; }
+  .landing-dark .feature-card:hover p { color: var(--ccc-text-muted); }
   .landing-dark .cta-section { padding: 120px 0; background: transparent; }
   .landing-dark .cta-content { max-width: 800px; margin: 0 auto; text-align: center; }
   .landing-dark .cta-content h2 { font-size: clamp(2rem, 4vw, 56px); font-weight: 800; margin-bottom: 24px; letter-spacing: -0.02em; color: var(--text-primary); line-height: 1.1; font-family: 'Sora', sans-serif; }

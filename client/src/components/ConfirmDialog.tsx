@@ -157,8 +157,8 @@ const ConfirmDialog = ({
 
   const confirmButtonStyle: CSSProperties = {
     ...baseButtonStyle,
-    backgroundColor: isDangerous ? '#dc3545' : '#7c3aed',
-    color: '#fff',
+    backgroundColor: isDangerous ? 'var(--ccc-error)' : 'var(--ccc-accent)',
+    color: 'var(--ccc-text-on-accent)',
   };
 
   return (

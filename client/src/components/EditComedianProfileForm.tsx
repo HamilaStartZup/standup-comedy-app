@@ -263,7 +263,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
-      <h2 style={{ color: '#7c3aed', marginBottom: '20px' }}>Modifier le Profil Humoriste</h2>
+      <h2 style={{ color: 'var(--ccc-accent)', marginBottom: '20px' }}>Modifier le Profil Humoriste</h2>
       <form onSubmit={handleSubmit}>
         <label style={labelStyle}>Photo de profil</label>
         <div style={{ marginBottom: '15px' }}>
@@ -278,7 +278,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
                   height: '100px',
                   borderRadius: '50%',
                   objectFit: 'cover',
-                  border: '2px solid #7c3aed'
+                  border: '2px solid var(--ccc-accent)'
                 }}
               />
             </div>
@@ -714,7 +714,7 @@ function EditComedianProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, 
               borderRadius: '5px',
               border: '1px solid var(--ccc-border-subtle)',
               backgroundColor: 'rgba(124, 58, 237, 0.15)',
-              color: '#7c3aed',
+              color: 'var(--ccc-accent)',
               cursor: 'pointer',
               fontSize: '0.9em',
               fontWeight: 'bold',

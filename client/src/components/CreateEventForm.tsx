@@ -1223,7 +1223,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     width: '100%',
     padding: isMobile ? '14px 16px' : '12px 16px',
     fontSize: isMobile ? '16px' : '14px', // 16px prevents zoom on iOS
-    border: '1px solid #ddd',
+    border: '1px solid var(--ccc-border-light)',
     borderRadius: '8px',
     background: 'rgba(255, 255, 255, 1)',
     color: '#1a1a1a',
@@ -1480,7 +1480,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                   onChange={handleChange}
                   style={{
                     ...inputStyle,
-                    borderColor: errors.title ? 'var(--ccc-error)' : '#444'
+                    borderColor: errors.title ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                   }}
                   placeholder="Ex: Soirée Stand-Up Comedy"
                 />
@@ -1504,7 +1504,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     ...inputStyle,
                     minHeight: '100px',
                     resize: 'vertical',
-                    borderColor: errors.description ? 'var(--ccc-error)' : '#444'
+                    borderColor: errors.description ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                   }}
                   placeholder="Décrivez votre évènement en détail..."
                 />
@@ -1530,7 +1530,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         maxHeight: 160,
                         objectFit: 'cover',
                         borderRadius: 8,
-                        border: '1px solid #444',
+                        border: '1px solid var(--ccc-input-border)',
                       }}
                     />
                     <button
@@ -1598,7 +1598,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
-                      borderColor: errors.venue ? 'var(--ccc-error)' : '#444'
+                      borderColor: errors.venue ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: Le Comedy Club"
                   />
@@ -1622,7 +1622,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
-                      borderColor: errors.address ? 'var(--ccc-error)' : '#444'
+                      borderColor: errors.address ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: 123 rue de la Comédie"
                   />
@@ -1665,7 +1665,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     onBlur={validatePostalCode}
                     style={{
                       ...inputStyle,
-                      borderColor: (errors.postalCode || postalCodeError) ? 'var(--ccc-error)' : '#444'
+                      borderColor: (errors.postalCode || postalCodeError) ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: 75001"
                     maxLength={5}
@@ -1707,7 +1707,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                             color: 'var(--ccc-text-primary)',
                             transition: 'background-color 0.2s'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--ccc-bg-surface)'}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--ccc-bg-hover)'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
                           {option.city} ({option.postcode})
@@ -1730,7 +1730,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
-                      borderColor: errors.city ? 'var(--ccc-error)' : '#444'
+                      borderColor: errors.city ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: Paris"
                   />
@@ -1754,7 +1754,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
-                      borderColor: errors.country ? 'var(--ccc-error)' : '#444'
+                      borderColor: errors.country ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: France"
                   />
@@ -1791,7 +1791,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     alignItems: 'center',
                     gap: '12px',
                     padding: '16px',
-                    backgroundColor: eventType === 'unique' ? 'rgba(124, 58, 237, 0.08)' : 'var(--ccc-bg-surface)',
+                    backgroundColor: eventType === 'unique' ? 'rgba(124, 58, 237, 0.08)' : 'var(--ccc-bg-inactive)',
                     borderRadius: '8px',
                     border: eventType === 'unique' ? '1px solid rgba(124, 58, 237, 0.4)' : '1px solid var(--ccc-border-subtle)',
                     cursor: 'pointer',
@@ -1815,7 +1815,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     alignItems: 'center',
                     gap: '12px',
                     padding: '16px',
-                    backgroundColor: eventType === 'recurring' ? 'rgba(124, 58, 237, 0.08)' : 'var(--ccc-bg-surface)',
+                    backgroundColor: eventType === 'recurring' ? 'rgba(124, 58, 237, 0.08)' : 'var(--ccc-bg-inactive)',
                     borderRadius: '8px',
                     border: eventType === 'recurring' ? '1px solid rgba(124, 58, 237, 0.4)' : '1px solid var(--ccc-border-subtle)',
                     cursor: 'pointer',
@@ -1851,7 +1851,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       value={formData.date}
                       onChange={handleChange}
                       disabled={fieldsLockedByVenueBooking}
-                      style={{ ...inputStyle, borderColor: errors.date ? 'var(--ccc-error)' : '#444' }}
+                      style={{ ...inputStyle, borderColor: errors.date ? 'var(--ccc-error)' : 'var(--ccc-input-border)' }}
                     />
                     {errors.date && <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>{errors.date}</p>}
                   </div>
@@ -1870,7 +1870,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         value={recurrenceStartDate}
                         onChange={(e) => setRecurrenceStartDate(e.target.value)}
                         disabled={fieldsLockedByVenueBooking}
-                        style={{ ...inputStyle, borderColor: errors.recurrenceStartDate ? 'var(--ccc-error)' : '#444' }}
+                        style={{ ...inputStyle, borderColor: errors.recurrenceStartDate ? 'var(--ccc-error)' : 'var(--ccc-input-border)' }}
                         min={new Date().toISOString().split('T')[0]}
                       />
                       {errors.recurrenceStartDate && (
@@ -1893,7 +1893,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                             flex: 1,
                             minWidth: 0,
                             marginBottom: 0,
-                            borderColor: errors.recurrenceEndDate ? 'var(--ccc-error)' : '#444',
+                            borderColor: errors.recurrenceEndDate ? 'var(--ccc-error)' : 'var(--ccc-input-border)',
                           }}
                           min={recurrenceStartDate || new Date().toISOString().split('T')[0]}
                         />
@@ -1936,7 +1936,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                               padding: '10px 14px',
                               borderRadius: '8px',
                               border: recurrenceWeeklyDays.includes(value) ? '1px solid var(--ccc-accent)' : '1px solid var(--ccc-border-medium)',
-                              background: recurrenceWeeklyDays.includes(value) ? 'rgba(124, 58, 237, 0.12)' : 'var(--ccc-bg-surface)',
+                              background: recurrenceWeeklyDays.includes(value) ? 'rgba(124, 58, 237, 0.12)' : 'var(--ccc-bg-inactive)',
                               color: 'var(--ccc-text-primary)',
                               cursor: 'pointer',
                               fontWeight: '500',
@@ -2034,7 +2034,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     }}
                     style={{
                       ...selectStyle,
-                      borderColor: errors.startTime ? 'var(--ccc-error)' : '#444',
+                      borderColor: errors.startTime ? 'var(--ccc-error)' : 'var(--ccc-input-border)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
@@ -2063,7 +2063,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       right: 0,
                       marginTop: '4px',
                       backgroundColor: 'var(--ccc-bg-elevated)',
-                      border: '1px solid #444',
+                      border: '1px solid var(--ccc-input-border)',
                       borderRadius: '8px',
                       maxHeight: '200px',
                       overflowY: 'auto',
@@ -2084,7 +2084,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                           }}
                           onMouseEnter={(e) => {
                             if (formData.startTime !== slot.value) {
-                              e.currentTarget.style.backgroundColor = 'var(--ccc-bg-surface)';
+                              e.currentTarget.style.backgroundColor = 'var(--ccc-bg-hover)';
                             }
                           }}
                           onMouseLeave={(e) => {
@@ -2117,7 +2117,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       disabled={fieldsLockedByVenueBooking}
                       style={{
                         ...selectStyle,
-                        borderColor: errors.duration ? 'var(--ccc-error)' : '#444',
+                        borderColor: errors.duration ? 'var(--ccc-error)' : 'var(--ccc-input-border)',
                         cursor: 'pointer',
                       }}
                     >
@@ -2166,7 +2166,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       }}
                       style={{
                         ...selectStyle,
-                        borderColor: errors.endTime ? 'var(--ccc-error)' : '#444',
+                        borderColor: errors.endTime ? 'var(--ccc-error)' : 'var(--ccc-input-border)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -2195,7 +2195,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         right: 0,
                         marginTop: '4px',
                         backgroundColor: 'var(--ccc-bg-elevated)',
-                        border: '1px solid #444',
+                        border: '1px solid var(--ccc-input-border)',
                         borderRadius: '8px',
                         maxHeight: '200px',
                         overflowY: 'auto',
@@ -2216,7 +2216,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                             }}
                             onMouseEnter={(e) => {
                               if (formData.endTime !== slot.value) {
-                                e.currentTarget.style.backgroundColor = 'var(--ccc-bg-surface)';
+                                e.currentTarget.style.backgroundColor = 'var(--ccc-bg-hover)';
                               }
                             }}
                             onMouseLeave={(e) => {
@@ -2275,7 +2275,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     placeholder="Nombre de places pour spectateur"
                     style={{
                       ...inputStyle,
-                      borderColor: errors.maxSpectators ? 'var(--ccc-error)' : '#444'
+                      borderColor: errors.maxSpectators ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                   />
                   {errors.maxSpectators && (
@@ -2307,7 +2307,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     onChange={handleChange}
                     style={{
                       ...inputStyle,
-                      borderColor: errors.minExperience ? 'var(--ccc-error)' : '#444'
+                      borderColor: errors.minExperience ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: 2"
                     min="0"
@@ -2331,7 +2331,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     onChange={handleChange}
                     style={{
                       ...inputStyle,
-                      borderColor: errors.maxComedians ? 'var(--ccc-error)' : '#444'
+                      borderColor: errors.maxComedians ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: 5"
                     min="1"
@@ -2354,7 +2354,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     onChange={handleChange}
                     style={{
                       ...selectStyle,
-                      borderColor: errors.requiredExperienceLevel ? 'var(--ccc-error)' : '#444'
+                      borderColor: errors.requiredExperienceLevel ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                   >
                     <option value="all">Tous les niveaux</option>

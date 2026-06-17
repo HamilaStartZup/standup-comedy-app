@@ -95,7 +95,7 @@ const ExportDataSection: React.FC = () => {
     opacity: isExporting ? 0.6 : 1,
     transition: 'all 0.3s ease',
     background: 'var(--ccc-accent-gradient)',
-    color: '#fff',
+    color: 'var(--ccc-text-on-accent)',
   };
 
   return (

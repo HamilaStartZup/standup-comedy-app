@@ -263,7 +263,7 @@ function RegisterSpectatorPage() {
     margin: '10px 0',
     borderRadius: '8px',
     border: '1px solid var(--ccc-border-medium)',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     color: 'var(--ccc-text-primary)',
     fontSize: '1em',
     outline: 'none',
@@ -292,7 +292,7 @@ function RegisterSpectatorPage() {
   };
 
   const errorStyle: CSSProperties = {
-    color: '#ef4444',
+    color: 'var(--ccc-error)',
     fontSize: '0.85em',
     marginTop: '4px',
     marginBottom: '8px',
@@ -327,7 +327,7 @@ function RegisterSpectatorPage() {
             <button
               type="button"
               onClick={() => handleSocialRegister('google')}
-              style={{ ...socialButtonBaseStyle, backgroundColor: '#ffffff', color: '#3c4043' }}
+              style={{ ...socialButtonBaseStyle, backgroundColor: 'var(--ccc-bg-elevated)', color: '#3c4043' }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -354,7 +354,7 @@ function RegisterSpectatorPage() {
               placeholder="Prénom *"
               value={formData.firstName}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.firstName ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.firstName ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.firstName && <div style={errorStyle}>{errors.firstName}</div>}
           </div>
@@ -366,7 +366,7 @@ function RegisterSpectatorPage() {
               placeholder="Nom *"
               value={formData.lastName}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.lastName ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.lastName ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.lastName && <div style={errorStyle}>{errors.lastName}</div>}
           </div>
@@ -378,7 +378,7 @@ function RegisterSpectatorPage() {
               placeholder="E-mail *"
               value={formData.email}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.email ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.email ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.email && <div style={errorStyle}>{errors.email}</div>}
           </div>
@@ -390,7 +390,7 @@ function RegisterSpectatorPage() {
               placeholder="Téléphone (optionnel)"
               value={formData.phone}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.phone ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.phone ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.phone && <div style={errorStyle}>{errors.phone}</div>}
           </div>
@@ -402,7 +402,7 @@ function RegisterSpectatorPage() {
               placeholder="Ville de résidence *"
               value={formData.city}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.city ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.city ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.city && <div style={errorStyle}>{errors.city}</div>}
           </div>
@@ -417,7 +417,7 @@ function RegisterSpectatorPage() {
               value={formData.birthDate}
               onChange={handleChange}
               max={new Date().toISOString().split('T')[0]}
-              style={{ ...inputStyle, borderColor: errors.birthDate ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.birthDate ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.birthDate && <div style={errorStyle}>{errors.birthDate}</div>}
           </div>
@@ -431,7 +431,7 @@ function RegisterSpectatorPage() {
               onChange={handleChange}
               onFocus={() => setPasswordFocused(true)}
               onBlur={() => setPasswordFocused(false)}
-              style={{ ...inputStyle, borderColor: errors.password ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.password ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.password && <div style={errorStyle}>{errors.password}</div>}
             {passwordFocused && (
@@ -443,13 +443,13 @@ function RegisterSpectatorPage() {
                 marginTop: '4px',
                 border: '1px solid var(--ccc-border-subtle)',
               }}>
-                <div style={{ color: passwordValidation.length ? '#28a745' : '#dc3545', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                <div style={{ color: passwordValidation.length ? 'var(--ccc-success)' : 'var(--ccc-error)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                   {passwordValidation.length ? '✓' : '✗'} 8 caractères min.
                 </div>
-                <div style={{ color: passwordValidation.uppercase ? '#28a745' : '#dc3545', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                <div style={{ color: passwordValidation.uppercase ? 'var(--ccc-success)' : 'var(--ccc-error)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                   {passwordValidation.uppercase ? '✓' : '✗'} 1 majuscule
                 </div>
-                <div style={{ color: passwordValidation.number ? '#28a745' : '#dc3545', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ color: passwordValidation.number ? 'var(--ccc-success)' : 'var(--ccc-error)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {passwordValidation.number ? '✓' : '✗'} 1 chiffre
                 </div>
               </div>
@@ -465,7 +465,7 @@ function RegisterSpectatorPage() {
               onChange={handleChange}
               style={{
                 ...inputStyle,
-                borderColor: errors.confirmPassword ? '#ef4444' : 'var(--ccc-border-medium)',
+                borderColor: errors.confirmPassword ? 'var(--ccc-error)' : 'var(--ccc-border-medium)',
               }}
             />
             {errors.confirmPassword && (
@@ -531,7 +531,7 @@ function RegisterSpectatorPage() {
                 placeholder="Prénom *"
                 value={oauthData.firstName}
                 onChange={(e) => { setOauthData(p => ({ ...p, firstName: e.target.value })); setOauthErrors(p => ({ ...p, firstName: '' })); }}
-                style={{ ...inputStyle, borderColor: oauthErrors.firstName ? '#ef4444' : 'var(--ccc-border-medium)' }}
+                style={{ ...inputStyle, borderColor: oauthErrors.firstName ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
               />
               {oauthErrors.firstName && <div style={errorStyle}>{oauthErrors.firstName}</div>}
             </div>
@@ -542,7 +542,7 @@ function RegisterSpectatorPage() {
                 placeholder="Nom *"
                 value={oauthData.lastName}
                 onChange={(e) => { setOauthData(p => ({ ...p, lastName: e.target.value })); setOauthErrors(p => ({ ...p, lastName: '' })); }}
-                style={{ ...inputStyle, borderColor: oauthErrors.lastName ? '#ef4444' : 'var(--ccc-border-medium)' }}
+                style={{ ...inputStyle, borderColor: oauthErrors.lastName ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
               />
               {oauthErrors.lastName && <div style={errorStyle}>{oauthErrors.lastName}</div>}
             </div>
@@ -553,7 +553,7 @@ function RegisterSpectatorPage() {
                 placeholder="Téléphone (optionnel)"
                 value={oauthData.phone}
                 onChange={(e) => { setOauthData(p => ({ ...p, phone: e.target.value })); setOauthErrors(p => ({ ...p, phone: '' })); }}
-                style={{ ...inputStyle, borderColor: oauthErrors.phone ? '#ef4444' : 'var(--ccc-border-medium)' }}
+                style={{ ...inputStyle, borderColor: oauthErrors.phone ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
               />
               {oauthErrors.phone && <div style={errorStyle}>{oauthErrors.phone}</div>}
             </div>
@@ -564,7 +564,7 @@ function RegisterSpectatorPage() {
                 placeholder="Ville de résidence *"
                 value={oauthData.city}
                 onChange={(e) => { setOauthData(p => ({ ...p, city: e.target.value })); setOauthErrors(p => ({ ...p, city: '' })); }}
-                style={{ ...inputStyle, borderColor: oauthErrors.city ? '#ef4444' : 'var(--ccc-border-medium)' }}
+                style={{ ...inputStyle, borderColor: oauthErrors.city ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
               />
               {oauthErrors.city && <div style={errorStyle}>{oauthErrors.city}</div>}
             </div>
@@ -578,7 +578,7 @@ function RegisterSpectatorPage() {
                 value={oauthData.birthDate}
                 onChange={(e) => { setOauthData(p => ({ ...p, birthDate: e.target.value })); setOauthErrors(p => ({ ...p, birthDate: '' })); }}
                 max={new Date().toISOString().split('T')[0]}
-                style={{ ...inputStyle, borderColor: oauthErrors.birthDate ? '#ef4444' : 'var(--ccc-border-medium)' }}
+                style={{ ...inputStyle, borderColor: oauthErrors.birthDate ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
               />
               {oauthErrors.birthDate && <div style={errorStyle}>{oauthErrors.birthDate}</div>}
             </div>

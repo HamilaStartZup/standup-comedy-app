@@ -579,7 +579,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
     letterSpacing: '0.05em',
   };
 
-  const errorStyle: React.CSSProperties = { color: '#ef4444', fontSize: 12, marginTop: 4 };
+  const errorStyle: React.CSSProperties = { color: 'var(--ccc-error)', fontSize: 12, marginTop: 4 };
 
   const infoBadgeStyle: React.CSSProperties = {
     display: 'inline-block',
@@ -632,8 +632,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
             onClick={() => { setBookingMode(m); setErrors({}); setBatchCreatedCount(null); setBatchUnavailable([]); }}
             style={{
               flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700,
-              background: bookingMode === m ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-surface)',
-              color: bookingMode === m ? '#fff' : 'var(--ccc-text-secondary)',
+              background: bookingMode === m ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-inactive)',
+              color: bookingMode === m ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-secondary)',
             }}
           >
             {m === 'unique' ? 'Réservation unique' : 'Série récurrente'}
@@ -656,8 +656,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
                     style={{
                       flex: 1, padding: '8px 4px', borderRadius: 8, border: 'none',
                       cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                      background: recurrenceType === t ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-surface)',
-                      color: recurrenceType === t ? '#fff' : 'var(--ccc-text-secondary)',
+                      background: recurrenceType === t ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-inactive)',
+                      color: recurrenceType === t ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-secondary)',
                     }}
                   >
                     {t === 'daily' ? 'Quotidien' : t === 'weekly' ? 'Hebdo' : 'Mensuel'}
@@ -682,8 +682,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
                         style={{
                           padding: '5px 10px', borderRadius: 6, border: 'none',
                           cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                          background: active ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-surface)',
-                          color: active ? '#fff' : 'var(--ccc-text-secondary)',
+                          background: active ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-inactive)',
+                          color: active ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-secondary)',
                         }}
                       >
                         {label}
@@ -881,7 +881,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
             style={{
               background: 'var(--ccc-bg-surface)',
               border: errors.date
-                ? '1px solid #ef4444'
+                ? '1px solid var(--ccc-error)'
                 : '1px solid var(--ccc-border-subtle)',
               borderRadius: 10,
               padding: '8px 4px',
@@ -1055,7 +1055,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
               background: isSubmitting
                 ? 'rgba(124, 58, 237,0.5)'
                 : 'var(--ccc-accent-gradient)',
-              color: '#fff',
+              color: 'var(--ccc-text-on-accent)',
               border: 'none',
               borderRadius: 10,
               fontSize: 15,

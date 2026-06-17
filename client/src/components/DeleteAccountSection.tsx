@@ -56,7 +56,7 @@ const DeleteAccountSection: React.FC = () => {
     borderRadius: '16px',
     padding: '24px',
     border: '1px solid var(--ccc-border-medium)',
-    borderLeft: '4px solid #dc3545',
+    borderLeft: '4px solid var(--ccc-error)',
   };
 
   const titleStyle: CSSProperties = {
@@ -72,7 +72,7 @@ const DeleteAccountSection: React.FC = () => {
     padding: '14px 16px',
     borderRadius: '8px',
     background: 'var(--ccc-bg-surface)',
-    borderLeft: '3px solid #dc3545',
+    borderLeft: '3px solid var(--ccc-error)',
     marginBottom: '16px',
   };
 
@@ -80,7 +80,7 @@ const DeleteAccountSection: React.FC = () => {
     padding: '14px 16px',
     borderRadius: '8px',
     background: 'var(--ccc-bg-surface)',
-    borderLeft: '3px solid #ffc107',
+    borderLeft: '3px solid var(--ccc-warning)',
     marginBottom: '16px',
   };
 
@@ -88,7 +88,7 @@ const DeleteAccountSection: React.FC = () => {
     padding: '14px 16px',
     borderRadius: '8px',
     background: 'var(--ccc-bg-surface)',
-    borderLeft: '3px solid #28a745',
+    borderLeft: '3px solid var(--ccc-success)',
     marginBottom: '16px',
   };
 
@@ -120,13 +120,13 @@ const DeleteAccountSection: React.FC = () => {
 
     return (
       <div style={cardStyle}>
-        <h2 style={{ ...titleStyle, color: '#ffc107' }}>
+        <h2 style={{ ...titleStyle, color: 'var(--ccc-warning)' }}>
           <i className="fas fa-clock" style={{ marginRight: '10px' }}></i>
           Demande de suppression enregistrée
         </h2>
 
         <div style={successBoxStyle}>
-          <p style={{ color: '#28a745', fontWeight: 'bold', marginBottom: '8px' }}>
+          <p style={{ color: 'var(--ccc-success)', fontWeight: 'bold', marginBottom: '8px' }}>
             <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
             Votre demande a été prise en compte
           </p>
@@ -144,7 +144,7 @@ const DeleteAccountSection: React.FC = () => {
         </div>
 
         <div style={infoBoxStyle}>
-          <p style={{ color: '#ffc107', fontWeight: 'bold', marginBottom: '8px' }}>
+          <p style={{ color: 'var(--ccc-warning)', fontWeight: 'bold', marginBottom: '8px' }}>
             <i className="fas fa-lightbulb" style={{ marginRight: '8px' }}></i>
             Vous pouvez annuler cette demande
           </p>
@@ -159,7 +159,7 @@ const DeleteAccountSection: React.FC = () => {
           style={{
             ...buttonStyle,
             background: 'linear-gradient(135deg, #e85d75, #c13057)',
-            color: '#fff',
+            color: 'var(--ccc-text-on-accent)',
           }}
         >
           <i className="fas fa-sign-out-alt" style={{ marginRight: '8px' }}></i>
@@ -179,7 +179,7 @@ const DeleteAccountSection: React.FC = () => {
       {!showConfirmation ? (
         <>
           <div style={infoBoxStyle}>
-            <p style={{ color: '#ffc107', fontWeight: 'bold', marginBottom: '8px' }}>
+            <p style={{ color: 'var(--ccc-warning)', fontWeight: 'bold', marginBottom: '8px' }}>
               <i className="fas fa-shield-alt" style={{ marginRight: '8px' }}></i>
               Protection de 30 jours
             </p>
@@ -190,7 +190,7 @@ const DeleteAccountSection: React.FC = () => {
           </div>
 
           <div style={warningBoxStyle}>
-            <p style={{ color: '#dc3545', fontWeight: 'bold', marginBottom: '8px' }}>
+            <p style={{ color: 'var(--ccc-error)', fontWeight: 'bold', marginBottom: '8px' }}>
               <i className="fas fa-exclamation-triangle" style={{ marginRight: '8px' }}></i>
               Après 30 jours, vos données seront définitivement supprimées :
             </p>
@@ -213,8 +213,8 @@ const DeleteAccountSection: React.FC = () => {
             style={{
               ...buttonStyle,
               background: 'transparent',
-              border: '1px solid #dc3545',
-              color: '#dc3545',
+              border: '1px solid var(--ccc-error)',
+              color: 'var(--ccc-error)',
             }}
           >
             <i className="fas fa-user-times" style={{ marginRight: '8px' }}></i>
@@ -224,7 +224,7 @@ const DeleteAccountSection: React.FC = () => {
       ) : (
         <>
           <div style={warningBoxStyle}>
-            <p style={{ color: '#dc3545', fontWeight: 'bold', marginBottom: '8px' }}>
+            <p style={{ color: 'var(--ccc-error)', fontWeight: 'bold', marginBottom: '8px' }}>
               <i className="fas fa-exclamation-circle" style={{ marginRight: '8px' }}></i>
               Confirmation de la demande
             </p>
@@ -251,10 +251,10 @@ const DeleteAccountSection: React.FC = () => {
                 padding: '12px 15px',
                 background: 'var(--ccc-bg-surface)',
                 borderRadius: '6px',
-                borderLeft: '3px solid #dc3545',
+                borderLeft: '3px solid var(--ccc-error)',
               }}
             >
-              <p style={{ color: '#dc3545', fontSize: '0.9em', margin: 0 }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '0.9em', margin: 0 }}>
                 <i className="fas fa-times-circle" style={{ marginRight: '8px' }}></i>
                 {error}
               </p>
@@ -283,8 +283,8 @@ const DeleteAccountSection: React.FC = () => {
               disabled={isDeleting || confirmEmail !== user?.email}
               style={{
                 ...buttonStyle,
-                background: confirmEmail === user?.email ? '#dc3545' : 'rgba(220, 53, 69, 0.3)',
-                color: '#fff',
+                background: confirmEmail === user?.email ? 'var(--ccc-error)' : 'rgba(220, 53, 69, 0.3)',
+                color: 'var(--ccc-text-on-accent)',
                 cursor: confirmEmail === user?.email && !isDeleting ? 'pointer' : 'not-allowed',
               }}
             >

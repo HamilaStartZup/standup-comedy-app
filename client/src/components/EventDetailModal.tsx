@@ -70,11 +70,11 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
       border-radius: 3px;
     }
     .event-detail-content::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, #7c3aed, #a78bfa);
+      background: linear-gradient(180deg, var(--ccc-accent), #a78bfa);
       border-radius: 3px;
     }
     .event-detail-content::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(180deg, #a78bfa, #7c3aed);
+      background: linear-gradient(180deg, #a78bfa, var(--ccc-accent));
     }
   `;
 
@@ -199,10 +199,10 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
               padding: '12px',
               backgroundColor: 'rgba(220, 53, 69, 0.15)',
               borderRadius: '8px',
-              borderLeft: '3px solid #dc3545',
+              borderLeft: '3px solid var(--ccc-error)',
             }}
           >
-            <div style={{ fontSize: '0.8em', color: '#ffc107', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: '6px' }}>
+            <div style={{ fontSize: '0.8em', color: 'var(--ccc-warning)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: '6px' }}>
               ⚠️ Raison d'annulation
             </div>
             <div style={{ color: '#0f172a', fontSize: '0.95em' }}>
@@ -286,7 +286,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                           {isAbsent && (
                             <span
                               style={{
-                                color: '#dc3545',
+                                color: 'var(--ccc-error)',
                                 marginRight: '8px',
                                 fontSize: '16px',
                                 fontWeight: 'bold',
@@ -310,7 +310,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                             <span
                               style={{
                                 marginLeft: '10px',
-                                color: '#dc3545',
+                                color: 'var(--ccc-error)',
                                 fontSize: '12px',
                                 fontStyle: 'italic',
                               }}
@@ -326,8 +326,8 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                               padding: '6px 12px',
                               borderRadius: '6px',
                               border: 'none',
-                              backgroundColor: isAbsent ? '#28a745' : '#dc3545',
-                              color: '#ffffff',
+                              backgroundColor: isAbsent ? 'var(--ccc-btn-success-bg)' : 'var(--ccc-btn-danger-bg)',
+                              color: 'var(--ccc-text-on-accent)',
                               fontSize: '12px',
                               fontWeight: 'bold',
                               cursor: 'pointer',
@@ -359,10 +359,10 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                             backgroundColor: theme.colors.bg.surface,
                             borderRadius: theme.radius.sm,
                             border: `1px solid ${theme.colors.border.subtle}`,
-                            borderLeft: '3px solid #dc3545',
+                            borderLeft: '3px solid var(--ccc-error)',
                           }}
                         >
-                          <div style={{ fontSize: '0.8em', color: '#ffc107', marginBottom: '2px', fontWeight: 'bold' }}>
+                          <div style={{ fontSize: '0.8em', color: 'var(--ccc-warning)', marginBottom: '2px', fontWeight: 'bold' }}>
                             💬 Raison de l'absence:
                           </div>
                           <div style={{ fontSize: '0.8em', color: '#0f172a', fontStyle: 'italic' }}>

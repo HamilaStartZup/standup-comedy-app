@@ -203,7 +203,7 @@ export default function SpectatorProfilePage() {
     borderRadius: 8,
     border: 'none',
     background: 'var(--ccc-accent-gradient)',
-    color: '#fff',
+    color: 'var(--ccc-text-on-accent)',
     fontSize: '1rem',
     fontWeight: 600,
     cursor: 'pointer',

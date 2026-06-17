@@ -163,7 +163,7 @@ export default function UpgradeToOrganizerForm({ isOpen, onClose, onSuccess }: P
           disabled={loading}
           style={{
             padding: '10px 20px', background: 'var(--ccc-accent)', border: 'none',
-            borderRadius: '8px', color: '#fff', cursor: 'pointer',
+            borderRadius: '8px', color: 'var(--ccc-text-on-accent)', cursor: 'pointer',
           }}
         >
           {loading ? 'Conversion...' : 'Devenir Organisateur'}

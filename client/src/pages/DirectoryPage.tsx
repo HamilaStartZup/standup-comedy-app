@@ -199,7 +199,7 @@ const DirectoryPage: React.FC = () => {
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
     cursor: userData.role === 'COMEDIAN' ? 'pointer' : 'default',
-    border: userData.role === 'COMEDIAN' ? '2px solid transparent' : '1px solid #eee',
+    border: userData.role === 'COMEDIAN' ? '2px solid transparent' : '1px solid var(--ccc-border-light)',
   });
 
   const badgeStyle = (role: string) => ({
@@ -605,7 +605,7 @@ const DirectoryPage: React.FC = () => {
                     </p>
                   )}
 
-                  <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px solid #eee' }}>
+                  <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px solid var(--ccc-border-light)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <p style={{ margin: 0, fontSize: '12px', color: 'var(--ccc-text-muted)' }}>
                         Inscrit le {new Date(userData.createdAt).toLocaleDateString('fr-FR')}
@@ -864,7 +864,7 @@ const DirectoryPage: React.FC = () => {
                     {selectedUser.isActive !== false ? '✓ Compte actif' : '✕ Compte désactivé'}
                   </span>
                   {selectedUser.deactivatedAt && (
-                    <span style={{ fontSize: '13px', color: '#666' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--ccc-text-secondary)' }}>
                       Désactivé le {new Date(selectedUser.deactivatedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                       {selectedUser.deactivationReason ? ` — ${selectedUser.deactivationReason}` : ''}
                     </span>
@@ -878,9 +878,9 @@ const DirectoryPage: React.FC = () => {
                       style={{
                         padding: '10px 18px',
                         borderRadius: '8px',
-                        border: '1px solid #dc3545',
-                        backgroundColor: '#fff',
-                        color: '#dc3545',
+                        border: '1px solid var(--ccc-error)',
+                        backgroundColor: 'var(--ccc-bg-elevated)',
+                        color: 'var(--ccc-error)',
                         fontSize: '14px',
                         fontWeight: '600',
                         cursor: 'pointer',
@@ -895,9 +895,9 @@ const DirectoryPage: React.FC = () => {
                       style={{
                         padding: '10px 18px',
                         borderRadius: '8px',
-                        border: '1px solid #28a745',
-                        backgroundColor: '#28a745',
-                        color: '#fff',
+                        border: '1px solid var(--ccc-btn-success-bg)',
+                        backgroundColor: 'var(--ccc-btn-success-bg)',
+                        color: 'var(--ccc-text-on-accent)',
                         fontSize: '14px',
                         fontWeight: '600',
                         cursor: 'pointer',
@@ -913,8 +913,8 @@ const DirectoryPage: React.FC = () => {
                       padding: '10px 18px',
                       borderRadius: '8px',
                       border: '1px solid #721c24',
-                      backgroundColor: '#dc3545',
-                      color: '#fff',
+                      backgroundColor: 'var(--ccc-error)',
+                      color: 'var(--ccc-text-on-accent)',
                       fontSize: '14px',
                       fontWeight: '600',
                       cursor: 'pointer',
@@ -982,44 +982,44 @@ const DirectoryPage: React.FC = () => {
                   gap: '15px',
                   marginBottom: '25px'
                 }}>
-                  <div style={{ padding: '15px', border: '1px solid #ddd', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ padding: '15px', border: '1px solid var(--ccc-border-light)', borderRadius: '8px', textAlign: 'center' }}>
                     <div style={{ fontSize: '20px', marginBottom: '5px' }}>❌</div>
                     <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#f44336' }}>
                       {selectedUser.stats?.applicationsRejected || 0}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#666' }}>Candidatures rejetées</div>
+                    <div style={{ fontSize: '11px', color: 'var(--ccc-text-secondary)' }}>Candidatures rejetées</div>
                   </div>
 
-                  <div style={{ padding: '15px', border: '1px solid #ddd', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ padding: '15px', border: '1px solid var(--ccc-border-light)', borderRadius: '8px', textAlign: 'center' }}>
                     <div style={{ fontSize: '20px', marginBottom: '5px' }}>⏳</div>
                     <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#ff9800' }}>
                       {selectedUser.stats?.applicationsPending || 0}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#666' }}>En attente</div>
+                    <div style={{ fontSize: '11px', color: 'var(--ccc-text-secondary)' }}>En attente</div>
                   </div>
 
-                  <div style={{ padding: '15px', border: '1px solid #ddd', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ padding: '15px', border: '1px solid var(--ccc-border-light)', borderRadius: '8px', textAlign: 'center' }}>
                     <div style={{ fontSize: '20px', marginBottom: '5px' }}>😴</div>
                     <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#f44336' }}>
                       {selectedUser.stats?.absences || 0}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#666' }}>Absences</div>
+                    <div style={{ fontSize: '11px', color: 'var(--ccc-text-secondary)' }}>Absences</div>
                   </div>
 
-                  <div style={{ padding: '15px', border: '1px solid #ddd', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ padding: '15px', border: '1px solid var(--ccc-border-light)', borderRadius: '8px', textAlign: 'center' }}>
                     <div style={{ fontSize: '20px', marginBottom: '5px' }}>👁️</div>
                     <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#607d8b' }}>
                       {selectedUser.stats?.profileViews || 0}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#666' }}>Vues du profil</div>
+                    <div style={{ fontSize: '11px', color: 'var(--ccc-text-secondary)' }}>Vues du profil</div>
                   </div>
 
-                  <div style={{ padding: '15px', border: '1px solid #ddd', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ padding: '15px', border: '1px solid var(--ccc-border-light)', borderRadius: '8px', textAlign: 'center' }}>
                     <div style={{ fontSize: '20px', marginBottom: '5px' }}>📊</div>
                     <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#673ab7' }}>
                       {selectedUser.stats?.netPromoterScore || 0}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#666' }}>Score NPS</div>
+                    <div style={{ fontSize: '11px', color: 'var(--ccc-text-secondary)' }}>Score NPS</div>
                   </div>
 
                   {/* Nouveau: Taux de participation */}
@@ -1093,7 +1093,7 @@ const DirectoryPage: React.FC = () => {
                 marginTop: '20px'
               }}>
                 <div style={{ fontSize: '48px', marginBottom: '15px' }}>📊</div>
-                <h3 style={{ color: '#666', fontSize: '18px', marginBottom: '10px' }}>
+                <h3 style={{ color: 'var(--ccc-text-secondary)', fontSize: '18px', marginBottom: '10px' }}>
                   Aucune statistique disponible
                 </h3>
                 <p style={{ color: 'var(--ccc-text-muted)', fontSize: '14px' }}>

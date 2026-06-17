@@ -360,7 +360,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                       title="Inclure dans l'acceptation"
                     />
                   )}
-                  <span style={{ color: '#ddd', flex: 1 }}>
+                  <span style={{ color: 'var(--ccc-text-subtle)', flex: 1 }}>
                     {new Date(b.requestedDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                     {' · '}{b.startTime} – {b.endTime}
                   </span>

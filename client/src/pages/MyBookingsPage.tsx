@@ -366,7 +366,7 @@ const MyBookingsPage: React.FC = () => {
         data-booking-id={booking._id}
         style={{
           backgroundColor: 'var(--ccc-bg-surface)', borderRadius: 14, padding: 14,
-          border: isHighlighted ? '2px solid #7c3aed' : '1px solid var(--ccc-border)',
+          border: isHighlighted ? '2px solid var(--ccc-accent)' : '1px solid var(--ccc-border)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 12, opacity: past ? 0.7 : 1, flexWrap: 'wrap',
         }}
@@ -388,7 +388,7 @@ const MyBookingsPage: React.FC = () => {
             <button
               onClick={() => handleCancelClick(booking)}
               disabled={cancellingId === booking._id}
-              style={{ padding: '8px 16px', background: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: 8, cursor: cancellingId === booking._id ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600, opacity: cancellingId === booking._id ? 0.6 : 1 }}
+              style={{ padding: '8px 16px', background: 'var(--ccc-btn-secondary-bg)', color: 'var(--ccc-error)', border: '1px solid #fca5a5', borderRadius: 8, cursor: cancellingId === booking._id ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600, opacity: cancellingId === booking._id ? 0.6 : 1 }}
             >
               {cancellingId === booking._id ? 'Annulation...' : 'Annuler'}
             </button>
@@ -417,7 +417,7 @@ const MyBookingsPage: React.FC = () => {
     const coverPhoto = getVenueCoverPhoto(first?.venue);
 
     return (
-      <div key={groupId} style={{ backgroundColor: '#fff', borderRadius: 20, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+      <div key={groupId} style={{ backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 20, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         <div
           onClick={() => toggleGroup(groupId)}
           className="booking-card-layout"
@@ -438,7 +438,7 @@ const MyBookingsPage: React.FC = () => {
                 <span style={{ fontSize: 48 }}>🏛️</span>
               </div>
             )}
-            <span style={{ position: 'absolute', top: 10, left: 10, fontSize: '0.72em', fontWeight: 700, color: '#fff', background: 'rgba(124,58,237,0.92)', padding: '4px 10px', borderRadius: 999, boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}>
+            <span style={{ position: 'absolute', top: 10, left: 10, fontSize: '0.72em', fontWeight: 700, color: 'var(--ccc-text-on-accent)', background: 'rgba(124,58,237,0.92)', padding: '4px 10px', borderRadius: 999, boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}>
               🔁 Série
             </span>
           </div>
@@ -468,7 +468,7 @@ const MyBookingsPage: React.FC = () => {
                 <button
                   onClick={(e) => { e.stopPropagation(); handlePayGroup(groupId); }}
                   disabled={payingGroupId === groupId}
-                  style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', color: '#fff', border: 'none', borderRadius: 8, cursor: payingGroupId === groupId ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, opacity: payingGroupId === groupId ? 0.6 : 1, boxShadow: '0 4px 14px rgba(139,92,246,0.35)' }}
+                  style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #8b5cf6, var(--ccc-accent))', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 8, cursor: payingGroupId === groupId ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, opacity: payingGroupId === groupId ? 0.6 : 1, boxShadow: '0 4px 14px rgba(139,92,246,0.35)' }}
                 >
                   {payingGroupId === groupId ? 'Redirection...' : `Payer la série (${acceptedUnpaid.length} réserv.)`}
                 </button>
@@ -477,7 +477,7 @@ const MyBookingsPage: React.FC = () => {
                 <button
                   onClick={(e) => { e.stopPropagation(); setCancelConfirmGroup({ groupId, bookings }); }}
                   disabled={cancellingGroupId === groupId}
-                  style={{ padding: '8px 16px', background: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: 8, cursor: cancellingGroupId === groupId ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600, opacity: cancellingGroupId === groupId ? 0.6 : 1 }}
+                  style={{ padding: '8px 16px', background: 'var(--ccc-btn-secondary-bg)', color: 'var(--ccc-error)', border: '1px solid #fca5a5', borderRadius: 8, cursor: cancellingGroupId === groupId ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600, opacity: cancellingGroupId === groupId ? 0.6 : 1 }}
                 >
                   {cancellingGroupId === groupId ? 'Annulation...' : 'Annuler la série'}
                 </button>
@@ -488,7 +488,7 @@ const MyBookingsPage: React.FC = () => {
                 label="Facture série"
                 onClick={(e) => e.stopPropagation()}
               />
-              <span style={{ color: '#7c3aed', fontSize: 13, fontWeight: 600 }}>
+              <span style={{ color: 'var(--ccc-accent)', fontSize: 13, fontWeight: 600 }}>
                 {expanded ? 'Masquer les dates ▲' : 'Voir les dates ▼'}
               </span>
             </div>
@@ -532,7 +532,7 @@ const MyBookingsPage: React.FC = () => {
             {/* Infos remboursement si booking payé */}
             {refundEstimate && cancelConfirmBooking.paidAmount ? (
               <div style={{ marginBottom: 20, padding: '14px 16px', background: 'var(--ccc-bg-surface)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 10 }}>
-                <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: refundEstimate.refundPercent === 0 ? '#ef4444' : refundEstimate.refundPercent === 50 ? '#f59e0b' : '#10b981' }}>
+                <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: refundEstimate.refundPercent === 0 ? 'var(--ccc-error)' : refundEstimate.refundPercent === 50 ? 'var(--ccc-warning)' : 'var(--ccc-success)' }}>
                   {formatRefundMessage(refundEstimate, cancelConfirmBooking.paidAmount)}
                 </p>
                 <p style={{ margin: 0, fontSize: 12, color: 'var(--ccc-text-muted)' }}>
@@ -561,7 +561,7 @@ const MyBookingsPage: React.FC = () => {
                 style={{
                   flex: 1, padding: '12px',
                   background: 'rgba(239,68,68,0.15)',
-                  color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)',
+                  color: 'var(--ccc-error)', border: '1px solid rgba(239,68,68,0.3)',
                   borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer',
                 }}
               >
@@ -590,7 +590,7 @@ const MyBookingsPage: React.FC = () => {
 
               {paidTotal > 0 ? (
                 <div style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--ccc-bg-surface)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 10 }}>
-                  <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: refundTotal === 0 ? '#ef4444' : refundTotal >= paidTotal ? '#10b981' : '#f59e0b' }}>
+                  <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: refundTotal === 0 ? 'var(--ccc-error)' : refundTotal >= paidTotal ? 'var(--ccc-success)' : 'var(--ccc-warning)' }}>
                     Remboursement estimé : {refundTotal.toFixed(2)}€ sur {paidTotal.toFixed(2)}€ payés
                   </p>
                   <p style={{ margin: 0, fontSize: 12, color: 'var(--ccc-text-muted)' }}>
@@ -612,7 +612,7 @@ const MyBookingsPage: React.FC = () => {
                     : estimate
                       ? `${estimate.refundAmount.toFixed(2)}€ (${estimate.refundPercent}%)`
                       : '—';
-                  const color = !paid ? 'var(--ccc-text-muted)' : estimate && estimate.refundPercent === 0 ? '#ef4444' : estimate && estimate.refundPercent === 50 ? '#f59e0b' : '#10b981';
+                  const color = !paid ? 'var(--ccc-text-muted)' : estimate && estimate.refundPercent === 0 ? 'var(--ccc-error)' : estimate && estimate.refundPercent === 50 ? 'var(--ccc-warning)' : 'var(--ccc-success)';
                   return (
                     <div key={booking._id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ccc-text-secondary)', padding: '6px 0', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
                       <span>{dateStr}</span>
@@ -626,7 +626,7 @@ const MyBookingsPage: React.FC = () => {
                 <button onClick={() => setCancelConfirmGroup(null)} style={{ flex: 1, padding: '12px', background: 'var(--ccc-bg-surface)', color: 'var(--ccc-text-secondary)', border: '1px solid var(--ccc-border-medium)', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                   Garder la série
                 </button>
-                <button onClick={handleCancelSeriesConfirm} style={{ flex: 1, padding: '12px', background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                <button onClick={handleCancelSeriesConfirm} style={{ flex: 1, padding: '12px', background: 'rgba(239,68,68,0.15)', color: 'var(--ccc-error)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
                   Annuler les {toCancel.length} date(s)
                 </button>
               </div>
@@ -668,10 +668,10 @@ const MyBookingsPage: React.FC = () => {
           </div>
         ) : error ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
-            <p style={{ color: '#ef4444' }}>Impossible de charger vos réservations.</p>
+            <p style={{ color: 'var(--ccc-error)' }}>Impossible de charger vos réservations.</p>
             <button
               onClick={() => queryClient.invalidateQueries({ queryKey: ['my-bookings'] })}
-              style={{ marginTop: 16, padding: '10px 24px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer' }}
+              style={{ marginTop: 16, padding: '10px 24px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer' }}
             >
               Réessayer
             </button>
@@ -695,7 +695,7 @@ const MyBookingsPage: React.FC = () => {
               style={{
                 padding: '14px 32px',
                 background: 'var(--ccc-accent-gradient)',
-                color: '#fff',
+                color: 'var(--ccc-text-on-accent)',
                 border: 'none',
                 borderRadius: 12,
                 fontWeight: 700,
@@ -734,9 +734,9 @@ const MyBookingsPage: React.FC = () => {
                   style={{
                     padding: '10px 14px',
                     background: 'var(--ccc-bg-elevated)',
-                    border: `1px solid ${filterStatus !== 'ACTIVE' ? '#7c3aed' : 'var(--ccc-border-medium)'}`,
+                    border: `1px solid ${filterStatus !== 'ACTIVE' ? 'var(--ccc-accent)' : 'var(--ccc-border-medium)'}`,
                     borderRadius: 10,
-                    color: filterStatus !== 'ACTIVE' ? '#7c3aed' : 'var(--ccc-text-primary)',
+                    color: filterStatus !== 'ACTIVE' ? 'var(--ccc-accent)' : 'var(--ccc-text-primary)',
                     fontSize: 14,
                     cursor: 'pointer',
                     outline: 'none',
@@ -818,7 +818,7 @@ const MyBookingsPage: React.FC = () => {
                   alignItems: 'stretch',
                   backgroundColor: 'var(--ccc-bg-elevated)',
                   border: isHighlighted
-                    ? '2px solid #7c3aed'
+                    ? '2px solid var(--ccc-accent)'
                     : `1px solid ${isUrgent ? '#f97316' : 'var(--ccc-border)'}`,
                   borderRadius: 20,
                   overflow: 'hidden',
@@ -990,11 +990,11 @@ const MyBookingsPage: React.FC = () => {
                     style={{
                       margin: '0 0 14px 0',
                       fontSize: 13,
-                      color: '#475569',
+                      color: 'var(--ccc-text-secondary)',
                       background: '#fdf2f8',
                       padding: '10px 14px',
                       borderRadius: 8,
-                      borderLeft: '3px solid #7c3aed',
+                      borderLeft: '3px solid var(--ccc-accent)',
                       fontStyle: 'italic',
                     }}
                   >
@@ -1011,7 +1011,7 @@ const MyBookingsPage: React.FC = () => {
                       background: '#d1fae5',
                       padding: '10px 14px',
                       borderRadius: 8,
-                      borderLeft: '3px solid #10b981',
+                      borderLeft: '3px solid var(--ccc-success)',
                     }}
                   >
                     Réponse du propriétaire : "{booking.ownerResponse}"
@@ -1026,7 +1026,7 @@ const MyBookingsPage: React.FC = () => {
                       padding: '10px 14px',
                       borderRadius: 8,
                       background: isUrgent ? '#fff7ed' : '#dbeafe',
-                      borderLeft: `3px solid ${isUrgent ? '#f97316' : '#3b82f6'}`,
+                      borderLeft: `3px solid ${isUrgent ? '#f97316' : 'var(--ccc-info)'}`,
                       fontSize: 13,
                       color: isUrgent ? '#c2410c' : '#1e40af',
                     }}
@@ -1073,7 +1073,7 @@ const MyBookingsPage: React.FC = () => {
                         padding: '10px 14px',
                         borderRadius: 8,
                         background: '#fef3c7',
-                        borderLeft: '3px solid #f59e0b',
+                        borderLeft: '3px solid var(--ccc-warning)',
                         fontSize: 13,
                         color: '#92400e',
                       }}
@@ -1090,7 +1090,7 @@ const MyBookingsPage: React.FC = () => {
                       padding: '10px 14px',
                       borderRadius: 8,
                       background: '#d1fae5',
-                      borderLeft: '3px solid #10b981',
+                      borderLeft: '3px solid var(--ccc-success)',
                       fontSize: 13,
                       color: '#065f46',
                     }}
@@ -1130,8 +1130,8 @@ const MyBookingsPage: React.FC = () => {
                         padding: '10px 22px',
                         background: isUrgent
                           ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)'
-                          : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: '#fff', border: 'none', borderRadius: 8,
+                          : 'linear-gradient(135deg, var(--ccc-success) 0%, #059669 100%)',
+                        color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 8,
                         cursor: payingId === booking._id ? 'not-allowed' : 'pointer',
                         fontSize: 14, fontWeight: 700,
                         opacity: payingId === booking._id ? 0.6 : 1,
@@ -1194,8 +1194,8 @@ const MyBookingsPage: React.FC = () => {
                       disabled={cancellingId === booking._id}
                       style={{
                         padding: '8px 18px',
-                        background: '#fff',
-                        color: '#ef4444',
+                        background: 'var(--ccc-bg-elevated)',
+                        color: 'var(--ccc-error)',
                         border: '1px solid #fca5a5',
                         borderRadius: 8,
                         cursor: cancellingId === booking._id ? 'not-allowed' : 'pointer',
@@ -1213,8 +1213,8 @@ const MyBookingsPage: React.FC = () => {
                       disabled={cancellingId === booking._id}
                       style={{
                         padding: '8px 18px',
-                        background: '#fff',
-                        color: '#ef4444',
+                        background: 'var(--ccc-bg-elevated)',
+                        color: 'var(--ccc-error)',
                         border: '1px solid #fca5a5',
                         borderRadius: 8,
                         cursor: cancellingId === booking._id ? 'not-allowed' : 'pointer',

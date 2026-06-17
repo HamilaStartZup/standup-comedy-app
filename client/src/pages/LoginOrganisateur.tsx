@@ -112,7 +112,7 @@ function LoginOrganisateur() {
     margin: '10px 0',
     borderRadius: '8px',
     border: '1px solid var(--ccc-border-medium)',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     color: 'var(--ccc-text-primary)',
     fontSize: '1em',
     outline: 'none',
@@ -166,7 +166,7 @@ function LoginOrganisateur() {
             autoComplete="email"
             style={{
               ...inputStyle,
-              borderColor: loginError ? '#dc3545' : 'var(--ccc-border-medium)'
+              borderColor: loginError ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
             }}
             required
           />
@@ -179,7 +179,7 @@ function LoginOrganisateur() {
             autoComplete="current-password"
             style={{
               ...inputStyle,
-              borderColor: loginError ? '#dc3545' : 'var(--ccc-border-medium)'
+              borderColor: loginError ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
             }}
             required
           />
@@ -187,7 +187,7 @@ function LoginOrganisateur() {
           {/* Message d'erreur de connexion */}
           {loginError && (
             <div style={{
-              color: '#dc3545',
+              color: 'var(--ccc-error)',
               marginBottom: '10px',
               fontSize: '0.9em',
               textAlign: 'left',
@@ -207,7 +207,7 @@ function LoginOrganisateur() {
           {/* Message d'erreur du mot de passe */}
           {passwordError && (
             <div style={{
-              color: '#dc3545',
+              color: 'var(--ccc-error)',
               marginBottom: '10px',
               fontSize: '0.9em',
               textAlign: 'left',
@@ -231,7 +231,7 @@ function LoginOrganisateur() {
               textAlign: 'left'
             }}>
               <div style={{
-                color: passwordValidation.length ? '#28a745' : '#dc3545',
+                color: passwordValidation.length ? 'var(--ccc-success)' : 'var(--ccc-error)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px'
@@ -248,7 +248,7 @@ function LoginOrganisateur() {
         {/* OAuth Error */}
         {oauthError && (
           <div style={{
-            color: '#dc3545',
+            color: 'var(--ccc-error)',
             marginTop: '10px',
             marginBottom: '10px',
             fontSize: '0.9em',
@@ -291,7 +291,7 @@ function LoginOrganisateur() {
                   padding: '14px 20px',
                   borderRadius: '10px',
                   border: 'none',
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--ccc-bg-elevated)',
                   color: '#3c4043',
                   fontSize: '0.95em',
                   fontWeight: '600',

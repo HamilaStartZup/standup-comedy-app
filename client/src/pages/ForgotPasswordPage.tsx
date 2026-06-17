@@ -56,7 +56,7 @@ function ForgotPasswordPage() {
     margin: '10px 0',
     borderRadius: '8px',
     border: '1px solid var(--ccc-border-medium)',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     color: 'var(--ccc-text-primary)',
     fontSize: '1em',
     outline: 'none',
@@ -106,7 +106,7 @@ function ForgotPasswordPage() {
 
           {error && (
             <div style={{
-              color: '#dc3545',
+              color: 'var(--ccc-error)',
               marginBottom: '10px',
               fontSize: '0.9em',
               padding: '10px',
@@ -120,7 +120,7 @@ function ForgotPasswordPage() {
 
           {message && (
             <div style={{
-              color: '#28a745',
+              color: 'var(--ccc-success)',
               marginBottom: '10px',
               fontSize: '0.9em',
               padding: '10px',

@@ -42,7 +42,7 @@ function ToastAlert({ id, message, type, onDismiss, autoDismiss }: ToastAlertPro
     height: '28px',
     borderRadius: '50%',
     backgroundColor: colors.bg,
-    color: '#fff',
+    color: 'var(--ccc-text-on-accent)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',

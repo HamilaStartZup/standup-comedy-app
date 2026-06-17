@@ -142,7 +142,7 @@ function ComedianProfilePage() {
     fontSize: 14,
     transition: 'all 0.2s',
     background: active ? ACCENT_GRADIENT : 'transparent',
-    color: active ? '#fff' : 'var(--ccc-text-muted)',
+    color: active ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-muted)',
   });
 
   const contentCardStyle: CSSProperties = {

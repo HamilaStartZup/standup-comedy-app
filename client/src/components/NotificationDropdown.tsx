@@ -192,8 +192,8 @@ const NotificationDropdown = () => {
     position: 'absolute',
     top: '0px',
     right: '0px',
-    backgroundColor: '#dc3545',
-    color: '#fff',
+    backgroundColor: 'var(--ccc-error)',
+    color: 'var(--ccc-text-on-accent)',
     borderRadius: '50%',
     width: '16px',
     height: '16px',
@@ -202,7 +202,7 @@ const NotificationDropdown = () => {
     justifyContent: 'center',
     fontSize: '0.6em',
     fontWeight: 'bold',
-    border: '2px solid #ffffff',
+    border: '2px solid var(--ccc-bg-elevated)',
     minWidth: '16px',
   };
 
@@ -262,7 +262,7 @@ const NotificationDropdown = () => {
           viewBox="0 0 24 24" 
           fill="none" 
           xmlns="http://www.w3.org/2000/svg"
-          style={{ color: '#3b82f6' }}
+          style={{ color: 'var(--ccc-info)' }}
         >
           <path 
             d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" 
@@ -299,7 +299,7 @@ const NotificationDropdown = () => {
             alignItems: 'center',
             backgroundColor: 'var(--ccc-bg-surface)',
           }}>
-            <h3 style={{ margin: 0, color: '#7c3aed', fontSize: '0.95em', fontWeight: 'bold' }}>
+            <h3 style={{ margin: 0, color: 'var(--ccc-accent)', fontSize: '0.95em', fontWeight: 'bold' }}>
               Notifications {unreadCount > 0 && `(${unreadCount})`}
             </h3>
             {unreadCount > 0 && (
@@ -310,7 +310,7 @@ const NotificationDropdown = () => {
                   borderRadius: '4px',
                   border: '1px solid var(--ccc-border-subtle)',
                   background: 'rgba(124, 58, 237, 0.2)',
-                  color: '#7c3aed',
+                  color: 'var(--ccc-accent)',
                   fontSize: '0.75em',
                   fontWeight: 'bold',
                   cursor: 'pointer',
@@ -344,10 +344,10 @@ const NotificationDropdown = () => {
                   style={{
                     ...notificationItemStyle,
                     backgroundColor: notification.read ? 'transparent' : 'rgba(124, 58, 237, 0.1)',
-                    borderLeft: notification.read ? 'none' : '3px solid #7c3aed',
+                    borderLeft: notification.read ? 'none' : '3px solid var(--ccc-accent)',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--ccc-bg-surface)';
+                    e.currentTarget.style.backgroundColor = 'var(--ccc-bg-hover)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = notification.read ? 'transparent' : 'rgba(124, 58, 237, 0.1)';
@@ -395,7 +395,7 @@ const NotificationDropdown = () => {
                       borderRadius: '3px',
                       border: 'none',
                       background: 'rgba(220, 53, 69, 0.2)',
-                      color: '#dc3545',
+                      color: 'var(--ccc-error)',
                       cursor: 'pointer',
                       fontSize: '0.75em',
                       flexShrink: 0,

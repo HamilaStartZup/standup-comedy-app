@@ -262,7 +262,7 @@ export default function SpectatorHomePage() {
                 borderRadius: 8,
                 border: 'none',
                 background: 'var(--ccc-accent-gradient)',
-                color: '#fff',
+                color: 'var(--ccc-text-on-accent)',
                 cursor: 'pointer',
                 fontWeight: 600,
                 fontSize: '0.9rem',
@@ -340,10 +340,10 @@ export default function SpectatorHomePage() {
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
               ) : errorEvents ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
-                  <p style={{ color: '#ef4444', margin: 0 }}>Impossible de charger les événements.</p>
+                  <p style={{ color: 'var(--ccc-error)', margin: 0 }}>Impossible de charger les événements.</p>
                   <button
                     onClick={() => queryClient.invalidateQueries({ queryKey: ['events', 'spectator', queryParams] })}
-                    style={{ padding: '8px 20px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
+                    style={{ padding: '8px 20px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
                   >
                     Réessayer
                   </button>
@@ -385,10 +385,10 @@ export default function SpectatorHomePage() {
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
               ) : errorRegistrations ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
-                  <p style={{ color: '#ef4444', margin: 0 }}>Impossible de charger vos inscriptions.</p>
+                  <p style={{ color: 'var(--ccc-error)', margin: 0 }}>Impossible de charger vos inscriptions.</p>
                   <button
                     onClick={() => queryClient.invalidateQueries({ queryKey: ['events', 'spectator', 'myRegistrations'] })}
-                    style={{ padding: '8px 20px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
+                    style={{ padding: '8px 20px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
                   >
                     Réessayer
                   </button>
@@ -453,10 +453,10 @@ export default function SpectatorHomePage() {
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
               ) : errorAroundMe ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
-                  <p style={{ color: '#ef4444', margin: 0 }}>Impossible de charger les suggestions.</p>
+                  <p style={{ color: 'var(--ccc-error)', margin: 0 }}>Impossible de charger les suggestions.</p>
                   <button
                     onClick={() => queryClient.invalidateQueries({ queryKey: ['events', 'spectator', 'nearMe'] })}
-                    style={{ padding: '8px 20px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
+                    style={{ padding: '8px 20px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
                   >
                     Réessayer
                   </button>
@@ -546,7 +546,7 @@ function EventCard({
 
   const imageUrl = (event as any).imageUrl;
   const hasBg = !!imageUrl;
-  const textColor = hasBg ? '#fff' : 'var(--ccc-text-primary)';
+  const textColor = hasBg ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-primary)';
   const textColorMuted = hasBg ? 'rgba(255,255,255,0.92)' : 'var(--ccc-text-secondary)';
   const textColorMuted2 = hasBg ? 'rgba(255,255,255,0.88)' : 'var(--ccc-text-muted)';
   const textShadow = hasBg ? '0 1px 2px rgba(0,0,0,0.8)' : 'none';
@@ -620,7 +620,7 @@ function EventCard({
                   borderRadius: 6,
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: '#fff',
+                  color: 'var(--ccc-text-on-accent)',
                   background: 'rgba(34, 197, 94, 0.95)',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                 }}
@@ -676,7 +676,7 @@ function EventCard({
               marginTop: 8,
               padding: '8px 12px',
               borderRadius: 8,
-              border: '1px solid #28a745',
+              border: '1px solid var(--ccc-success)',
               background: 'rgba(40, 167, 69, 0.12)',
               color: '#166534',
               cursor: isRegistering ? 'wait' : 'pointer',

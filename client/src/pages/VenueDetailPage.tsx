@@ -105,14 +105,14 @@ const VenueDetailPage: React.FC = () => {
         }}
       >
         <div style={{ textAlign: 'center' }}>
-          <p style={{ color: '#ef4444', fontSize: 16 }}>Salle introuvable.</p>
+          <p style={{ color: 'var(--ccc-error)', fontSize: 16 }}>Salle introuvable.</p>
           <button
             onClick={() => navigate('/venues')}
             style={{
               marginTop: 16,
               padding: '10px 24px',
               background: 'rgba(124, 58, 237,0.15)',
-              color: '#7c3aed',
+              color: 'var(--ccc-accent)',
               border: '1px solid rgba(124, 58, 237,0.4)',
               borderRadius: 10,
               cursor: 'pointer',
@@ -236,7 +236,7 @@ const VenueDetailPage: React.FC = () => {
                 borderRadius: 16,
               }}
             >
-              <h3 style={{ margin: '0 0 8px 0', color: '#ef4444', fontSize: 16 }}>Zone dangereuse</h3>
+              <h3 style={{ margin: '0 0 8px 0', color: 'var(--ccc-error)', fontSize: 16 }}>Zone dangereuse</h3>
               <p style={{ margin: '0 0 16px 0', color: 'var(--ccc-text-muted)', fontSize: 13 }}>
                 La suppression de cette salle est irréversible et annulera toutes les réservations associées.
               </p>
@@ -245,7 +245,7 @@ const VenueDetailPage: React.FC = () => {
                 style={{
                   padding: '10px 24px',
                   background: 'rgba(239,68,68,0.2)',
-                  color: '#ef4444',
+                  color: 'var(--ccc-error)',
                   border: '1px solid rgba(239,68,68,0.4)',
                   borderRadius: 10,
                   cursor: 'pointer',
@@ -398,7 +398,7 @@ const VenueDetailPage: React.FC = () => {
                                 width: i === activePhoto ? 20 : 8,
                                 height: 8,
                                 borderRadius: 4,
-                                background: i === activePhoto ? '#7c3aed' : 'rgba(255,255,255,0.4)',
+                                background: i === activePhoto ? 'var(--ccc-accent)' : 'rgba(255,255,255,0.4)',
                                 border: 'none',
                                 cursor: 'pointer',
                                 padding: 0,
@@ -422,7 +422,7 @@ const VenueDetailPage: React.FC = () => {
                             width: 64,
                             height: 44,
                             padding: 0,
-                            border: i === activePhoto ? '2px solid #7c3aed' : '2px solid transparent',
+                            border: i === activePhoto ? '2px solid var(--ccc-accent)' : '2px solid transparent',
                             borderRadius: 8,
                             overflow: 'hidden',
                             cursor: 'pointer',
@@ -474,7 +474,7 @@ const VenueDetailPage: React.FC = () => {
                       borderRadius: 20,
                       fontSize: 12,
                       fontWeight: 700,
-                      color: '#7c3aed',
+                      color: 'var(--ccc-accent)',
                       textTransform: 'uppercase',
                       letterSpacing: '0.04em',
                       whiteSpace: 'nowrap',
@@ -502,7 +502,7 @@ const VenueDetailPage: React.FC = () => {
                 }}
               >
                 <div style={{ textAlign: 'center' }}>
-                  <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#7c3aed' }}>
+                  <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--ccc-accent)' }}>
                     {venue.capacity}
                   </p>
                   <p style={{ margin: 0, fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>
@@ -511,7 +511,7 @@ const VenueDetailPage: React.FC = () => {
                 </div>
                 <div style={{ width: 1, background: 'var(--ccc-border-subtle)' }} />
                 <div style={{ textAlign: 'center' }}>
-                  <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#7c3aed' }}>
+                  <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--ccc-accent)' }}>
                     {venue.pricePerEvent.toLocaleString('fr-FR')} €
                   </p>
                   <p style={{ margin: 0, fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>
@@ -522,7 +522,7 @@ const VenueDetailPage: React.FC = () => {
                   <>
                     <div style={{ width: 1, background: 'var(--ccc-border-subtle)' }} />
                     <div style={{ textAlign: 'center' }}>
-                      <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#7c3aed' }}>
+                      <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--ccc-accent)' }}>
                         {venue.equipment.length}
                       </p>
                       <p style={{ margin: 0, fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>
@@ -573,7 +573,7 @@ const VenueDetailPage: React.FC = () => {
               {venue.cancellationPolicy && (
                 <div style={{ marginBottom: 24, padding: '20px', background: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', borderRadius: 16, boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#7c3aed' }} />
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--ccc-accent)' }} />
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--ccc-text-primary)' }}>
                       Politique d'annulation
                     </h3>
@@ -632,13 +632,13 @@ const VenueDetailPage: React.FC = () => {
                         {venue.accessiblePMR && (
                           <div style={{ padding: '10px 14px', background: 'var(--ccc-bg-elevated)', borderRadius: 10, border: '1px solid var(--ccc-border-subtle)' }}>
                             <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>Accessibilité</p>
-                            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#10b981' }}>♿ PMR</p>
+                            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ccc-success)' }}>♿ PMR</p>
                           </div>
                         )}
                         {venue.parkingAvailable && (
                           <div style={{ padding: '10px 14px', background: 'var(--ccc-bg-elevated)', borderRadius: 10, border: '1px solid var(--ccc-border-subtle)' }}>
                             <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--ccc-text-muted)', textTransform: 'uppercase' }}>Parking</p>
-                            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#10b981' }}>✓ Disponible</p>
+                            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ccc-success)' }}>✓ Disponible</p>
                           </div>
                         )}
                       </div>
@@ -691,7 +691,7 @@ const VenueDetailPage: React.FC = () => {
                             ))}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--ccc-border-subtle)' }}>
                               <span style={{ fontSize: 12, color: 'var(--ccc-text-muted)' }}>Total</span>
-                              <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 700 }}>
+                              <span style={{ fontSize: 13, color: 'var(--ccc-accent)', fontWeight: 700 }}>
                                 {venue.extraFees.reduce((sum, f) => sum + (f.amount ?? 0), 0).toFixed(2)} {venue.currency || 'EUR'}
                               </span>
                             </div>
@@ -800,7 +800,7 @@ const VenueDetailPage: React.FC = () => {
                         {venue.invoicingAvailable && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
                             <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)' }}>Facturation</span>
-                            <span style={{ fontSize: 13, color: '#10b981', fontWeight: 600 }}>✓ Disponible</span>
+                            <span style={{ fontSize: 13, color: 'var(--ccc-success)', fontWeight: 600 }}>✓ Disponible</span>
                           </div>
                         )}
                       </div>

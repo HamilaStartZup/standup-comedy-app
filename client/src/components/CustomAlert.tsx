@@ -20,13 +20,13 @@ function CustomAlert({ message, type, onClose }: CustomAlertProps) {
   const getTypeColors = () => {
     switch (type) {
       case 'success':
-        return { bg: '#10b981', border: '#059669', icon: '✓' };
+        return { bg: 'var(--ccc-success)', border: '#059669', icon: '✓' };
       case 'error':
-        return { bg: '#ef4444', border: '#dc2626', icon: '✕' };
+        return { bg: 'var(--ccc-error)', border: '#dc2626', icon: '✕' };
       case 'warning':
-        return { bg: '#f59e0b', border: '#d97706', icon: '⚠' };
+        return { bg: 'var(--ccc-warning)', border: '#d97706', icon: '⚠' };
       case 'info':
-        return { bg: '#3b82f6', border: '#2563eb', icon: 'ℹ' };
+        return { bg: 'var(--ccc-info)', border: '#2563eb', icon: 'ℹ' };
       default:
         return { bg: '#6b7280', border: '#4b5563', icon: '•' };
     }

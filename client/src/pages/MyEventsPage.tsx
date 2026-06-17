@@ -2767,15 +2767,15 @@ useEffect(() => {
             if (comedianApplicationsMap.size > 0) {
               relatedApplication = comedianApplicationsMap.get(event._id);
               if (relatedApplication) {
-                let color = '#ffc107';
+                let color = 'var(--ccc-warning)';
                 let bg = 'rgba(255, 193, 7, 0.18)';
                 let label = 'Candidature: En attente';
                 if (relatedApplication.status === 'ACCEPTED') {
-                  color = '#28a745';
+                  color = 'var(--ccc-success)';
                   bg = 'rgba(40, 167, 69, 0.18)';
                   label = 'Candidature: Acceptée';
                 } else if (relatedApplication.status === 'REJECTED') {
-                  color = '#dc3545';
+                  color = 'var(--ccc-error)';
                   bg = 'rgba(220, 53, 69, 0.2)';
                   label = 'Candidature: Refusée';
                 } else if (relatedApplication.status === 'WITHDRAWN') {
@@ -2847,10 +2847,10 @@ useEffect(() => {
                   </div>
                 </div>
                 <div style={cardStatusBlockStyle}>
-                  {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? '#28a745' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(124, 58, 237, 0.12)')}
+                  {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? 'var(--ccc-success)' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(124, 58, 237, 0.12)')}
                   {renderStatusChip(
                     isCompleteEvent ? `Complet • ${participantsRatio}` : `Non complet • ${participantsRatio}`,
-                    isCompleteEvent ? '#64748B' : '#ffc107',
+                    isCompleteEvent ? 'var(--ccc-text-muted)' : 'var(--ccc-warning)',
                     isCompleteEvent ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 193, 7, 0.15)'
                   )}
                   {comedianApplicationChip}
@@ -2934,7 +2934,7 @@ useEffect(() => {
                   <div style={dropdownContainerStyle}>
                     <style>{`
                       .organizer-events-dropdown option {
-                        background-color: #ffffff !important;
+                        background-color: var(--ccc-bg-elevated) !important;
                         color: #1e293b !important;
                         padding: 12px 16px;
                         font-size: 1em;
@@ -2944,7 +2944,7 @@ useEffect(() => {
                       }
                       .organizer-events-dropdown option:checked {
                         background-color: rgba(124, 58, 237, 0.18) !important;
-                        color: #7c3aed !important;
+                        color: var(--ccc-accent) !important;
                         font-weight: 700;
                       }
                     `}</style>
@@ -3217,7 +3217,7 @@ useEffect(() => {
                       )}
 
                       {!isSearchingComedians && comedianZoneSearch.trim() && comedianSearchResults.length === 0 && !comedianSearchError && (
-                        <p style={{ color: '#ffc107', marginTop: '15px', textAlign: 'center' }}>
+                        <p style={{ color: 'var(--ccc-warning)', marginTop: '15px', textAlign: 'center' }}>
                           Aucun humoriste trouvé pour cette zone.
                         </p>
                       )}
@@ -3260,10 +3260,10 @@ useEffect(() => {
                                 }}
                                 onMouseEnter={(e) => {
                                   e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.04)';
-                                  e.currentTarget.style.borderColor = '#7c3aed';
+                                  e.currentTarget.style.borderColor = 'var(--ccc-accent)';
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = '#ffffff';
+                                  e.currentTarget.style.backgroundColor = 'var(--ccc-bg-elevated)';
                                   e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.14)';
                                 }}
                               >
@@ -3346,7 +3346,7 @@ useEffect(() => {
                                           fontSize: '15px',
                                           // On garde la même couleur jaune pour tous les niveaux
                                           backgroundColor: 'rgba(255, 193, 7, 0.3)',
-                                          color: '#ffc107'
+                                          color: 'var(--ccc-warning)'
                                         }}
                                       >
                                         {comedian.numberOfScenes === '200+' ? 'Pro' : comedian.numberOfScenes === '50-200' ? 'Expérimenté' : 'Débutant'}
@@ -3385,9 +3385,9 @@ useEffect(() => {
                                 style={{
                                   padding: '8px 16px',
                                   borderRadius: theme.radius.sm,
-                                  border: '1px solid #28a745',
+                                  border: '1px solid var(--ccc-success)',
                                   backgroundColor: comedianSearchPage === 1 ? 'rgba(0, 0, 0, 0.3)' : 'rgba(40, 167, 69, 0.2)',
-                                  color: comedianSearchPage === 1 ? '#666' : '#ffffff',
+                                  color: comedianSearchPage === 1 ? 'var(--ccc-text-secondary)' : 'var(--ccc-text-on-accent)',
                                   cursor: comedianSearchPage === 1 ? 'not-allowed' : 'pointer'
                                 }}
                               >
@@ -3402,9 +3402,9 @@ useEffect(() => {
                                 style={{
                                   padding: '8px 16px',
                                   borderRadius: theme.radius.sm,
-                                  border: '1px solid #28a745',
+                                  border: '1px solid var(--ccc-success)',
                                   backgroundColor: comedianSearchPage >= Math.ceil(comedianSearchTotal / 10) ? 'rgba(0, 0, 0, 0.3)' : 'rgba(40, 167, 69, 0.2)',
-                                  color: comedianSearchPage >= Math.ceil(comedianSearchTotal / 10) ? '#666' : '#ffffff',
+                                  color: comedianSearchPage >= Math.ceil(comedianSearchTotal / 10) ? 'var(--ccc-text-secondary)' : 'var(--ccc-text-on-accent)',
                                   cursor: comedianSearchPage >= Math.ceil(comedianSearchTotal / 10) ? 'not-allowed' : 'pointer'
                                 }}
                               >
@@ -3524,10 +3524,10 @@ useEffect(() => {
                             </div>
                           </div>
                           <div style={cardStatusBlockStyle}>
-                            {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? '#28a745' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(124, 58, 237, 0.12)')}
+                            {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? 'var(--ccc-success)' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(124, 58, 237, 0.12)')}
                             {renderStatusChip(
                               isCompleteEvent ? `Complet • ${participantsRatio}` : `Non complet • ${participantsRatio}`,
-                              isCompleteEvent ? '#64748B' : '#ffc107',
+                              isCompleteEvent ? 'var(--ccc-text-muted)' : 'var(--ccc-warning)',
                               isCompleteEvent ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 193, 7, 0.15)'
                             )}
                             {renderOrganizerActions(event, 'upcoming')}
@@ -3668,10 +3668,10 @@ useEffect(() => {
                             </div>
                           </div>
                           <div style={cardStatusBlockStyle}>
-                            {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? '#28a745' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(124, 58, 237, 0.12)')}
+                            {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? 'var(--ccc-success)' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(124, 58, 237, 0.12)')}
                             {renderStatusChip(
                               isCompleteEvent ? `Complet • ${participantsRatio}` : `Non complet • ${participantsRatio}`,
-                              isCompleteEvent ? '#64748B' : '#ffc107',
+                              isCompleteEvent ? 'var(--ccc-text-muted)' : 'var(--ccc-warning)',
                               isCompleteEvent ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 193, 7, 0.15)'
                             )}
                             {renderOrganizerActions(event, 'upcoming')}
@@ -3733,8 +3733,8 @@ useEffect(() => {
                       </div>
                     </div>
                     <div style={cardStatusBlockStyle}>
-                      {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? '#28a745' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(124, 58, 237, 0.12)')}
-                      {renderStatusChip(`Complet • ${participantsRatio}`, '#64748B', 'rgba(0, 0, 0, 0.06)')}
+                      {renderStatusChip(`Statut: ${statusLabel}`, statusLabel === 'Publié' ? 'var(--ccc-success)' : '#ff8ba0', statusLabel === 'Publié' ? 'rgba(40, 167, 69, 0.15)' : 'rgba(124, 58, 237, 0.12)')}
+                      {renderStatusChip(`Complet • ${participantsRatio}`, 'var(--ccc-text-muted)', 'rgba(0, 0, 0, 0.06)')}
                       {renderOrganizerActions(event, 'full')}
                     </div>
                   </div>
@@ -3789,7 +3789,7 @@ useEffect(() => {
                 <div style={cardStatusBlockStyle}>
                   {renderStatusChip(`Statut: ${statusLabel}`, '#4dd0e1', 'rgba(77, 208, 225, 0.18)')}
                   {renderStatusChip(`Participants: ${participantsRatio}`, '#9b8bff', 'rgba(155, 139, 255, 0.18)')}
-                  {isFutureButArchived && renderStatusChip('Évènement futur classé en archive', '#ffc107', 'rgba(255, 193, 7, 0.18)')}
+                  {isFutureButArchived && renderStatusChip('Évènement futur classé en archive', 'var(--ccc-warning)', 'rgba(255, 193, 7, 0.18)')}
                   {renderOrganizerActions(event, 'archived')}
                 </div>
               </div>
@@ -3892,7 +3892,7 @@ useEffect(() => {
                   )}
                 </div>
                 <div style={cardStatusBlockStyle}>
-                  {renderStatusChip(`Statut: ${statusLabel}`, '#dc3545', 'rgba(220, 53, 69, 0.18)')}
+                  {renderStatusChip(`Statut: ${statusLabel}`, 'var(--ccc-error)', 'rgba(220, 53, 69, 0.18)')}
                 </div>
               </div>
             );
@@ -3970,10 +3970,10 @@ useEffect(() => {
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.04)';
-                    e.currentTarget.style.borderColor = '#7c3aed';
+                    e.currentTarget.style.borderColor = 'var(--ccc-accent)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.backgroundColor = 'var(--ccc-bg-elevated)';
                     e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.14)';
                   }}
                 >
@@ -4030,7 +4030,7 @@ useEffect(() => {
                             borderRadius: '12px',
                             fontSize: '15px',
                             backgroundColor: 'rgba(255, 193, 7, 0.3)',
-                            color: '#ffc107'
+                            color: 'var(--ccc-warning)'
                           }}
                         >
                           {(comedian.numberOfScenes || comedian.profile?.numberOfScenes) === '200+' ? 'Pro' : 

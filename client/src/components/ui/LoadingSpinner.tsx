@@ -21,7 +21,7 @@ const LoadingSpinner = ({ size = 48, message = 'Chargement...' }: LoadingSpinner
           width: size,
           height: size,
           border: '4px solid rgba(124, 58, 237, 0.2)',
-          borderTop: '4px solid #7c3aed',
+          borderTop: '4px solid var(--ccc-accent)',
           borderRadius: '50%',
           animation: 'spin 1s linear infinite',
           margin: '0 auto 16px',

@@ -163,7 +163,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
 
   const titleStyle: CSSProperties = {
     fontSize: '2em',
-    color: '#7c3aed',
+    color: 'var(--ccc-accent)',
     marginBottom: '20px',
     textAlign: 'center',
   };
@@ -205,7 +205,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #28a745, #218838)',
+    background: 'linear-gradient(to right, var(--ccc-success), #059669)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -216,7 +216,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #dc3545, #c82333)',
+    background: 'linear-gradient(to right, var(--ccc-error), #c82333)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -247,7 +247,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
               <img
                 src={previewImage}
                 alt="Aperçu"
-                style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #7c3aed' }}
+                style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--ccc-accent)' }}
               />
             </div>
           )}

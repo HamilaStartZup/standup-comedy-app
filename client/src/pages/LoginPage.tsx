@@ -176,7 +176,7 @@ function LoginPage() {
     margin: '10px 0',
     borderRadius: '8px',
     border: '1px solid var(--ccc-border-medium)',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     color: 'var(--ccc-text-primary)',
     fontSize: '1em',
     outline: 'none',
@@ -230,7 +230,7 @@ function LoginPage() {
             marginBottom: '20px',
             textAlign: 'left'
           }}>
-            <p style={{ color: '#ffc107', fontWeight: 'bold', marginBottom: '10px' }}>
+            <p style={{ color: 'var(--ccc-warning)', fontWeight: 'bold', marginBottom: '10px' }}>
               Votre compte sera supprimé le :
             </p>
             <p style={{ color: 'var(--ccc-text-primary)', fontSize: '1.1em', fontWeight: 'bold', marginBottom: '10px' }}>
@@ -254,7 +254,7 @@ function LoginPage() {
               border: '1px solid rgba(40, 167, 69, 0.4)',
               marginBottom: '20px',
             }}>
-              <p style={{ color: '#28a745', fontWeight: 'bold' }}>
+              <p style={{ color: 'var(--ccc-success)', fontWeight: 'bold' }}>
                 ✅ Compte réactivé avec succès !
               </p>
               <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
@@ -269,7 +269,7 @@ function LoginPage() {
                 style={{
                   ...buttonStyle,
                   margin: 0,
-                  background: 'linear-gradient(135deg, #28a745, #20c997)',
+                  background: 'linear-gradient(135deg, var(--ccc-success), #20c997)',
                   opacity: isReactivating ? 0.7 : 1,
                   cursor: isReactivating ? 'not-allowed' : 'pointer',
                 }}
@@ -327,7 +327,7 @@ function LoginPage() {
           {/* Message d'erreur du mot de passe */}
           {passwordError && (
             <div style={{
-              color: '#dc3545',
+              color: 'var(--ccc-error)',
               marginBottom: '10px',
               fontSize: '0.9em',
               textAlign: 'left',
@@ -351,7 +351,7 @@ function LoginPage() {
               textAlign: 'left'
             }}>
               <div style={{
-                color: passwordValidation.length ? '#28a745' : '#dc3545',
+                color: passwordValidation.length ? 'var(--ccc-success)' : 'var(--ccc-error)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px'
@@ -390,7 +390,7 @@ function LoginPage() {
                   padding: '14px 20px',
                   borderRadius: '10px',
                   border: 'none',
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--ccc-bg-elevated)',
                   color: '#3c4043',
                   fontSize: '0.95em',
                   fontWeight: '600',

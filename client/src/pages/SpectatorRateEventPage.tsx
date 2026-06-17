@@ -268,11 +268,11 @@ export default function SpectatorRateEventPage() {
                               backgroundImage: p.avatarUrl ? `url(${p.avatarUrl})` : undefined,
                               backgroundSize: p.avatarUrl ? 'cover' : undefined,
                               backgroundPosition: p.avatarUrl ? 'center' : undefined,
-                              background: !p.avatarUrl ? 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)' : undefined,
+                              background: !p.avatarUrl ? 'linear-gradient(135deg, var(--ccc-accent) 0%, #5b21b6 100%)' : undefined,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: '#fff',
+                              color: 'var(--ccc-text-on-accent)',
                               fontWeight: 700,
                               fontSize: '1.1rem',
                             }}

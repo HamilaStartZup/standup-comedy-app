@@ -136,7 +136,7 @@ function PasswordResetManagementPage() {
             ...cardStyle,
             backgroundColor: 'rgba(40, 167, 69, 0.2)',
             border: '1px solid rgba(40, 167, 69, 0.4)',
-            color: '#28a745',
+            color: 'var(--ccc-success)',
             marginBottom: '20px',
           }}>
             ✅ {successMessage}
@@ -148,7 +148,7 @@ function PasswordResetManagementPage() {
             ...cardStyle,
             backgroundColor: 'rgba(220, 53, 69, 0.2)',
             border: '1px solid rgba(220, 53, 69, 0.4)',
-            color: '#dc3545',
+            color: 'var(--ccc-error)',
             marginBottom: '20px',
           }}>
             ⚠️ {error}
@@ -161,8 +161,8 @@ function PasswordResetManagementPage() {
           </div>
         ) : isRequestsError ? (
           <div style={{ ...cardStyle, textAlign: 'center' }}>
-            <p style={{ color: '#ef4444', marginBottom: 12 }}>Impossible de charger les demandes.</p>
-            <button onClick={() => refetchRequests()} style={{ padding: '10px 20px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Réessayer</button>
+            <p style={{ color: 'var(--ccc-error)', marginBottom: 12 }}>Impossible de charger les demandes.</p>
+            <button onClick={() => refetchRequests()} style={{ padding: '10px 20px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Réessayer</button>
           </div>
         ) : requests.length === 0 ? (
           <div style={cardStyle}>
@@ -182,7 +182,7 @@ function PasswordResetManagementPage() {
                   style={{
                     ...cardStyle,
                     marginBottom: '15px',
-                    border: '2px solid #7c3aed',
+                    border: '2px solid var(--ccc-accent)',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -227,7 +227,7 @@ function PasswordResetManagementPage() {
                                 setSelectedUserId(null);
                                 setNewPassword('');
                               }}
-                              style={{ ...buttonStyle, background: 'var(--ccc-bg-elevated)', color: 'var(--ccc-text-secondary)' }}
+                              style={{ ...buttonStyle, background: 'var(--ccc-btn-secondary-bg)', color: 'var(--ccc-text-secondary)' }}
                             >
                               Annuler
                             </button>

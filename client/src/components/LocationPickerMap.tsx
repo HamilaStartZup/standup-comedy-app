@@ -26,7 +26,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ lat, lng, name, o
 
   return (
     <div style={{ marginTop: 16 }}>
-      <span style={{ fontSize: 13, color: '#f59e0b', fontWeight: 600, display: 'block', marginBottom: 8 }}>
+      <span style={{ fontSize: 13, color: 'var(--ccc-warning)', fontWeight: 600, display: 'block', marginBottom: 8 }}>
         📍 Vérifiez la position — faites glisser le marqueur si besoin
       </span>
       <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', height: 260 }}>
@@ -37,7 +37,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ lat, lng, name, o
           </Marker>
         </MapContainer>
       </div>
-      <p style={{ margin: '6px 0 0', fontSize: 11, color: '#666' }}>
+      <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--ccc-text-secondary)' }}>
         {lat.toFixed(6)}, {lng.toFixed(6)}
       </p>
     </div>

@@ -122,21 +122,21 @@ const EmailPreferences: React.FC = () => {
         style={{
           ...statusBoxStyle,
           borderLeft: isSubscribed
-            ? '3px solid #28a745'
-            : '3px solid #ffc107',
+            ? '3px solid var(--ccc-success)'
+            : '3px solid var(--ccc-warning)',
         }}
       >
         <i
           className={isSubscribed ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'}
           style={{
             fontSize: '1.3em',
-            color: isSubscribed ? '#28a745' : '#ffc107',
+            color: isSubscribed ? 'var(--ccc-success)' : 'var(--ccc-warning)',
           }}
         ></i>
         <div>
           <p
             style={{
-              color: isSubscribed ? '#28a745' : '#ffc107',
+              color: isSubscribed ? 'var(--ccc-success)' : 'var(--ccc-warning)',
               fontWeight: 'bold',
               marginBottom: '4px',
             }}
@@ -160,7 +160,7 @@ const EmailPreferences: React.FC = () => {
             style={{
               ...buttonStyle,
               background: 'linear-gradient(135deg, #e85d75, #c13057)',
-              color: '#fff',
+              color: 'var(--ccc-text-on-accent)',
             }}
           >
             {isUpdating ? (
@@ -190,7 +190,7 @@ const EmailPreferences: React.FC = () => {
           }}
         >
           <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.85em' }}>
-            <i className="fas fa-lightbulb" style={{ marginRight: '8px', color: '#ffc107' }}></i>
+            <i className="fas fa-lightbulb" style={{ marginRight: '8px', color: 'var(--ccc-warning)' }}></i>
             Pour vous désabonner, utilisez le lien "Se désabonner" présent dans vos emails.
           </p>
         </div>
@@ -204,10 +204,10 @@ const EmailPreferences: React.FC = () => {
             padding: '12px 15px',
             background: 'var(--ccc-bg-surface)',
             borderRadius: '6px',
-            borderLeft: '3px solid #dc3545',
+            borderLeft: '3px solid var(--ccc-error)',
           }}
         >
-          <p style={{ color: '#dc3545', fontSize: '0.9em', margin: 0 }}>
+          <p style={{ color: 'var(--ccc-error)', fontSize: '0.9em', margin: 0 }}>
             <i className="fas fa-times-circle" style={{ marginRight: '8px' }}></i>
             {error}
           </p>
@@ -221,10 +221,10 @@ const EmailPreferences: React.FC = () => {
             padding: '12px 15px',
             background: 'var(--ccc-bg-surface)',
             borderRadius: '6px',
-            borderLeft: '3px solid #28a745',
+            borderLeft: '3px solid var(--ccc-success)',
           }}
         >
-          <p style={{ color: '#28a745', fontSize: '0.9em', margin: 0 }}>
+          <p style={{ color: 'var(--ccc-success)', fontSize: '0.9em', margin: 0 }}>
             <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
             {successMessage}
           </p>

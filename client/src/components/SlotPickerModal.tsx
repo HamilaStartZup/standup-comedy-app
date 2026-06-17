@@ -98,7 +98,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
     width: '100%',
     padding: '10px',
     background: 'var(--ccc-accent-gradient)',
-    color: '#fff',
+    color: 'var(--ccc-text-on-accent)',
     border: 'none',
     borderRadius: 10,
     cursor: 'pointer',
@@ -171,7 +171,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
           <p style={{ margin: '0 0 2px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>Choisir un créneau</p>
           <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ccc-text-muted)' }}>Sélectionnez un ou plusieurs créneaux d'1h</p>
           {durConstraints && (
-            <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#f59e0b', fontWeight: 600 }}>{durConstraints}</p>
+            <p style={{ margin: '0 0 12px 0', fontSize: 12, color: 'var(--ccc-warning)', fontWeight: 600 }}>{durConstraints}</p>
           )}
 
           <div style={{ overflowY: 'auto', flex: 1, marginBottom: 8 }}>
@@ -192,7 +192,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
                     padding: '12px 16px',
                     borderRadius: 10,
                     border: isSel ? '1px solid var(--ccc-accent)' : '1px solid var(--ccc-border-medium)',
-                    background: isSel ? 'var(--ccc-accent-soft)' : 'var(--ccc-bg-surface)',
+                    background: isSel ? 'var(--ccc-accent-soft)' : 'var(--ccc-bg-inactive)',
                     color: disabled ? 'var(--ccc-text-faint)' : isSel ? 'var(--ccc-accent)' : 'var(--ccc-text-primary)',
                     fontSize: 14,
                     textAlign: 'left',
@@ -230,9 +230,9 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
               width: '100%',
               padding: '12px',
               background: canConfirm
-                ? 'linear-gradient(135deg, #22c55e 0%, #10b981 100%)'
+                ? `linear-gradient(135deg, #22c55e 0%, var(--ccc-success) 100%)`
                 : 'rgba(34,197,94,0.2)',
-              color: canConfirm ? '#fff' : '#6b7280',
+              color: canConfirm ? 'var(--ccc-text-on-accent)' : '#6b7280',
               border: 'none',
               borderRadius: 10,
               cursor: canConfirm ? 'pointer' : 'not-allowed',
@@ -267,7 +267,7 @@ const SlotPickerModal: React.FC<SlotPickerModalProps> = ({
     padding: '16px',
     borderRadius: 10,
     border: active ? '1px solid var(--ccc-accent)' : '1px solid var(--ccc-border-medium)',
-    background: active ? 'var(--ccc-accent-soft)' : 'var(--ccc-bg-surface)',
+    background: active ? 'var(--ccc-accent-soft)' : 'var(--ccc-bg-inactive)',
     color: disabled ? 'var(--ccc-text-faint)' : active ? 'var(--ccc-accent)' : 'var(--ccc-text-primary)',
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.4 : 1,

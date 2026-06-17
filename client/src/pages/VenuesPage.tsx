@@ -145,7 +145,7 @@ const VenuesPage: React.FC = () => {
             style={inputStyle}
           >
             {VENUE_TYPES_WITH_ALL.map((t) => (
-              <option key={t.value} value={t.value} style={{ background: '#ffffff' }}>
+              <option key={t.value} value={t.value} style={{ background: 'var(--ccc-option-bg)' }}>
                 {t.label}
               </option>
             ))}
@@ -160,9 +160,9 @@ const VenuesPage: React.FC = () => {
             }}
             style={inputStyle}
           >
-            <option value="" style={{ background: '#ffffff' }}>Toutes les régions</option>
+            <option value="" style={{ background: 'var(--ccc-option-bg)' }}>Toutes les régions</option>
             {REGION_OPTIONS.filter(Boolean).map((r) => (
-              <option key={r} value={r} style={{ background: '#ffffff' }}>
+              <option key={r} value={r} style={{ background: 'var(--ccc-option-bg)' }}>
                 {r}
               </option>
             ))}
@@ -174,9 +174,9 @@ const VenuesPage: React.FC = () => {
             onChange={(e) => setFilters((p) => ({ ...p, department: e.target.value }))}
             style={inputStyle}
           >
-            <option value="" style={{ background: '#ffffff' }}>Tous les départements</option>
+            <option value="" style={{ background: 'var(--ccc-option-bg)' }}>Tous les départements</option>
             {availableDepartments.map((code) => (
-              <option key={code} value={code} style={{ background: '#ffffff' }}>
+              <option key={code} value={code} style={{ background: 'var(--ccc-option-bg)' }}>
                 {code} — {FRENCH_DEPARTMENTS[code] ?? code}
               </option>
             ))}
@@ -222,7 +222,7 @@ const VenuesPage: React.FC = () => {
           </div>
         ) : error ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
-            <p style={{ color: '#ef4444', fontSize: 15, marginBottom: 16 }}>Impossible de charger les salles.</p>
+            <p style={{ color: 'var(--ccc-error)', fontSize: 15, marginBottom: 16 }}>Impossible de charger les salles.</p>
             <button
               onClick={() => refetch()}
               style={{
@@ -262,7 +262,7 @@ const VenuesPage: React.FC = () => {
                 style={{
                   padding: '10px 24px',
                   background: 'rgba(124, 58, 237,0.15)',
-                  color: '#7c3aed',
+                  color: 'var(--ccc-accent)',
                   border: '1px solid rgba(124, 58, 237,0.4)',
                   borderRadius: 10,
                   cursor: 'pointer',

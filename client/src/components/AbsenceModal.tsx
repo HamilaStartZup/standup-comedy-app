@@ -103,8 +103,8 @@ function AbsenceModal({
   };
   const submitButtonStyle: CSSProperties = {
     ...buttonBaseStyle,
-    backgroundColor: isAlreadyAbsent ? '#28a745' : '#dc3545',
-    color: '#ffffff',
+    backgroundColor: isAlreadyAbsent ? 'var(--ccc-btn-success-bg)' : 'var(--ccc-btn-danger-bg)',
+    color: 'var(--ccc-text-on-accent)',
   };
   const disabledButtonStyle: CSSProperties = {
     ...submitButtonStyle,
@@ -137,7 +137,7 @@ function AbsenceModal({
             borderRadius: '8px',
             padding: '15px',
             marginBottom: '20px',
-            color: '#28a745',
+            color: 'var(--ccc-success)',
             textAlign: 'center',
           }}>
             ✅ Ce participant est actuellement marqué comme absent.<br />

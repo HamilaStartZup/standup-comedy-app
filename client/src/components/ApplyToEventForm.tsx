@@ -124,7 +124,7 @@ function ApplyToEventForm({ event, onClose, onApplicationSubmitted }: ApplyToEve
   const titleStyle: CSSProperties = {
     fontSize: '1.5em',
     fontWeight: '600',
-    color: '#7c3aed',
+    color: 'var(--ccc-accent)',
   };
 
   const closeButtonStyle: CSSProperties = {
@@ -194,7 +194,7 @@ function ApplyToEventForm({ event, onClose, onApplicationSubmitted }: ApplyToEve
     content = (
       <div style={formContentStyle}>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
-          <div style={{ border: '4px solid var(--ccc-border-medium)', borderTop: '4px solid #7c3aed', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite' }}></div>
+          <div style={{ border: '4px solid var(--ccc-border-medium)', borderTop: '4px solid var(--ccc-accent)', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite' }}></div>
           <span style={{ marginLeft: '10px', color: 'var(--ccc-text-muted)' }}>Vérification...</span>
           <style>{`
             @keyframes spin {

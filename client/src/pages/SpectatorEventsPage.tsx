@@ -122,7 +122,7 @@ export default function SpectatorEventsPage() {
       const node = document.querySelector<HTMLElement>(`[data-event-id="${focusId}"]`);
       if (!node) return;
       node.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      node.style.outline = '3px solid #7c3aed';
+      node.style.outline = '3px solid var(--ccc-accent)';
       node.style.outlineOffset = '2px';
       setTimeout(() => {
         node.style.outline = '';
@@ -307,13 +307,13 @@ export default function SpectatorEventsPage() {
             <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
           ) : (errorRegistrations || errorFavorites) ? (
             <div style={{ textAlign: 'center', padding: 60 }}>
-              <p style={{ color: '#ef4444' }}>Impossible de charger vos événements.</p>
+              <p style={{ color: 'var(--ccc-error)' }}>Impossible de charger vos événements.</p>
               <button
                 onClick={() => {
                   queryClient.invalidateQueries({ queryKey: ['events'], exact: false });
                   queryClient.invalidateQueries({ queryKey: ['event-favorites'], exact: false });
                 }}
-                style={{ marginTop: 16, padding: '10px 24px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer' }}
+                style={{ marginTop: 16, padding: '10px 24px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer' }}
               >
                 Réessayer
               </button>
@@ -570,7 +570,7 @@ function EventCard({
   const canRegister = onRegister && !isRegistered && !isPast && !isCancelled && (placesRemaining === null || placesRemaining > 0);
   const imageUrl = event.imageUrl;
   const hasBg = !!imageUrl;
-  const textColor = hasBg ? '#fff' : 'var(--ccc-text-primary)';
+  const textColor = hasBg ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-primary)';
   const textColorMuted = hasBg ? 'rgba(255,255,255,0.92)' : 'var(--ccc-text-secondary)';
   const textColorMuted2 = hasBg ? 'rgba(255,255,255,0.88)' : 'var(--ccc-text-muted)';
   const textShadow = hasBg ? '0 1px 2px rgba(0,0,0,0.8)' : 'none';
@@ -626,7 +626,7 @@ function EventCard({
               borderRadius: 6,
               fontSize: '0.75rem',
               fontWeight: 600,
-              color: '#fff',
+              color: 'var(--ccc-text-on-accent)',
               background: 'rgba(34, 197, 94, 0.95)',
               boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
             }}
@@ -666,7 +666,7 @@ function EventCard({
             style={{
               padding: '8px 12px',
               borderRadius: 8,
-              border: '1px solid #28a745',
+              border: '1px solid var(--ccc-success)',
               background: 'rgba(40, 167, 69, 0.2)',
               color: '#5dd879',
               cursor: isRegistering ? 'wait' : 'pointer',
@@ -743,7 +743,7 @@ function EventCard({
               borderRadius: 8,
               border: '1px solid rgba(0,0,0,0.2)',
               background: 'rgba(0,0,0,0.06)',
-              color: '#444',
+              color: 'var(--ccc-input-border)',
               cursor: 'pointer',
               fontSize: '0.9rem',
             }}

@@ -175,7 +175,7 @@ const EventCalendar = ({
   const monthTitleStyle: CSSProperties = {
     fontSize: getResponsiveValue('1.2em', '1.3em', '1.5em'),
     fontWeight:'bold',
-    color:'#7c3aed',
+    color:'var(--ccc-accent)',
     textAlign: screenSize === 'mobile' ? 'center' : 'left'
   };
 
@@ -184,7 +184,7 @@ const EventCalendar = ({
     borderRadius:'8px',
     border:'1px solid var(--ccc-border-subtle)',
     background:'var(--ccc-bg-elevated)',
-    color:'#7c3aed',
+    color:'var(--ccc-accent)',
     fontWeight:'bold',
     cursor:'pointer',
     fontSize:'0.9em',
@@ -198,9 +198,9 @@ const EventCalendar = ({
     padding:'6px 12px',
     marginLeft:'6px',
     borderRadius:'6px',
-    border:'1px solid #7c3aed',
+    border:'1px solid var(--ccc-accent)',
     backgroundColor:'transparent',
-    color:'#7c3aed',
+    color:'var(--ccc-accent)',
     cursor:'pointer',
     fontSize: getResponsiveValue('0.75em', '0.8em', '0.85em'),
     fontWeight:'bold',
@@ -225,7 +225,7 @@ const EventCalendar = ({
     padding:'10px',
     textAlign:'center',
     fontWeight:'bold',
-    color:'#7c3aed',
+    color:'var(--ccc-accent)',
     fontSize: getResponsiveValue('0.75em', '0.85em', '0.9em'),
     backgroundColor:'var(--ccc-bg-elevated)',
     borderRadius:'6px',
@@ -237,7 +237,7 @@ const EventCalendar = ({
     padding:'8px',
     backgroundColor: todayFlag ? 'rgba(124, 58, 237, 0.12)' : 'var(--ccc-bg-elevated)',
     borderRadius:'8px',
-    border: todayFlag ? '2px solid #7c3aed' : '1px solid var(--ccc-border-subtle)',
+    border: todayFlag ? '2px solid var(--ccc-accent)' : '1px solid var(--ccc-border-subtle)',
     position:'relative'
   });
 
@@ -249,7 +249,7 @@ const EventCalendar = ({
   };
 
   const badgeStyle = (type:string): CSSProperties => {
-    const colors:Record<string,string> = { published:'#28a745', completed:'#17a2b8', cancelled:'#dc3545', draft:'#6c757d' };
+    const colors:Record<string,string> = { published:'var(--ccc-success)', completed:'#17a2b8', cancelled:'var(--ccc-error)', draft:'#6c757d' };
     const minSize = screenSize === 'mobile' ? '24px' : '18px';
     return {
       display:'inline-block',
@@ -259,7 +259,7 @@ const EventCalendar = ({
       margin:'2px 2px 0 0',
       fontSize: getResponsiveValue('0.6em', '0.65em', '0.7em'),
       fontWeight:'bold',
-      color:'#fff',
+      color:'var(--ccc-text-on-accent)',
       borderRadius:'12px',
       backgroundColor:colors[type] || '#6c757d',
       cursor:'pointer',

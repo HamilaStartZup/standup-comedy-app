@@ -90,7 +90,7 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
         <p style={{ color: 'var(--ccc-text-muted)', textAlign: 'center' }}>Vérification...</p>
       ) : hasReported ? (
         <div>
-          <p style={{ color: '#ffc107', marginBottom: '20px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--ccc-warning)', marginBottom: '20px', textAlign: 'center' }}>
             ⚠️ Vous avez déjà signalé cet humoriste.
           </p>
           <button
@@ -116,7 +116,7 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
           </p>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', color: '#fff', marginBottom: '10px', fontWeight: 'bold' }}>
+            <label style={{ display: 'block', color: 'var(--ccc-text-primary)', marginBottom: '10px', fontWeight: 'bold' }}>
               Raison du signalement *
             </label>
             <select
@@ -141,7 +141,7 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', color: '#fff', marginBottom: '10px', fontWeight: 'bold' }}>
+            <label style={{ display: 'block', color: 'var(--ccc-text-primary)', marginBottom: '10px', fontWeight: 'bold' }}>
               Description (optionnel)
             </label>
             <textarea
@@ -191,7 +191,7 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
                 padding: '10px 20px',
                 borderRadius: '6px',
                 border: 'none',
-                background: 'linear-gradient(to right, #dc3545, #c82333)',
+                background: 'linear-gradient(to right, var(--ccc-error), #c82333)',
                 color: 'white',
                 fontWeight: 'bold',
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',

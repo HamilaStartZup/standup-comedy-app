@@ -79,9 +79,9 @@ const ComedianReportsPage = () => {
   };
 
   const statusColors: Record<string, string> = {
-    pending: '#ffc107',
-    validated: '#28a745',
-    rejected: '#dc3545'
+    pending: 'var(--ccc-warning)',
+    validated: 'var(--ccc-success)',
+    rejected: 'var(--ccc-error)'
   };
 
   const handleOpenModal = (report: ComedianReport) => {
@@ -170,7 +170,7 @@ const ComedianReportsPage = () => {
       <div style={mainContainerStyle}>
         <Navbar />
         <div style={contentStyle}>
-          <p style={{ color: '#dc3545', fontSize: '1.2em' }}>
+          <p style={{ color: 'var(--ccc-error)', fontSize: '1.2em' }}>
             Accès refusé. Seuls les super-admins peuvent accéder à cette page.
           </p>
         </div>
@@ -222,7 +222,7 @@ const ComedianReportsPage = () => {
 
           {error && (
             <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-              <p style={{ color: '#dc3545', marginBottom: '16px' }}>
+              <p style={{ color: 'var(--ccc-error)', marginBottom: '16px' }}>
                 Erreur: {(error as any).response?.data?.message || (error as any).message}
               </p>
               <button
@@ -285,19 +285,19 @@ const ComedianReportsPage = () => {
                           {statusLabels[report.status]}
                         </span>
                       </div>
-                      <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', margin: '5px 0' }}>
+                      <p style={{ color: 'var(--ccc-text-subtle)', fontSize: '0.9em', margin: '5px 0' }}>
                         Signalé par: {report.reporter.firstName} {report.reporter.lastName}
                       </p>
                       <p style={{ color: 'var(--ccc-text-secondary)', margin: '5px 0' }}>
                         <strong>Raison:</strong> {reasonLabels[report.reason]}
                       </p>
                       {report.description && (
-                        <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', marginTop: '10px', fontStyle: 'italic' }}>
+                        <p style={{ color: 'var(--ccc-text-subtle)', fontSize: '0.9em', marginTop: '10px', fontStyle: 'italic' }}>
                           "{report.description}"
                         </p>
                       )}
                     </div>
-                    <div style={{ textAlign: 'right', color: 'var(--ccc-text-muted)', fontSize: '0.85em' }}>
+                    <div style={{ textAlign: 'right', color: 'var(--ccc-text-subtle)', fontSize: '0.85em' }}>
                       <div>Créé le {new Date(report.createdAt).toLocaleDateString('fr-FR')}</div>
                       {report.reviewedAt && (
                         <div style={{ marginTop: '5px' }}>
@@ -381,7 +381,7 @@ const ComedianReportsPage = () => {
                   padding: '10px',
                   borderRadius: '6px',
                   border: '1px solid var(--ccc-border-medium)',
-                  background: '#ffffff',
+                  background: 'var(--ccc-bg-elevated)',
                   color: 'var(--ccc-text-primary)',
                   fontSize: '14px'
                 }}
@@ -415,7 +415,7 @@ const ComedianReportsPage = () => {
                   padding: '10px 20px',
                   borderRadius: '6px',
                   border: 'none',
-                  background: 'linear-gradient(to right, #28a745, #218838)',
+                  background: 'linear-gradient(to right, var(--ccc-success), #059669)',
                   color: 'white',
                   fontWeight: 'bold',
                   cursor: 'pointer'

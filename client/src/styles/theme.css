@@ -33,6 +33,31 @@
   /* Shadows */
   --ccc-shadow-sm: 0 4px 24px rgba(15, 23, 42, 0.08);
 
+  /* Hover states */
+  --ccc-bg-hover: rgba(15, 23, 42, 0.05);
+
+  /* Options inactives / non-sélectionnées */
+  --ccc-bg-inactive: rgba(15, 23, 42, 0.05);
+
+  /* Options de select (besoin opaque) */
+  --ccc-option-bg: #ffffff;
+
+  /* Boutons secondaires / annulation */
+  --ccc-btn-secondary-bg: #ffffff;
+
+  /* Boutons d'action positive (Accepter, Confirmer) */
+  --ccc-btn-success-bg: #10b981;
+
+  /* Boutons d'action destructive (Rejeter, Supprimer) */
+  --ccc-btn-danger-bg: #ef4444;
+
+  /* Borders legers (inputs, tableaux, cartes) */
+  --ccc-input-border: #444;
+  --ccc-border-light: #ddd;
+
+  /* Textes très discrets (vides, sous-texte) */
+  --ccc-text-subtle: #aaa;
+
   /* Radius */
   --ccc-radius-sm: 8px;
   --ccc-radius-md: 12px;

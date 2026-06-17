@@ -61,9 +61,9 @@ function ComedianDashboardPage() {
   const pendingCount = applications ? applications.filter((app: any) => app.status === 'PENDING').length : 0;
   const expiredCount = applications ? applications.filter((app: any) => app.status === 'EXPIRED').length : 0;
   const pieData = [
-    { name: 'Acceptées', value: acceptedCount, color: '#28a745' },
-    { name: 'Refusées', value: refusedCount, color: '#dc3545' },
-    { name: 'En cours', value: pendingCount, color: '#ffc107' },
+    { name: 'Acceptées', value: acceptedCount, color: 'var(--ccc-success)' },
+    { name: 'Refusées', value: refusedCount, color: 'var(--ccc-error)' },
+    { name: 'En cours', value: pendingCount, color: 'var(--ccc-warning)' },
     { name: 'Expirées', value: expiredCount, color: '#6c757d' },
   ];
 
@@ -213,8 +213,8 @@ function ComedianDashboardPage() {
                 padding: '10px 20px',
                 borderRadius: 8,
                 border: 'none',
-                backgroundColor: '#7c3aed',
-                color: '#fff',
+                backgroundColor: 'var(--ccc-accent)',
+                color: 'var(--ccc-text-on-accent)',
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -255,7 +255,7 @@ function ComedianDashboardPage() {
               <p style={cardTitleStyle}>Candidatures Acceptées</p>
               <p style={cardValueStyle}>{displayCount(acceptedCount)}</p>
             </div>
-            <span style={{ fontSize: '2.6em', color: '#28a745' }}>✅</span>
+            <span style={{ fontSize: '2.6em', color: 'var(--ccc-success)' }}>✅</span>
           </div>
 
           {/* Carte: Mes Candidatures (SWAPPED) */}
@@ -264,14 +264,14 @@ function ComedianDashboardPage() {
               <p style={cardTitleStyle}>Mes Candidatures</p>
               <p style={cardValueStyle}>{displayCount(sentCount)}</p>
             </div>
-            <span style={{ fontSize: '2.6em', color: '#7c3aed' }}>📝</span>
+            <span style={{ fontSize: '2.6em', color: 'var(--ccc-accent)' }}>📝</span>
           </div>
         </div>
         )}
         {/* Ajout du camembert */}
         {!isError && (
         <div style={{ maxWidth: 400, margin: '40px auto 0 auto', backgroundColor: 'var(--ccc-bg-elevated)', border: '1px solid var(--ccc-border-subtle)', boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)', borderRadius: 8, padding: 24 }}>
-          <h2 style={{ color: '#7c3aed', textAlign: 'center', marginBottom: 16 }}>Répartition des Candidatures</h2>
+          <h2 style={{ color: 'var(--ccc-accent)', textAlign: 'center', marginBottom: 16 }}>Répartition des Candidatures</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie

@@ -315,7 +315,7 @@ if (id.startsWith('organizerProfile.location.')) {
 
   const titleStyle: CSSProperties = {
     fontSize: '2em',
-    color: '#7c3aed',
+    color: 'var(--ccc-accent)',
     marginBottom: '20px',
     textAlign: 'center',
   };
@@ -365,7 +365,7 @@ if (id.startsWith('organizerProfile.location.')) {
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #28a745, #218838)',
+    background: 'linear-gradient(to right, var(--ccc-success), #059669)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -377,7 +377,7 @@ if (id.startsWith('organizerProfile.location.')) {
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #dc3545, #c82333)',
+    background: 'linear-gradient(to right, var(--ccc-error), #c82333)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -413,7 +413,7 @@ if (id.startsWith('organizerProfile.location.')) {
                   height: '110px',
                   borderRadius: '50%',
                   objectFit: 'cover',
-                  border: '2px solid #7c3aed',
+                  border: '2px solid var(--ccc-accent)',
                 }}
               />
             </div>
@@ -444,7 +444,7 @@ if (id.startsWith('organizerProfile.location.')) {
                 width: '100%',
                 padding: '8px',
                 borderRadius: '5px',
-                border: '1px solid #444',
+                border: '1px solid var(--ccc-input-border)',
                 backgroundColor: '#333',
                 color: '#fff',
                 cursor: 'pointer',
@@ -522,14 +522,14 @@ if (id.startsWith('organizerProfile.location.')) {
               onBlur={validatePostalCode}
               style={{
                 ...inputStyle,
-                borderColor: (postalCodeError || error) ? '#ef4444' : undefined
+                borderColor: (postalCodeError || error) ? 'var(--ccc-error)' : undefined
               }}
               maxLength={5}
               disabled={isValidating}
               required
             />
             {(postalCodeError || error) && (
-              <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', marginTop: '4px' }}>
                 {postalCodeError || error}
               </p>
             )}
@@ -541,8 +541,8 @@ if (id.startsWith('organizerProfile.location.')) {
                 top: '100%',
                 left: 0,
                 right: 0,
-                backgroundColor: '#fff',
-                border: '1px solid #ddd',
+                backgroundColor: 'var(--ccc-bg-elevated)',
+                border: '1px solid var(--ccc-border-medium)',
                 borderRadius: '4px',
                 marginTop: '4px',
                 maxHeight: '200px',
@@ -550,7 +550,7 @@ if (id.startsWith('organizerProfile.location.')) {
                 zIndex: 1000,
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
               }}>
-                <div style={{ padding: '8px', color: '#666', fontSize: '12px', borderBottom: '1px solid #eee' }}>
+                <div style={{ padding: '8px', color: 'var(--ccc-text-secondary)', fontSize: '12px', borderBottom: '1px solid var(--ccc-border-light)' }}>
                   Plusieurs villes pour ce code postal :
                 </div>
                 {citySuggestions.map((option, index) => (
@@ -560,7 +560,7 @@ if (id.startsWith('organizerProfile.location.')) {
                     style={{
                       padding: '10px',
                       cursor: 'pointer',
-                      borderBottom: index < citySuggestions.length - 1 ? '1px solid #eee' : 'none',
+                      borderBottom: index < citySuggestions.length - 1 ? '1px solid var(--ccc-border-light)' : 'none',
                       color: '#333'
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}

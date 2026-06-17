@@ -90,11 +90,11 @@ const LateCancellationAlertsPage = () => {
   // Calculer la severite en fonction du nombre d'annulations
   const getSeverity = (total: number): { label: string; color: string; bgColor: string } => {
     if (total >= 3) {
-      return { label: 'ELEVEE', color: '#dc3545', bgColor: 'rgba(220, 53, 69, 0.2)' };
+      return { label: 'ELEVEE', color: 'var(--ccc-error)', bgColor: 'rgba(220, 53, 69, 0.2)' };
     } else if (total >= 2) {
-      return { label: 'MOYENNE', color: '#ffc107', bgColor: 'rgba(255, 193, 7, 0.2)' };
+      return { label: 'MOYENNE', color: 'var(--ccc-warning)', bgColor: 'rgba(255, 193, 7, 0.2)' };
     }
-    return { label: 'NORMALE', color: '#28a745', bgColor: 'rgba(40, 167, 69, 0.2)' };
+    return { label: 'NORMALE', color: 'var(--ccc-success)', bgColor: 'rgba(40, 167, 69, 0.2)' };
   };
 
   // Styles
@@ -167,7 +167,7 @@ const LateCancellationAlertsPage = () => {
     gap: '20px',
     flexWrap: 'wrap',
     fontSize: '0.95em',
-    color: 'var(--ccc-text-muted)',
+    color: 'var(--ccc-text-subtle)',
   };
 
   const buttonStyle: CSSProperties = {
@@ -184,7 +184,7 @@ const LateCancellationAlertsPage = () => {
 
   const acknowledgeButtonStyle: CSSProperties = {
     ...buttonStyle,
-    background: 'linear-gradient(to right, #28a745, #218838)',
+    background: 'linear-gradient(to right, var(--ccc-success), #059669)',
     padding: '8px 16px',
     fontSize: '0.9em',
   };
@@ -200,7 +200,7 @@ const LateCancellationAlertsPage = () => {
 
   const emptyStateStyle: CSSProperties = {
     textAlign: 'center',
-    color: 'var(--ccc-text-muted)',
+    color: 'var(--ccc-text-subtle)',
     fontSize: '1.2em',
     padding: '40px',
   };
@@ -218,7 +218,7 @@ const LateCancellationAlertsPage = () => {
   const hoursWarningStyle: CSSProperties = {
     fontSize: '1.2em',
     fontWeight: 'bold',
-    color: '#dc3545',
+    color: 'var(--ccc-error)',
     padding: '8px 16px',
     borderRadius: '8px',
     backgroundColor: 'rgba(220, 53, 69, 0.2)',
@@ -229,7 +229,7 @@ const LateCancellationAlertsPage = () => {
       <div style={mainContainerStyle}>
         <Navbar />
         <div style={contentStyle}>
-          <p style={{ color: '#dc3545', fontSize: '1.2em' }}>
+          <p style={{ color: 'var(--ccc-error)', fontSize: '1.2em' }}>
             Acces refuse. Seuls les super-admins peuvent acceder a cette page.
           </p>
         </div>
@@ -244,7 +244,7 @@ const LateCancellationAlertsPage = () => {
         <div style={pageHeaderStyle}>
           <div>
             <h1 style={titleStyle}>Alertes Annulations Tardives</h1>
-            <p style={{ color: 'var(--ccc-text-muted)', fontSize: '1.1em' }}>
+            <p style={{ color: 'var(--ccc-text-subtle)', fontSize: '1.1em' }}>
               Desistements moins de 72h avant l'evenement
             </p>
           </div>
@@ -258,11 +258,11 @@ const LateCancellationAlertsPage = () => {
 
         <div style={contentStyle}>
           {isLoading && (
-            <p style={{ textAlign: 'center', color: 'var(--ccc-text-muted)' }}>Chargement des alertes...</p>
+            <p style={{ textAlign: 'center', color: 'var(--ccc-text-subtle)' }}>Chargement des alertes...</p>
           )}
 
           {error && (
-            <p style={{ textAlign: 'center', color: '#dc3545' }}>
+            <p style={{ textAlign: 'center', color: 'var(--ccc-error)' }}>
               Erreur: {(error as any).response?.data?.message || (error as any).message}
             </p>
           )}
@@ -280,7 +280,7 @@ const LateCancellationAlertsPage = () => {
 
           {!isLoading && !error && alertsCount > 0 && (
             <>
-              <div style={{ marginBottom: '20px', color: '#ffc107', fontSize: '1.1em', fontWeight: 'bold' }}>
+              <div style={{ marginBottom: '20px', color: 'var(--ccc-warning)', fontSize: '1.1em', fontWeight: 'bold' }}>
                 {alertsCount} alerte(s) {showAll ? 'au total' : 'active(s)'}
               </div>
               {alerts.map((alert) => {
@@ -298,7 +298,7 @@ const LateCancellationAlertsPage = () => {
                         <div style={comedianNameStyle}>
                           {alert.comedian.firstName} {alert.comedian.lastName}
                         </div>
-                        <div style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', marginTop: '4px' }}>
+                        <div style={{ color: 'var(--ccc-text-subtle)', fontSize: '0.9em', marginTop: '4px' }}>
                           {alert.comedian.email}
                         </div>
                         <div style={eventTitleStyle}>
@@ -350,7 +350,7 @@ const LateCancellationAlertsPage = () => {
                         })}
                       </div>
                       {alert.acknowledgedAt && (
-                        <div style={{ color: '#28a745' }}>
+                        <div style={{ color: 'var(--ccc-success)' }}>
                           <strong>Prise en compte:</strong>{' '}
                           {new Date(alert.acknowledgedAt).toLocaleDateString('fr-FR', {
                             year: 'numeric',
