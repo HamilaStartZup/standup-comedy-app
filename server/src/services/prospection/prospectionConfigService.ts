@@ -19,6 +19,7 @@ const DEFAULT_CONFIG = {
     maxEmailsParRun: 50,
     delaiEntreEnvois: 3,
     dryRunParDefaut: false,
+    relance72hActive: true,
   },
   updatedBy: 'Système',
 };
@@ -62,6 +63,7 @@ export async function patchProspectionConfig(
     if (patch.envoi.maxEmailsParRun !== undefined) current.envoi.maxEmailsParRun = patch.envoi.maxEmailsParRun;
     if (patch.envoi.delaiEntreEnvois !== undefined) current.envoi.delaiEntreEnvois = patch.envoi.delaiEntreEnvois;
     if (patch.envoi.dryRunParDefaut !== undefined) current.envoi.dryRunParDefaut = patch.envoi.dryRunParDefaut;
+    if (patch.envoi.relance72hActive !== undefined) current.envoi.relance72hActive = patch.envoi.relance72hActive;
   }
   if (patch.cron) {
     if (patch.cron.joursActifs !== undefined) current.cron.joursActifs = patch.cron.joursActifs;

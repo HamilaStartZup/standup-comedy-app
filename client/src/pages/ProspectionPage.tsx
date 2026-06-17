@@ -544,6 +544,17 @@ const ProspectionPage: React.FC = () => {
             />
             <span>Dry run par défaut (le cron simule sans envoyer)</span>
           </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={configForm.envoi.relance72hActive}
+              onChange={(e) => setConfigForm({
+                ...configForm,
+                envoi: { ...configForm.envoi, relance72hActive: e.target.checked },
+              })}
+            />
+            <span>Activer la relance automatique à 72h</span>
+          </label>
         </section>
 
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 32 }}>

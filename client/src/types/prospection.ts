@@ -53,6 +53,7 @@ export interface IProspectionConfig {
     maxEmailsParRun: number;
     delaiEntreEnvois: number;
     dryRunParDefaut: boolean;
+    relance72hActive: boolean;
   };
   updatedBy?: string;
   updatedAt?: string;

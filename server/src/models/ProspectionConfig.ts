@@ -18,6 +18,7 @@ export interface ProspectionConfigDocument extends Document {
     maxEmailsParRun: number;
     delaiEntreEnvois: number;
     dryRunParDefaut: boolean;
+    relance72hActive: boolean;
   };
   updatedBy?: string;
 }
@@ -46,6 +47,7 @@ const prospectionConfigSchema = new Schema<ProspectionConfigDocument>(
       maxEmailsParRun: { type: Number, default: 50, min: 1, max: 200 },
       delaiEntreEnvois: { type: Number, default: 3, min: 2, max: 30 },
       dryRunParDefaut: { type: Boolean, default: false },
+      relance72hActive: { type: Boolean, default: true },
     },
     updatedBy: { type: String, default: 'Système' },
   },
