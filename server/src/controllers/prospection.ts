@@ -113,6 +113,23 @@ export const listProspectedVenuesHandler = async (req: AuthRequest, res: Respons
     });
   }
 
+  if (req.query.hasPhone === 'true') {
+    andClauses.push({ phone: { $type: 'string', $gt: '' } });
+  } else if (req.query.hasPhone === 'false') {
+    andClauses.push({
+      $or: [{ phone: { $exists: false } }, { phone: null }, { phone: '' }],
+    });
+  }
+
+  if (req.query.hasAnyContact === 'true') {
+    andClauses.push({
+      $or: [
+        { email: { $type: 'string', $gt: '' } },
+        { phone: { $type: 'string', $gt: '' } },
+      ],
+    });
+  }
+
   if (req.query.search) {
     const q = String(req.query.search);
     andClauses.push({

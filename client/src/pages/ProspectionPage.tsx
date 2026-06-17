@@ -72,7 +72,9 @@ const ProspectionPage: React.FC = () => {
   const [venueDept, setVenueDept] = useState('');
   const [venueType, setVenueType] = useState('');
   const [venueStatus, setVenueStatus] = useState('');
-  const [venueHasEmail, setVenueHasEmail] = useState<'' | 'true' | 'false'>('');
+  const [venueContactFilter, setVenueContactFilter] = useState<
+    '' | 'with_email' | 'without_email' | 'with_phone' | 'without_phone' | 'with_email_and_phone' | 'without_email_and_phone'
+  >('');
   const [venueSearch, setVenueSearch] = useState('');
   const [enriching, setEnriching] = useState(false);
   const [clearingRuns, setClearingRuns] = useState(false);
@@ -100,14 +102,26 @@ const ProspectionPage: React.FC = () => {
   });
 
   const { data: venuesData, isLoading: loadingVenues } = useQuery({
-    queryKey: ['prospected-venues', venuePage, venueDept, venueType, venueStatus, venueHasEmail, venueSearch],
+    queryKey: ['prospected-venues', venuePage, venueDept, venueType, venueStatus, venueContactFilter, venueSearch],
     queryFn: () => listProspectedVenues({
       page: venuePage,
       limit: 15,
       departement: venueDept || undefined,
       type: venueType || undefined,
       emailStatus: venueStatus || undefined,
-      hasEmail: venueHasEmail || undefined,
+      hasEmail:
+        venueContactFilter === 'with_email'
+          ? 'true'
+          : venueContactFilter === 'without_email' || venueContactFilter === 'without_email_and_phone'
+            ? 'false'
+            : undefined,
+      hasPhone:
+        venueContactFilter === 'with_phone'
+          ? 'true'
+          : venueContactFilter === 'without_phone' || venueContactFilter === 'without_email_and_phone'
+            ? 'false'
+            : undefined,
+      hasAnyContact: venueContactFilter === 'with_email_and_phone' ? 'true' : undefined,
       search: venueSearch || undefined,
     }),
     enabled: isSuperAdmin,
@@ -736,10 +750,23 @@ const ProspectionPage: React.FC = () => {
                 <option key={value} value={value}>{label}</option>
               ))}
             </select>
-            <select value={venueHasEmail} onChange={(e) => { setVenueHasEmail(e.target.value as '' | 'true' | 'false'); setVenuePage(1); }} style={inputStyle}>
-              <option value="">Tous (email)</option>
-              <option value="true">Avec email</option>
-              <option value="false">Sans email</option>
+            <select
+              value={venueContactFilter}
+              onChange={(e) => {
+                setVenueContactFilter(
+                  e.target.value as '' | 'with_email' | 'without_email' | 'with_phone' | 'without_phone' | 'with_email_and_phone' | 'without_email_and_phone'
+                );
+                setVenuePage(1);
+              }}
+              style={inputStyle}
+            >
+              <option value="">Tous (email/téléphone)</option>
+              <option value="with_email">Avec mails</option>
+              <option value="without_email">Sans mails</option>
+              <option value="with_phone">Avec téléphone</option>
+              <option value="without_phone">Sans téléphone</option>
+              <option value="with_email_and_phone">Avec mail + tel</option>
+              <option value="without_email_and_phone">Sans mail + tel</option>
             </select>
             <select value={venueStatus} onChange={(e) => { setVenueStatus(e.target.value); setVenuePage(1); }} style={inputStyle}>
               <option value="">Tous statuts envoi</option>
@@ -769,6 +796,7 @@ const ProspectionPage: React.FC = () => {
                       <th style={{ padding: 8 }}>Dép.</th>
                       <th style={{ padding: 8 }}>Ville</th>
                       <th style={{ padding: 8 }}>Email</th>
+                      <th style={{ padding: 8 }}>Téléphone</th>
                       <th style={{ padding: 8 }}>Site web</th>
                       <th style={{ padding: 8 }}>Statut</th>
                       <th style={{ padding: 8 }}>Source</th>
@@ -782,6 +810,7 @@ const ProspectionPage: React.FC = () => {
                         <td style={{ padding: 8 }}>{v.address.departement}</td>
                         <td style={{ padding: 8 }}>{v.address.city ?? '—'}</td>
                         <td style={{ padding: 8 }}>{v.email ?? <span style={{ color: '#94a3b8' }}>—</span>}</td>
+                        <td style={{ padding: 8 }}>{v.phone ?? <span style={{ color: '#94a3b8' }}>—</span>}</td>
                         <td style={{ padding: 8, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {v.website ? (
                             <a href={v.website.startsWith('http') ? v.website : `https://${v.website}`} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
