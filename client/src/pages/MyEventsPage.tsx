@@ -2779,7 +2779,7 @@ useEffect(() => {
                   bg = 'rgba(220, 53, 69, 0.2)';
                   label = 'Candidature: Refusée';
                 } else if (relatedApplication.status === 'WITHDRAWN') {
-                  color = '#888';
+                  color = 'var(--ccc-text-muted)';
                   bg = 'rgba(136, 136, 136, 0.15)';
                   label = 'Candidature: Retirée';
                 }
@@ -3281,7 +3281,7 @@ useEffect(() => {
                                         style={{
                                           border: 'none',
                                           background: 'transparent',
-                                          color: favoriteComedianIds.includes(comedian._id) ? '#ffd700' : '#888888',
+                                          color: favoriteComedianIds.includes(comedian._id) ? '#ffd700' : 'var(--ccc-text-muted)',
                                           fontSize: '1.3em',
                                           cursor: 'pointer',
                                           transition: 'color 0.2s ease, transform 0.2s ease',
@@ -3306,7 +3306,7 @@ useEffect(() => {
                                         style={{
                                           border: 'none',
                                           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                          color: theme.colors.text.primary,
+                                          color: 'var(--ccc-text-on-accent)',
                                           fontSize: '12px',
                                           cursor: 'pointer',
                                           padding: '6px 12px',

@@ -154,10 +154,10 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
 
   const sectionTitleStyle: CSSProperties = {
     fontSize: '1.3em',
-    color: '#7c3aed',
+    color: 'var(--ccc-accent)',
     marginTop: '20px',
     marginBottom: '15px',
-    borderBottom: '2px solid #7c3aed',
+    borderBottom: '2px solid var(--ccc-accent)',
     paddingBottom: '8px',
     fontWeight: 'bold'
   };
@@ -176,7 +176,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
   };
 
   const infoValueStyle: CSSProperties = {
-    color: '#ffffff',
+    color: 'var(--ccc-text-on-accent)',
     flex: 1,
     wordBreak: 'break-word'
   };
@@ -185,8 +185,8 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
     display: 'inline-block',
     padding: '4px 12px',
     borderRadius: '15px',
-    backgroundColor: '#28a745',
-    color: '#ffffff',
+    backgroundColor: 'var(--ccc-success)',
+    color: 'var(--ccc-text-on-accent)',
     fontSize: '0.9em',
     fontWeight: 'bold',
     marginTop: '5px'
@@ -320,7 +320,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
             {/* Réseaux sociaux */}
             {(comedian.profile?.socialLinks?.youtube || comedian.profile?.socialLinks?.instagram || comedian.profile?.socialLinks?.facebook) && (
               <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                <h4 style={{ color: '#7c3aed', marginBottom: '10px', fontSize: '1em' }}>📱 Réseaux sociaux</h4>
+                <h4 style={{ color: 'var(--ccc-accent)', marginBottom: '10px', fontSize: '1em' }}>📱 Réseaux sociaux</h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                   {comedian.profile?.socialLinks?.youtube && (
                     <a 
@@ -328,7 +328,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                       target="_blank" 
                       rel="noopener noreferrer"
                       style={{ 
-                        color: '#7c3aed', 
+                        color: 'var(--ccc-accent)', 
                         textDecoration: 'none',
                         display: 'flex',
                         alignItems: 'center',
@@ -347,7 +347,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                       target="_blank" 
                       rel="noopener noreferrer"
                       style={{ 
-                        color: '#7c3aed', 
+                        color: 'var(--ccc-accent)', 
                         textDecoration: 'none',
                         display: 'flex',
                         alignItems: 'center',
@@ -366,7 +366,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                       target="_blank" 
                       rel="noopener noreferrer"
                       style={{ 
-                        color: '#7c3aed', 
+                        color: 'var(--ccc-accent)', 
                         textDecoration: 'none',
                         display: 'flex',
                         alignItems: 'center',
@@ -398,10 +398,10 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                marginBottom: '15px',
                border: '1px solid rgba(255, 255, 255, 0.1)'
              }}>
-               <h4 style={{ color: '#7c3aed', marginBottom: '10px', fontSize: '1.1em' }}>🎯 Candidatures</h4>
+               <h4 style={{ color: 'var(--ccc-accent)', marginBottom: '10px', fontSize: '1.1em' }}>🎯 Candidatures</h4>
                
                {loading && (
-                 <div style={{ textAlign: 'center', color: '#aaa', padding: '10px' }}>
+                 <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.67)', padding: '10px' }}>
                    Chargement des statistiques...
                  </div>
                )}
@@ -415,21 +415,21 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                    
                    <div style={infoRowStyle}>
                      <span style={infoLabelStyle}>✅ Acceptées:</span>
-                     <span style={{ ...infoValueStyle, color: '#28a745', fontWeight: 'bold' }}>
+                     <span style={{ ...infoValueStyle, color: 'var(--ccc-success)', fontWeight: 'bold' }}>
                        {applicationStats.accepted}
                      </span>
                    </div>
                    
                    <div style={infoRowStyle}>
                      <span style={infoLabelStyle}>❌ Refusées:</span>
-                     <span style={{ ...infoValueStyle, color: '#dc3545', fontWeight: 'bold' }}>
+                     <span style={{ ...infoValueStyle, color: 'var(--ccc-error)', fontWeight: 'bold' }}>
                        {applicationStats.rejected}
                      </span>
                    </div>
                    
                    <div style={infoRowStyle}>
                      <span style={infoLabelStyle}>⏳ En attente:</span>
-                     <span style={{ ...infoValueStyle, color: '#ffc107', fontWeight: 'bold' }}>
+                     <span style={{ ...infoValueStyle, color: 'var(--ccc-warning)', fontWeight: 'bold' }}>
                        {applicationStats.pending}
                      </span>
                    </div>
@@ -447,7 +447,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                )}
                
                {!loading && !applicationStats && (
-                 <div style={{ textAlign: 'center', color: '#ffc107', padding: '10px' }}>
+                 <div style={{ textAlign: 'center', color: 'var(--ccc-warning)', padding: '10px' }}>
                    ⚠️ Impossible de charger les statistiques des candidatures
                  </div>
                )}
@@ -463,7 +463,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                    {comedian.stats.applicationsAccepted !== undefined && (
                      <div style={infoRowStyle}>
                        <span style={infoLabelStyle}>✅ Acceptées (approx.):</span>
-                       <span style={{ ...infoValueStyle, color: '#28a745', fontWeight: 'bold' }}>
+                       <span style={{ ...infoValueStyle, color: 'var(--ccc-success)', fontWeight: 'bold' }}>
                          {comedian.stats.applicationsAccepted}
                        </span>
                      </div>
@@ -480,12 +480,12 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
               marginBottom: '15px',
               border: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
-              <h4 style={{ color: '#7c3aed', marginBottom: '10px', fontSize: '1.1em' }}>🎭 Évènements</h4>
+              <h4 style={{ color: 'var(--ccc-accent)', marginBottom: '10px', fontSize: '1.1em' }}>🎭 Évènements</h4>
               
               {((freshComedianStats?.totalEvents !== undefined) || (comedian.stats.totalEvents !== undefined)) && (
                 <div style={infoRowStyle}>
                   <span style={infoLabelStyle}>🎪 Participations:</span>
-                  <span style={{ ...infoValueStyle, color: '#28a745', fontWeight: 'bold' }}>
+                  <span style={{ ...infoValueStyle, color: 'var(--ccc-success)', fontWeight: 'bold' }}>
                     {(freshComedianStats?.totalEvents || comedian.stats.totalEvents || 0)} évènement{(freshComedianStats?.totalEvents || comedian.stats.totalEvents || 0) > 1 ? 's' : ''}
                   </span>
                 </div>
@@ -493,7 +493,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
               
               <div style={infoRowStyle}>
                 <span style={infoLabelStyle}>🚫 Absences:</span>
-                <span style={{ ...infoValueStyle, color: '#dc3545', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ ...infoValueStyle, color: 'var(--ccc-error)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}>
                   {comedian.stats?.absences || 0} évènement{(comedian.stats?.absences || 0) > 1 ? 's' : ''}
                   {absences.length > 0 && absences[0].reason && (
                     <span
@@ -501,7 +501,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                       style={{
                         marginLeft: 6,
                         cursor: 'pointer',
-                        color: '#ffc107',
+                        color: 'var(--ccc-warning)',
                         fontWeight: 'bold',
                         fontSize: '1.1em'
                       }}
@@ -516,8 +516,8 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                 <span style={infoLabelStyle}>⏰ Annulations tardives:</span>
                 <span style={{
                   ...infoValueStyle,
-                  color: (comedian.stats?.lateCancellations || 0) >= 3 ? '#dc3545' :
-                         (comedian.stats?.lateCancellations || 0) >= 2 ? '#ffc107' : '#28a745',
+                  color: (comedian.stats?.lateCancellations || 0) >= 3 ? 'var(--ccc-error)' :
+                         (comedian.stats?.lateCancellations || 0) >= 2 ? 'var(--ccc-warning)' : 'var(--ccc-success)',
                   fontWeight: 'bold'
                 }}>
                   {comedian.stats?.lateCancellations || 0}
@@ -536,7 +536,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
 
               {/* Détails des absences avec messages */}
               {loadingAbsences ? (
-                <div style={{ textAlign: 'center', color: '#aaa', padding: '10px', fontSize: '12px' }}>
+                <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.67)', padding: '10px', fontSize: '12px' }}>
                   Chargement des détails des absences...
                 </div>
               ) : absences.length > 0 ? (
@@ -548,7 +548,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                   border: '1px solid rgba(220, 53, 69, 0.3)'
                 }}>
                   <h5 style={{ 
-                    color: '#dc3545', 
+                    color: 'var(--ccc-error)', 
                     fontSize: '0.9em', 
                     marginBottom: '8px',
                     fontWeight: 'bold'
@@ -561,15 +561,15 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                       padding: '8px',
                       backgroundColor: 'rgba(0, 0, 0, 0.2)',
                       borderRadius: '4px',
-                      borderLeft: '3px solid #dc3545'
+                      borderLeft: '3px solid var(--ccc-error)'
                     }}>
                       <div style={{ fontSize: '0.85em', color: '#ff6b6b', marginBottom: '4px' }}>
                         <strong>Évènement:</strong> {absence.event.title}
                       </div>
-                      <div style={{ fontSize: '0.8em', color: '#aaa', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.67)', marginBottom: '4px' }}>
                         <strong>Date:</strong> {new Date(absence.event.date).toLocaleDateString('fr-FR')}
                       </div>
-                      <div style={{ fontSize: '0.8em', color: '#aaa', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.67)', marginBottom: '4px' }}>
                         <strong>Lieu:</strong> {(() => {
                           const location = absence.event.location;
                           if (typeof location === 'object' && location !== null) {
@@ -582,10 +582,10 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                           return location || 'Lieu non spécifié';
                         })()}
                       </div>
-                      <div style={{ fontSize: '0.8em', color: '#aaa', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.67)', marginBottom: '4px' }}>
                         <strong>Marqué par:</strong> {absence.organizer.firstName} {absence.organizer.lastName}
                       </div>
-                      <div style={{ fontSize: '0.8em', color: '#aaa', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.67)', marginBottom: '4px' }}>
                         <strong>Date du marquage:</strong> {new Date(absence.markedAt).toLocaleDateString('fr-FR')}
                       </div>
                       {absence.reason && (
@@ -596,10 +596,10 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
                           borderRadius: '4px',
                           border: '1px solid rgba(255, 255, 255, 0.2)'
                         }}>
-                          <div style={{ fontSize: '0.8em', color: '#ffc107', marginBottom: '2px', fontWeight: 'bold' }}>
+                          <div style={{ fontSize: '0.8em', color: 'var(--ccc-warning)', marginBottom: '2px', fontWeight: 'bold' }}>
                             💬 Raison de l'absence:
                           </div>
-                          <div style={{ fontSize: '0.8em', color: '#ffffff', fontStyle: 'italic' }}>
+                          <div style={{ fontSize: '0.8em', color: 'var(--ccc-text-on-accent)', fontStyle: 'italic' }}>
                             "{absence.reason}"
                           </div>
                         </div>
@@ -614,7 +614,7 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
               {comedian.stats.averageRating !== undefined && (
                 <div style={infoRowStyle}>
                   <span style={infoLabelStyle}>⭐ Note moyenne:</span>
-                  <span style={{ ...infoValueStyle, color: '#ffc107', fontWeight: 'bold' }}>
+                  <span style={{ ...infoValueStyle, color: 'var(--ccc-warning)', fontWeight: 'bold' }}>
                     {comedian.stats.averageRating}/5 ⭐
                   </span>
                 </div>
@@ -655,10 +655,10 @@ function ComedianDetailsModal({ isOpen, onClose, comedian }: ComedianDetailsModa
             padding: '20px', 
             backgroundColor: 'rgba(255, 193, 7, 0.1)', 
             borderRadius: '8px', 
-            border: '1px solid #ffc107',
+            border: '1px solid var(--ccc-warning)',
             marginTop: '20px'
           }}>
-            <p style={{ color: '#ffc107', margin: 0, textAlign: 'center' }}>
+            <p style={{ color: 'var(--ccc-warning)', margin: 0, textAlign: 'center' }}>
               ⚠️ Ce humoriste n'a pas encore complété son profil professionnel.
             </p>
           </div>

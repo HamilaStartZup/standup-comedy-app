@@ -442,7 +442,7 @@ const Dashboard = () => {
                     <p style={{ color: '#fff', margin: '5px 0', fontSize: '0.95em' }}>
                       <strong>{alert.comedian?.firstName} {alert.comedian?.lastName}</strong> a un score de présence de <strong style={{ color: '#ffc107' }}>{alert.presenceScore}%</strong>
                     </p>
-                    <p style={{ color: '#aaa', fontSize: '0.85em', margin: 0 }}>
+                    <p style={{ color: 'rgba(255,255,255,0.67)', fontSize: '0.85em', margin: 0 }}>
                       {alert.totalEvents} présences • {alert.absences} absences
                     </p>
                   </div>
@@ -497,7 +497,7 @@ const Dashboard = () => {
                     <p style={{ color: '#fff', margin: '5px 0', fontSize: '0.95em' }}>
                       <strong>{report.comedian?.firstName} {report.comedian?.lastName}</strong> signalé par <strong>{report.reporter?.firstName} {report.reporter?.lastName}</strong>
                     </p>
-                    <p style={{ color: '#aaa', fontSize: '0.85em', margin: '5px 0' }}>
+                    <p style={{ color: 'rgba(255,255,255,0.67)', fontSize: '0.85em', margin: '5px 0' }}>
                       Raison: <strong style={{ color: '#ffc107' }}>
                         {report.reason === 'troll' ? 'Troll / Comportement inapproprié' :
                          report.reason === 'fake_account' ? 'Faux compte' :
@@ -507,7 +507,7 @@ const Dashboard = () => {
                       </strong>
                     </p>
                     {report.description && (
-                      <p style={{ color: '#aaa', fontSize: '0.85em', margin: '5px 0', fontStyle: 'italic' }}>
+                      <p style={{ color: 'rgba(255,255,255,0.67)', fontSize: '0.85em', margin: '5px 0', fontStyle: 'italic' }}>
                         "{report.description.substring(0, 100)}{report.description.length > 100 ? '...' : ''}"
                       </p>
                     )}

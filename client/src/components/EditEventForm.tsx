@@ -701,7 +701,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               cursor: uploadingEventImage ? 'wait' : 'pointer',
             }}
           />
-          <p style={{ color: '#888', fontSize: '12px', margin: '4px 0 0' }}>
+          <p style={{ color: 'var(--ccc-text-muted)', fontSize: '12px', margin: '4px 0 0' }}>
             Formats acceptés: JPG, PNG, GIF (max 5MB)
           </p>
         </div>
@@ -728,7 +728,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
           </div>
           <div style={{ ...inputGroupStyle, position: 'relative' }}>
             <label htmlFor="postalCode" style={labelStyle}>
-              Code postal * {isValidatingPostalCode && <span style={{ fontSize: '12px', color: '#888' }}>(validation...)</span>}
+              Code postal * {isValidatingPostalCode && <span style={{ fontSize: '12px', color: 'var(--ccc-text-muted)' }}>(validation...)</span>}
             </label>
             <input
               type="text"
@@ -757,16 +757,16 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
                 top: '100%',
                 left: 0,
                 right: 0,
-                backgroundColor: '#2a2a2a',
-                border: '1px solid #444',
+                backgroundColor: 'var(--ccc-bg-elevated)',
+                border: '1px solid var(--ccc-border-medium)',
                 borderRadius: '4px',
                 marginTop: '4px',
                 maxHeight: '200px',
                 overflowY: 'auto',
                 zIndex: 1000,
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+                boxShadow: 'var(--ccc-shadow-sm)'
               }}>
-                <div style={{ padding: '8px', color: '#888', fontSize: '12px', borderBottom: '1px solid #444' }}>
+                <div style={{ padding: '8px', color: 'var(--ccc-text-muted)', fontSize: '12px', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
                   Plusieurs villes possibles pour ce code postal :
                 </div>
                 {citySuggestions.map((option, index) => (
@@ -776,11 +776,11 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
                     style={{
                       padding: '12px',
                       cursor: 'pointer',
-                      borderBottom: index < citySuggestions.length - 1 ? '1px solid #333' : 'none',
-                      color: '#ccc',
+                      borderBottom: index < citySuggestions.length - 1 ? '1px solid var(--ccc-border-subtle)' : 'none',
+                      color: 'var(--ccc-text-primary)',
                       transition: 'background-color 0.2s'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#333'}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--ccc-bg-surface)'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     {option.city} ({option.postcode})

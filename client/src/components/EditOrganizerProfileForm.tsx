@@ -450,7 +450,7 @@ if (id.startsWith('organizerProfile.location.')) {
                 cursor: 'pointer',
               }}
             />
-            <p style={{ fontSize: '0.85em', color: '#aaa', marginTop: '5px' }}>
+            <p style={{ fontSize: '0.85em', color: 'var(--ccc-text-muted)', marginTop: '5px' }}>
               Formats acceptés: JPG, PNG, GIF (max 5MB)
             </p>
           </div>
@@ -512,7 +512,7 @@ if (id.startsWith('organizerProfile.location.')) {
           </div>
           <div style={{ ...inputGroupStyle, position: 'relative' }}>
             <label htmlFor="organizerProfile.location.postalCode" style={labelStyle}>
-              Code Postal {isValidating && <span style={{ fontSize: '12px', color: '#888' }}>(validation...)</span>}
+              Code Postal {isValidating && <span style={{ fontSize: '12px', color: 'var(--ccc-text-muted)' }}>(validation...)</span>}
             </label>
             <input
               id="organizerProfile.location.postalCode"

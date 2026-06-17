@@ -1070,7 +1070,7 @@ function ApplicationsPage() {
         break;
       case 'EXPIRED':
         backgroundColor = 'transparent'; // pas de fond gris
-        color = '#999'; // texte gris
+        color = 'var(--ccc-text-muted)'; // texte gris
         break;
       case 'WITHDRAWN':
       case 'CANCELLED_BY_PLATFORM':
@@ -1085,7 +1085,7 @@ function ApplicationsPage() {
       padding: '6px 12px',
       borderRadius: theme.radius.sm,
       backgroundColor: (status === 'ACCEPTED' || status === 'REJECTED' || status === 'EXPIRED' || status === 'WITHDRAWN' || status === 'CANCELLED_BY_PLATFORM') ? 'transparent' : backgroundColor,
-      color: status === 'ACCEPTED' ? '#28a745' : (status === 'REJECTED' ? '#dc3545' : (status === 'EXPIRED' ? '#999' : (status === 'WITHDRAWN' || status === 'CANCELLED_BY_PLATFORM' ? '#6c757d' : color))),
+      color: status === 'ACCEPTED' ? '#28a745' : (status === 'REJECTED' ? '#dc3545' : (status === 'EXPIRED' ? 'var(--ccc-text-muted)' : (status === 'WITHDRAWN' || status === 'CANCELLED_BY_PLATFORM' ? '#6c757d' : color))),
       fontWeight: 'bold',
       fontSize: '0.9em',
       border: status === 'ACCEPTED' ? 'none' : undefined,
@@ -1587,7 +1587,7 @@ function ApplicationsPage() {
                             </div>
                           )}
                           {user?.role === 'COMEDIAN' && comedianTab === 'accepted' && app.status === 'ACCEPTED' && app.event && isEventWithinOneHour(app.event) && (
-                            <div style={{ marginTop: 12, fontSize: '12px', color: '#888' }}>
+                            <div style={{ marginTop: 12, fontSize: '12px', color: 'var(--ccc-text-muted)' }}>
                               Plus de modification possible (événement dans moins d'1 h)
                             </div>
                           )}
@@ -1647,7 +1647,7 @@ function ApplicationsPage() {
                             </div>
                           )}
                           {user?.role === 'COMEDIAN' && comedianTab === 'accepted' && app.status === 'ACCEPTED' && wasEventUpdatedAfterApplication(app) && app.event && isEventWithinOneHour(app.event) && (
-                            <div style={{ marginTop: 12, fontSize: '12px', color: '#888' }}>
+                            <div style={{ marginTop: 12, fontSize: '12px', color: 'var(--ccc-text-muted)' }}>
                               Plus de modification possible (événement dans moins d'1 h)
                             </div>
                           )}
@@ -1850,7 +1850,7 @@ function ApplicationsPage() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#999',
+                  color: 'var(--ccc-text-muted)',
                   cursor: 'pointer',
                   fontSize: '20px',
                   padding: '4px 8px',

@@ -607,7 +607,7 @@ const DirectoryPage: React.FC = () => {
 
                   <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px solid #eee' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <p style={{ margin: 0, fontSize: '12px', color: '#888' }}>
+                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--ccc-text-muted)' }}>
                         Inscrit le {new Date(userData.createdAt).toLocaleDateString('fr-FR')}
                       </p>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -1096,7 +1096,7 @@ const DirectoryPage: React.FC = () => {
                 <h3 style={{ color: '#666', fontSize: '18px', marginBottom: '10px' }}>
                   Aucune statistique disponible
                 </h3>
-                <p style={{ color: '#888', fontSize: '14px' }}>
+                <p style={{ color: 'var(--ccc-text-muted)', fontSize: '14px' }}>
                   Les statistiques seront disponibles une fois que l'utilisateur aura commencé à utiliser la plateforme.
                 </p>
               </div>

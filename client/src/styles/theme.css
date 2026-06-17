@@ -18,6 +18,7 @@
   --ccc-text-secondary: #475569;
   --ccc-text-muted: #64748b;
   --ccc-text-faint: #94a3b8;
+  --ccc-text-on-accent: #ffffff;
 
   /* Borders */
   --ccc-border-subtle: rgba(15, 23, 42, 0.08);
@@ -28,6 +29,9 @@
   --ccc-error: #ef4444;
   --ccc-warning: #f59e0b;
   --ccc-info: #3b82f6;
+
+  /* Shadows */
+  --ccc-shadow-sm: 0 4px 24px rgba(15, 23, 42, 0.08);
 
   /* Radius */
   --ccc-radius-sm: 8px;
