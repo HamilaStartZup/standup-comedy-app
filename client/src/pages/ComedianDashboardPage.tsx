@@ -6,7 +6,7 @@ import { useAlert } from '../hooks/useAlert';
 import api from '../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { pageTitleStyle } from '../styles/theme';
+
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 function ComedianDashboardPage() {
@@ -81,7 +81,10 @@ function ComedianDashboardPage() {
   };
 
   const titleStyle: CSSProperties = {
-    ...pageTitleStyle,
+    fontSize: '2.5em',
+    color: 'var(--ccc-accent)',
+    fontWeight: 700,
+    letterSpacing: '-0.02em',
     marginBottom: '20px',
   };
 

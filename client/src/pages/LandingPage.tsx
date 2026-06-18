@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 const LANDING_CSS = `
-  .landing-dark { --primary: var(--ccc-accent); --primary-hover: #6d28d9; --primary-light: rgba(124, 58, 237, 0.12); --secondary: #a78bfa; --accent: #a78bfa; --dark: #1e293b; --text-primary: #1e293b; --text-secondary: var(--ccc-text-secondary); --bg-light: rgba(15, 23, 42, 0.05); --bg-white: #ffffff; --border: rgba(15, 23, 42, 0.08); --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06); --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.08); --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1); --shadow-xl: 0 20px 25px rgba(15, 23, 42, 0.12); --shadow-2xl: 0 25px 50px rgba(15, 23, 42, 0.15); }
+  .landing-dark { --primary: var(--ccc-accent); --primary-hover: var(--ccc-accent-primary-hover); --primary-light: var(--ccc-accent-soft); --secondary: var(--ccc-accent-secondary); --accent: var(--ccc-accent-secondary); --dark: var(--ccc-text-primary); --text-primary: var(--ccc-text-primary); --text-secondary: var(--ccc-text-secondary); --bg-light: var(--ccc-bg-surface); --bg-white: var(--ccc-bg-elevated); --border: var(--ccc-border-subtle); --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06); --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.08); --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1); --shadow-xl: 0 20px 25px rgba(15, 23, 42, 0.12); --shadow-2xl: 0 25px 50px rgba(15, 23, 42, 0.15); }
   .landing-dark * { box-sizing: border-box; }
   .landing-dark .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
   @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }

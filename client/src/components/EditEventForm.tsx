@@ -534,13 +534,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
   };
 
   const formContainerStyle: CSSProperties = {
-    maxWidth: '1000px',
-    margin: '40px auto',
-    padding: '30px',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: '8px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
   };
 
   const formTitleStyle: CSSProperties = {
@@ -557,16 +551,17 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
     display: 'block',
     marginBottom: '5px',
     fontWeight: 'bold',
-    color: '#ff4b2b',
+    color: 'var(--ccc-accent)',
+    fontSize: '0.9em',
   };
 
   const inputStyle: CSSProperties = {
     width: '100%',
     padding: '10px',
     borderRadius: '5px',
-    border: '1px solid #555',
-    backgroundColor: '#333',
-    color: '#ffffff',
+    border: '1px solid var(--ccc-border-medium)',
+    backgroundColor: 'var(--ccc-bg-surface)',
+    color: 'var(--ccc-text-primary)',
     boxSizing: 'border-box',
   };
 
@@ -626,7 +621,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
             id="title" 
             style={{
               ...inputStyle,
-              borderColor: errors.title ? 'var(--ccc-error)' : '#555'
+              borderColor: errors.title ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
             }} 
             value={formData.title} 
             onChange={handleChange} 
@@ -645,7 +640,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
             id="description" 
             style={{
               ...textAreaStyle,
-              borderColor: errors.description ? 'var(--ccc-error)' : '#555'
+              borderColor: errors.description ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
             }} 
             value={formData.description} 
             onChange={handleChange} 
@@ -670,7 +665,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
                   maxHeight: 160,
                   objectFit: 'cover',
                   borderRadius: 8,
-                  border: '1px solid #555',
+                  border: '1px solid var(--ccc-border-medium)',
                 }}
               />
               <button
@@ -714,7 +709,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="city"
               style={{
                 ...inputStyle,
-                borderColor: errors.city ? 'var(--ccc-error)' : '#555'
+                borderColor: errors.city ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }}
               value={formData.city}
               onChange={handleChange}
@@ -735,7 +730,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="postalCode"
               style={{
                 ...inputStyle,
-                borderColor: (errors.postalCode || postalCodeError) ? 'var(--ccc-error)' : '#555'
+                borderColor: (errors.postalCode || postalCodeError) ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }}
               value={formData.postalCode}
               onChange={handleChange}
@@ -799,7 +794,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="address" 
               style={{
                 ...inputStyle,
-                borderColor: errors.address ? 'var(--ccc-error)' : '#555'
+                borderColor: errors.address ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               value={formData.address} 
               onChange={handleChange} 
@@ -818,7 +813,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="country" 
               style={{
                 ...inputStyle,
-                borderColor: errors.country ? 'var(--ccc-error)' : '#555'
+                borderColor: errors.country ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               value={formData.country} 
               onChange={handleChange} 
@@ -840,7 +835,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="date" 
               style={{
                 ...inputStyle,
-                borderColor: errors.date ? 'var(--ccc-error)' : '#555'
+                borderColor: errors.date ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               placeholder="JJ/MM/AAAA" 
               value={formData.date} 
@@ -859,7 +854,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="venue" 
               style={{
                 ...inputStyle,
-                borderColor: errors.venue ? 'var(--ccc-error)' : '#555'
+                borderColor: errors.venue ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               value={formData.venue} 
               onChange={handleChange} 
@@ -875,7 +870,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
             <label htmlFor="venueType" style={labelStyle}>Type de lieu</label>
             <select
               id="venueType"
-              style={{ ...inputStyle, borderColor: errors.venueType ? 'var(--ccc-error)' : '#555' }}
+              style={{ ...inputStyle, borderColor: errors.venueType ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
               value={formData.venueType}
               onChange={handleChange}
             >
@@ -897,7 +892,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               placeholder="Optionnel"
               style={{
                 ...inputStyle,
-                borderColor: errors.maxSpectators ? 'var(--ccc-error)' : '#555'
+                borderColor: errors.maxSpectators ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }}
               value={formData.maxSpectators}
               onChange={handleChange}
@@ -916,7 +911,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="startTime" 
               style={{
                 ...inputStyle,
-                borderColor: errors.startTime ? 'var(--ccc-error)' : '#555'
+                borderColor: errors.startTime ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               placeholder="HH:MM" 
               value={formData.startTime} 
@@ -935,7 +930,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="endTime" 
               style={{
                 ...inputStyle,
-                borderColor: errors.endTime ? 'var(--ccc-error)' : '#555'
+                borderColor: errors.endTime ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               placeholder="HH:MM" 
               value={formData.endTime} 
@@ -957,7 +952,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="minExperience" 
               style={{
                 ...inputStyle,
-                borderColor: errors.minExperience ? 'var(--ccc-error)' : '#555'
+                borderColor: errors.minExperience ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               value={formData.minExperience} 
               onChange={handleChange} 
@@ -977,7 +972,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="maxPerformers" 
               style={{
                 ...inputStyle,
-                borderColor: errors.maxPerformers ? 'var(--ccc-error)' : '#555'
+                borderColor: errors.maxPerformers ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               value={formData.maxPerformers} 
               onChange={handleChange} 
@@ -1000,7 +995,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
             onChange={handleChange}
             style={{
               ...inputStyle,
-              borderColor: errors.requiredExperienceLevel ? 'var(--ccc-error)' : '#555'
+              borderColor: errors.requiredExperienceLevel ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
             }}
           >
             <option value="all">Tous les niveaux</option>

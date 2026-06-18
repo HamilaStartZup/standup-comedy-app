@@ -1,6 +1,5 @@
 import React, { type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { theme } from '../styles/theme';
 
 interface ModalProps {
   isOpen: boolean;
@@ -26,7 +25,7 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: transparentOverlay ? 'rgba(15, 23, 42, 0.2)' : theme.colors.bg.overlay,
+    backgroundColor: transparentOverlay ? 'rgba(15, 23, 42, 0.2)' : 'var(--ccc-bg-overlay)',
     backdropFilter: 'blur(4px)',
     display: 'flex',
     justifyContent: 'center',
@@ -35,16 +34,16 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
   };
 
   const modalStyle: CSSProperties = {
-    background: theme.colors.bg.elevated,
+    background: 'var(--ccc-bg-elevated)',
     padding: '25px',
-    borderRadius: theme.radius.md,
+    borderRadius: 'var(--ccc-radius-md)',
     minWidth: 'auto',
     maxWidth: '600px',
     width: '100%',
-    boxShadow: theme.shadow.dropdown,
+    boxShadow: 'var(--ccc-shadow-dropdown)',
     position: 'relative',
-    color: theme.colors.text.primary,
-    border: `1px solid ${theme.colors.border.subtle}`,
+    color: 'var(--ccc-text-primary)',
+    border: '1px solid var(--ccc-border-subtle)',
     maxHeight: '85vh',
     overflowY: 'auto',
     overflowX: 'hidden',
@@ -60,7 +59,7 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
     border: 'none',
     fontSize: '1.5em',
     cursor: 'pointer',
-    color: theme.colors.text.muted,
+    color: 'var(--ccc-text-muted)',
   };
 
   return createPortal(

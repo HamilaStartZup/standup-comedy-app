@@ -6,7 +6,7 @@ import { useAlert } from '../hooks/useAlert';
 import { useNavigate } from 'react-router-dom';
 import api, { updateComedianReport } from '../services/api';
 import { getErrorMessage, ErrorMessages, SuccessMessages } from '../services/systemMessages';
-import { pageTitleStyle } from '../styles/theme';
+
 
 interface ComedianReport {
   _id: string;
@@ -125,7 +125,10 @@ const ComedianReportsPage = () => {
   };
 
   const titleStyle: CSSProperties = {
-    ...pageTitleStyle,
+    fontSize: '2.5em',
+    color: 'var(--ccc-accent)',
+    fontWeight: 700,
+    letterSpacing: '-0.02em',
     margin: 0,
   };
 

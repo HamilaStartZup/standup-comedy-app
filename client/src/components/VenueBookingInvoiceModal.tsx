@@ -254,7 +254,7 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
                             <td style={{ border: cellBorder, padding: '8px 10px 8px 20px', fontSize: 12, color: 'var(--ccc-text-secondary)' }}>
                               {line.label}
                               {line.note && (
-                                <span style={{ display: 'block', fontSize: 10, color: '#94a3b8', fontStyle: 'italic', marginTop: 2 }}>
+                                <span style={{ display: 'block', fontSize: 10, color: 'var(--ccc-text-faint)', fontStyle: 'italic', marginTop: 2 }}>
                                   {line.note}
                                 </span>
                               )}
@@ -285,12 +285,12 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
           </p>
 
           {lines.some((b) => b.paymentStatus === 'refunded') && (
-            <p style={{ marginTop: 12, fontSize: 12, color: '#b45309' }}>
+            <p style={{ marginTop: 12, fontSize: 12, color: 'var(--ccc-card-pending-text)' }}>
               Certaines lignes ont fait l&apos;objet d&apos;un remboursement.
             </p>
           )}
 
-          <p style={{ marginTop: 24, fontSize: 11, color: '#94a3b8' }}>
+          <p style={{ marginTop: 24, fontSize: 11, color: 'var(--ccc-text-faint)' }}>
             Document généré par Connect Comedy Club à titre de justificatif de réservation.
             {isSeries ? ` Série de ${lines.length} date(s).` : ''}
           </p>

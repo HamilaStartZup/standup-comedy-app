@@ -7,7 +7,7 @@ import { useUserEvents } from '../hooks/useUserEvents';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { getErrorMessage, WarningMessages } from '../services/systemMessages';
-import { pageTitleStyle } from '../styles/theme';
+
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 interface EventStats {
@@ -139,7 +139,10 @@ const Dashboard = () => {
 
   // Styles pour l'en-tête du tableau de bord
   const dashboardHeaderStyle: CSSProperties = {
-    ...pageTitleStyle,
+    fontSize: '2.5em',
+    color: 'var(--ccc-accent)',
+    fontWeight: 700,
+    letterSpacing: '-0.02em',
     textAlign: 'center',
     marginBottom: '40px',
   };

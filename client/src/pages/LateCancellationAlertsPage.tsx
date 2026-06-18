@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { getLateCancellationAlerts, acknowledgeLateCancellationAlert } from '../services/api';
 import { getErrorMessage, ConfirmMessages } from '../services/systemMessages';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { pageTitleStyle } from '../styles/theme';
+
 
 interface LateCancellationAlert {
   _id: string;
@@ -116,7 +116,10 @@ const LateCancellationAlertsPage = () => {
   };
 
   const titleStyle: CSSProperties = {
-    ...pageTitleStyle,
+    fontSize: '2.5em',
+    color: 'var(--ccc-accent)',
+    fontWeight: 700,
+    letterSpacing: '-0.02em',
     margin: 0,
   };
 

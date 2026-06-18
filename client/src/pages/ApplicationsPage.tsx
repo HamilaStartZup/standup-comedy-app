@@ -12,7 +12,7 @@ import { checkGeographicCompatibility } from '../utils/geographicMatching';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages, InfoMessages, ConfirmMessages } from '../services/systemMessages';
 import Pagination from '../components/Pagination';
 import type { PaginationMeta } from '../types/pagination';
-import { theme, pageTitleStyle } from '../styles/theme';
+
 
 export interface IUser {
   _id: string;
@@ -780,9 +780,9 @@ function ApplicationsPage() {
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: theme.colors.text.primary,
+    color: 'var(--ccc-text-primary)',
     padding: isMobile ? '16px 12px' : '20px',
-    background: theme.colors.bg.gradient,
+    background: 'var(--ccc-bg-gradient)',
   };
 
   const pageHeaderStyle: CSSProperties = {
@@ -797,11 +797,11 @@ function ApplicationsPage() {
     marginBottom: '30px',
   };
 
-  const titleStyle: CSSProperties = pageTitleStyle;
+  const titleStyle: CSSProperties = { fontSize: '2.5em', color: 'var(--ccc-accent)', fontWeight: 700, letterSpacing: '-0.02em' };
 
   const subtitleStyle: CSSProperties = {
     fontSize: '1.1em',
-    color: theme.colors.text.muted,
+    color: 'var(--ccc-text-muted)',
     marginBottom: '20px',
   };
 
@@ -813,18 +813,18 @@ function ApplicationsPage() {
 
   const filterLabelStyle: CSSProperties = {
     display: 'block',
-    color: theme.colors.text.primary,
+    color: 'var(--ccc-text-primary)',
     marginBottom: '8px',
     fontWeight: 'bold',
     fontSize: '14px',
   };
 
   const eventCardSurfaceStyle: CSSProperties = {
-    backgroundColor: theme.colors.card.default,
-    borderRadius: theme.radius.md,
-    boxShadow: theme.shadow.card,
-    border: `1px solid ${theme.colors.border.onCard}`,
-    color: theme.colors.text.onCard,
+    backgroundColor: 'var(--ccc-card-default)',
+    borderRadius: 'var(--ccc-radius-md)',
+    boxShadow: 'var(--ccc-shadow-sm)',
+    border: '1px solid var(--ccc-border-on-card)',
+    color: 'var(--ccc-text-on-card)',
   };
 
   const filterSelectStyle: CSSProperties = {
@@ -866,37 +866,37 @@ function ApplicationsPage() {
 
   /** Fond jaune très clair lorsque la candidature est en attente */
   const applicationCardStylePending: CSSProperties = {
-    backgroundColor: theme.colors.card.pending.bg,
-    border: `1px solid ${theme.colors.card.pending.border}`,
-    color: theme.colors.text.onCard,
+    backgroundColor: 'var(--ccc-card-pending-bg)',
+    border: '1px solid var(--ccc-card-pending-border)',
+    color: 'var(--ccc-text-on-card)',
   };
 
   /** Fond vert lorsque la candidature est acceptée (comme pour les évènements complets) */
   const applicationCardStyleAccepted: CSSProperties = {
-    backgroundColor: theme.colors.card.complete.bg,
-    border: `1px solid ${theme.colors.card.complete.border}`,
-    color: theme.colors.text.onCard,
+    backgroundColor: 'var(--ccc-card-complete-bg)',
+    border: '1px solid var(--ccc-card-complete-border)',
+    color: 'var(--ccc-text-on-card)',
   };
 
   /** Fond rouge clair lorsque la candidature est refusée (comme dans la capture) */
   const applicationCardStyleRejected: CSSProperties = {
-    backgroundColor: theme.colors.card.cancelled.bg,
-    border: `1px solid ${theme.colors.card.cancelled.border}`,
-    color: theme.colors.text.onCard,
+    backgroundColor: 'var(--ccc-card-cancelled-bg)',
+    border: '1px solid var(--ccc-card-cancelled-border)',
+    color: 'var(--ccc-text-on-card)',
   };
 
   /** Fond blanc lorsque la candidature est expirée (comme dans la page évènements) */
   const applicationCardStyleExpired: CSSProperties = {
     backgroundColor: 'var(--ccc-bg-elevated)',
-    border: '1px solid rgba(0, 0, 0, 0.08)',
-    color: '#1a1a1a',
+    border: '1px solid var(--ccc-border-subtle)',
+    color: 'var(--ccc-text-primary)',
   };
 
   /** Fond gris lorsque la candidature est retirée (WITHDRAWN) */
   const applicationCardStyleWithdrawn: CSSProperties = {
-    backgroundColor: '#f5f5f5',
-    border: '1px solid #e0e0e0',
-    color: '#1a1a1a',
+    backgroundColor: 'var(--ccc-card-withdrawn-bg)',
+    border: '1px solid var(--ccc-card-withdrawn-border)',
+    color: 'var(--ccc-card-withdrawn-text)',
   };
 
   const cardTitleStyle: CSSProperties = {
@@ -962,7 +962,7 @@ function ApplicationsPage() {
 
   const viewProfileInlineButtonStyle: CSSProperties = {
     padding: '8px 14px',
-    borderRadius: theme.radius.sm,
+    borderRadius: 'var(--ccc-radius-sm)',
     border: '1px solid rgba(255, 255, 255, 0.3)',
     background: 'rgba(0, 0, 0, 0.2)',
     color: 'var(--ccc-text-on-accent)',
@@ -1035,7 +1035,7 @@ function ApplicationsPage() {
 
   const comedianApplicationDateBadgeStyle: CSSProperties = {
     padding: '4px 12px',
-    borderRadius: theme.radius.full,
+    borderRadius: 'var(--ccc-radius-full)',
     border: '1px solid rgba(255, 255, 255, 0.15)',
     color: 'var(--ccc-text-on-accent)',
     fontSize: '0.85em',
@@ -1083,7 +1083,7 @@ function ApplicationsPage() {
     return {
       display: 'inline-block',
       padding: '6px 12px',
-      borderRadius: theme.radius.sm,
+      borderRadius: 'var(--ccc-radius-sm)',
       backgroundColor: (status === 'ACCEPTED' || status === 'REJECTED' || status === 'EXPIRED' || status === 'WITHDRAWN' || status === 'CANCELLED_BY_PLATFORM') ? 'transparent' : backgroundColor,
       color: status === 'ACCEPTED' ? 'var(--ccc-success)' : (status === 'REJECTED' ? 'var(--ccc-error)' : (status === 'EXPIRED' ? 'var(--ccc-text-muted)' : (status === 'WITHDRAWN' || status === 'CANCELLED_BY_PLATFORM' ? '#6c757d' : color))),
       fontWeight: 'bold',
@@ -1115,7 +1115,7 @@ function ApplicationsPage() {
 
   const actionButtonStyle: CSSProperties = {
     padding: '8px 15px',
-    borderRadius: theme.radius.sm,
+    borderRadius: 'var(--ccc-radius-sm)',
     border: 'none',
     color: 'white',
     fontWeight: 'bold',
@@ -1166,10 +1166,10 @@ function ApplicationsPage() {
 
   const organizerTabButtonStyle = (isActive: boolean): CSSProperties => ({
     padding: '10px 18px',
-    borderRadius: theme.radius.full,
-    border: `1px solid ${isActive ? theme.colors.accent.softBorder : theme.colors.border.medium}`,
-    backgroundColor: isActive ? theme.colors.accent.soft : theme.colors.bg.surface,
-    color: isActive ? theme.colors.accent.primary : theme.colors.text.secondary,
+    borderRadius: 'var(--ccc-radius-full)',
+    border: `1px solid ${isActive ? 'var(--ccc-accent-soft-border)' : 'var(--ccc-border-medium)'}`,
+    backgroundColor: isActive ? 'var(--ccc-accent-soft)' : 'var(--ccc-bg-surface)',
+    color: isActive ? 'var(--ccc-accent)' : 'var(--ccc-text-secondary)',
     fontWeight: isActive ? 700 : 500,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
@@ -1180,9 +1180,9 @@ function ApplicationsPage() {
 
   const organizerTabCountStyle: CSSProperties = {
     fontSize: '0.85em',
-    backgroundColor: theme.colors.bg.surfaceHover,
+    backgroundColor: 'var(--ccc-bg-surface-hover)',
     padding: '2px 8px',
-    borderRadius: theme.radius.full,
+    borderRadius: 'var(--ccc-radius-full)',
   };
 
   const filtersRowStyle: CSSProperties = {
@@ -1216,14 +1216,14 @@ function ApplicationsPage() {
 
   const comedianTabButtonStyle = (isActive: boolean): CSSProperties => ({
     padding: '10px 16px',
-    borderRadius: `${theme.radius.md} ${theme.radius.md} 0 0`,
+    borderRadius: 'var(--ccc-radius-md) var(--ccc-radius-md) 0 0',
     border: 'none',
-    backgroundColor: isActive ? theme.colors.accent.soft : 'transparent',
-    color: isActive ? theme.colors.accent.primary : theme.colors.text.muted,
+    backgroundColor: isActive ? 'var(--ccc-accent-soft)' : 'transparent',
+    color: isActive ? 'var(--ccc-accent)' : 'var(--ccc-text-muted)',
     fontWeight: isActive ? 'bold' : 'normal',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    borderBottom: isActive ? `2px solid ${theme.colors.accent.primary}` : '2px solid transparent',
+    borderBottom: isActive ? '2px solid var(--ccc-accent)' : '2px solid transparent',
     fontSize: '0.95em',
   });
 
@@ -1822,13 +1822,13 @@ function ApplicationsPage() {
           onClick={(e) => e.target === e.currentTarget && closeStatusModal()}
         >
           <div style={{
-            backgroundColor: theme.colors.bg.elevated,
-            borderRadius: theme.radius.md,
+            backgroundColor: 'var(--ccc-bg-elevated)',
+            borderRadius: 'var(--ccc-radius-md)',
             padding: '24px',
             maxWidth: '500px',
             width: '90%',
-            boxShadow: theme.shadow.dropdown,
-            border: `1px solid ${theme.colors.border.subtle}`,
+            boxShadow: 'var(--ccc-shadow-dropdown)',
+            border: '1px solid var(--ccc-border-subtle)',
           }}>
             {/* Header avec titre et bouton X */}
             <div style={{
@@ -1840,7 +1840,7 @@ function ApplicationsPage() {
               <h2 style={{
                 fontSize: '20px',
                 fontWeight: '600',
-                color: theme.colors.text.primary,
+                color: 'var(--ccc-text-primary)',
                 margin: 0,
               }}>
                 {statusToSet === 'ACCEPTED' ? 'Accepter la candidature' : 'Refuser la candidature'}
@@ -1854,7 +1854,7 @@ function ApplicationsPage() {
                   cursor: 'pointer',
                   fontSize: '20px',
                   padding: '4px 8px',
-                  borderRadius: theme.radius.sm,
+                  borderRadius: 'var(--ccc-radius-sm)',
                   transition: 'all 0.2s',
                 }}
                 aria-label="Fermer"
@@ -1865,7 +1865,7 @@ function ApplicationsPage() {
 
             {/* Description contextuelle */}
             <p style={{
-              color: theme.colors.text.muted,
+              color: 'var(--ccc-text-muted)',
               fontSize: '14px',
               lineHeight: '1.5',
               margin: '0 0 20px 0',
@@ -1877,7 +1877,7 @@ function ApplicationsPage() {
 
             {/* Label et textarea */}
             <label style={{
-              color: theme.colors.text.secondary,
+              color: 'var(--ccc-text-secondary)',
               fontWeight: '600',
               display: 'block',
               marginBottom: '10px',
@@ -1896,10 +1896,10 @@ function ApplicationsPage() {
               style={{
                 width: '100%',
                 padding: '12px',
-                borderRadius: theme.radius.sm,
-                border: `1px solid ${theme.colors.border.medium}`,
-                backgroundColor: theme.colors.bg.elevated,
-                color: theme.colors.text.primary,
+                borderRadius: 'var(--ccc-radius-sm)',
+                  border: '1px solid var(--ccc-border-medium)',
+                backgroundColor: 'var(--ccc-bg-elevated)',
+                color: 'var(--ccc-text-primary)',
                 fontSize: '14px',
                 lineHeight: '1.5',
                 resize: 'vertical',
@@ -1919,10 +1919,10 @@ function ApplicationsPage() {
                 onClick={closeStatusModal}
                 style={{
                   padding: '10px 24px',
-                  borderRadius: theme.radius.sm,
-                  border: `1px solid ${theme.colors.border.medium}`,
-                  backgroundColor: theme.colors.bg.surface,
-                  color: theme.colors.text.primary,
+                  borderRadius: 'var(--ccc-radius-sm)',
+                border: '1px solid var(--ccc-border-medium)',
+                  backgroundColor: 'var(--ccc-bg-surface)',
+                  color: 'var(--ccc-text-primary)',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
@@ -1935,7 +1935,7 @@ function ApplicationsPage() {
                 onClick={handleConfirmStatus}
                 style={{
                   padding: '10px 24px',
-                  borderRadius: theme.radius.sm,
+                  borderRadius: 'var(--ccc-radius-sm)',
                   border: 'none',
                   backgroundColor: statusToSet === 'ACCEPTED' ? 'var(--ccc-btn-success-bg)' : 'var(--ccc-btn-danger-bg)',
                   color: 'var(--ccc-text-on-accent)',

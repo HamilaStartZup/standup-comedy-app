@@ -25,7 +25,7 @@ import { markAbsence, cancelAbsence, getEventAbsences, addEventFavorite, removeE
 import type { ComedianSearchResult, SearchComediansByZoneResponse } from '../services/api';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages, InfoMessages, ConfirmMessages } from '../services/systemMessages';
 import { MoreVertical } from 'lucide-react';
-import { theme, pageTitleStyle } from '../styles/theme';
+
 
 const ITEMS_PER_PAGE = 5;
 type ComedianTab = 'opportunities' | 'accepted' | 'favorites' | 'recommendations';
@@ -83,28 +83,28 @@ function RatingsSummaryModal({ event, onClose }: { event: IEvent | null; onClose
   return (
     <Modal isOpen onClose={onClose}>
       <div>
-        <h2 style={{ margin: '0 0 16px 0', fontSize: '1.25em', color: theme.colors.text.primary }}>
+        <h2 style={{ margin: '0 0 16px 0', fontSize: '1.25em', color: 'var(--ccc-text-primary)' }}>
           Notes — {event.title}
         </h2>
-        {isLoading && <p style={{ color: theme.colors.text.muted }}>Chargement des notes…</p>}
-        {error && <p style={{ color: theme.colors.semantic.danger }}>Impossible de charger les notes.</p>}
+        {isLoading && <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement des notes…</p>}
+        {error && <p style={{ color: 'var(--ccc-error)' }}>Impossible de charger les notes.</p>}
         {data && !isLoading && (
           <>
-            <div style={{ marginBottom: 20, padding: '16px', background: theme.colors.bg.surface, borderRadius: theme.radius.md }}>
-              <div style={{ marginBottom: 12, color: theme.colors.text.primary, fontSize: '0.95em' }}>
-                <span style={{ color: theme.colors.text.muted }}>Moyenne par événement</span>
+            <div style={{ marginBottom: 20, padding: '16px', background: 'var(--ccc-bg-surface)', borderRadius: 'var(--ccc-radius-md)' }}>
+              <div style={{ marginBottom: 12, color: 'var(--ccc-text-primary)', fontSize: '0.95em' }}>
+                <span style={{ color: 'var(--ccc-text-muted)' }}>Moyenne par événement</span>
                 <div style={{ color: '#FFD700', fontWeight: 600, fontSize: '1.2em', marginTop: 4 }}>
                   {data.averageEventRating != null ? `${data.averageEventRating}/5` : '—'}
                 </div>
               </div>
-              <div style={{ marginBottom: 12, color: theme.colors.text.primary, fontSize: '0.95em' }}>
-                <span style={{ color: theme.colors.text.muted }}>Nombre total d&apos;avis</span>
-                <div style={{ color: theme.colors.text.primary, fontWeight: 600, fontSize: '1.2em', marginTop: 4 }}>
+              <div style={{ marginBottom: 12, color: 'var(--ccc-text-primary)', fontSize: '0.95em' }}>
+                <span style={{ color: 'var(--ccc-text-muted)' }}>Nombre total d&apos;avis</span>
+                <div style={{ color: 'var(--ccc-text-primary)', fontWeight: 600, fontSize: '1.2em', marginTop: 4 }}>
                   {data.totalRatings}
                 </div>
               </div>
             </div>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '1em', color: theme.colors.text.secondary }}>Moyenne par humoriste</h3>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '1em', color: 'var(--ccc-text-secondary)' }}>Moyenne par humoriste</h3>
             {data.comedianRatings.length > 0 ? (
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 260, overflowY: 'auto' }}>
                 {data.comedianRatings.map((cr: RatingsSummaryData['comedianRatings'][number]) => (
@@ -112,14 +112,14 @@ function RatingsSummaryModal({ event, onClose }: { event: IEvent | null; onClose
                     key={cr.comedianId}
                     style={{
                       padding: '10px 0',
-                      borderBottom: `1px solid ${theme.colors.border.subtle}`,
+                      borderBottom: `1px solid var(--ccc-border-subtle)`,
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       gap: 12,
                     }}
                   >
-                    <span style={{ color: theme.colors.text.primary }}>
+                    <span style={{ color: 'var(--ccc-text-primary)' }}>
                       {cr.firstName} {cr.lastName}
                     </span>
                     <span style={{ color: '#FFD700', fontWeight: 600 }}>
@@ -129,10 +129,10 @@ function RatingsSummaryModal({ event, onClose }: { event: IEvent | null; onClose
                 ))}
               </ul>
             ) : (
-              <p style={{ color: theme.colors.text.muted, margin: 0 }}>Aucun humoriste à afficher.</p>
+              <p style={{ color: 'var(--ccc-text-muted)', margin: 0 }}>Aucun humoriste à afficher.</p>
             )}
             {data.totalRatings === 0 && (
-              <p style={{ color: theme.colors.text.muted, marginTop: 12 }}>Aucune notation pour cet événement.</p>
+              <p style={{ color: 'var(--ccc-text-muted)', marginTop: 12 }}>Aucune notation pour cet événement.</p>
             )}
           </>
         )}
@@ -446,7 +446,7 @@ useEffect(() => {
       node.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const previousOutline = node.style.outline;
       const previousOffset = node.style.outlineOffset;
-      node.style.outline = `3px solid ${theme.colors.accent.primary}`;
+      node.style.outline = `3px solid var(--ccc-accent)`;
       node.style.outlineOffset = '2px';
       setTimeout(() => {
         node.style.outline = previousOutline;
@@ -1330,7 +1330,7 @@ useEffect(() => {
     const isOpen = openActionsEventId === menuId;
     const isActionsButtonHighlighted = isOpen || hoveredActionsButtonId === menuId;
     const handleMenuItemMouseEnter = (e: React.MouseEvent<HTMLButtonElement>, disabled?: boolean) => {
-      if (!disabled) e.currentTarget.style.backgroundColor = theme.colors.accent.soft;
+      if (!disabled) e.currentTarget.style.backgroundColor = 'var(--ccc-accent-soft)';
     };
     const handleMenuItemMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
       e.currentTarget.style.backgroundColor = 'transparent';
@@ -1341,7 +1341,7 @@ useEffect(() => {
       padding: '10px 14px',
       border: 'none',
       background: 'transparent',
-      color: theme.colors.text.primary,
+      color: 'var(--ccc-text-primary)',
       fontSize: '14px',
       textAlign: 'left',
       cursor: 'pointer',
@@ -1370,12 +1370,12 @@ useEffect(() => {
             width: '36px',
             height: '36px',
             padding: 0,
-            borderRadius: theme.radius.sm,
-            border: `1px solid ${isActionsButtonHighlighted ? theme.colors.accent.softBorder : theme.colors.border.medium}`,
-            background: isActionsButtonHighlighted ? theme.colors.accent.soft : theme.colors.bg.surface,
-            color: isActionsButtonHighlighted ? theme.colors.accent.primary : theme.colors.text.primary,
+            borderRadius: 'var(--ccc-radius-sm)',
+            border: `1px solid ${isActionsButtonHighlighted ? 'var(--ccc-accent-soft-border)' : 'var(--ccc-border-medium)'}`,
+            background: isActionsButtonHighlighted ? 'var(--ccc-accent-soft)' : 'var(--ccc-bg-surface)',
+            color: isActionsButtonHighlighted ? 'var(--ccc-accent)' : 'var(--ccc-text-primary)',
             cursor: 'pointer',
-            boxShadow: isActionsButtonHighlighted ? theme.shadow.accent : 'none',
+            boxShadow: isActionsButtonHighlighted ? 'var(--ccc-shadow-accent)' : 'none',
             transform: isActionsButtonHighlighted ? 'scale(1.05)' : 'scale(1)',
             transition: 'background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease, color 0.2s ease',
           }}
@@ -1394,10 +1394,10 @@ useEffect(() => {
               marginBottom: '8px',
               minWidth: '200px',
               ...(isMobile ? { maxWidth: 'min(280px, calc(100vw - 24px))' } : {}),
-              backgroundColor: theme.colors.bg.elevated,
-              border: `1px solid ${theme.colors.border.subtle}`,
-              borderRadius: theme.radius.md,
-              boxShadow: theme.shadow.dropdown,
+              backgroundColor: 'var(--ccc-bg-elevated)',
+              border: `1px solid var(--ccc-border-subtle)`,
+              borderRadius: 'var(--ccc-radius-md)',
+              boxShadow: 'var(--ccc-shadow-dropdown)',
               zIndex: 1000,
               overflow: 'hidden',
             }}
@@ -1407,7 +1407,7 @@ useEffect(() => {
               <>
                 <button
                   type="button"
-                  style={{ ...menuItemStyle, borderBottom: `1px solid ${theme.colors.border.subtle}` }}
+                  style={{ ...menuItemStyle, borderBottom: `1px solid var(--ccc-border-subtle)` }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenActionsEventId(null);
@@ -1436,7 +1436,7 @@ useEffect(() => {
               <>
                 <button
                   type="button"
-                  style={{ ...menuItemStyle, borderBottom: `1px solid ${theme.colors.border.subtle}` }}
+                  style={{ ...menuItemStyle, borderBottom: `1px solid var(--ccc-border-subtle)` }}
                   onClick={(e) => {
                     e.stopPropagation();
                 setOpenActionsEventId(null);
@@ -1449,7 +1449,7 @@ useEffect(() => {
                 </button>
                 <button
                   type="button"
-                  style={{ ...menuItemStyle, borderBottom: `1px solid ${theme.colors.border.subtle}` }}
+                  style={{ ...menuItemStyle, borderBottom: `1px solid var(--ccc-border-subtle)` }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenActionsEventId(null);
@@ -1462,7 +1462,7 @@ useEffect(() => {
                 </button>
                 <button
                   type="button"
-                  style={{ ...menuItemStyle, borderBottom: `1px solid ${theme.colors.border.subtle}` }}
+                  style={{ ...menuItemStyle, borderBottom: `1px solid var(--ccc-border-subtle)` }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenActionsEventId(null);
@@ -1476,7 +1476,7 @@ useEffect(() => {
                 </button>
                 <button
                   type="button"
-                  style={{ ...menuItemStyle, borderBottom: `1px solid ${theme.colors.border.subtle}` }}
+                  style={{ ...menuItemStyle, borderBottom: `1px solid var(--ccc-border-subtle)` }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenActionsEventId(null);
@@ -1974,9 +1974,9 @@ useEffect(() => {
 
   const mainContainerStyle: CSSProperties = {
     minHeight: '100vh',
-    color: theme.colors.text.primary,
+    color: 'var(--ccc-text-primary)',
     padding: '20px',
-    background: theme.colors.bg.gradient,
+    background: 'var(--ccc-bg-gradient)',
   };
 
   const pageHeaderStyle: CSSProperties = {
@@ -1989,19 +1989,19 @@ useEffect(() => {
     marginBottom: '30px',
   };
 
-  const titleStyle: CSSProperties = pageTitleStyle;
+  const titleStyle: CSSProperties = { fontSize: '2.5em', color: 'var(--ccc-accent)', fontWeight: 700, letterSpacing: '-0.02em' };
 
   const buttonStyle: CSSProperties = {
     padding: '10px 20px',
-    borderRadius: theme.radius.sm,
+    borderRadius: 'var(--ccc-radius-sm)',
     border: 'none',
-    background: theme.colors.accent.gradient,
-    color: theme.colors.text.onAccent,
+    background: 'var(--ccc-accent-gradient)',
+    color: 'var(--ccc-text-on-accent)',
     fontSize: '1em',
     fontWeight: 'bold',
     cursor: 'pointer',
     transition: 'opacity 0.2s ease, transform 0.2s ease',
-    boxShadow: theme.shadow.accent,
+    boxShadow: 'var(--ccc-shadow-accent)',
   };
 
   const sectionStyle: CSSProperties = {
@@ -2018,7 +2018,7 @@ useEffect(() => {
 
   const filterLabelStyle: CSSProperties = {
     display: 'block',
-    color: theme.colors.text.primary,
+    color: 'var(--ccc-text-primary)',
     marginBottom: '8px',
     fontWeight: 'bold',
     fontSize: '14px',
@@ -2026,11 +2026,11 @@ useEffect(() => {
 
   /** Même surface visuelle que les cartes évènement à venir */
   const eventCardSurfaceStyle: CSSProperties = {
-    backgroundColor: theme.colors.card.default,
-    borderRadius: theme.radius.md,
-    boxShadow: theme.shadow.card,
-    border: `1px solid ${theme.colors.border.onCard}`,
-    color: theme.colors.text.onCard,
+    backgroundColor: 'var(--ccc-card-default)',
+    borderRadius: 'var(--ccc-radius-md)',
+    boxShadow: 'var(--ccc-shadow-sm)',
+    border: `1px solid var(--ccc-border-on-card)`,
+    color: 'var(--ccc-text-on-card)',
   };
 
   const filterToggleButtonStyle: CSSProperties = {
@@ -2068,14 +2068,14 @@ useEffect(() => {
 
   const sectionTitleStyle: CSSProperties = {
     fontSize: '1.8em',
-    color: theme.colors.accent.primary,
+    color: 'var(--ccc-accent)',
     marginBottom: '15px',
     fontWeight: 600,
     letterSpacing: '-0.01em',
   };
 
   const emptyStateStyle: CSSProperties = {
-    color: theme.colors.text.muted,
+    color: 'var(--ccc-text-muted)',
     fontSize: '1.1em',
   };
 
@@ -2097,16 +2097,16 @@ useEffect(() => {
     flex: isMobile ? '1 1 45%' : '0 0 auto',
     minWidth: '140px',
     padding: '10px 14px',
-    borderRadius: theme.radius.md,
-    border: `1px solid ${isActive ? theme.colors.accent.softBorder : theme.colors.border.subtle}`,
-    backgroundColor: isActive ? theme.colors.accent.soft : theme.colors.bg.surface,
-    color: isActive ? theme.colors.text.primary : theme.colors.text.secondary,
+    borderRadius: 'var(--ccc-radius-md)',
+    border: `1px solid ${isActive ? 'var(--ccc-accent-soft-border)' : 'var(--ccc-border-subtle)'}`,
+    backgroundColor: isActive ? 'var(--ccc-accent-soft)' : 'var(--ccc-bg-surface)',
+    color: isActive ? 'var(--ccc-text-primary)' : 'var(--ccc-text-secondary)',
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    boxShadow: isActive ? theme.shadow.accent : 'none',
+    boxShadow: isActive ? 'var(--ccc-shadow-accent)' : 'none',
   });
 
   const comedianTabTitleStyle: CSSProperties = {
@@ -2116,7 +2116,7 @@ useEffect(() => {
 
   const comedianTabCountStyle: CSSProperties = {
     fontSize: '0.85em',
-    color: theme.colors.text.accent,
+    color: 'var(--ccc-text-accent)',
   };
 
   const organizerTabsContainerStyle: CSSProperties = {
@@ -2129,10 +2129,10 @@ useEffect(() => {
 
   const organizerTabButtonStyle = (isActive: boolean): CSSProperties => ({
     padding: '10px 18px',
-    borderRadius: theme.radius.full,
-    border: `1px solid ${isActive ? theme.colors.accent.softBorder : theme.colors.border.medium}`,
-    backgroundColor: isActive ? theme.colors.accent.soft : theme.colors.bg.surface,
-    color: isActive ? theme.colors.text.primary : theme.colors.text.secondary,
+    borderRadius: 'var(--ccc-radius-full)',
+    border: `1px solid ${isActive ? 'var(--ccc-accent-soft-border)' : 'var(--ccc-border-medium)'}`,
+    backgroundColor: isActive ? 'var(--ccc-accent-soft)' : 'var(--ccc-bg-surface)',
+    color: isActive ? 'var(--ccc-text-primary)' : 'var(--ccc-text-secondary)',
     fontWeight: isActive ? 700 : 500,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
@@ -2143,9 +2143,9 @@ useEffect(() => {
 
   const organizerTabCountStyle: CSSProperties = {
     fontSize: '0.85em',
-    backgroundColor: theme.colors.bg.surfaceHover,
+    backgroundColor: 'var(--ccc-bg-surface-hover)',
     padding: '2px 8px',
-    borderRadius: theme.radius.full,
+    borderRadius: 'var(--ccc-radius-full)',
   };
 
   const dropdownContainerStyle: CSSProperties = {
@@ -2156,10 +2156,10 @@ useEffect(() => {
   const dropdownSelectStyle = (isActive: boolean): CSSProperties => ({
     padding: '10px 18px',
     paddingRight: '40px',
-    borderRadius: theme.radius.full,
-    border: `1px solid ${isActive ? theme.colors.accent.softBorder : theme.colors.border.medium}`,
-    backgroundColor: isActive ? theme.colors.accent.soft : theme.colors.bg.surface,
-    color: isActive ? theme.colors.text.primary : theme.colors.text.secondary,
+    borderRadius: 'var(--ccc-radius-full)',
+    border: `1px solid ${isActive ? 'var(--ccc-accent-soft-border)' : 'var(--ccc-border-medium)'}`,
+    backgroundColor: isActive ? 'var(--ccc-accent-soft)' : 'var(--ccc-bg-surface)',
+    color: isActive ? 'var(--ccc-text-primary)' : 'var(--ccc-text-secondary)',
     fontWeight: isActive ? 700 : 500,
     cursor: 'pointer',
     fontSize: '1em',
@@ -2171,7 +2171,7 @@ useEffect(() => {
     backgroundSize: '14px',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     minWidth: isMobile ? '100%' : '220px',
-    boxShadow: isActive ? theme.shadow.accent : 'none',
+    boxShadow: isActive ? 'var(--ccc-shadow-accent)' : 'none',
     backdropFilter: 'blur(10px)',
     WebkitBackdropFilter: 'blur(10px)',
     WebkitFontSmoothing: 'antialiased',
@@ -2192,14 +2192,14 @@ useEffect(() => {
 
   /** Style carte lorsque l'événement est en statut Complet (fond vert comme la capture) */
   const eventCardStyleComplete: CSSProperties = {
-    backgroundColor: theme.colors.card.complete.bg,
-    border: `1px solid ${theme.colors.card.complete.border}`,
+    backgroundColor: 'var(--ccc-card-complete-bg)',
+    border: `1px solid var(--ccc-card-complete-border)`,
   };
 
   /** Fond rouge clair pour les évènements annulés (comme candidatures refusées) */
   const eventCardStyleCancelled: CSSProperties = {
-    backgroundColor: theme.colors.card.cancelled.bg,
-    border: `1px solid ${theme.colors.card.cancelled.border}`,
+    backgroundColor: 'var(--ccc-card-cancelled-bg)',
+    border: `1px solid var(--ccc-card-cancelled-border)`,
   };
 
   const cardContentStyle: CSSProperties = {
@@ -2219,12 +2219,12 @@ useEffect(() => {
 
   const cardDateBadgeStyle: CSSProperties = {
     padding: '6px 16px',
-    borderRadius: theme.radius.full,
-    border: `1px solid ${theme.colors.border.onCardStrong}`,
-    backgroundColor: theme.colors.bg.surface,
+    borderRadius: 'var(--ccc-radius-full)',
+    border: `1px solid var(--ccc-border-on-card-strong)`,
+    backgroundColor: 'var(--ccc-bg-surface)',
     fontSize: '0.85em',
     fontWeight: 600,
-    color: theme.colors.text.onCard,
+    color: 'var(--ccc-text-on-card)',
   };
 
   const cardHeaderActionsStyle: CSSProperties = {
@@ -2237,7 +2237,7 @@ useEffect(() => {
   const favoriteStarButtonStyle = (isFavorite: boolean): CSSProperties => ({
     border: 'none',
     background: 'transparent',
-    color: isFavorite ? theme.colors.semantic.star : theme.colors.semantic.starInactive,
+    color: isFavorite ? 'var(--ccc-semantic-star)' : 'var(--ccc-semantic-star-inactive)',
     fontSize: '1.4em',
     cursor: 'pointer',
     transition: 'color 0.2s ease, transform 0.2s ease',
@@ -2259,14 +2259,14 @@ useEffect(() => {
 
   const cardMetaLabelStyle: CSSProperties = {
     fontSize: '0.72em',
-    color: theme.colors.text.onCardMuted,
+    color: 'var(--ccc-text-on-card-muted)',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   };
 
   const cardMetaValueStyle: CSSProperties = {
     fontSize: '0.95em',
-    color: theme.colors.text.onCard,
+    color: 'var(--ccc-text-on-card)',
     fontWeight: 600,
   };
 
@@ -2289,12 +2289,12 @@ useEffect(() => {
 
   const statusBadgeStyle: CSSProperties = {
     padding: '6px 14px',
-    borderRadius: theme.radius.full,
-    border: `1px solid ${theme.colors.border.onCard}`,
+    borderRadius: 'var(--ccc-radius-full)',
+    border: `1px solid var(--ccc-border-on-card)`,
     fontSize: '0.85em',
     fontWeight: 600,
-    color: theme.colors.text.onCard,
-    backgroundColor: theme.colors.bg.surface,
+    color: 'var(--ccc-text-on-card)',
+    backgroundColor: 'var(--ccc-bg-surface)',
   };
 
   const renderStatusChip = (label: string, color: string, backgroundColor: string) => (
@@ -2303,13 +2303,13 @@ useEffect(() => {
 
   const eventTitleStyle: CSSProperties = {
     fontSize: isMobile ? '1.2em' : '1.45em',
-    color: theme.colors.text.onCard,
+    color: 'var(--ccc-text-on-card)',
     margin: 0,
   };
 
   const eventDetailStyle: CSSProperties = {
     fontSize: '0.9em',
-    color: theme.colors.text.onCardMuted,
+    color: 'var(--ccc-text-on-card-muted)',
     marginBottom: '3px',
   };
 
@@ -2319,12 +2319,12 @@ useEffect(() => {
 
   const modalLabelStyle: CSSProperties = {
     fontWeight: 'bold',
-    color: theme.colors.accent.primary,
+    color: 'var(--ccc-accent)',
     marginRight: '5px',
   };
 
   const modalValueStyle: CSSProperties = {
-    color: theme.colors.text.secondary,
+    color: 'var(--ccc-text-secondary)',
   };
 
   // const modalParticipantListStyle: CSSProperties = {
@@ -2334,15 +2334,15 @@ useEffect(() => {
   // };
 
   // const modalParticipantItemStyle: CSSProperties = {
-  //   color: theme.colors.text.primary,
+  //   color: 'var(--ccc-text-primary)',
   //   marginBottom: '3px',
   // };
 
   const actionButtonStyleSmall: CSSProperties = {
     padding: '8px 15px',
-    borderRadius: theme.radius.sm,
+    borderRadius: 'var(--ccc-radius-sm)',
     border: 'none',
-    color: theme.colors.text.onAccent,
+    color: 'var(--ccc-text-on-accent)',
     fontWeight: 'bold',
     cursor: 'pointer',
     transition: 'opacity 0.2s ease',
@@ -2350,22 +2350,22 @@ useEffect(() => {
 
   const deleteButtonStyle: CSSProperties = {
     ...actionButtonStyleSmall,
-    backgroundColor: theme.colors.semantic.danger,
+    backgroundColor: 'var(--ccc-error)',
   };
 
   const editButtonStyle: CSSProperties = {
     ...actionButtonStyleSmall,
-    backgroundColor: theme.colors.semantic.warning,
+    backgroundColor: 'var(--ccc-warning)',
   };
 
   const applyButtonStyle: CSSProperties = {
     ...actionButtonStyleSmall,
-    background: `linear-gradient(135deg, ${theme.colors.semantic.success} 0%, ${theme.colors.semantic.successDark} 100%)`,
+    background: `linear-gradient(135deg, var(--ccc-success) 0%, var(--ccc-semantic-success-dark) 100%)`,
   };
 
   const disabledApplyButtonStyle: CSSProperties = {
     ...actionButtonStyleSmall,
-    backgroundColor: theme.colors.semantic.disabled,
+    backgroundColor: 'var(--ccc-text-faint)',
     cursor: 'not-allowed',
   };
 
@@ -2398,8 +2398,8 @@ useEffect(() => {
 
   // Ajout du style du spinner
   const spinnerStyle: React.CSSProperties = {
-    border: `8px solid ${theme.colors.bg.surface}`,
-    borderTop: `8px solid ${theme.colors.accent.primary}`,
+    border: `8px solid var(--ccc-bg-surface)`,
+    borderTop: `8px solid var(--ccc-accent)`,
     borderRadius: '50%',
     width: '70px',
     height: '70px',
@@ -2421,31 +2421,31 @@ useEffect(() => {
       {authIsLoading || eventsLoading ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
           <div style={spinnerStyle}></div>
-          <p style={{ color: theme.colors.text.muted, marginTop: 20, fontSize: '1.2em' }}>
+          <p style={{ color: 'var(--ccc-text-muted)', marginTop: 20, fontSize: '1.2em' }}>
             {authIsLoading ? 'Chargement de votre profil...' : 'Chargement des évènements...'}
           </p>
         </div>
       ) : eventsError ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '20px' }}>
-          <p style={{ color: theme.colors.semantic.danger, fontSize: '1.2em', marginBottom: '20px' }}>
+          <p style={{ color: 'var(--ccc-error)', fontSize: '1.2em', marginBottom: '20px' }}>
             Erreur lors du chargement des évènements
           </p>
-          <p style={{ color: theme.colors.text.muted, fontSize: '1em', marginBottom: '20px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--ccc-text-muted)', fontSize: '1em', marginBottom: '20px', textAlign: 'center' }}>
             {eventsErrorMessage?.message || 'Une erreur inattendue s\'est produite'}
           </p>
           <button
             onClick={() => refetch()}
             style={{
               padding: '12px 24px',
-              borderRadius: theme.radius.sm,
+              borderRadius: 'var(--ccc-radius-sm)',
               border: 'none',
-              background: theme.colors.accent.gradient,
-              color: theme.colors.text.onAccent,
+              background: 'var(--ccc-accent-gradient)',
+              color: 'var(--ccc-text-on-accent)',
               fontSize: '1em',
               fontWeight: '600',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
-              boxShadow: theme.shadow.accent,
+              boxShadow: 'var(--ccc-shadow-accent)',
             }}
           >
             Réessayer
@@ -2462,7 +2462,7 @@ useEffect(() => {
             }}>
             <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
               <h1 style={titleStyle}>Les évènements</h1>
-              <p style={{ fontSize: '1.1em', color: theme.colors.text.muted }}>
+              <p style={{ fontSize: '1.1em', color: 'var(--ccc-text-muted)' }}>
                 {user?.role === 'ORGANIZER' 
                   ? 'Gérez et visualisez vos évènements. Créez de nouveaux évènements pour trouver les meilleurs humoristes.'
                   : user?.role === 'SUPER_ADMIN'
@@ -2489,15 +2489,15 @@ useEffect(() => {
           {user?.role === 'SUPER_ADMIN' && (
             <div style={{ maxWidth: '1200px', margin: '0 auto 20px auto', padding: '0 20px' }}>
               <div style={{
-                backgroundColor: theme.colors.bg.elevated,
+                backgroundColor: 'var(--ccc-bg-elevated)',
                 padding: '20px',
-                borderRadius: theme.radius.md,
+                borderRadius: 'var(--ccc-radius-md)',
                 margin: '0 auto',
-                border: `1px solid ${theme.colors.border.subtle}`,
+                border: `1px solid var(--ccc-border-subtle)`,
                 width: '100%',
-                boxShadow: theme.shadow.card,
+                boxShadow: 'var(--ccc-shadow-sm)',
               }}>
-              <h3 style={{ color: theme.colors.accent.primary, marginBottom: '15px', fontSize: '1.2em' }}>Filtres de recherche</h3>
+              <h3 style={{ color: 'var(--ccc-accent)', marginBottom: '15px', fontSize: '1.2em' }}>Filtres de recherche</h3>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 320px))',
@@ -2505,7 +2505,7 @@ useEffect(() => {
                   justifyContent: isMobile ? 'stretch' : 'center'
               }}>
                 <div style={{ maxWidth: isMobile ? '100%' : 320 }}>
-                <label style={{ display: 'block', color: theme.colors.text.primary, marginBottom: '5px', fontWeight: 'bold' }}>
+                <label style={{ display: 'block', color: 'var(--ccc-text-primary)', marginBottom: '5px', fontWeight: 'bold' }}>
                   Filtrer par organisateur:
                 </label>
                 <select
@@ -2522,21 +2522,21 @@ useEffect(() => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    borderRadius: theme.radius.sm,
+                    borderRadius: 'var(--ccc-radius-sm)',
                     border: '1px solid #555',
                     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    color: theme.colors.text.primary,
+                    color: 'var(--ccc-text-primary)',
                     fontSize: '14px'
                   }}
                 >
-                  <option value="" style={{ backgroundColor: theme.colors.bg.elevated, color: theme.colors.text.primary }}>
+                  <option value="" style={{ backgroundColor: 'var(--ccc-bg-elevated)', color: 'var(--ccc-text-primary)' }}>
                     Tous les organisateurs
                   </option>
                   {availableOrganizers.map((organizer) => (
                     <option 
                       key={organizer.id} 
                       value={organizer.fullName}
-                      style={{ backgroundColor: theme.colors.bg.elevated, color: theme.colors.text.primary }}
+                      style={{ backgroundColor: 'var(--ccc-bg-elevated)', color: 'var(--ccc-text-primary)' }}
                     >
                       {organizer.fullName}
                     </option>
@@ -2544,7 +2544,7 @@ useEffect(() => {
                 </select>
               </div>
                 <div style={{ maxWidth: isMobile ? '100%' : 320 }}>
-                  <label style={{ display: 'block', color: theme.colors.text.primary, marginBottom: '5px', fontWeight: 'bold' }}>
+                  <label style={{ display: 'block', color: 'var(--ccc-text-primary)', marginBottom: '5px', fontWeight: 'bold' }}>
                     Recherche par mots-clés:
                   </label>
                   <form
@@ -2568,10 +2568,10 @@ useEffect(() => {
                         flex: isMobile ? undefined : 1,
                         width: isMobile ? '100%' : undefined,
                         padding: '10px',
-                        borderRadius: theme.radius.sm,
+                        borderRadius: 'var(--ccc-radius-sm)',
                         border: '1px solid #555',
                         backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                        color: theme.colors.text.primary,
+                        color: 'var(--ccc-text-primary)',
                         fontSize: '14px'
                       }}
                     />
@@ -2579,10 +2579,10 @@ useEffect(() => {
                       type="submit"
                       style={{
                         padding: '10px 18px',
-                        borderRadius: theme.radius.sm,
+                        borderRadius: 'var(--ccc-radius-sm)',
                         border: 'none',
-                        background: theme.colors.accent.gradient,
-                        color: theme.colors.text.onAccent,
+                        background: 'var(--ccc-accent-gradient)',
+                        color: 'var(--ccc-text-on-accent)',
                         fontWeight: 600,
                         cursor: 'pointer',
                         width: isMobile ? '100%' : 'auto'
@@ -2610,10 +2610,10 @@ useEffect(() => {
                   }}
                   style={{
                     padding: '8px 15px',
-                    borderRadius: theme.radius.sm,
-                    border: `1px solid ${theme.colors.border.medium}`,
-                    backgroundColor: theme.colors.bg.surface,
-                    color: theme.colors.text.primary,
+                    borderRadius: 'var(--ccc-radius-sm)',
+                    border: `1px solid var(--ccc-border-medium)`,
+                    backgroundColor: 'var(--ccc-bg-surface)',
+                    color: 'var(--ccc-text-primary)',
                     cursor: 'pointer',
                     fontSize: '14px',
                     width: isMobile ? '100%' : 'auto',
@@ -2740,10 +2740,10 @@ useEffect(() => {
           {listIsLoading && <p style={emptyStateStyle}>Chargement des évènements...</p>}
           {listHasError && (
             <div style={{ textAlign: 'center', padding: '16px 0' }}>
-              <p style={{ ...emptyStateStyle, color: theme.colors.semantic.danger, marginBottom: 12 }}>Erreur : {listErrorMessage}</p>
+              <p style={{ ...emptyStateStyle, color: 'var(--ccc-error)', marginBottom: 12 }}>Erreur : {listErrorMessage}</p>
               <button
                 onClick={() => listRefetch()}
-                style={{ padding: '8px 20px', borderRadius: theme.radius.sm, border: 'none', background: theme.colors.accent.gradient, color: theme.colors.text.onAccent, fontSize: '0.9em', fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '8px 20px', borderRadius: 'var(--ccc-radius-sm)', border: 'none', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', fontSize: '0.9em', fontWeight: 600, cursor: 'pointer' }}
               >
                 Réessayer
               </button>
@@ -2882,7 +2882,7 @@ useEffect(() => {
                   })()}
                   <div style={cardActionStackStyle}>
                     {isEventWithinOneHour(event) ? (
-                      <span style={{ fontSize: '12px', color: theme.colors.text.muted }}>
+                      <span style={{ fontSize: '12px', color: 'var(--ccc-text-muted)' }}>
                         Plus de modification possible (événement dans moins d'1 h)
                       </span>
                     ) : !appliedEventIds.has(event._id) ? (
@@ -3081,7 +3081,7 @@ useEffect(() => {
                     aria-expanded={showComedianSearchSection}
                   >
                     <span>Rechercher des humoristes par zone</span>
-                    <span style={{ fontSize: '18px', lineHeight: 1, color: theme.colors.text.muted }}>{showComedianSearchSection ? '−' : '+'}</span>
+                    <span style={{ fontSize: '18px', lineHeight: 1, color: 'var(--ccc-text-muted)' }}>{showComedianSearchSection ? '−' : '+'}</span>
                   </button>
 
                   {showComedianSearchSection && (
@@ -3205,13 +3205,13 @@ useEffect(() => {
 
                       {/* Résultats de la recherche */}
                       {isSearchingComedians && (
-                        <p style={{ color: theme.colors.semantic.success, marginTop: '15px', textAlign: 'center' }}>
+                        <p style={{ color: 'var(--ccc-success)', marginTop: '15px', textAlign: 'center' }}>
                           Recherche en cours...
                         </p>
                       )}
 
                       {comedianSearchError && (
-                        <p style={{ color: theme.colors.semantic.danger, marginTop: '15px', textAlign: 'center' }}>
+                        <p style={{ color: 'var(--ccc-error)', marginTop: '15px', textAlign: 'center' }}>
                           {comedianSearchError}
                         </p>
                       )}
@@ -3224,7 +3224,7 @@ useEffect(() => {
 
                       {comedianSearchResults.length > 0 && (
                         <div style={{ marginTop: '20px' }}>
-                          <h4 style={{ color: theme.colors.semantic.success, marginBottom: '15px' }}>
+                          <h4 style={{ color: 'var(--ccc-success)', marginBottom: '15px' }}>
                             {comedianSearchTotal} humoriste{comedianSearchTotal > 1 ? 's' : ''} trouvé{comedianSearchTotal > 1 ? 's' : ''}
                           </h4>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -3251,10 +3251,10 @@ useEffect(() => {
                                 }}
                                 style={{
                                   padding: '15px',
-                                  backgroundColor: theme.colors.bg.elevated,
-                                  borderRadius: theme.radius.sm,
-                                  border: `1px solid ${theme.colors.border.medium}`,
-                                  boxShadow: theme.shadow.card,
+                                  backgroundColor: 'var(--ccc-bg-elevated)',
+                                  borderRadius: 'var(--ccc-radius-sm)',
+                                  border: `1px solid var(--ccc-border-medium)`,
+                                  boxShadow: 'var(--ccc-shadow-sm)',
                                   cursor: 'pointer',
                                   transition: 'all 0.2s ease'
                                 }}
@@ -3270,7 +3270,7 @@ useEffect(() => {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
                                   <div style={{ flex: 1 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-                                      <h5 style={{ color: theme.colors.text.primary, margin: 0, fontSize: '16px' }}>
+                                      <h5 style={{ color: 'var(--ccc-text-primary)', margin: 0, fontSize: '16px' }}>
                                         {comedian.stageName || `${comedian.firstName} ${comedian.lastName}`}
                                       </h5>
                                       <button
@@ -3310,7 +3310,7 @@ useEffect(() => {
                                           fontSize: '12px',
                                           cursor: 'pointer',
                                           padding: '6px 12px',
-                                          borderRadius: theme.radius.md,
+                                          borderRadius: 'var(--ccc-radius-md)',
                                           transition: 'transform 0.2s ease, opacity 0.2s ease',
                                         }}
                                         title="Inviter pour un événement"
@@ -3327,12 +3327,12 @@ useEffect(() => {
                                       </button>
                                     </div>
                                     {comedian.stageName && (
-                                      <p style={{ color: theme.colors.text.muted, margin: '0 0 5px 0', fontSize: '13px' }}>
+                                      <p style={{ color: 'var(--ccc-text-muted)', margin: '0 0 5px 0', fontSize: '13px' }}>
                                         {comedian.firstName} {comedian.lastName}
                                       </p>
                                     )}
                                     {comedian.mobilityZone && comedian.mobilityZone.length > 0 && (
-                                      <p style={{ color: theme.colors.text.muted, margin: '0', fontSize: '13px' }}>
+                                      <p style={{ color: 'var(--ccc-text-muted)', margin: '0', fontSize: '13px' }}>
                                         🚗 Zones : {comedian.mobilityZone.map(z => z.value).join(', ')}
                                       </p>
                                     )}
@@ -3361,7 +3361,7 @@ useEffect(() => {
                                         key={idx}
                                         style={{
                                           padding: '3px 8px',
-                                          borderRadius: theme.radius.md,
+                                          borderRadius: 'var(--ccc-radius-md)',
                                           fontSize: '15px',
                                           backgroundColor: 'rgba(102, 126, 234, 0.2)',
                                           color: '#667eea'
@@ -3384,7 +3384,7 @@ useEffect(() => {
                                 disabled={comedianSearchPage === 1}
                                 style={{
                                   padding: '8px 16px',
-                                  borderRadius: theme.radius.sm,
+                                  borderRadius: 'var(--ccc-radius-sm)',
                                   border: '1px solid var(--ccc-success)',
                                   backgroundColor: comedianSearchPage === 1 ? 'rgba(0, 0, 0, 0.3)' : 'rgba(40, 167, 69, 0.2)',
                                   color: comedianSearchPage === 1 ? 'var(--ccc-text-secondary)' : 'var(--ccc-text-on-accent)',
@@ -3393,7 +3393,7 @@ useEffect(() => {
                               >
                                 Précédent
                               </button>
-                              <span style={{ color: theme.colors.text.primary, alignSelf: 'center' }}>
+                              <span style={{ color: 'var(--ccc-text-primary)', alignSelf: 'center' }}>
                                 Page {comedianSearchPage} / {Math.ceil(comedianSearchTotal / 10)}
                               </span>
                               <button
@@ -3401,7 +3401,7 @@ useEffect(() => {
                                 disabled={comedianSearchPage >= Math.ceil(comedianSearchTotal / 10)}
                                 style={{
                                   padding: '8px 16px',
-                                  borderRadius: theme.radius.sm,
+                                  borderRadius: 'var(--ccc-radius-sm)',
                                   border: '1px solid var(--ccc-success)',
                                   backgroundColor: comedianSearchPage >= Math.ceil(comedianSearchTotal / 10) ? 'rgba(0, 0, 0, 0.3)' : 'rgba(40, 167, 69, 0.2)',
                                   color: comedianSearchPage >= Math.ceil(comedianSearchTotal / 10) ? 'var(--ccc-text-secondary)' : 'var(--ccc-text-on-accent)',
@@ -3468,10 +3468,10 @@ useEffect(() => {
               {listIsLoading && <p style={emptyStateStyle}>Chargement des évènements...</p>}
               {listHasError && (
             <div style={{ textAlign: 'center', padding: '16px 0' }}>
-              <p style={{ ...emptyStateStyle, color: theme.colors.semantic.danger, marginBottom: 12 }}>Erreur : {listErrorMessage}</p>
+              <p style={{ ...emptyStateStyle, color: 'var(--ccc-error)', marginBottom: 12 }}>Erreur : {listErrorMessage}</p>
               <button
                 onClick={() => listRefetch()}
-                style={{ padding: '8px 20px', borderRadius: theme.radius.sm, border: 'none', background: theme.colors.accent.gradient, color: theme.colors.text.onAccent, fontSize: '0.9em', fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '8px 20px', borderRadius: 'var(--ccc-radius-sm)', border: 'none', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', fontSize: '0.9em', fontWeight: 600, cursor: 'pointer' }}
               >
                 Réessayer
               </button>
@@ -3550,7 +3550,7 @@ useEffect(() => {
                             <div style={cardHeaderRowStyle}>
                               <div>
                                 <h3 style={eventTitleStyle}>{first?.title}</h3>
-                                <span style={{ fontSize: '0.85em', color: theme.colors.text.muted }}>Événement récurrent · {item.events.length} date(s)</span>
+                                <span style={{ fontSize: '0.85em', color: 'var(--ccc-text-muted)' }}>Événement récurrent · {item.events.length} date(s)</span>
                               </div>
                               <div style={cardHeaderActionsStyle}>
                                 <span style={cardDateBadgeStyle}>Voir les dates</span>
@@ -3585,9 +3585,9 @@ useEffect(() => {
                                   onClick={(e) => { e.stopPropagation(); handleCardClick(event); }}
                                   style={{
                                     padding: '12px 16px',
-                                    backgroundColor: isDateComplete ? theme.colors.card.complete.bg : '#f8fafc',
-                                    borderRadius: theme.radius.sm,
-                                    border: isDateComplete ? `1px solid ${theme.colors.card.complete.border}` : `1px solid ${theme.colors.border.subtle}`,
+                                    backgroundColor: isDateComplete ? 'var(--ccc-card-complete-bg)' : '#f8fafc',
+                                    borderRadius: 'var(--ccc-radius-sm)',
+                                    border: isDateComplete ? `1px solid var(--ccc-card-complete-border)` : `1px solid var(--ccc-border-subtle)`,
                                     cursor: 'pointer',
                                     display: 'flex',
                                     justifyContent: 'space-between',
@@ -3598,10 +3598,10 @@ useEffect(() => {
                                 >
                                   <div>
                                     <span style={{ ...cardDateBadgeStyle, marginRight: '8px', fontSize: '0.8em' }}>{dateFormatted}</span>
-                                    <span style={{ color: theme.colors.text.primary }}>{timeStr}</span>
+                                    <span style={{ color: 'var(--ccc-text-primary)' }}>{timeStr}</span>
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <span style={{ color: theme.colors.text.muted, fontSize: '0.9em' }}>{participantsCount}/{maxP} humoristes</span>
+                                    <span style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>{participantsCount}/{maxP} humoristes</span>
                                     {user?.role === 'ORGANIZER' && renderOrganizerActions(event, 'upcoming', undefined, `upcoming-expanded-${event._id}`)}
                                   </div>
                                 </div>
@@ -3698,7 +3698,7 @@ useEffect(() => {
                 <h2 style={sectionTitleStyle}>Évènements complets</h2>
               </div>
               {eventsLoading && <p style={emptyStateStyle}>Chargement des évènements...</p>}
-              {eventsError && <p style={{ ...emptyStateStyle, color: theme.colors.semantic.danger }}>Erreur : {eventsErrorMessage?.message}</p>}
+              {eventsError && <p style={{ ...emptyStateStyle, color: 'var(--ccc-error)' }}>Erreur : {eventsErrorMessage?.message}</p>}
               {!eventsLoading && !eventsError && completedUpcomingEvents.length === 0 && (
                 <p style={emptyStateStyle}>Aucun évènement complet à venir.</p>
               )}
@@ -3757,7 +3757,7 @@ useEffect(() => {
         <div ref={archivedSectionRef} style={sectionStyle}>
           <h2 style={sectionTitleStyle}>Évènements archivés</h2>
           {eventsLoading && <p style={emptyStateStyle}>Chargement des évènements...</p>}
-          {eventsError && <p style={{ ...emptyStateStyle, color: theme.colors.semantic.danger }}>Erreur: {eventsErrorMessage?.message}</p>}
+          {eventsError && <p style={{ ...emptyStateStyle, color: 'var(--ccc-error)' }}>Erreur: {eventsErrorMessage?.message}</p>}
           {!eventsLoading && !eventsError && archivedEventsToShow.length === 0 && (
             <p style={emptyStateStyle}>Aucun évènement archivé.</p>
           )}
@@ -3858,7 +3858,7 @@ useEffect(() => {
         <div ref={cancelledSectionRef} style={sectionStyle}>
           <h2 style={sectionTitleStyle}>Évènements annulés</h2>
           {eventsLoading && <p style={emptyStateStyle}>Chargement des évènements...</p>}
-          {eventsError && <p style={{ ...emptyStateStyle, color: theme.colors.semantic.danger }}>Erreur: {eventsErrorMessage?.message}</p>}
+          {eventsError && <p style={{ ...emptyStateStyle, color: 'var(--ccc-error)' }}>Erreur: {eventsErrorMessage?.message}</p>}
           {!eventsLoading && !eventsError && cancelledEvents.length === 0 && (
             <p style={emptyStateStyle}>Aucun évènement annulé.</p>
           )}
@@ -3927,10 +3927,10 @@ useEffect(() => {
           {favoriteComediansLoading && <p style={emptyStateStyle}>Chargement des humoristes favoris...</p>}
           {favoriteComediansError && (
             <div style={{ textAlign: 'center', padding: '16px 0' }}>
-              <p style={{ ...emptyStateStyle, color: theme.colors.semantic.danger, marginBottom: 12 }}>Impossible de charger les humoristes favoris.</p>
+              <p style={{ ...emptyStateStyle, color: 'var(--ccc-error)', marginBottom: 12 }}>Impossible de charger les humoristes favoris.</p>
               <button
                 onClick={() => refetchFavoriteComedians()}
-                style={{ padding: '8px 20px', borderRadius: theme.radius.sm, border: 'none', background: theme.colors.accent.gradient, color: theme.colors.text.onAccent, fontSize: '0.9em', fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '8px 20px', borderRadius: 'var(--ccc-radius-sm)', border: 'none', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', fontSize: '0.9em', fontWeight: 600, cursor: 'pointer' }}
               >
                 Réessayer
               </button>
@@ -3961,10 +3961,10 @@ useEffect(() => {
                   }}
                   style={{
                     padding: '15px',
-                    backgroundColor: theme.colors.bg.elevated,
-                    borderRadius: theme.radius.sm,
-                    border: `1px solid ${theme.colors.border.medium}`,
-                    boxShadow: theme.shadow.card,
+                    backgroundColor: 'var(--ccc-bg-elevated)',
+                    borderRadius: 'var(--ccc-radius-sm)',
+                    border: `1px solid var(--ccc-border-medium)`,
+                    boxShadow: 'var(--ccc-shadow-sm)',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease'
                   }}
@@ -3980,7 +3980,7 @@ useEffect(() => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-                        <h5 style={{ color: theme.colors.text.primary, margin: 0, fontSize: '16px' }}>
+                        <h5 style={{ color: 'var(--ccc-text-primary)', margin: 0, fontSize: '16px' }}>
                           {comedian.stageName || `${comedian.firstName} ${comedian.lastName}`}
                         </h5>
                         <button
@@ -4011,13 +4011,13 @@ useEffect(() => {
                         </button>
                       </div>
                       {comedian.stageName && (
-                        <p style={{ color: theme.colors.text.muted, margin: '0 0 5px 0', fontSize: '13px' }}>
+                        <p style={{ color: 'var(--ccc-text-muted)', margin: '0 0 5px 0', fontSize: '13px' }}>
                           {comedian.firstName} {comedian.lastName}
                         </p>
                       )}
                       {(comedian.mobilityZone || comedian.profile?.mobilityZone) && 
                        (comedian.mobilityZone || comedian.profile?.mobilityZone).length > 0 && (
-                        <p style={{ color: theme.colors.text.muted, margin: '0', fontSize: '13px' }}>
+                        <p style={{ color: 'var(--ccc-text-muted)', margin: '0', fontSize: '13px' }}>
                           🚗 Zones : {(comedian.mobilityZone || comedian.profile?.mobilityZone).map((z: any) => z.value).join(', ')}
                         </p>
                       )}
@@ -4047,7 +4047,7 @@ useEffect(() => {
                           key={idx}
                           style={{
                             padding: '3px 8px',
-                            borderRadius: theme.radius.md,
+                            borderRadius: 'var(--ccc-radius-md)',
                             fontSize: '15px',
                             backgroundColor: 'rgba(102, 126, 234, 0.2)',
                             color: '#667eea'
@@ -4062,7 +4062,7 @@ useEffect(() => {
               ))}
             </div>
           ) : (
-            <p style={{ color: theme.colors.text.muted, marginTop: '20px', textAlign: 'center' }}>
+            <p style={{ color: 'var(--ccc-text-muted)', marginTop: '20px', textAlign: 'center' }}>
               Aucun humoriste en favoris pour le moment. Utilisez la recherche d'humoristes pour en ajouter.
             </p>
           ))}
@@ -4084,10 +4084,10 @@ useEffect(() => {
                   gap: '8px',
                   marginBottom: '20px',
                   padding: '10px 16px',
-                  borderRadius: theme.radius.sm,
-                  border: `1px solid ${theme.colors.border.medium}`,
-                  background: theme.colors.bg.surface,
-                  color: theme.colors.text.primary,
+                  borderRadius: 'var(--ccc-radius-sm)',
+                  border: `1px solid var(--ccc-border-medium)`,
+                  background: 'var(--ccc-bg-surface)',
+                  color: 'var(--ccc-text-primary)',
                   cursor: 'pointer',
                   fontSize: '14px',
                   fontWeight: 600,
@@ -4102,8 +4102,8 @@ useEffect(() => {
                 return (
                   <>
                     <div style={{ marginBottom: '20px', padding: '16px', ...eventCardStyle }}>
-                      <h3 style={{ margin: '0 0 8px 0', color: theme.colors.text.primary, fontSize: '1.2em' }}>{firstEvent?.title}</h3>
-                      <p style={{ margin: 0, color: theme.colors.text.muted, fontSize: '0.9em' }}>
+                      <h3 style={{ margin: '0 0 8px 0', color: 'var(--ccc-text-primary)', fontSize: '1.2em' }}>{firstEvent?.title}</h3>
+                      <p style={{ margin: 0, color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
                         {firstEvent?.location?.venue} — {firstEvent?.location?.city} · {eventsInGroup.length} date(s)
                       </p>
                     </div>
@@ -4134,8 +4134,8 @@ useEffect(() => {
                           >
                             <div style={{ flex: 1 }}>
                               <div style={{ ...cardDateBadgeStyle, marginBottom: '8px', display: 'inline-block' }}>{dateFormatted}</div>
-                              <div style={{ color: theme.colors.text.primary, fontWeight: 600, marginBottom: '4px' }}>{timeStr}</div>
-                              <div style={{ color: theme.colors.text.muted, fontSize: '0.9em' }}>
+                              <div style={{ color: 'var(--ccc-text-primary)', fontWeight: 600, marginBottom: '4px' }}>{timeStr}</div>
+                              <div style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
                                 {event.location?.venue} · {event.location?.city}
                               </div>
                             </div>
@@ -4143,7 +4143,7 @@ useEffect(() => {
                               <span style={{ ...statusBadgeStyle, opacity: (event.status === 'CANCELLED' || event.status === 'cancelled') ? 0.7 : 1 }}>
                                 {status}
                               </span>
-                              <span style={{ color: theme.colors.text.muted, fontSize: '0.9em' }}>
+                              <span style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
                                 {participantsCount}/{maxP} humoristes
                               </span>
                               {user?.role === 'ORGANIZER' && renderOrganizerActions(event, 'upcoming')}
@@ -4177,12 +4177,12 @@ useEffect(() => {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                           <div>
-                            <h3 style={{ margin: '0 0 6px 0', color: theme.colors.text.primary, fontSize: '1.1em' }}>{first?.title}</h3>
-                            <p style={{ margin: 0, color: theme.colors.text.muted, fontSize: '0.9em' }}>
+                            <h3 style={{ margin: '0 0 6px 0', color: 'var(--ccc-text-primary)', fontSize: '1.1em' }}>{first?.title}</h3>
+                            <p style={{ margin: 0, color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
                               {dateFirst} → {dateLast} · {events.length} date(s)
                             </p>
                             {first?.location?.city && (
-                              <p style={{ margin: '4px 0 0 0', color: theme.colors.text.muted, fontSize: '0.85em' }}>{first.location.venue} — {first.location.city}</p>
+                              <p style={{ margin: '4px 0 0 0', color: 'var(--ccc-text-muted)', fontSize: '0.85em' }}>{first.location.venue} — {first.location.city}</p>
                             )}
                           </div>
                           <span style={{ ...cardDateBadgeStyle, flexShrink: 0 }}>{events.length} date(s)</span>
@@ -4192,7 +4192,7 @@ useEffect(() => {
                   })}
                 </div>
               ) : (
-                <p style={{ color: theme.colors.text.muted, marginTop: '20px', textAlign: 'center' }}>
+                <p style={{ color: 'var(--ccc-text-muted)', marginTop: '20px', textAlign: 'center' }}>
                   Aucun événement récurrent. Les événements créés en série apparaîtront ici regroupés par groupe.
                 </p>
               )}
@@ -4239,11 +4239,11 @@ useEffect(() => {
       <Modal isOpen={showCancelModal} onClose={() => { setShowCancelModal(false); setEventToCancel(null); setEventsGroupToCancel(null); setCancelReason(''); }} title={eventsGroupToCancel?.length ? "Annuler le groupe d'événements" : "Annuler l'évènement"}>
         <div>
           {(eventToCancel?.venueBookingId || eventsGroupToCancel?.some(e => !!e.venueBookingId)) && (
-            <p style={{ marginBottom: 12, padding: '10px 12px', backgroundColor: theme.colors.bg.surface, borderRadius: theme.radius.sm, border: `1px solid ${theme.colors.border.subtle}`, color: theme.colors.text.secondary, fontSize: '0.9em' }}>
+            <p style={{ marginBottom: 12, padding: '10px 12px', backgroundColor: 'var(--ccc-bg-surface)', borderRadius: 'var(--ccc-radius-sm)', border: `1px solid var(--ccc-border-subtle)`, color: 'var(--ccc-text-secondary)', fontSize: '0.9em' }}>
               ℹ️ La réservation de salle reste active. Vous pourrez créer un nouvel événement sur ce créneau.
             </p>
           )}
-          <p style={{ marginBottom: 12, color: theme.colors.text.secondary }}>
+          <p style={{ marginBottom: 12, color: 'var(--ccc-text-secondary)' }}>
             {(() => {
               const eventsToCheck = eventsGroupToCancel?.length ? eventsGroupToCancel : (eventToCancel ? [eventToCancel] : []);
               if (eventsToCheck.length === 0) return "";
@@ -4264,13 +4264,13 @@ useEffect(() => {
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
             placeholder="Raison de l'annulation"
-            style={{ width: '100%', minHeight: 80, padding: 10, borderRadius: theme.radius.sm, border: `1px solid ${theme.colors.border.medium}`, background: theme.colors.bg.surface, color: theme.colors.text.primary }}
+            style={{ width: '100%', minHeight: 80, padding: 10, borderRadius: 'var(--ccc-radius-sm)', border: `1px solid var(--ccc-border-medium)`, background: 'var(--ccc-bg-surface)', color: 'var(--ccc-text-primary)' }}
           />
           <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <button onClick={() => setShowCancelModal(false)} disabled={isCancelling} style={{ ...actionButtonStyleSmall, backgroundColor: '#6c757d', cursor: isCancelling ? 'not-allowed' : 'pointer' }}>
               Fermer
             </button>
-            <button onClick={confirmCancelEvent} disabled={isCancelling} style={{ ...actionButtonStyleSmall, background: theme.colors.accent.gradient, opacity: isCancelling ? 0.7 : 1, cursor: isCancelling ? 'not-allowed' : 'pointer' }}>
+            <button onClick={confirmCancelEvent} disabled={isCancelling} style={{ ...actionButtonStyleSmall, background: 'var(--ccc-accent-gradient)', opacity: isCancelling ? 0.7 : 1, cursor: isCancelling ? 'not-allowed' : 'pointer' }}>
               {isCancelling ? 'Annulation...' : "Confirmer l'annulation"}
             </button>
           </div>
@@ -4290,7 +4290,7 @@ useEffect(() => {
       >
         {spectatorsModalEvent && (
           <div>
-            <h2 style={{ margin: '0 0 16px 0', fontSize: '1.25em', color: theme.colors.text.primary }}>
+            <h2 style={{ margin: '0 0 16px 0', fontSize: '1.25em', color: 'var(--ccc-text-primary)' }}>
               Spectateurs — {spectatorsModalEvent.title}
             </h2>
             {(() => {
@@ -4300,10 +4300,10 @@ useEffect(() => {
               const placesLeft = max != null && typeof max === 'number' ? Math.max(0, max - count) : null;
               return (
                 <>
-                  <p style={{ marginBottom: 16, color: theme.colors.semantic.success, fontSize: '1em' }}>
+                  <p style={{ marginBottom: 16, color: 'var(--ccc-success)', fontSize: '1em' }}>
                     <strong>{count}</strong> personne{count !== 1 ? 's' : ''} inscrite{count !== 1 ? 's' : ''}
                     {placesLeft !== null && (
-                      <span style={{ color: theme.colors.text.muted }}> · <strong>{placesLeft}</strong> place{placesLeft !== 1 ? 's' : ''} restante{placesLeft !== 1 ? 's' : ''}</span>
+                      <span style={{ color: 'var(--ccc-text-muted)' }}> · <strong>{placesLeft}</strong> place{placesLeft !== 1 ? 's' : ''} restante{placesLeft !== 1 ? 's' : ''}</span>
                     )}
                   </p>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 320, overflowY: 'auto' }}>
@@ -4312,14 +4312,14 @@ useEffect(() => {
                         ? `${(reg as { firstName: string; lastName: string }).firstName} ${(reg as { lastName: string }).lastName}`
                         : '—';
                       return (
-                        <li key={i} style={{ padding: '8px 0', borderBottom: `1px solid ${theme.colors.border.subtle}`, color: theme.colors.text.primary }}>
+                        <li key={i} style={{ padding: '8px 0', borderBottom: `1px solid var(--ccc-border-subtle)`, color: 'var(--ccc-text-primary)' }}>
                           {name}
                         </li>
                       );
                     })}
                   </ul>
                   {regs.length === 0 && (
-                    <p style={{ color: theme.colors.text.muted, marginTop: 8 }}>Aucun spectateur inscrit pour le moment.</p>
+                    <p style={{ color: 'var(--ccc-text-muted)', marginTop: 8 }}>Aucun spectateur inscrit pour le moment.</p>
                   )}
                 </>
               );
@@ -4333,7 +4333,7 @@ useEffect(() => {
         <div>
           {comedianToInvite && (
             <>
-              <p style={{ marginBottom: 16, color: theme.colors.text.secondary }}>
+              <p style={{ marginBottom: 16, color: 'var(--ccc-text-secondary)' }}>
                 Inviter <strong>{comedianToInvite.stageName || `${comedianToInvite.firstName} ${comedianToInvite.lastName}`}</strong> à postuler pour un de vos événements :
               </p>
 
@@ -4344,9 +4344,9 @@ useEffect(() => {
                   ...filterFieldStyle,
                   padding: '12px',
                   marginBottom: '16px',
-                  border: `1px solid ${theme.colors.border.medium}`,
-                  borderRadius: theme.radius.sm,
-                  backgroundColor: theme.colors.bg.surface,
+                  border: `1px solid var(--ccc-border-medium)`,
+                  borderRadius: 'var(--ccc-radius-sm)',
+                  backgroundColor: 'var(--ccc-bg-surface)',
                 }}
               >
                 <option value="">-- Choisir un événement --</option>
@@ -4390,7 +4390,7 @@ useEffect(() => {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: theme.colors.bg.overlay,
+            backgroundColor: 'var(--ccc-bg-overlay)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -4399,13 +4399,13 @@ useEffect(() => {
           onClick={(e) => e.target === e.currentTarget && closeWithdrawModal()}
         >
           <div style={{
-            backgroundColor: theme.colors.bg.elevated,
-            borderRadius: theme.radius.md,
+            backgroundColor: 'var(--ccc-bg-elevated)',
+            borderRadius: 'var(--ccc-radius-md)',
             padding: '24px',
             maxWidth: '500px',
             width: '90%',
-            boxShadow: theme.shadow.dropdown,
-            border: `1px solid ${theme.colors.border.subtle}`,
+            boxShadow: 'var(--ccc-shadow-dropdown)',
+            border: `1px solid var(--ccc-border-subtle)`,
           }}>
             {/* Header avec titre et bouton X */}
             <div style={{
@@ -4417,7 +4417,7 @@ useEffect(() => {
               <h2 style={{
                 fontSize: '20px',
                 fontWeight: '600',
-                color: theme.colors.text.primary,
+                color: 'var(--ccc-text-primary)',
                 margin: 0,
               }}>
                 Retirer votre candidature
@@ -4427,11 +4427,11 @@ useEffect(() => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: theme.colors.text.muted,
+                  color: 'var(--ccc-text-muted)',
                   cursor: 'pointer',
                   fontSize: '20px',
                   padding: '4px 8px',
-                  borderRadius: theme.radius.sm,
+                  borderRadius: 'var(--ccc-radius-sm)',
                   transition: 'all 0.2s',
                 }}
                 aria-label="Fermer"
@@ -4442,12 +4442,12 @@ useEffect(() => {
 
             {/* Message principal */}
             <p style={{
-              color: theme.colors.text.secondary,
+              color: 'var(--ccc-text-secondary)',
               fontSize: '15px',
               lineHeight: '1.6',
               margin: '0 0 12px 0',
             }}>
-              Êtes-vous sûr de vouloir retirer votre candidature pour l'évènement <strong style={{ color: theme.colors.text.primary }}>"{eventToWithdraw.title}"</strong> ?
+              Êtes-vous sûr de vouloir retirer votre candidature pour l'évènement <strong style={{ color: 'var(--ccc-text-primary)' }}>"{eventToWithdraw.title}"</strong> ?
             </p>
 
             {/* Avertissement */}
@@ -4457,7 +4457,7 @@ useEffect(() => {
               margin: '0 0 24px 0',
               padding: '10px 12px',
               backgroundColor: 'rgba(220, 53, 69, 0.15)',
-              borderRadius: theme.radius.sm,
+              borderRadius: 'var(--ccc-radius-sm)',
               border: '1px solid rgba(220, 53, 69, 0.3)',
             }}>
               ⚠️ Cette action est définitive.
@@ -4474,10 +4474,10 @@ useEffect(() => {
                 disabled={isWithdrawing}
                 style={{
                   padding: '10px 24px',
-                  borderRadius: theme.radius.sm,
-                  border: `1px solid ${theme.colors.border.medium}`,
-                  backgroundColor: theme.colors.bg.surface,
-                  color: theme.colors.text.primary,
+                  borderRadius: 'var(--ccc-radius-sm)',
+                  border: `1px solid var(--ccc-border-medium)`,
+                  backgroundColor: 'var(--ccc-bg-surface)',
+                  color: 'var(--ccc-text-primary)',
                   fontWeight: '600',
                   cursor: isWithdrawing ? 'not-allowed' : 'pointer',
                   transition: 'all 0.2s ease',
@@ -4491,10 +4491,10 @@ useEffect(() => {
                 disabled={isWithdrawing}
                 style={{
                   padding: '10px 24px',
-                  borderRadius: theme.radius.sm,
+                  borderRadius: 'var(--ccc-radius-sm)',
                   border: 'none',
-                  backgroundColor: theme.colors.semantic.danger,
-                  color: theme.colors.text.onAccent,
+                  backgroundColor: 'var(--ccc-error)',
+                  color: 'var(--ccc-text-on-accent)',
                   fontWeight: '600',
                   cursor: isWithdrawing ? 'not-allowed' : 'pointer',
                   opacity: isWithdrawing ? 0.7 : 1,

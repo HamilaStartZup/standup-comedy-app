@@ -328,16 +328,17 @@ if (id.startsWith('organizerProfile.location.')) {
     display: 'block',
     marginBottom: '5px',
     fontWeight: 'bold',
-    color: '#ff4b2b',
+    color: 'var(--ccc-accent)',
+    fontSize: '0.9em',
   };
 
   const inputStyle: CSSProperties = {
     width: '100%',
     padding: '10px',
     borderRadius: '5px',
-    border: '1px solid #555',
-    backgroundColor: '#333',
-    color: '#ffffff',
+    border: '1px solid var(--ccc-border-medium)',
+    backgroundColor: 'var(--ccc-bg-surface)',
+    color: 'var(--ccc-text-primary)',
     boxSizing: 'border-box',
   };
 
@@ -365,7 +366,7 @@ if (id.startsWith('organizerProfile.location.')) {
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, var(--ccc-success), #059669)',
+    background: 'var(--ccc-accent-gradient)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -377,7 +378,7 @@ if (id.startsWith('organizerProfile.location.')) {
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, var(--ccc-error), #c82333)',
+    backgroundColor: '#6c757d',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -393,7 +394,7 @@ if (id.startsWith('organizerProfile.location.')) {
     border: 'none',
     fontSize: '1.5em',
     cursor: 'pointer',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
   };
 
   return (
@@ -402,7 +403,7 @@ if (id.startsWith('organizerProfile.location.')) {
         <button onClick={onClose} style={closeButtonStyle}>&times;</button>
         <h2 style={titleStyle}>Modifier le Profil Organisateur</h2>
         <form onSubmit={handleSubmit}>
-          <h3 style={{ color: '#ff4b2b', marginBottom: '15px' }}>Photo de profil</h3>
+          <h3 style={{ color: 'var(--ccc-accent)', marginBottom: '15px' }}>Photo de profil</h3>
           {previewImage && (
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
               <img
@@ -426,7 +427,7 @@ if (id.startsWith('organizerProfile.location.')) {
                 marginBottom: '15px',
                 padding: '8px 12px',
                 borderRadius: '6px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                border: '1px solid var(--ccc-border-subtle)',
                 backgroundColor: 'rgba(220, 53, 69, 0.15)',
                 color: '#ffb3b3',
                 cursor: 'pointer',
@@ -444,9 +445,9 @@ if (id.startsWith('organizerProfile.location.')) {
                 width: '100%',
                 padding: '8px',
                 borderRadius: '5px',
-                border: '1px solid var(--ccc-input-border)',
-                backgroundColor: '#333',
-                color: '#fff',
+                border: '1px solid var(--ccc-border-medium)',
+                backgroundColor: 'var(--ccc-bg-surface)',
+                color: 'var(--ccc-text-primary)',
                 cursor: 'pointer',
               }}
             />
@@ -455,7 +456,7 @@ if (id.startsWith('organizerProfile.location.')) {
             </p>
           </div>
           {/* Informations personnelles */}
-          <h3 style={{ color: '#ff4b2b', marginBottom: '15px' }}>Informations personnelles</h3>
+          <h3 style={{ color: 'var(--ccc-accent)', marginBottom: '15px' }}>Informations personnelles</h3>
           <div style={twoColumnLayout}>
             <div style={inputGroupStyle}>
               <label htmlFor="firstName" style={labelStyle}>Prénom</label>
@@ -492,7 +493,7 @@ if (id.startsWith('organizerProfile.location.')) {
           </div>
 
           {/* Profil Organisateur */}
-          <h3 style={{ color: '#ff4b2b', marginTop: '30px', marginBottom: '15px' }}>Profil Organisateur</h3>
+          <h3 style={{ color: 'var(--ccc-accent)', marginTop: '30px', marginBottom: '15px' }}>Profil Organisateur</h3>
           <div style={twoColumnLayout}>
             <div style={inputGroupStyle}>
               <label htmlFor="organizerProfile.companyName" style={labelStyle}>Nom de l'entreprise</label>
@@ -561,9 +562,9 @@ if (id.startsWith('organizerProfile.location.')) {
                       padding: '10px',
                       cursor: 'pointer',
                       borderBottom: index < citySuggestions.length - 1 ? '1px solid var(--ccc-border-light)' : 'none',
-                      color: '#333'
+                      color: 'var(--ccc-text-primary)'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(124, 58, 237, 0.2)'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     {option.city}

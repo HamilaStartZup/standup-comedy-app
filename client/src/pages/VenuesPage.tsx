@@ -13,7 +13,7 @@ import {
   FRENCH_DEPARTMENTS,
   DEPARTMENTS_ORDER,
 } from '../utils/geographicMatching';
-import { primaryButtonStyle } from '../styles/theme';
+
 
 const VENUE_TYPES_WITH_ALL = [
   { value: '', label: 'Tous les types' },
@@ -192,7 +192,7 @@ const VenuesPage: React.FC = () => {
           />
           <button
             type="submit"
-            style={{ ...primaryButtonStyle, whiteSpace: 'nowrap' }}
+            style={{ padding: '10px 20px', borderRadius: 'var(--ccc-radius-sm)', border: 'none', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', fontSize: '1em', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s ease, transform 0.2s ease', boxShadow: 'var(--ccc-shadow-accent)', whiteSpace: 'nowrap' }}
           >
             Rechercher
           </button>

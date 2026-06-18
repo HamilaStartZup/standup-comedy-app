@@ -5,10 +5,10 @@ import { useAuth } from '../hooks/useAuth';
 import { listVenues } from '../services/api';
 import { normalizeFilters } from '../hooks/useVenues';
 import NotificationDropdown from './NotificationDropdown';
-import { theme } from '../styles/theme';
+
 
 const NAVBAR_CSS = `
-  .app-navbar { --primary: var(--ccc-accent); --text-primary: #1e293b; --text-secondary: var(--ccc-text-secondary); --bg-light: rgba(15, 23, 42, 0.05); --border: rgba(15, 23, 42, 0.08); --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1); box-sizing: border-box; }
+  .app-navbar { --primary: var(--ccc-accent); --text-primary: var(--ccc-text-primary); --text-secondary: var(--ccc-text-secondary); --bg-light: var(--ccc-bg-surface); --border: var(--ccc-border-subtle); --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1); box-sizing: border-box; }
   .app-navbar *, .app-navbar *::before, .app-navbar *::after { box-sizing: border-box; }
   .app-navbar { padding: 16px 0; padding-top: max(16px, env(safe-area-inset-top)); position: sticky; top: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 1000; border-bottom: 1px solid var(--border); font-family: 'Sora', -apple-system, BlinkMacSystemFont, sans-serif; }
   .app-navbar .navbar-container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
@@ -272,7 +272,7 @@ function Navbar() {
                   >
                     <span>{roleBadge.icon}</span>
                     <span className="user-name">{user.firstName} {user.lastName}</span>
-                    <span aria-hidden style={{ fontSize: '10px', color: theme.colors.text.muted }}>▼</span>
+                    <span aria-hidden style={{ fontSize: '10px', color: 'var(--ccc-text-muted)' }}>▼</span>
                   </button>
                   {isUserMenuOpen && (
                     <div className="user-dropdown" role="menu">

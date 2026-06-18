@@ -500,7 +500,7 @@ const MesSallesPage: React.FC = () => {
                                   <p style={{ margin: 0, color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
                                     📍 {first?.venue?.name} · {first?.venue?.city} · {groupBookings.length} date(s)
                                   </p>
-                                  <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.82em' }}>
+                                  <p style={{ margin: '4px 0 0 0', color: 'var(--ccc-text-faint)', fontSize: '0.82em' }}>
                                     {dateFirst} → {dateLast}
                                   </p>
                                 </div>

@@ -2,11 +2,11 @@ import React, { type CSSProperties } from 'react';
 import Modal from './Modal';
 import { IEvent } from '../types/event';
 import { getOrganizerName, translateEventStatus } from '../utils/eventHelpers';
-import { theme } from '../styles/theme';
+
 
 const fieldLabelStyle: CSSProperties = {
   fontSize: '0.8em',
-  color: theme.colors.text.muted,
+  color: 'var(--ccc-text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
   fontWeight: 600,
@@ -21,7 +21,7 @@ const fieldValueStyle: CSSProperties = {
 
 const sectionHeadingStyle: CSSProperties = {
   fontSize: '1.1em',
-  color: theme.colors.semantic.success,
+  color: 'var(--ccc-success)',
   marginBottom: '12px',
   marginTop: 0,
 };
@@ -91,7 +91,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
         }}
       >
         {/* Titre principal */}
-        <h2 style={{ fontSize: '1.6em', color: theme.colors.accent.primary, marginBottom: '20px', marginTop: 0, fontWeight: 700 }}>
+        <h2 style={{ fontSize: '1.6em', color: 'var(--ccc-accent)', marginBottom: '20px', marginTop: 0, fontWeight: 700 }}>
           {selectedEvent.title}
         </h2>
 
@@ -134,7 +134,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
           </div>
           <div>
             <div style={fieldLabelStyle}>Statut</div>
-            <div style={{ ...fieldValueStyle, color: theme.colors.accent.primary }}>
+            <div style={{ ...fieldValueStyle, color: 'var(--ccc-accent)' }}>
               {translateEventStatus(selectedEvent.status)}
             </div>
           </div>
@@ -152,9 +152,9 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
             style={{
               marginBottom: '20px',
               padding: '12px',
-              backgroundColor: theme.colors.bg.surface,
-              borderRadius: theme.radius.sm,
-              borderLeft: `3px solid ${theme.colors.accent.primary}`,
+              backgroundColor: 'var(--ccc-bg-surface)',
+              borderRadius: 'var(--ccc-radius-sm)',
+              borderLeft: '3px solid var(--ccc-accent)',
             }}
           >
             <div style={fieldLabelStyle}>Description</div>
@@ -173,7 +173,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
               gap: '16px',
               marginBottom: '24px',
               paddingBottom: '24px',
-              borderBottom: `1px solid ${theme.colors.border.subtle}`,
+              borderBottom: '1px solid var(--ccc-border-subtle)',
             }}
           >
             <div>
@@ -197,7 +197,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
             style={{
               marginBottom: '20px',
               padding: '12px',
-              backgroundColor: 'rgba(220, 53, 69, 0.15)',
+              backgroundColor: 'var(--ccc-card-cancelled-bg)',
               borderRadius: '8px',
               borderLeft: '3px solid var(--ccc-error)',
             }}
@@ -269,9 +269,9 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                       style={{
                         marginBottom: '12px',
                         padding: '10px',
-                        backgroundColor: isAbsent ? theme.colors.card.cancelled.bg : theme.colors.bg.surface,
-                        borderRadius: theme.radius.sm,
-                        border: isAbsent ? `1px solid ${theme.colors.card.cancelled.border}` : `1px solid ${theme.colors.border.subtle}`,
+                        backgroundColor: isAbsent ? 'var(--ccc-card-cancelled-bg)' : 'var(--ccc-bg-surface)',
+                        borderRadius: 'var(--ccc-radius-sm)',
+                        border: isAbsent ? '1px solid var(--ccc-card-cancelled-border)' : '1px solid var(--ccc-border-subtle)',
                       }}
                     >
                       <div
@@ -297,7 +297,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                           )}
                           <span
                             style={{
-                              color: theme.colors.accent.primary,
+                              color: 'var(--ccc-accent)',
                               cursor: 'pointer',
                               textDecoration: 'underline',
                               fontWeight: 'bold',
@@ -356,9 +356,9 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                           style={{
                             marginTop: '8px',
                             padding: '8px',
-                            backgroundColor: theme.colors.bg.surface,
-                            borderRadius: theme.radius.sm,
-                            border: `1px solid ${theme.colors.border.subtle}`,
+                            backgroundColor: 'var(--ccc-bg-surface)',
+                            borderRadius: 'var(--ccc-radius-sm)',
+                            border: '1px solid var(--ccc-border-subtle)',
                             borderLeft: '3px solid var(--ccc-error)',
                           }}
                         >
@@ -368,7 +368,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                           <div style={{ fontSize: '0.8em', color: '#0f172a', fontStyle: 'italic' }}>
                             "{absence.reason}"
                           </div>
-                          <div style={{ fontSize: '0.7em', color: theme.colors.text.muted, marginTop: '4px' }}>
+                          <div style={{ fontSize: '0.7em', color: 'var(--ccc-text-muted)', marginTop: '4px' }}>
                             Marqué le {new Date(absence.markedAt).toLocaleDateString('fr-FR')}
                           </div>
                         </div>
@@ -378,7 +378,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 })}
               </div>
             ) : (
-              <p style={{ color: theme.colors.text.muted }}>Aucun participant pour l'instant.</p>
+              <p style={{ color: 'var(--ccc-text-muted)' }}>Aucun participant pour l'instant.</p>
             )}
           </div>
         ) : (
@@ -395,17 +395,17 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
             justifyContent: 'center',
             marginTop: '28px',
             paddingTop: '24px',
-            borderTop: `1px solid ${theme.colors.border.subtle}`,
+            borderTop: '1px solid var(--ccc-border-subtle)',
           }}
         >
           <button
             onClick={onClose}
             style={{
               padding: '8px 24px',
-              borderRadius: theme.radius.sm,
+              borderRadius: 'var(--ccc-radius-sm)',
               border: 'none',
-              background: theme.colors.accent.gradient,
-              color: theme.colors.text.onAccent,
+              background: 'var(--ccc-accent-gradient)',
+              color: 'var(--ccc-text-on-accent)',
               fontWeight: 'bold',
               cursor: 'pointer',
               minWidth: '120px',

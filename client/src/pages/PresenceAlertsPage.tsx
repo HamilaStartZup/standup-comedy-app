@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import api, { acknowledgePresenceAlert, triggerPresenceCheck } from '../services/api';
 import { getErrorMessage, ErrorMessages, ConfirmMessages } from '../services/systemMessages';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { pageTitleStyle } from '../styles/theme';
+
 
 interface PresenceAlert {
   _id: string;
@@ -112,7 +112,10 @@ const PresenceAlertsPage = () => {
   };
 
   const titleStyle: CSSProperties = {
-    ...pageTitleStyle,
+    fontSize: '2.5em',
+    color: 'var(--ccc-accent)',
+    fontWeight: 700,
+    letterSpacing: '-0.02em',
     margin: 0,
   };
 
