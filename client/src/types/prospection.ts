@@ -14,6 +14,18 @@ export type ProspectedEmailStatus =
   | 'desinscrit'
   | 'repondu';
 
+export interface ProspectedVenueInput {
+  name: string;
+  type: ProspectedVenueType;
+  email?: string;
+  phone?: string;
+  street?: string;
+  city?: string;
+  postalCode?: string;
+  departement?: string;
+  website?: string;
+}
+
 export interface IProspectedVenue {
   _id: string;
   name: string;

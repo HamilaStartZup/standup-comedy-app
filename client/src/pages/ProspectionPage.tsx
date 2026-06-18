@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Navbar from '../components/Navbar';
 import Pagination from '../components/Pagination';
+import ProspectedVenueModal from '../components/ProspectedVenueModal';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import {
@@ -12,6 +13,9 @@ import {
   listProspectionRuns,
   clearProspectionRuns,
   listProspectedVenues,
+  createProspectedVenue,
+  updateProspectedVenue,
+  deleteProspectedVenue,
   enrichProspectionVenues,
 } from '../services/api';
 import { getErrorMessage } from '../services/systemMessages';
@@ -23,6 +27,8 @@ import {
   WEEKDAY_OPTIONS,
   type IProspectionConfig,
   type IProspectionRun,
+  type IProspectedVenue,
+  type ProspectedVenueInput,
   type ProspectedVenueType,
 } from '../types/prospection';
 
@@ -78,6 +84,9 @@ const ProspectionPage: React.FC = () => {
   const [venueSearch, setVenueSearch] = useState('');
   const [enriching, setEnriching] = useState(false);
   const [clearingRuns, setClearingRuns] = useState(false);
+  const [venueModalOpen, setVenueModalOpen] = useState(false);
+  const [editingVenue, setEditingVenue] = useState<IProspectedVenue | null>(null);
+  const [savingVenue, setSavingVenue] = useState(false);
 
   const { data: configData, isLoading: loadingConfig } = useQuery({
     queryKey: ['prospection-config'],
@@ -235,6 +244,55 @@ const ProspectionPage: React.FC = () => {
       showError(getErrorMessage(err, 'Enrichissement impossible'));
     } finally {
       setEnriching(false);
+    }
+  };
+
+  const openCreateVenueModal = () => {
+    setEditingVenue(null);
+    setVenueModalOpen(true);
+  };
+
+  const openEditVenueModal = (venue: IProspectedVenue) => {
+    setEditingVenue(venue);
+    setVenueModalOpen(true);
+  };
+
+  const closeVenueModal = () => {
+    if (savingVenue) return;
+    setVenueModalOpen(false);
+    setEditingVenue(null);
+  };
+
+  const handleSaveVenue = async (payload: ProspectedVenueInput) => {
+    setSavingVenue(true);
+    try {
+      if (editingVenue) {
+        await updateProspectedVenue(editingVenue._id, payload);
+        showSuccess('Lieu mis à jour');
+      } else {
+        await createProspectedVenue(payload);
+        showSuccess('Lieu ajouté');
+      }
+      setVenueModalOpen(false);
+      setEditingVenue(null);
+      queryClient.invalidateQueries({ queryKey: ['prospected-venues'] });
+    } catch (err) {
+      showError(getErrorMessage(err, 'Impossible d\'enregistrer le lieu'));
+    } finally {
+      setSavingVenue(false);
+    }
+  };
+
+  const handleDeleteVenue = async (venue: IProspectedVenue) => {
+    const confirmed = window.confirm(`Supprimer « ${venue.name} » ? Cette action est irréversible.`);
+    if (!confirmed) return;
+
+    try {
+      await deleteProspectedVenue(venue._id);
+      showSuccess('Lieu supprimé');
+      queryClient.invalidateQueries({ queryKey: ['prospected-venues'] });
+    } catch (err) {
+      showError(getErrorMessage(err, 'Impossible de supprimer le lieu'));
     }
   };
 
@@ -705,23 +763,40 @@ const ProspectionPage: React.FC = () => {
         <section style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>Lieux prospectés</h2>
-            <button
-              type="button"
-              onClick={handleEnrichVenues}
-              disabled={enriching}
-              style={{
-                padding: '10px 16px',
-                borderRadius: 10,
-                border: '1px solid var(--ccc-border-medium)',
-                background: 'var(--ccc-bg-surface)',
-                color: 'var(--ccc-text-primary)',
-                fontWeight: 600,
-                cursor: enriching ? 'wait' : 'pointer',
-                opacity: enriching ? 0.7 : 1,
-              }}
-            >
-              {enriching ? 'Enrichissement…' : 'Enrichir sites & emails (30)'}
-            </button>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={openCreateVenueModal}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: '#7c3aed',
+                  color: '#fff',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                + Ajouter un lieu
+              </button>
+              <button
+                type="button"
+                onClick={handleEnrichVenues}
+                disabled={enriching}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 10,
+                  border: '1px solid var(--ccc-border-medium)',
+                  background: 'var(--ccc-bg-surface)',
+                  color: 'var(--ccc-text-primary)',
+                  fontWeight: 600,
+                  cursor: enriching ? 'wait' : 'pointer',
+                  opacity: enriching ? 0.7 : 1,
+                }}
+              >
+                {enriching ? 'Enrichissement…' : 'Enrichir sites & emails (30)'}
+              </button>
+            </div>
           </div>
           <div
             style={{
@@ -800,6 +875,7 @@ const ProspectionPage: React.FC = () => {
                       <th style={{ padding: 8 }}>Site web</th>
                       <th style={{ padding: 8 }}>Statut</th>
                       <th style={{ padding: 8 }}>Source</th>
+                      <th style={{ padding: 8 }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -824,6 +900,38 @@ const ProspectionPage: React.FC = () => {
                         <td style={{ padding: 8, fontSize: 12, color: 'var(--ccc-text-muted)' }}>
                           {SOURCE_LABELS[v.source] ?? v.source}
                         </td>
+                        <td style={{ padding: 8, whiteSpace: 'nowrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => openEditVenueModal(v)}
+                            style={{
+                              padding: '4px 10px',
+                              marginRight: 6,
+                              borderRadius: 8,
+                              border: '1px solid var(--ccc-border-medium)',
+                              background: 'transparent',
+                              cursor: 'pointer',
+                              fontSize: 12,
+                            }}
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteVenue(v)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 8,
+                              border: '1px solid #dc2626',
+                              background: 'transparent',
+                              color: '#dc2626',
+                              cursor: 'pointer',
+                              fontSize: 12,
+                            }}
+                          >
+                            Supprimer
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -839,6 +947,15 @@ const ProspectionPage: React.FC = () => {
             </>
           )}
         </section>
+
+        <ProspectedVenueModal
+          open={venueModalOpen}
+          venue={editingVenue}
+          departments={departments}
+          saving={savingVenue}
+          onClose={closeVenueModal}
+          onSave={handleSaveVenue}
+        />
       </main>
     </div>
   );

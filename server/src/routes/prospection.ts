@@ -7,6 +7,9 @@ import {
   listProspectionRunsHandler,
   clearProspectionRunsHandler,
   listProspectedVenuesHandler,
+  createProspectedVenueHandler,
+  updateProspectedVenueHandler,
+  deleteProspectedVenueHandler,
   enrichProspectionVenuesHandler,
   prospectionUnsubscribeHandler,
 } from '../controllers/prospection';
@@ -24,6 +27,9 @@ router.get('/runs', authMiddleware, listProspectionRunsHandler);
 router.delete('/runs', authMiddleware, clearProspectionRunsHandler);
 router.get('/runs/:id', authMiddleware, getProspectionRunHandler);
 router.get('/venues', authMiddleware, listProspectedVenuesHandler);
+router.post('/venues', authMiddleware, createProspectedVenueHandler);
+router.patch('/venues/:id', authMiddleware, updateProspectedVenueHandler);
+router.delete('/venues/:id', authMiddleware, deleteProspectedVenueHandler);
 router.post('/enrich', authMiddleware, enrichProspectionVenuesHandler);
 
 export default router;

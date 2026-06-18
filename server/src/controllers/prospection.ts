@@ -11,8 +11,70 @@ import {
 import { executeProspectionRun } from '../services/prospection/prospectionService';
 import { rescheduleProspectionCron } from '../services/prospection/prospectionCronManager';
 import { enrichVenuesContacts } from '../services/prospection/venueRepository';
-import { validateProspectionUnsubscribeToken } from '../utils/prospectionHelpers';
+import {
+  isValidEmail,
+  normalizePhoneFR,
+  validateProspectionUnsubscribeToken,
+} from '../utils/prospectionHelpers';
 import { FRENCH_DEPARTMENTS } from '../constants/frenchDepartments';
+import { getDepartmentFromPostalCode } from '../utils/cityMapping';
+import type { ProspectedVenueType } from '../models/ProspectedVenue';
+
+const VENUE_TYPES: ProspectedVenueType[] = [
+  'theatre', 'cinema', 'salle_spectacle', 'mjc', 'centre_culturel', 'centre_social', 'autre',
+];
+
+function parseOptionalString(value: unknown): string | null {
+  if (value == null) return null;
+  const trimmed = String(value).trim();
+  return trimmed || null;
+}
+
+function buildVenuePayload(body: Record<string, unknown>) {
+  const name = String(body.name ?? '').trim();
+  if (!name) throw new Error('Le nom est requis');
+
+  const type = String(body.type ?? '');
+  if (!VENUE_TYPES.includes(type as ProspectedVenueType)) {
+    throw new Error('Type de lieu invalide');
+  }
+
+  const email = parseOptionalString(body.email)?.toLowerCase() ?? null;
+  if (email && !isValidEmail(email)) throw new Error('Email invalide');
+
+  const phone = normalizePhoneFR(parseOptionalString(body.phone));
+  const street = parseOptionalString(body.street) ?? undefined;
+  const city = parseOptionalString(body.city) ?? undefined;
+  const postalCode = parseOptionalString(body.postalCode) ?? undefined;
+  const departementInput = parseOptionalString(body.departement) ?? '';
+  const departement =
+    (postalCode ? getDepartmentFromPostalCode(postalCode) : null) ?? (departementInput || undefined);
+  const departementName = departement ? FRENCH_DEPARTMENTS[departement] : undefined;
+  const website = parseOptionalString(body.website) ?? null;
+
+  return {
+    name,
+    type: type as ProspectedVenueType,
+    email,
+    phone,
+    website,
+    address: {
+      street,
+      city,
+      postalCode,
+      departement,
+      departementName,
+    },
+  };
+}
+
+async function assertEmailAvailable(email: string | null, excludeId?: string): Promise<void> {
+  if (!email) return;
+  const filter: Record<string, unknown> = { email };
+  if (excludeId) filter._id = { $ne: excludeId };
+  const existing = await ProspectedVenueModel.findOne(filter);
+  if (existing) throw new Error('Cet email est déjà utilisé par un autre lieu');
+}
 
 function assertSuperAdmin(req: AuthRequest, res: Response): boolean {
   if (req.user?.role !== 'SUPER_ADMIN') {
@@ -182,6 +244,83 @@ export const prospectionUnsubscribeHandler = async (req: AuthRequest, res: Respo
       <p>Vous ne recevrez plus d'emails de prospection de Connect Comedy Club.</p>
     </body></html>
   `);
+};
+
+export const createProspectedVenueHandler = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!assertSuperAdmin(req, res)) return;
+
+  try {
+    const payload = buildVenuePayload(req.body ?? {});
+    await assertEmailAvailable(payload.email);
+
+    const venue = await ProspectedVenueModel.create({
+      ...payload,
+      source: 'manuel',
+      emailStatus: 'non_envoye',
+      emailHistory: [],
+      optOut: false,
+    });
+
+    res.status(201).json({ venue });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur';
+    const status = message.includes('déjà utilisé') ? 409 : 400;
+    res.status(status).json({ message });
+  }
+};
+
+export const updateProspectedVenueHandler = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!assertSuperAdmin(req, res)) return;
+
+  try {
+    const payload = buildVenuePayload(req.body ?? {});
+    await assertEmailAvailable(payload.email, req.params.id);
+
+    const $set: Record<string, unknown> = {
+      name: payload.name,
+      type: payload.type,
+      address: payload.address,
+    };
+    const $unset: Record<string, string> = {};
+
+    if (payload.email) $set.email = payload.email;
+    else $unset.email = '';
+
+    if (payload.phone) $set.phone = payload.phone;
+    else $unset.phone = '';
+
+    if (payload.website) $set.website = payload.website;
+    else $unset.website = '';
+
+    const venue = await ProspectedVenueModel.findByIdAndUpdate(
+      req.params.id,
+      { $set, ...(Object.keys($unset).length > 0 ? { $unset } : {}) },
+      { new: true, runValidators: true }
+    );
+
+    if (!venue) {
+      res.status(404).json({ message: 'Lieu introuvable' });
+      return;
+    }
+
+    res.json({ venue });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur';
+    const status = message.includes('déjà utilisé') ? 409 : 400;
+    res.status(status).json({ message });
+  }
+};
+
+export const deleteProspectedVenueHandler = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!assertSuperAdmin(req, res)) return;
+
+  const result = await ProspectedVenueModel.findByIdAndDelete(req.params.id);
+  if (!result) {
+    res.status(404).json({ message: 'Lieu introuvable' });
+    return;
+  }
+
+  res.json({ message: 'Lieu supprimé' });
 };
 
 export const enrichProspectionVenuesHandler = async (req: AuthRequest, res: Response): Promise<void> => {

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { IVenue, IVenueBooking, IVenueBlockedDate } from '../types/venue';
-import type { IProspectionConfig, IProspectionRun, IProspectedVenue } from '../types/prospection';
+import type { IProspectionConfig, IProspectionRun, IProspectedVenue, ProspectedVenueInput } from '../types/prospection';
 
 // Configuration automatique de l'URL de base selon l'environnement
 const baseURL =
@@ -684,6 +684,21 @@ export const listProspectedVenues = async (params: {
     venues: IProspectedVenue[];
     pagination: { page: number; limit: number; total: number; totalPages: number };
   };
+};
+
+export const createProspectedVenue = async (payload: ProspectedVenueInput) => {
+  const res = await api.post('/prospection/venues', payload);
+  return res.data as { venue: IProspectedVenue };
+};
+
+export const updateProspectedVenue = async (id: string, payload: ProspectedVenueInput) => {
+  const res = await api.patch(`/prospection/venues/${id}`, payload);
+  return res.data as { venue: IProspectedVenue };
+};
+
+export const deleteProspectedVenue = async (id: string) => {
+  const res = await api.delete(`/prospection/venues/${id}`);
+  return res.data as { message: string };
 };
 
 export const enrichProspectionVenues = async (payload?: {
