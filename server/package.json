@@ -8,6 +8,7 @@
     "dev": "nodemon",
     "seed:super-admin": "ts-node scripts/seedSuperAdmin.ts",
     "import:prospected-venues": "ts-node scripts/importManualProspectedVenues.ts",
+    "update:prospected-venues-csv": "ts-node scripts/updateProspectedVenuesFromCsv.ts",
     "generate-secret": "node scripts/generate-secret.js"
   },
   "keywords": [],
