@@ -13,6 +13,12 @@ import {
   enrichProspectionVenuesHandler,
   prospectionUnsubscribeHandler,
 } from '../controllers/prospection';
+import {
+  getProspectionInboxStatusHandler,
+  listProspectionInboxHandler,
+  syncProspectionInboxHandler,
+  markProspectionInboxRepliedHandler,
+} from '../controllers/prospectionInbox';
 import { authMiddleware } from '../middleware/auth';
 
 const router = express.Router();
@@ -31,5 +37,9 @@ router.post('/venues', authMiddleware, createProspectedVenueHandler);
 router.patch('/venues/:id', authMiddleware, updateProspectedVenueHandler);
 router.delete('/venues/:id', authMiddleware, deleteProspectedVenueHandler);
 router.post('/enrich', authMiddleware, enrichProspectionVenuesHandler);
+router.get('/inbox/status', authMiddleware, getProspectionInboxStatusHandler);
+router.get('/inbox', authMiddleware, listProspectionInboxHandler);
+router.post('/inbox/sync', authMiddleware, syncProspectionInboxHandler);
+router.post('/inbox/:id/mark-replied', authMiddleware, markProspectionInboxRepliedHandler);
 
 export default router;

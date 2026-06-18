@@ -17,20 +17,42 @@ import {
   updateProspectedVenue,
   deleteProspectedVenue,
   enrichProspectionVenues,
+  getProspectionInboxStatus,
+  listProspectionInbox,
+  syncProspectionInbox,
+  markProspectionInboxReplied,
 } from '../services/api';
 import { getErrorMessage } from '../services/systemMessages';
 import { pageTitleStyle } from '../styles/theme';
 import {
   EMAIL_STATUS_LABELS,
+  EMAIL_STATUS_OPTIONS,
   SOURCE_LABELS,
   VENUE_TYPE_OPTIONS,
   WEEKDAY_OPTIONS,
   type IProspectionConfig,
+  type IProspectionInboxMessage,
   type IProspectionRun,
   type IProspectedVenue,
+  type ProspectedEmailStatus,
   type ProspectedVenueInput,
   type ProspectedVenueType,
 } from '../types/prospection';
+
+function venueToInput(venue: IProspectedVenue): ProspectedVenueInput {
+  return {
+    name: venue.name,
+    type: venue.type,
+    email: venue.email ?? '',
+    phone: venue.phone ?? '',
+    street: venue.address.street ?? '',
+    city: venue.address.city ?? '',
+    postalCode: venue.address.postalCode ?? '',
+    departement: venue.address.departement ?? '',
+    website: venue.website ?? '',
+    emailStatus: venue.emailStatus,
+  };
+}
 
 const cardStyle: React.CSSProperties = {
   background: 'var(--ccc-bg-elevated)',
@@ -87,6 +109,10 @@ const ProspectionPage: React.FC = () => {
   const [venueModalOpen, setVenueModalOpen] = useState(false);
   const [editingVenue, setEditingVenue] = useState<IProspectedVenue | null>(null);
   const [savingVenue, setSavingVenue] = useState(false);
+  const [updatingVenueStatusId, setUpdatingVenueStatusId] = useState<string | null>(null);
+  const [inboxUnhandledOnly, setInboxUnhandledOnly] = useState(true);
+  const [syncingInbox, setSyncingInbox] = useState(false);
+  const [markingInboxId, setMarkingInboxId] = useState<string | null>(null);
 
   const { data: configData, isLoading: loadingConfig } = useQuery({
     queryKey: ['prospection-config'],
@@ -133,6 +159,18 @@ const ProspectionPage: React.FC = () => {
       hasAnyContact: venueContactFilter === 'with_email_and_phone' ? 'true' : undefined,
       search: venueSearch || undefined,
     }),
+    enabled: isSuperAdmin,
+  });
+
+  const { data: inboxStatus } = useQuery({
+    queryKey: ['prospection-inbox-status'],
+    queryFn: getProspectionInboxStatus,
+    enabled: isSuperAdmin,
+  });
+
+  const { data: inboxData, isLoading: loadingInbox, refetch: refetchInbox } = useQuery({
+    queryKey: ['prospection-inbox', inboxUnhandledOnly],
+    queryFn: () => listProspectionInbox({ page: 1, limit: 20, unhandledOnly: inboxUnhandledOnly }),
     enabled: isSuperAdmin,
   });
 
@@ -280,6 +318,53 @@ const ProspectionPage: React.FC = () => {
       showError(getErrorMessage(err, 'Impossible d\'enregistrer le lieu'));
     } finally {
       setSavingVenue(false);
+    }
+  };
+
+  const handleVenueStatusChange = async (venue: IProspectedVenue, emailStatus: ProspectedEmailStatus) => {
+    if (emailStatus === venue.emailStatus) return;
+
+    setUpdatingVenueStatusId(venue._id);
+    try {
+      await updateProspectedVenue(venue._id, { ...venueToInput(venue), emailStatus });
+      queryClient.invalidateQueries({ queryKey: ['prospected-venues'] });
+      showSuccess(`Statut mis à jour : ${EMAIL_STATUS_LABELS[emailStatus]}`);
+    } catch (err) {
+      showError(getErrorMessage(err, 'Impossible de mettre à jour le statut'));
+    } finally {
+      setUpdatingVenueStatusId(null);
+    }
+  };
+
+  const handleSyncInbox = async () => {
+    setSyncingInbox(true);
+    try {
+      const result = await syncProspectionInbox();
+      showSuccess(result.message);
+      await refetchInbox();
+      queryClient.invalidateQueries({ queryKey: ['prospected-venues'] });
+    } catch (err) {
+      showError(getErrorMessage(err, 'Synchronisation impossible'));
+    } finally {
+      setSyncingInbox(false);
+    }
+  };
+
+  const handleMarkInboxReplied = async (message: IProspectionInboxMessage) => {
+    setMarkingInboxId(message._id);
+    try {
+      const result = await markProspectionInboxReplied(message._id);
+      if (result.venue) {
+        showSuccess(`Réponse traitée — ${message.venue?.name ?? 'lieu'} marqué comme répondu`);
+      } else {
+        showSuccess('Message marqué comme traité (aucun lieu correspondant en base)');
+      }
+      await refetchInbox();
+      queryClient.invalidateQueries({ queryKey: ['prospected-venues'] });
+    } catch (err) {
+      showError(getErrorMessage(err, 'Impossible de marquer la réponse'));
+    } finally {
+      setMarkingInboxId(null);
     }
   };
 
@@ -759,6 +844,140 @@ const ProspectionPage: React.FC = () => {
           )}
         </section>
 
+        {/* Réponses boîte prospection */}
+        <section style={cardStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+            <div>
+              <h2 style={{ margin: '0 0 6px', fontSize: 18 }}>Réponses prospection</h2>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--ccc-text-muted)' }}>
+                Synchronisation IMAP de {inboxStatus?.imapUser ?? 'contact@connectcomedyclub.com'}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={inboxUnhandledOnly}
+                  onChange={(e) => setInboxUnhandledOnly(e.target.checked)}
+                />
+                Non traitées uniquement
+              </label>
+              {inboxStatus?.webmailUrl && (
+                <a
+                  href={inboxStatus.webmailUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 10,
+                    border: '1px solid var(--ccc-border-medium)',
+                    color: 'var(--ccc-text-primary)',
+                    textDecoration: 'none',
+                    fontSize: 13,
+                  }}
+                >
+                  Ouvrir le webmail OVH
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={handleSyncInbox}
+                disabled={syncingInbox || !inboxStatus?.configured}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: '#7c3aed',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: syncingInbox || !inboxStatus?.configured ? 'not-allowed' : 'pointer',
+                  opacity: syncingInbox || !inboxStatus?.configured ? 0.6 : 1,
+                }}
+              >
+                {syncingInbox ? 'Synchronisation…' : 'Actualiser les réponses'}
+              </button>
+            </div>
+          </div>
+
+          {!inboxStatus?.configured ? (
+            <p style={{ margin: 0, fontSize: 13, color: '#d97706' }}>
+              Boîte IMAP non configurée côté serveur. Ajoutez{' '}
+              <code>PROSPECTION_IMAP_USER</code> et <code>PROSPECTION_IMAP_PASS</code> dans le fichier{' '}
+              <code>.env</code> du serveur (compte OVH contact@connectcomedyclub.com).
+            </p>
+          ) : loadingInbox ? (
+            <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement des réponses…</p>
+          ) : (inboxData?.messages.length ?? 0) === 0 ? (
+            <p style={{ color: 'var(--ccc-text-muted)' }}>
+              Aucune réponse importée pour le moment. Cliquez sur « Actualiser les réponses » pour synchroniser la boîte OVH.
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gap: 12 }}>
+              {inboxData?.messages.map((message) => (
+                <div
+                  key={message._id}
+                  style={{
+                    border: '1px solid var(--ccc-border-subtle)',
+                    borderRadius: 12,
+                    padding: 14,
+                    background: message.handled ? 'var(--ccc-bg-surface)' : 'rgba(124, 58, 237, 0.06)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>
+                        {message.venue?.name ?? message.fromName ?? message.from}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--ccc-text-muted)' }}>
+                        {message.from}
+                        {message.venue ? ` · Lieu identifié` : ' · Expéditeur non reconnu en base'}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--ccc-text-muted)' }}>
+                      {new Date(message.receivedAt).toLocaleString('fr-FR')}
+                    </div>
+                  </div>
+                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>{message.subject}</div>
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--ccc-text-secondary)', lineHeight: 1.5 }}>
+                    {message.snippet || '—'}
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {message.venue && (
+                      <span style={{ fontSize: 12, color: 'var(--ccc-text-muted)' }}>
+                        Statut actuel : {EMAIL_STATUS_LABELS[message.venue.emailStatus as ProspectedEmailStatus] ?? message.venue.emailStatus}
+                      </span>
+                    )}
+                    {!message.handled && (
+                      <button
+                        type="button"
+                        onClick={() => handleMarkInboxReplied(message)}
+                        disabled={markingInboxId === message._id}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 8,
+                          border: 'none',
+                          background: '#059669',
+                          color: '#fff',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: markingInboxId === message._id ? 'wait' : 'pointer',
+                          opacity: markingInboxId === message._id ? 0.7 : 1,
+                        }}
+                      >
+                        {markingInboxId === message._id ? 'Traitement…' : 'Marquer comme répondu'}
+                      </button>
+                    )}
+                    {message.handled && (
+                      <span style={{ fontSize: 12, color: '#059669', fontWeight: 600 }}>Traité</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
         {/* Tableau lieux */}
         <section style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -896,7 +1115,28 @@ const ProspectionPage: React.FC = () => {
                             <span style={{ color: '#94a3b8' }}>—</span>
                           )}
                         </td>
-                        <td style={{ padding: 8 }}>{EMAIL_STATUS_LABELS[v.emailStatus]}</td>
+                        <td style={{ padding: 8 }}>
+                          <select
+                            value={v.emailStatus}
+                            disabled={updatingVenueStatusId === v._id}
+                            onChange={(e) => handleVenueStatusChange(v, e.target.value as ProspectedEmailStatus)}
+                            style={{
+                              padding: '6px 8px',
+                              borderRadius: 8,
+                              border: '1px solid var(--ccc-border-medium)',
+                              background: 'var(--ccc-bg-surface)',
+                              color: 'var(--ccc-text-primary)',
+                              fontSize: 12,
+                              cursor: updatingVenueStatusId === v._id ? 'wait' : 'pointer',
+                              minWidth: 120,
+                            }}
+                            title="Changer le statut email"
+                          >
+                            {EMAIL_STATUS_OPTIONS.map(({ value, label }) => (
+                              <option key={value} value={value}>{label}</option>
+                            ))}
+                          </select>
+                        </td>
                         <td style={{ padding: 8, fontSize: 12, color: 'var(--ccc-text-muted)' }}>
                           {SOURCE_LABELS[v.source] ?? v.source}
                         </td>

@@ -24,6 +24,7 @@ export interface ProspectedVenueInput {
   postalCode?: string;
   departement?: string;
   website?: string;
+  emailStatus?: ProspectedEmailStatus;
 }
 
 export interface IProspectedVenue {
@@ -114,6 +115,10 @@ export const EMAIL_STATUS_LABELS: Record<ProspectedEmailStatus, string> = {
   repondu: 'Répondu',
 };
 
+export const EMAIL_STATUS_OPTIONS: { value: ProspectedEmailStatus; label: string }[] = (
+  Object.entries(EMAIL_STATUS_LABELS) as [ProspectedEmailStatus, string][]
+).map(([value, label]) => ({ value, label }));
+
 export const SOURCE_LABELS: Record<string, string> = {
   insee_bpe: 'BPE INSEE',
   openstreetmap: 'OpenStreetMap',
@@ -132,3 +137,28 @@ export const WEEKDAY_OPTIONS = [
   { value: 6, label: 'Sam' },
   { value: 0, label: 'Dim' },
 ];
+
+export interface IProspectionInboxVenue {
+  _id: string;
+  name: string;
+  email?: string | null;
+  emailStatus?: string | null;
+}
+
+export interface IProspectionInboxMessage {
+  _id: string;
+  messageId: string;
+  from: string;
+  fromName?: string | null;
+  subject: string;
+  snippet: string;
+  receivedAt: string;
+  handled: boolean;
+  venue: IProspectionInboxVenue | null;
+}
+
+export interface IProspectionInboxStatus {
+  configured: boolean;
+  webmailUrl: string;
+  imapUser: string | null;
+}

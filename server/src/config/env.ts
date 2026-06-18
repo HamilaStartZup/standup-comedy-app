@@ -68,6 +68,17 @@ export const config = {
     messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID || '',
     verifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID || '',
   },
+
+  prospection: {
+    imap: {
+      host: process.env.PROSPECTION_IMAP_HOST || 'ssl0.ovh.net',
+      port: parseInt(process.env.PROSPECTION_IMAP_PORT || '993', 10),
+      user: process.env.PROSPECTION_IMAP_USER || '',
+      pass: process.env.PROSPECTION_IMAP_PASS || '',
+      mailbox: process.env.PROSPECTION_IMAP_MAILBOX || 'INBOX',
+    },
+    webmailUrl: process.env.PROSPECTION_WEBMAIL_URL || 'https://mail.ovh.net/',
+  },
 };
 
 // Validation de la configuration

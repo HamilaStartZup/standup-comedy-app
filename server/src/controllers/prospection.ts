@@ -18,7 +18,11 @@ import {
 } from '../utils/prospectionHelpers';
 import { FRENCH_DEPARTMENTS } from '../constants/frenchDepartments';
 import { getDepartmentFromPostalCode } from '../utils/cityMapping';
-import type { ProspectedVenueType } from '../models/ProspectedVenue';
+import type { ProspectedEmailStatus, ProspectedVenueType } from '../models/ProspectedVenue';
+
+const EMAIL_STATUSES: ProspectedEmailStatus[] = [
+  'non_envoye', 'envoye', 'echec', 'desinscrit', 'repondu',
+];
 
 const VENUE_TYPES: ProspectedVenueType[] = [
   'theatre', 'cinema', 'salle_spectacle', 'mjc', 'centre_culturel', 'centre_social', 'autre',
@@ -291,6 +295,16 @@ export const updateProspectedVenueHandler = async (req: AuthRequest, res: Respon
 
     if (payload.website) $set.website = payload.website;
     else $unset.website = '';
+
+    if (req.body.emailStatus !== undefined) {
+      const status = String(req.body.emailStatus) as ProspectedEmailStatus;
+      if (!EMAIL_STATUSES.includes(status)) {
+        res.status(400).json({ message: 'Statut email invalide' });
+        return;
+      }
+      $set.emailStatus = status;
+      $set.optOut = status === 'desinscrit';
+    }
 
     const venue = await ProspectedVenueModel.findByIdAndUpdate(
       req.params.id,

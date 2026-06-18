@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   VENUE_TYPE_OPTIONS,
+  EMAIL_STATUS_OPTIONS,
   type IProspectedVenue,
   type ProspectedVenueInput,
   type ProspectedVenueType,
@@ -47,6 +48,7 @@ function venueToForm(venue: IProspectedVenue): ProspectedVenueInput {
     postalCode: venue.address.postalCode ?? '',
     departement: venue.address.departement ?? '',
     website: venue.website ?? '',
+    emailStatus: venue.emailStatus,
   };
 }
 
@@ -208,6 +210,21 @@ const ProspectedVenueModal: React.FC<ProspectedVenueModalProps> = ({
               placeholder="https://..."
             />
           </div>
+
+          {venue && (
+            <div>
+              <label style={labelStyle}>Statut email</label>
+              <select
+                value={form.emailStatus ?? venue.emailStatus}
+                onChange={(e) => setForm({ ...form, emailStatus: e.target.value as ProspectedVenueInput['emailStatus'] })}
+                style={inputStyle}
+              >
+                {EMAIL_STATUS_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
             <button

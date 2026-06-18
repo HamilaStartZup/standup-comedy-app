@@ -1,6 +1,13 @@
 import axios from 'axios';
 import type { IVenue, IVenueBooking, IVenueBlockedDate } from '../types/venue';
-import type { IProspectionConfig, IProspectionRun, IProspectedVenue, ProspectedVenueInput } from '../types/prospection';
+import type {
+  IProspectionConfig,
+  IProspectionInboxMessage,
+  IProspectionInboxStatus,
+  IProspectionRun,
+  IProspectedVenue,
+  ProspectedVenueInput,
+} from '../types/prospection';
 
 // Configuration automatique de l'URL de base selon l'environnement
 const baseURL =
@@ -710,6 +717,48 @@ export const enrichProspectionVenues = async (payload?: {
     message: string;
     websitesFound: number;
     emailsEnriched: number;
+  };
+};
+
+export const getProspectionInboxStatus = async () => {
+  const res = await api.get('/prospection/inbox/status');
+  return res.data as IProspectionInboxStatus;
+};
+
+export const listProspectionInbox = async (params?: {
+  page?: number;
+  limit?: number;
+  unhandledOnly?: boolean;
+}) => {
+  const qs = new URLSearchParams();
+  if (params?.page) qs.set('page', String(params.page));
+  if (params?.limit) qs.set('limit', String(params.limit));
+  if (params?.unhandledOnly) qs.set('unhandledOnly', 'true');
+  const res = await api.get(`/prospection/inbox?${qs.toString()}`);
+  return res.data as {
+    messages: IProspectionInboxMessage[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+    configured: boolean;
+    webmailUrl: string;
+  };
+};
+
+export const syncProspectionInbox = async () => {
+  const res = await api.post('/prospection/inbox/sync');
+  return res.data as {
+    message: string;
+    imported: number;
+    skipped: number;
+    matched: number;
+    errors: string[];
+  };
+};
+
+export const markProspectionInboxReplied = async (messageId: string) => {
+  const res = await api.post(`/prospection/inbox/${messageId}/mark-replied`);
+  return res.data as {
+    message: { _id: string; handled: boolean };
+    venue: { _id: string; emailStatus: string } | null;
   };
 };
 
