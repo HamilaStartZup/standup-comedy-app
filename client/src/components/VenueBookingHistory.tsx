@@ -21,7 +21,7 @@ const VenueBookingHistory: React.FC<Props> = ({ bookings }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {sortedBookings.map((b) => {
-        const color = STATUS_CONFIG[b.status]?.color ?? '#aaa';
+        const color = STATUS_CONFIG[b.status]?.color ?? 'var(--ccc-text-muted)';
         const date = new Date(b.requestedDate).toLocaleDateString('fr-FR', {
           weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
         });
@@ -41,7 +41,7 @@ const VenueBookingHistory: React.FC<Props> = ({ bookings }) => {
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13, color: '#fff' }}>{date}</div>
                 {b.startTime && b.endTime && (
-                  <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>
+                  <div style={{ fontSize: 12, color: 'var(--ccc-text-muted)', marginTop: 2 }}>
                     {b.startTime} – {b.endTime}
                   </div>
                 )}

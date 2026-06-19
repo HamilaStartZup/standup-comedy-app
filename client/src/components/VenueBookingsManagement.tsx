@@ -4,15 +4,16 @@ import { listVenueBookings, updateBookingStatus, updateBookingGroupStatus, cance
 import { SuccessMessages, ErrorMessages, getErrorMessage } from '../services/systemMessages';
 import { useAlert } from '../hooks/useAlert';
 import BookingStatusBadge from './BookingStatusBadge';
+import ConfirmDialog from './ConfirmDialog';
 import type { IVenueBooking } from '../types/venue';
 import type { IUserData } from '../types/user';
 
 const ROLE_STYLES: Record<string, { bg: string; fg: string; label: string }> = {
   ORGANIZER: { bg: 'rgba(255,140,0,0.15)', fg: '#ff8c00', label: 'Organisateur' },
   COMEDIAN: { bg: 'rgba(168,85,247,0.15)', fg: '#a855f7', label: 'Humoriste' },
-  LIEU: { bg: 'rgba(59,130,246,0.15)', fg: '#3b82f6', label: 'Lieu' },
+  LIEU: { bg: 'rgba(59,130,246,0.15)', fg: 'var(--ccc-info)', label: 'Lieu' },
   SPECTATOR: { bg: 'rgba(34,197,94,0.15)', fg: '#22c55e', label: 'Spectateur' },
-  SUPER_ADMIN: { bg: 'rgba(239,68,68,0.15)', fg: '#ef4444', label: 'Admin' },
+  SUPER_ADMIN: { bg: 'rgba(239,68,68,0.15)', fg: 'var(--ccc-error)', label: 'Admin' },
 };
 
 const RequesterInfoBlock: React.FC<{ requester: IUserData }> = ({ requester }) => {
@@ -21,21 +22,21 @@ const RequesterInfoBlock: React.FC<{ requester: IUserData }> = ({ requester }) =
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#bbb' }}>
       <div>
-        <span style={{ color: '#888' }}>✉ </span>
-        <a href={`mailto:${requester.email}`} style={{ color: '#7c3aed', textDecoration: 'none' }}>
+        <span style={{ color: 'rgba(255,255,255,0.53)' }}>✉ </span>
+        <a href={`mailto:${requester.email}`} style={{ color: 'var(--ccc-accent)', textDecoration: 'none' }}>
           {requester.email}
         </a>
       </div>
       {phone && (
         <div>
-          <span style={{ color: '#888' }}>☎ </span>
-          <a href={`tel:${phone}`} style={{ color: '#7c3aed', textDecoration: 'none' }}>
+          <span style={{ color: 'rgba(255,255,255,0.53)' }}>☎ </span>
+          <a href={`tel:${phone}`} style={{ color: 'var(--ccc-accent)', textDecoration: 'none' }}>
             {phone}
           </a>
         </div>
       )}
       {company && (
-        <div style={{ fontStyle: 'italic', color: '#888' }}>🏢 {company}</div>
+        <div style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.53)' }}>🏢 {company}</div>
       )}
     </div>
   );
@@ -59,7 +60,7 @@ const RequesterAvatar: React.FC<{ requester: IUserData; size?: number }> = ({ re
         height: size,
         borderRadius: '50%',
         background: 'rgba(124, 58, 237,0.2)',
-        color: '#7c3aed',
+        color: 'var(--ccc-accent)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -75,7 +76,7 @@ const RequesterAvatar: React.FC<{ requester: IUserData; size?: number }> = ({ re
 
 const RoleBadge: React.FC<{ role?: string }> = ({ role }) => {
   if (!role) return null;
-  const s = ROLE_STYLES[role] ?? { bg: 'rgba(255,255,255,0.1)', fg: '#ccc', label: role };
+  const s = ROLE_STYLES[role] ?? { bg: 'rgba(255,255,255,0.1)', fg: 'rgba(255,255,255,0.8)', label: role };
   return (
     <span
       style={{
@@ -113,6 +114,8 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [ownerResponse, setOwnerResponse] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  // Réservation dont l'annulation par le lieu attend confirmation
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // État pour la gestion de lots
@@ -157,7 +160,6 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
   };
 
   const handleCancelByOwner = async (bookingId: string) => {
-    if (!window.confirm('Annuler cette réservation acceptée ?')) return;
     setActionLoading(bookingId);
     try {
       await cancelBookingByOwner(bookingId);
@@ -234,7 +236,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>
+      <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.53)' }}>
         Chargement des réservations...
       </div>
     );
@@ -242,7 +244,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
 
   if (error) {
     return (
-      <div style={{ textAlign: 'center', padding: 40, color: '#ef4444' }}>
+      <div style={{ textAlign: 'center', padding: 40, color: 'var(--ccc-error)' }}>
         Impossible de charger les réservations.
       </div>
     );
@@ -254,7 +256,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
         style={{
           textAlign: 'center',
           padding: '48px 24px',
-          color: '#888',
+          color: 'rgba(255,255,255,0.53)',
           border: '1px dashed rgba(255,255,255,0.1)',
           borderRadius: 16,
         }}
@@ -293,7 +295,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                 background: isActive
                   ? 'var(--ccc-accent-gradient)'
                   : 'rgba(255,255,255,0.07)',
-                color: isActive ? '#fff' : '#888',
+                color: isActive ? 'var(--ccc-text-on-accent)' : 'rgba(255,255,255,0.53)',
                 outline: isActive ? 'none' : '1px solid rgba(255,255,255,0.1)',
                 transition: 'all 0.15s',
               }}
@@ -325,7 +327,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                 Série · {groupBookings.length} réservation(s)
               </span>
               {firstBooking.requester && (
-                <span style={{ fontSize: 13, color: '#aaa' }}>
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.67)' }}>
                   {firstBooking.requester.firstName} {firstBooking.requester.lastName}
                 </span>
               )}
@@ -358,7 +360,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                       title="Inclure dans l'acceptation"
                     />
                   )}
-                  <span style={{ color: '#ddd', flex: 1 }}>
+                  <span style={{ color: 'var(--ccc-text-subtle)', flex: 1 }}>
                     {new Date(b.requestedDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                     {' · '}{b.startTime} – {b.endTime}
                   </span>
@@ -368,7 +370,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
             </div>
 
             {firstBooking.message && (
-              <p style={{ margin: '0 0 12px 0', fontSize: 13, color: '#ccc', background: 'rgba(255,255,255,0.04)', padding: '8px 12px', borderRadius: 8, borderLeft: '3px solid rgba(255,165,0,0.4)' }}>
+              <p style={{ margin: '0 0 12px 0', fontSize: 13, color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.04)', padding: '8px 12px', borderRadius: 8, borderLeft: '3px solid rgba(255,165,0,0.4)' }}>
                 "{firstBooking.message}"
               </p>
             )}
@@ -376,32 +378,32 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
             {hasPending && (
               isRespondingThisGroup ? (
                 <div>
-                  <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 6px 0' }}>Cochez les dates à inclure dans l'acceptation (décocher = refuser).</p>
+                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.67)', margin: '0 0 6px 0' }}>Cochez les dates à inclure dans l'acceptation (décocher = refuser).</p>
                   <textarea
                     value={groupOwnerResponse}
                     onChange={(e) => setGroupOwnerResponse(e.target.value)}
                     placeholder="Message optionnel..."
                     rows={2}
-                    style={{ width: '100%', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 13, marginBottom: 10, boxSizing: 'border-box', resize: 'vertical' }}
+                    style={{ width: '100%', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '8px 12px', color: 'var(--ccc-text-on-accent)', fontSize: 13, marginBottom: 10, boxSizing: 'border-box', resize: 'vertical' }}
                   />
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <button
                       onClick={() => handleGroupAction(groupId, 'ACCEPTED')}
                       disabled={groupActionLoading === groupId}
-                      style={{ padding: '8px 18px', background: 'rgba(16,185,129,0.2)', color: '#10b981', border: '1px solid rgba(16,185,129,0.4)', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                      style={{ padding: '8px 18px', background: 'rgba(16,185,129,0.2)', color: 'var(--ccc-success)', border: '1px solid rgba(16,185,129,0.4)', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
                     >
                       ✓ Accepter le lot
                     </button>
                     <button
                       onClick={() => handleGroupAction(groupId, 'REFUSED')}
                       disabled={groupActionLoading === groupId}
-                      style={{ padding: '8px 18px', background: 'rgba(239,68,68,0.2)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                      style={{ padding: '8px 18px', background: 'rgba(239,68,68,0.2)', color: 'var(--ccc-error)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
                     >
                       ✕ Refuser tout
                     </button>
                     <button
                       onClick={() => { setRespondingGroupId(null); setGroupOwnerResponse(''); setGroupExcluded(new Set()); }}
-                      style={{ padding: '8px 18px', background: 'transparent', color: '#888', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}
+                      style={{ padding: '8px 18px', background: 'transparent', color: 'rgba(255,255,255,0.53)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}
                     >
                       Annuler
                     </button>
@@ -410,7 +412,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
               ) : (
                 <button
                   onClick={() => { setRespondingGroupId(groupId); setGroupOwnerResponse(''); setGroupExcluded(new Set()); }}
-                  style={{ padding: '8px 18px', background: 'var(--ccc-accent-gradient)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                  style={{ padding: '8px 18px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
                 >
                   Répondre au lot
                 </button>
@@ -447,12 +449,12 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                 {booking.requester && <RequesterAvatar requester={booking.requester} size={32} />}
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <p style={{ margin: 0, fontWeight: 700, color: '#fff', fontSize: 15 }}>
+                    <p style={{ margin: 0, fontWeight: 700, color: 'var(--ccc-text-on-accent)', fontSize: 15 }}>
                       {booking.requester?.firstName} {booking.requester?.lastName}
                     </p>
                     <RoleBadge role={booking.requester?.role} />
                   </div>
-                  <p style={{ margin: '2px 0 0 0', fontSize: 13, color: '#888' }}>
+                  <p style={{ margin: '2px 0 0 0', fontSize: 13, color: 'rgba(255,255,255,0.53)' }}>
                     {new Date(booking.requestedDate).toLocaleDateString('fr-FR', {
                       weekday: 'long',
                       year: 'numeric',
@@ -473,7 +475,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#7c3aed',
+                      color: 'var(--ccc-accent)',
                       fontSize: 12,
                       cursor: 'pointer',
                       padding: 0,
@@ -506,7 +508,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
               style={{
                 margin: '0 0 12px 0',
                 fontSize: 13,
-                color: '#ccc',
+                color: 'rgba(255,255,255,0.8)',
                 background: 'rgba(255,255,255,0.04)',
                 padding: '10px 14px',
                 borderRadius: 8,
@@ -518,7 +520,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
           )}
 
           {booking.ownerResponse && (
-            <p style={{ margin: '0 0 12px 0', fontSize: 13, color: '#10b981' }}>
+            <p style={{ margin: '0 0 12px 0', fontSize: 13, color: 'var(--ccc-success)' }}>
               Votre réponse : {booking.ownerResponse}
             </p>
           )}
@@ -539,7 +541,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                       border: '1px solid rgba(255,255,255,0.12)',
                       borderRadius: 8,
                       padding: '8px 12px',
-                      color: '#fff',
+                      color: 'var(--ccc-text-on-accent)',
                       fontSize: 13,
                       marginBottom: 10,
                       boxSizing: 'border-box',
@@ -553,7 +555,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                       style={{
                         padding: '8px 18px',
                         background: 'rgba(16,185,129,0.2)',
-                        color: '#10b981',
+                        color: 'var(--ccc-success)',
                         border: '1px solid rgba(16,185,129,0.4)',
                         borderRadius: 8,
                         cursor: 'pointer',
@@ -569,7 +571,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                       style={{
                         padding: '8px 18px',
                         background: 'rgba(239,68,68,0.2)',
-                        color: '#ef4444',
+                        color: 'var(--ccc-error)',
                         border: '1px solid rgba(239,68,68,0.4)',
                         borderRadius: 8,
                         cursor: 'pointer',
@@ -584,7 +586,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                       style={{
                         padding: '8px 18px',
                         background: 'transparent',
-                        color: '#888',
+                        color: 'rgba(255,255,255,0.53)',
                         border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: 8,
                         cursor: 'pointer',
@@ -601,7 +603,7 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
                   style={{
                     padding: '8px 18px',
                     background: 'var(--ccc-accent-gradient)',
-                    color: '#fff',
+                    color: 'var(--ccc-text-on-accent)',
                     border: 'none',
                     borderRadius: 8,
                     cursor: 'pointer',
@@ -617,14 +619,14 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
 
           {/* Info paiement pour ACCEPTED */}
           {booking.status === 'ACCEPTED' && (
-            <p style={{ margin: '0 0 12px 0', fontSize: 13, color: '#f59e0b', fontStyle: 'italic' }}>
+            <p style={{ margin: '0 0 12px 0', fontSize: 13, color: 'var(--ccc-warning)', fontStyle: 'italic' }}>
               En attente de paiement par le demandeur
             </p>
           )}
 
           {/* Info paiement pour CONFIRMED */}
           {booking.status === 'CONFIRMED' && booking.paidAt && (
-            <p style={{ margin: '0 0 12px 0', fontSize: 13, color: '#3b82f6' }}>
+            <p style={{ margin: '0 0 12px 0', fontSize: 13, color: 'var(--ccc-info)' }}>
               Payé le {new Date(booking.paidAt).toLocaleDateString('fr-FR')}
               {booking.paidAmount != null && ` — ${booking.paidAmount.toLocaleString('fr-FR')} €`}
             </p>
@@ -633,12 +635,12 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
           {/* Annuler si ACCEPTED ou CONFIRMED */}
           {(booking.status === 'ACCEPTED' || booking.status === 'CONFIRMED') && (
             <button
-              onClick={() => handleCancelByOwner(booking._id)}
+              onClick={() => setCancelConfirmId(booking._id)}
               disabled={actionLoading === booking._id}
               style={{
                 padding: '8px 18px',
                 background: 'rgba(239,68,68,0.15)',
-                color: '#ef4444',
+                color: 'var(--ccc-error)',
                 border: '1px solid rgba(239,68,68,0.3)',
                 borderRadius: 8,
                 cursor: 'pointer',
@@ -654,6 +656,21 @@ const VenueBookingsManagement: React.FC<VenueBookingsManagementProps> = ({ venue
         </div>
       ))}
       </div>
+
+      <ConfirmDialog
+        isOpen={cancelConfirmId !== null}
+        title="Annuler la réservation"
+        message="Annuler cette réservation acceptée ? Le demandeur en sera notifié."
+        confirmText="Annuler la réservation"
+        cancelText="Retour"
+        isDangerous
+        onConfirm={async () => {
+          if (!cancelConfirmId) return;
+          await handleCancelByOwner(cancelConfirmId);
+          setCancelConfirmId(null);
+        }}
+        onCancel={() => setCancelConfirmId(null)}
+      />
     </div>
   );
 };

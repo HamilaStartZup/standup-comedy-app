@@ -92,11 +92,11 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
   };
 
   const inputStyle: React.CSSProperties = {
-    background: 'rgba(0,0,0,0.4)',
-    border: '1px solid rgba(255,255,255,0.12)',
+    background: 'var(--ccc-bg-surface)',
+    border: '1px solid var(--ccc-border-subtle)',
     borderRadius: 10,
     padding: '10px 14px',
-    color: '#fff',
+    color: 'var(--ccc-text-primary)',
     fontSize: 14,
     outline: 'none',
     width: '100%',
@@ -107,7 +107,7 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
     display: 'block',
     fontSize: 12,
     fontWeight: 600,
-    color: '#aaa',
+    color: 'var(--ccc-text-muted)',
     marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
@@ -132,14 +132,14 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
       {/* Formulaire d'ajout */}
       <div
         style={{
-          background: 'rgba(0,0,0,0.3)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'var(--ccc-bg-surface)',
+          border: '1px solid var(--ccc-border-subtle)',
           borderRadius: 16,
           padding: 24,
           marginBottom: 24,
         }}
       >
-        <h4 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>
+        <h4 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>
           Bloquer une date
         </h4>
         <form onSubmit={handleBlock}>
@@ -153,24 +153,24 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
                 ...inputStyle,
                 textAlign: 'left',
                 cursor: 'pointer',
-                color: selectedDate ? '#fff' : '#666',
+                color: selectedDate ? 'var(--ccc-text-primary)' : 'var(--ccc-text-muted)',
                 border: errors.date
-                  ? '1px solid #ef4444'
-                  : '1px solid rgba(255,255,255,0.12)',
+                  ? '1px solid var(--ccc-error)'
+                  : '1px solid var(--ccc-border-subtle)',
               }}
             >
               {selectedDate
                 ? selectedDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
                 : 'Choisir une date…'}
             </button>
-            {errors.date && <p style={{ color: '#ef4444', fontSize: 12, margin: '4px 0 0' }}>{errors.date}</p>}
+            {errors.date && <p style={{ color: 'var(--ccc-error)', fontSize: 12, margin: '4px 0 0' }}>{errors.date}</p>}
 
             {showCalendar && (
               <div
                 style={{
                   marginTop: 8,
-                  background: 'rgba(20,10,30,0.95)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'var(--ccc-bg-elevated)',
+                  border: '1px solid var(--ccc-border-subtle)',
                   borderRadius: 12,
                   padding: '8px 4px',
                   display: 'inline-block',
@@ -192,7 +192,7 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
 
           {/* Note pour les types journée entière */}
           {isFullDayPricing && (
-            <p style={{ fontSize: 12, color: '#aaa', marginBottom: 12, padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.07)' }}>
+            <p style={{ fontSize: 12, color: 'var(--ccc-text-muted)', marginBottom: 12, padding: '8px 12px', background: 'var(--ccc-bg-surface)', borderRadius: 8, border: '1px solid var(--ccc-border-subtle)' }}>
               Ce type de tarification réserve la journée entière. Seul un blocage sans heure s'applique.
             </p>
           )}
@@ -200,7 +200,7 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
           {/* Raccourcis demi-journée */}
           {pricingType === 'demi_journee' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: '#aaa', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: 12, color: 'var(--ccc-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Raccourcis :
               </span>
               {timeRestrictions?.matinEnabled !== false && (
@@ -214,7 +214,7 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
                   style={{
                     padding: '5px 12px',
                     background: 'rgba(124, 58, 237,0.12)',
-                    color: '#7c3aed',
+                    color: 'var(--ccc-accent)',
                     border: '1px solid rgba(124, 58, 237,0.3)',
                     borderRadius: 8,
                     cursor: 'pointer',
@@ -236,7 +236,7 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
                   style={{
                     padding: '5px 12px',
                     background: 'rgba(124, 58, 237,0.12)',
-                    color: '#7c3aed',
+                    color: 'var(--ccc-accent)',
                     border: '1px solid rgba(124, 58, 237,0.3)',
                     borderRadius: 8,
                     cursor: 'pointer',
@@ -260,9 +260,9 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
                   onChange={(e) => setForm((p) => ({ ...p, startTime: e.target.value, endTime: '' }))}
                   style={selectStyle}
                 >
-                  <option value="" style={{ background: '#1a1a1a' }}>--</option>
+                  <option value="" style={{ background: 'var(--ccc-option-bg)' }}>--</option>
                   {hourOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value} style={{ background: '#1a1a1a' }}>
+                    <option key={opt.value} value={opt.value} style={{ background: 'var(--ccc-option-bg)' }}>
                       {opt.label}
                     </option>
                   ))}
@@ -276,14 +276,14 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
                   style={selectStyle}
                   disabled={!form.startTime}
                 >
-                  <option value="" style={{ background: '#1a1a1a' }}>--</option>
+                  <option value="" style={{ background: 'var(--ccc-option-bg)' }}>--</option>
                   {hourOptions.filter((opt) => !form.startTime || opt.value > form.startTime).map((opt) => (
-                    <option key={opt.value} value={opt.value} style={{ background: '#1a1a1a' }}>
+                    <option key={opt.value} value={opt.value} style={{ background: 'var(--ccc-option-bg)' }}>
                       {opt.label}
                     </option>
                   ))}
                 </select>
-                {errors.endTime && <p style={{ color: '#ef4444', fontSize: 12, margin: '4px 0 0' }}>{errors.endTime}</p>}
+                {errors.endTime && <p style={{ color: 'var(--ccc-error)', fontSize: 12, margin: '4px 0 0' }}>{errors.endTime}</p>}
               </div>
             </div>
           )}
@@ -307,7 +307,7 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
               background: isSubmitting
                 ? 'rgba(124, 58, 237,0.4)'
                 : 'var(--ccc-accent-gradient)',
-              color: '#fff',
+              color: 'var(--ccc-text-on-accent)',
               border: 'none',
               borderRadius: 10,
               fontWeight: 700,
@@ -322,15 +322,15 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
 
       {/* Liste des dates bloquées */}
       <div>
-        <h4 style={{ margin: '0 0 16px 0', fontSize: 15, fontWeight: 700, color: '#fff' }}>
+        <h4 style={{ margin: '0 0 16px 0', fontSize: 15, fontWeight: 700, color: 'var(--ccc-text-primary)' }}>
           Dates bloquées ({isLoading ? '...' : (data?.length || 0)})
         </h4>
         {error ? (
-          <p style={{ color: '#ef4444', fontSize: 14, textAlign: 'center', padding: 24 }}>
+          <p style={{ color: 'var(--ccc-error)', fontSize: 14, textAlign: 'center', padding: 24 }}>
             Impossible de charger les dates bloquées.
           </p>
         ) : !isLoading && (!data || data.length === 0) ? (
-          <p style={{ color: '#888', fontSize: 14, textAlign: 'center', padding: 24 }}>
+          <p style={{ color: 'var(--ccc-text-muted)', fontSize: 14, textAlign: 'center', padding: 24 }}>
             Aucune date bloquée.
           </p>
         ) : (
@@ -343,14 +343,14 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px solid rgba(255,255,255,0.07)',
+                  background: 'var(--ccc-bg-surface)',
+                  border: '1px solid var(--ccc-border-subtle)',
                   borderRadius: 12,
                   padding: '12px 16px',
                 }}
               >
                 <div>
-                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#fff' }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ccc-text-primary)' }}>
                     {new Date(blocked.date).toLocaleDateString('fr-FR', {
                       weekday: 'long',
                       year: 'numeric',
@@ -358,13 +358,13 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
                       day: 'numeric',
                     })}
                     {blocked.startTime && blocked.endTime && (
-                      <span style={{ color: '#aaa', fontWeight: 400 }}>
+                      <span style={{ color: 'var(--ccc-text-muted)', fontWeight: 400 }}>
                         {' '}· {blocked.startTime} – {blocked.endTime}
                       </span>
                     )}
                   </p>
                   {blocked.reason && (
-                    <p style={{ margin: '2px 0 0', fontSize: 12, color: '#888' }}>{blocked.reason}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--ccc-text-muted)' }}>{blocked.reason}</p>
                   )}
                 </div>
                 <button
@@ -373,7 +373,7 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ venueId, pric
                   style={{
                     padding: '6px 14px',
                     background: 'rgba(239,68,68,0.15)',
-                    color: '#ef4444',
+                    color: 'var(--ccc-error)',
                     border: '1px solid rgba(239,68,68,0.3)',
                     borderRadius: 8,
                     cursor: 'pointer',

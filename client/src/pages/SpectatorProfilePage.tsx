@@ -8,11 +8,11 @@ import { useAlert } from '../hooks/useAlert';
 const RADII = [5, 10, 20, 50] as const;
 
 export default function SpectatorProfilePage() {
-  const { user: authUser, token, refreshUser } = useAuth();
+  const { user: authUser, refreshUser } = useAuth();
   const { showSuccess, showError } = useAlert();
   const queryClient = useQueryClient();
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, isError, refetch } = useQuery({
     queryKey: ['profile', 'me', authUser?._id],
     queryFn: async () => {
       const res = await api.get('/profile/me');
@@ -181,7 +181,7 @@ export default function SpectatorProfilePage() {
     width: '100%',
     padding: '12px 14px',
     borderRadius: 8,
-    border: '1px solid #ddd',
+    border: '1px solid var(--ccc-border-medium)',
     fontSize: '1rem',
     marginBottom: 16,
     boxSizing: 'border-box',
@@ -193,7 +193,7 @@ export default function SpectatorProfilePage() {
     fontSize: '0.9rem',
   };
   const errorStyle: CSSProperties = {
-    color: '#dc3545',
+    color: 'var(--ccc-error)',
     fontSize: '0.85rem',
     marginTop: -10,
     marginBottom: 12,
@@ -202,8 +202,8 @@ export default function SpectatorProfilePage() {
     padding: '12px 24px',
     borderRadius: 8,
     border: 'none',
-    background: 'linear-gradient(135deg, #FF5A7E, #FF7A92)',
-    color: '#fff',
+    background: 'var(--ccc-accent-gradient)',
+    color: 'var(--ccc-text-on-accent)',
     fontSize: '1rem',
     fontWeight: 600,
     cursor: 'pointer',
@@ -222,7 +222,7 @@ export default function SpectatorProfilePage() {
         <Navbar />
         <div style={pageStyle}>
           <div style={containerStyle}>
-            <p style={{ color: 'rgba(255,255,255,0.8)' }}>Accès réservé aux spectateurs.</p>
+            <p style={{ color: 'var(--ccc-text-secondary)' }}>Accès réservé aux spectateurs.</p>
           </div>
         </div>
       </>
@@ -235,12 +235,23 @@ export default function SpectatorProfilePage() {
       <div style={pageStyle}>
         <div style={containerStyle}>
           <h1 className="ccc-page-title" style={{ marginBottom: 8 }}>Mon profil</h1>
-          <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: 24 }}>
+          <p style={{ color: 'var(--ccc-text-secondary)', marginBottom: 24 }}>
             Modifiez les informations renseignées lors de votre inscription.
           </p>
 
           {isLoading ? (
-            <p style={{ color: 'rgba(255,255,255,0.8)' }}>Chargement…</p>
+            <p style={{ color: 'var(--ccc-text-secondary)' }}>Chargement…</p>
+          ) : isError ? (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <p style={{ color: 'var(--ccc-text-muted)' }}>Impossible de charger votre profil.</p>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                style={{ marginTop: 12, padding: '8px 20px', borderRadius: 8, border: '1px solid var(--ccc-border-medium)', background: 'transparent', cursor: 'pointer', color: 'var(--ccc-text-primary)' }}
+              >
+                Réessayer
+              </button>
+            </div>
           ) : (
             <form onSubmit={handleSubmit}>
               <div style={cardStyle}>
@@ -253,7 +264,7 @@ export default function SpectatorProfilePage() {
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleChange}
-                  style={{ ...inputStyle, borderColor: errors.firstName ? '#dc3545' : '#ddd' }}
+                  style={{ ...inputStyle, borderColor: errors.firstName ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
                   placeholder="Prénom"
                 />
                 {errors.firstName && <div style={errorStyle}>{errors.firstName}</div>}
@@ -264,7 +275,7 @@ export default function SpectatorProfilePage() {
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleChange}
-                  style={{ ...inputStyle, borderColor: errors.lastName ? '#dc3545' : '#ddd' }}
+                  style={{ ...inputStyle, borderColor: errors.lastName ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
                   placeholder="Nom"
                 />
                 {errors.lastName && <div style={errorStyle}>{errors.lastName}</div>}
@@ -275,7 +286,7 @@ export default function SpectatorProfilePage() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  style={{ ...inputStyle, borderColor: errors.email ? '#dc3545' : '#ddd' }}
+                  style={{ ...inputStyle, borderColor: errors.email ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
                   placeholder="email@exemple.com"
                 />
                 {errors.email && <div style={errorStyle}>{errors.email}</div>}
@@ -286,7 +297,7 @@ export default function SpectatorProfilePage() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  style={{ ...inputStyle, borderColor: errors.phone ? '#dc3545' : '#ddd' }}
+                  style={{ ...inputStyle, borderColor: errors.phone ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
                   placeholder="0X XX XX XX XX"
                 />
                 {errors.phone && <div style={errorStyle}>{errors.phone}</div>}
@@ -297,7 +308,7 @@ export default function SpectatorProfilePage() {
                   name="city"
                   value={formData.city}
                   onChange={handleChange}
-                  style={{ ...inputStyle, borderColor: errors.city ? '#dc3545' : '#ddd' }}
+                  style={{ ...inputStyle, borderColor: errors.city ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
                   placeholder="Ville"
                 />
                 {errors.city && <div style={errorStyle}>{errors.city}</div>}
@@ -309,7 +320,7 @@ export default function SpectatorProfilePage() {
                   value={formData.birthDate}
                   onChange={handleChange}
                   max={new Date().toISOString().split('T')[0]}
-                  style={{ ...inputStyle, borderColor: errors.birthDate ? '#dc3545' : '#ddd' }}
+                  style={{ ...inputStyle, borderColor: errors.birthDate ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
                 />
                 {errors.birthDate && <div style={errorStyle}>{errors.birthDate}</div>}
               </div>

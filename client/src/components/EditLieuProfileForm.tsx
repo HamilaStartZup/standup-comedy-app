@@ -163,7 +163,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
 
   const titleStyle: CSSProperties = {
     fontSize: '2em',
-    color: '#7c3aed',
+    color: 'var(--ccc-accent)',
     marginBottom: '20px',
     textAlign: 'center',
   };
@@ -174,16 +174,16 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
     display: 'block',
     marginBottom: '5px',
     fontWeight: 'bold',
-    color: '#ff4b2b',
+    color: 'var(--ccc-accent)',
   };
 
   const inputStyle: CSSProperties = {
     width: '100%',
     padding: '10px',
     borderRadius: '5px',
-    border: '1px solid #555',
-    backgroundColor: '#333',
-    color: '#ffffff',
+    border: '1px solid var(--ccc-border-medium)',
+    backgroundColor: 'var(--ccc-bg-surface)',
+    color: 'var(--ccc-text-primary)',
     boxSizing: 'border-box',
   };
 
@@ -205,7 +205,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #28a745, #218838)',
+    background: 'linear-gradient(to right, var(--ccc-success), #059669)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -216,7 +216,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #dc3545, #c82333)',
+    background: 'linear-gradient(to right, var(--ccc-error), #c82333)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -231,7 +231,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
     border: 'none',
     fontSize: '1.5em',
     cursor: 'pointer',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
   };
 
   return (
@@ -241,13 +241,13 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
         <h2 style={titleStyle}>Modifier le Profil Lieu</h2>
         <form onSubmit={handleSubmit}>
           {/* Photo de profil */}
-          <h3 style={{ color: '#ff4b2b', marginBottom: '15px' }}>Photo de profil</h3>
+          <h3 style={{ color: 'var(--ccc-accent)', marginBottom: '15px' }}>Photo de profil</h3>
           {previewImage && (
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
               <img
                 src={previewImage}
                 alt="Aperçu"
-                style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #7c3aed' }}
+                style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--ccc-accent)' }}
               />
             </div>
           )}
@@ -272,7 +272,7 @@ function EditLieuProfileForm({ isOpen, onClose, currentUser, onSaveSuccess, scro
           </div>
 
           {/* Informations */}
-          <h3 style={{ color: '#ff4b2b', marginBottom: '15px' }}>Informations personnelles</h3>
+          <h3 style={{ color: 'var(--ccc-accent)', marginBottom: '15px' }}>Informations personnelles</h3>
           <div style={twoColumnLayout}>
             <div style={inputGroupStyle} id="firstName">
               <label style={labelStyle} htmlFor="firstName">Prénom</label>

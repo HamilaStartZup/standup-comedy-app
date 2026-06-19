@@ -19,9 +19,9 @@ const Pagination: React.FC<PaginationProps> = ({ page, totalPages, onChange, dis
         style={{
           padding: '8px 16px',
           borderRadius: 8,
-          border: page <= 1 ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.2)',
-          background: page <= 1 ? 'rgba(255,255,255,0.05)' : 'rgba(124, 58, 237,0.15)',
-          color: page <= 1 ? 'rgba(255,255,255,0.5)' : '#7c3aed',
+          border: page <= 1 ? '1px solid var(--ccc-border-subtle)' : '1px solid var(--ccc-border-medium)',
+          background: page <= 1 ? 'var(--ccc-bg-inactive)' : 'var(--ccc-accent-soft)',
+          color: page <= 1 ? 'var(--ccc-text-faint)' : 'var(--ccc-accent)',
           cursor: page <= 1 ? 'not-allowed' : 'pointer',
           fontWeight: 600,
           fontSize: 14,
@@ -31,7 +31,7 @@ const Pagination: React.FC<PaginationProps> = ({ page, totalPages, onChange, dis
         ← Précédent
       </button>
 
-      <span aria-live="polite" aria-atomic="true" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
+      <span aria-live="polite" aria-atomic="true" style={{ color: 'var(--ccc-text-muted)', fontSize: 14 }}>
         Page {page} / {totalPages}
       </span>
 
@@ -42,9 +42,9 @@ const Pagination: React.FC<PaginationProps> = ({ page, totalPages, onChange, dis
         style={{
           padding: '8px 16px',
           borderRadius: 8,
-          border: page >= totalPages ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.2)',
-          background: page >= totalPages ? 'rgba(255,255,255,0.05)' : 'rgba(124, 58, 237,0.15)',
-          color: page >= totalPages ? 'rgba(255,255,255,0.5)' : '#7c3aed',
+          border: page >= totalPages ? '1px solid var(--ccc-border-subtle)' : '1px solid var(--ccc-border-medium)',
+          background: page >= totalPages ? 'var(--ccc-bg-inactive)' : 'var(--ccc-accent-soft)',
+          color: page >= totalPages ? 'var(--ccc-text-faint)' : 'var(--ccc-accent)',
           cursor: page >= totalPages ? 'not-allowed' : 'pointer',
           fontWeight: 600,
           fontSize: 14,

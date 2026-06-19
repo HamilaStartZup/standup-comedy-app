@@ -315,7 +315,7 @@ if (id.startsWith('organizerProfile.location.')) {
 
   const titleStyle: CSSProperties = {
     fontSize: '2em',
-    color: '#7c3aed',
+    color: 'var(--ccc-accent)',
     marginBottom: '20px',
     textAlign: 'center',
   };
@@ -328,16 +328,17 @@ if (id.startsWith('organizerProfile.location.')) {
     display: 'block',
     marginBottom: '5px',
     fontWeight: 'bold',
-    color: '#ff4b2b',
+    color: 'var(--ccc-accent)',
+    fontSize: '0.9em',
   };
 
   const inputStyle: CSSProperties = {
     width: '100%',
     padding: '10px',
     borderRadius: '5px',
-    border: '1px solid #555',
-    backgroundColor: '#333',
-    color: '#ffffff',
+    border: '1px solid var(--ccc-border-medium)',
+    backgroundColor: 'var(--ccc-bg-surface)',
+    color: 'var(--ccc-text-primary)',
     boxSizing: 'border-box',
   };
 
@@ -365,7 +366,7 @@ if (id.startsWith('organizerProfile.location.')) {
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #28a745, #218838)',
+    background: 'var(--ccc-accent-gradient)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -377,7 +378,7 @@ if (id.startsWith('organizerProfile.location.')) {
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #dc3545, #c82333)',
+    backgroundColor: '#6c757d',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -393,7 +394,7 @@ if (id.startsWith('organizerProfile.location.')) {
     border: 'none',
     fontSize: '1.5em',
     cursor: 'pointer',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
   };
 
   return (
@@ -402,7 +403,7 @@ if (id.startsWith('organizerProfile.location.')) {
         <button onClick={onClose} style={closeButtonStyle}>&times;</button>
         <h2 style={titleStyle}>Modifier le Profil Organisateur</h2>
         <form onSubmit={handleSubmit}>
-          <h3 style={{ color: '#ff4b2b', marginBottom: '15px' }}>Photo de profil</h3>
+          <h3 style={{ color: 'var(--ccc-accent)', marginBottom: '15px' }}>Photo de profil</h3>
           {previewImage && (
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
               <img
@@ -413,7 +414,7 @@ if (id.startsWith('organizerProfile.location.')) {
                   height: '110px',
                   borderRadius: '50%',
                   objectFit: 'cover',
-                  border: '2px solid #7c3aed',
+                  border: '2px solid var(--ccc-accent)',
                 }}
               />
             </div>
@@ -426,7 +427,7 @@ if (id.startsWith('organizerProfile.location.')) {
                 marginBottom: '15px',
                 padding: '8px 12px',
                 borderRadius: '6px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                border: '1px solid var(--ccc-border-subtle)',
                 backgroundColor: 'rgba(220, 53, 69, 0.15)',
                 color: '#ffb3b3',
                 cursor: 'pointer',
@@ -444,18 +445,18 @@ if (id.startsWith('organizerProfile.location.')) {
                 width: '100%',
                 padding: '8px',
                 borderRadius: '5px',
-                border: '1px solid #444',
-                backgroundColor: '#333',
-                color: '#fff',
+                border: '1px solid var(--ccc-border-medium)',
+                backgroundColor: 'var(--ccc-bg-surface)',
+                color: 'var(--ccc-text-primary)',
                 cursor: 'pointer',
               }}
             />
-            <p style={{ fontSize: '0.85em', color: '#aaa', marginTop: '5px' }}>
+            <p style={{ fontSize: '0.85em', color: 'var(--ccc-text-muted)', marginTop: '5px' }}>
               Formats acceptés: JPG, PNG, GIF (max 5MB)
             </p>
           </div>
           {/* Informations personnelles */}
-          <h3 style={{ color: '#ff4b2b', marginBottom: '15px' }}>Informations personnelles</h3>
+          <h3 style={{ color: 'var(--ccc-accent)', marginBottom: '15px' }}>Informations personnelles</h3>
           <div style={twoColumnLayout}>
             <div style={inputGroupStyle}>
               <label htmlFor="firstName" style={labelStyle}>Prénom</label>
@@ -492,7 +493,7 @@ if (id.startsWith('organizerProfile.location.')) {
           </div>
 
           {/* Profil Organisateur */}
-          <h3 style={{ color: '#ff4b2b', marginTop: '30px', marginBottom: '15px' }}>Profil Organisateur</h3>
+          <h3 style={{ color: 'var(--ccc-accent)', marginTop: '30px', marginBottom: '15px' }}>Profil Organisateur</h3>
           <div style={twoColumnLayout}>
             <div style={inputGroupStyle}>
               <label htmlFor="organizerProfile.companyName" style={labelStyle}>Nom de l'entreprise</label>
@@ -512,7 +513,7 @@ if (id.startsWith('organizerProfile.location.')) {
           </div>
           <div style={{ ...inputGroupStyle, position: 'relative' }}>
             <label htmlFor="organizerProfile.location.postalCode" style={labelStyle}>
-              Code Postal {isValidating && <span style={{ fontSize: '12px', color: '#888' }}>(validation...)</span>}
+              Code Postal {isValidating && <span style={{ fontSize: '12px', color: 'var(--ccc-text-muted)' }}>(validation...)</span>}
             </label>
             <input
               id="organizerProfile.location.postalCode"
@@ -522,14 +523,14 @@ if (id.startsWith('organizerProfile.location.')) {
               onBlur={validatePostalCode}
               style={{
                 ...inputStyle,
-                borderColor: (postalCodeError || error) ? '#ef4444' : undefined
+                borderColor: (postalCodeError || error) ? 'var(--ccc-error)' : undefined
               }}
               maxLength={5}
               disabled={isValidating}
               required
             />
             {(postalCodeError || error) && (
-              <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', marginTop: '4px' }}>
                 {postalCodeError || error}
               </p>
             )}
@@ -541,8 +542,8 @@ if (id.startsWith('organizerProfile.location.')) {
                 top: '100%',
                 left: 0,
                 right: 0,
-                backgroundColor: '#fff',
-                border: '1px solid #ddd',
+                backgroundColor: 'var(--ccc-bg-elevated)',
+                border: '1px solid var(--ccc-border-medium)',
                 borderRadius: '4px',
                 marginTop: '4px',
                 maxHeight: '200px',
@@ -550,7 +551,7 @@ if (id.startsWith('organizerProfile.location.')) {
                 zIndex: 1000,
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
               }}>
-                <div style={{ padding: '8px', color: '#666', fontSize: '12px', borderBottom: '1px solid #eee' }}>
+                <div style={{ padding: '8px', color: 'var(--ccc-text-secondary)', fontSize: '12px', borderBottom: '1px solid var(--ccc-border-light)' }}>
                   Plusieurs villes pour ce code postal :
                 </div>
                 {citySuggestions.map((option, index) => (
@@ -560,10 +561,10 @@ if (id.startsWith('organizerProfile.location.')) {
                     style={{
                       padding: '10px',
                       cursor: 'pointer',
-                      borderBottom: index < citySuggestions.length - 1 ? '1px solid #eee' : 'none',
-                      color: '#333'
+                      borderBottom: index < citySuggestions.length - 1 ? '1px solid var(--ccc-border-light)' : 'none',
+                      color: 'var(--ccc-text-primary)'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(124, 58, 237, 0.2)'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     {option.city}

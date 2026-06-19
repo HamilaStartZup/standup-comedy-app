@@ -7,7 +7,8 @@ import { useUserEvents } from '../hooks/useUserEvents';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { getErrorMessage, WarningMessages } from '../services/systemMessages';
-import { pageTitleStyle } from '../styles/theme';
+
+import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 interface EventStats {
   totalEvents: number;
@@ -138,7 +139,10 @@ const Dashboard = () => {
 
   // Styles pour l'en-tête du tableau de bord
   const dashboardHeaderStyle: CSSProperties = {
-    ...pageTitleStyle,
+    fontSize: '2.5em',
+    color: 'var(--ccc-accent)',
+    fontWeight: 700,
+    letterSpacing: '-0.02em',
     textAlign: 'center',
     marginBottom: '40px',
   };
@@ -326,7 +330,7 @@ const Dashboard = () => {
           alignItems: 'center',
           minHeight: 'calc(100vh - 60px)' // Adjust based on navbar height
         }}>
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-500"></div>
+          <LoadingSpinner message="Chargement des statistiques..." />
         </div>
       </div>
     );
@@ -338,12 +342,27 @@ const Dashboard = () => {
         <Navbar />
         <div style={{
           display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: 'calc(100vh - 60px)',
-          color: '#dc3545'
         }}>
-          <p>Erreur lors du chargement des statistiques: {error}</p>
+          <p style={{ color: 'var(--ccc-error)' }}>Erreur lors du chargement des statistiques: {error}</p>
+          <button
+            onClick={() => refetchStats()}
+            style={{
+              padding: '10px 20px',
+              borderRadius: 8,
+              border: 'none',
+              backgroundColor: 'var(--ccc-accent)',
+              color: 'var(--ccc-text-on-accent)',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Réessayer
+          </button>
         </div>
       </div>
     );
@@ -378,7 +397,7 @@ const Dashboard = () => {
             boxShadow: '0 4px 12px rgba(220, 53, 69, 0.2)'
           }}>
             <h2 style={{
-              color: '#7c3aed',
+              color: 'var(--ccc-accent)',
               fontSize: '1.5em',
               marginBottom: '20px',
               display: 'flex',
@@ -419,14 +438,14 @@ const Dashboard = () => {
                   <div style={{ flex: 1, minWidth: '250px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
                       <span style={{ fontSize: '1.3em' }}>⚠️</span>
-                      <strong style={{ color: '#ffc107', fontSize: '1.1em' }}>
+                      <strong style={{ color: 'var(--ccc-warning)', fontSize: '1.1em' }}>
                         Alerte de présence
                       </strong>
                     </div>
                     <p style={{ color: '#fff', margin: '5px 0', fontSize: '0.95em' }}>
-                      <strong>{alert.comedian?.firstName} {alert.comedian?.lastName}</strong> a un score de présence de <strong style={{ color: '#ffc107' }}>{alert.presenceScore}%</strong>
+                      <strong>{alert.comedian?.firstName} {alert.comedian?.lastName}</strong> a un score de présence de <strong style={{ color: 'var(--ccc-warning)' }}>{alert.presenceScore}%</strong>
                     </p>
-                    <p style={{ color: '#aaa', fontSize: '0.85em', margin: 0 }}>
+                    <p style={{ color: 'rgba(255,255,255,0.67)', fontSize: '0.85em', margin: 0 }}>
                       {alert.totalEvents} présences • {alert.absences} absences
                     </p>
                   </div>
@@ -434,7 +453,7 @@ const Dashboard = () => {
                     padding: '8px 16px',
                     borderRadius: '6px',
                     backgroundColor: 'rgba(255, 193, 7, 0.2)',
-                    color: '#ffc107',
+                    color: 'var(--ccc-warning)',
                     fontWeight: 'bold',
                     fontSize: '0.9em',
                     whiteSpace: 'nowrap'
@@ -474,15 +493,15 @@ const Dashboard = () => {
                   <div style={{ flex: 1, minWidth: '250px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
                       <span style={{ fontSize: '1.3em' }}>🚫</span>
-                      <strong style={{ color: '#dc3545', fontSize: '1.1em' }}>
+                      <strong style={{ color: 'var(--ccc-error)', fontSize: '1.1em' }}>
                         Compte signalé
                       </strong>
                     </div>
                     <p style={{ color: '#fff', margin: '5px 0', fontSize: '0.95em' }}>
                       <strong>{report.comedian?.firstName} {report.comedian?.lastName}</strong> signalé par <strong>{report.reporter?.firstName} {report.reporter?.lastName}</strong>
                     </p>
-                    <p style={{ color: '#aaa', fontSize: '0.85em', margin: '5px 0' }}>
-                      Raison: <strong style={{ color: '#ffc107' }}>
+                    <p style={{ color: 'rgba(255,255,255,0.67)', fontSize: '0.85em', margin: '5px 0' }}>
+                      Raison: <strong style={{ color: 'var(--ccc-warning)' }}>
                         {report.reason === 'troll' ? 'Troll / Comportement inapproprié' :
                          report.reason === 'fake_account' ? 'Faux compte' :
                          report.reason === 'inappropriate_content' ? 'Contenu inapproprié' :
@@ -491,7 +510,7 @@ const Dashboard = () => {
                       </strong>
                     </p>
                     {report.description && (
-                      <p style={{ color: '#aaa', fontSize: '0.85em', margin: '5px 0', fontStyle: 'italic' }}>
+                      <p style={{ color: 'rgba(255,255,255,0.67)', fontSize: '0.85em', margin: '5px 0', fontStyle: 'italic' }}>
                         "{report.description.substring(0, 100)}{report.description.length > 100 ? '...' : ''}"
                       </p>
                     )}
@@ -500,7 +519,7 @@ const Dashboard = () => {
                     padding: '8px 16px',
                     borderRadius: '6px',
                     backgroundColor: 'rgba(220, 53, 69, 0.2)',
-                    color: '#dc3545',
+                    color: 'var(--ccc-error)',
                     fontWeight: 'bold',
                     fontSize: '0.9em',
                     whiteSpace: 'nowrap'
@@ -531,7 +550,7 @@ const Dashboard = () => {
                       borderRadius: '8px',
                       border: '1px solid rgba(255, 255, 255, 0.3)',
                       background: 'rgba(124, 58, 237, 0.2)',
-                      color: '#7c3aed',
+                      color: 'var(--ccc-accent)',
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       fontSize: '0.95em',
@@ -564,7 +583,7 @@ const Dashboard = () => {
                       borderRadius: '6px',
                       border: '1px solid rgba(255, 193, 7, 0.3)',
                       background: 'rgba(255, 193, 7, 0.1)',
-                      color: '#ffc107',
+                      color: 'var(--ccc-warning)',
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       fontSize: '0.85em',
@@ -588,7 +607,7 @@ const Dashboard = () => {
                       borderRadius: '6px',
                       border: '1px solid rgba(220, 53, 69, 0.3)',
                       background: 'rgba(220, 53, 69, 0.1)',
-                      color: '#dc3545',
+                      color: 'var(--ccc-error)',
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       fontSize: '0.85em',
@@ -756,7 +775,7 @@ const Dashboard = () => {
                   <p style={{
                     fontSize: '1.2rem',
                     fontWeight: 'bold',
-                    color: '#ffffff',
+                    color: 'var(--ccc-text-on-accent)',
                     marginBottom: '10px'
                   }}>
                     Traitement automatique
@@ -780,7 +799,7 @@ const Dashboard = () => {
                       : 'linear-gradient(135deg, #8b5cf6, #ec4899)',
                     border: 'none',
                     borderRadius: '10px',
-                    color: '#ffffff',
+                    color: 'var(--ccc-text-on-accent)',
                     fontWeight: 'bold',
                     fontSize: '0.9rem',
                     cursor: isProcessing ? 'not-allowed' : 'pointer',

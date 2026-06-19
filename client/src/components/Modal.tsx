@@ -1,5 +1,5 @@
 import React, { type CSSProperties } from 'react';
-import { theme } from '../styles/theme';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   isOpen: boolean;
@@ -25,25 +25,25 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: transparentOverlay ? 'rgba(15, 23, 42, 0.2)' : theme.colors.bg.overlay,
+    backgroundColor: transparentOverlay ? 'rgba(15, 23, 42, 0.2)' : 'var(--ccc-bg-overlay)',
     backdropFilter: 'blur(4px)',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
+    zIndex: 1200,
   };
 
   const modalStyle: CSSProperties = {
-    background: theme.colors.bg.elevated,
+    background: 'var(--ccc-bg-elevated)',
     padding: '25px',
-    borderRadius: theme.radius.md,
+    borderRadius: 'var(--ccc-radius-md)',
     minWidth: 'auto',
     maxWidth: '600px',
     width: '100%',
-    boxShadow: theme.shadow.dropdown,
+    boxShadow: 'var(--ccc-shadow-dropdown)',
     position: 'relative',
-    color: theme.colors.text.primary,
-    border: `1px solid ${theme.colors.border.subtle}`,
+    color: 'var(--ccc-text-primary)',
+    border: '1px solid var(--ccc-border-subtle)',
     maxHeight: '85vh',
     overflowY: 'auto',
     overflowX: 'hidden',
@@ -59,10 +59,10 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
     border: 'none',
     fontSize: '1.5em',
     cursor: 'pointer',
-    color: theme.colors.text.muted,
+    color: 'var(--ccc-text-muted)',
   };
 
-  return (
+  return createPortal(
     <div style={overlayStyle} onClick={handleOverlayClick}>
       <style>{`
         .modal-content::-webkit-scrollbar {
@@ -73,7 +73,8 @@ function Modal({ isOpen, onClose, children, closeOnOverlayClick = true, transpar
         <button onClick={onClose} style={closeButtonStyle}>&times;</button>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

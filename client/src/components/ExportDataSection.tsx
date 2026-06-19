@@ -1,16 +1,14 @@
 import React, { useState, type CSSProperties } from 'react';
 import api from '../services/api';
+import { useAlert } from '../hooks/useAlert';
 
 const ExportDataSection: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
-  const [exportSuccess, setExportSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { showSuccess, showError } = useAlert();
 
   const handleExportData = async () => {
     try {
       setIsExporting(true);
-      setError(null);
-      setExportSuccess(false);
 
       // Appeler l'API d'export
       const response = await api.get('/profile/me/export', {
@@ -35,30 +33,27 @@ const ExportDataSection: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      setExportSuccess(true);
-
-      // Masquer le message de succès après 5 secondes
-      setTimeout(() => setExportSuccess(false), 5000);
+      showSuccess('Vos données ont été exportées avec succès !');
 
     } catch (err: any) {
       console.error('Erreur lors de l\'export des données:', err);
-      setError(err.response?.data?.message || 'Une erreur est survenue lors de l\'export');
+      showError(err.response?.data?.message || 'Une erreur est survenue lors de l\'export');
     } finally {
       setIsExporting(false);
     }
   };
 
   const cardStyle: CSSProperties = {
-    backgroundColor: '#1a1d27',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     borderRadius: '16px',
     padding: '24px',
-    border: '1px solid #2a2d3a',
-    borderLeft: '4px solid #667eea',
+    border: '1px solid var(--ccc-border-medium)',
+    borderLeft: '4px solid var(--ccc-accent)',
   };
 
   const titleStyle: CSSProperties = {
     fontSize: '1.2em',
-    color: '#fff',
+    color: 'var(--ccc-text-primary)',
     marginBottom: '16px',
     display: 'flex',
     alignItems: 'center',
@@ -68,8 +63,8 @@ const ExportDataSection: React.FC = () => {
   const infoBoxStyle: CSSProperties = {
     padding: '14px 16px',
     borderRadius: '8px',
-    background: 'rgba(255, 255, 255, 0.04)',
-    borderLeft: '3px solid #667eea',
+    background: 'var(--ccc-bg-surface)',
+    borderLeft: '3px solid var(--ccc-accent)',
     marginBottom: '16px',
   };
 
@@ -85,9 +80,9 @@ const ExportDataSection: React.FC = () => {
     alignItems: 'center',
     gap: '8px',
     padding: '10px 12px',
-    background: 'rgba(255, 255, 255, 0.03)',
+    background: 'var(--ccc-bg-surface)',
     borderRadius: '8px',
-    color: '#888',
+    color: 'var(--ccc-text-muted)',
     fontSize: '0.85em',
   };
 
@@ -99,8 +94,8 @@ const ExportDataSection: React.FC = () => {
     cursor: isExporting ? 'not-allowed' : 'pointer',
     opacity: isExporting ? 0.6 : 1,
     transition: 'all 0.3s ease',
-    background: 'linear-gradient(to right, #667eea, #764ba2)',
-    color: '#fff',
+    background: 'var(--ccc-accent-gradient)',
+    color: 'var(--ccc-text-on-accent)',
   };
 
   return (
@@ -112,72 +107,38 @@ const ExportDataSection: React.FC = () => {
 
       <div style={infoBoxStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <i className="fas fa-shield-alt" style={{ color: '#667eea' }}></i>
-          <span style={{ color: '#667eea', fontWeight: 'bold' }}>
+          <i className="fas fa-shield-alt" style={{ color: 'var(--ccc-accent)' }}></i>
+          <span style={{ color: 'var(--ccc-accent)', fontWeight: 'bold' }}>
             Droit à la portabilité (RGPD - Article 20)
           </span>
         </div>
-        <p style={{ color: '#aaa', fontSize: '0.9em', margin: 0 }}>
+        <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em', margin: 0 }}>
           Téléchargez une copie de toutes vos données personnelles dans un format lisible (JSON).
         </p>
       </div>
 
-      <p style={{ color: '#ccc', fontSize: '0.85em', marginBottom: '10px' }}>
+      <p style={{ color: 'var(--ccc-text-secondary)', fontSize: '0.85em', marginBottom: '10px' }}>
         Le fichier contiendra :
       </p>
 
       <div style={dataListStyle}>
         <div style={dataItemStyle}>
-          <i className="fas fa-user" style={{ color: '#667eea' }}></i>
+          <i className="fas fa-user" style={{ color: 'var(--ccc-accent)' }}></i>
           Profil
         </div>
         <div style={dataItemStyle}>
-          <i className="fas fa-file-alt" style={{ color: '#667eea' }}></i>
+          <i className="fas fa-file-alt" style={{ color: 'var(--ccc-accent)' }}></i>
           Candidatures / Événements
         </div>
         <div style={dataItemStyle}>
-          <i className="fas fa-cog" style={{ color: '#667eea' }}></i>
+          <i className="fas fa-cog" style={{ color: 'var(--ccc-accent)' }}></i>
           Préférences
         </div>
         <div style={dataItemStyle}>
-          <i className="fas fa-bell" style={{ color: '#667eea' }}></i>
+          <i className="fas fa-bell" style={{ color: 'var(--ccc-accent)' }}></i>
           Notifications
         </div>
       </div>
-
-      {exportSuccess && (
-        <div
-          style={{
-            padding: '12px 15px',
-            borderRadius: '6px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderLeft: '3px solid #28a745',
-            marginBottom: '15px',
-          }}
-        >
-          <p style={{ color: '#28a745', fontWeight: 'bold', margin: 0 }}>
-            <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
-            Vos données ont été exportées avec succès !
-          </p>
-        </div>
-      )}
-
-      {error && (
-        <div
-          style={{
-            padding: '12px 15px',
-            borderRadius: '6px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderLeft: '3px solid #dc3545',
-            marginBottom: '15px',
-          }}
-        >
-          <p style={{ color: '#dc3545', fontSize: '0.9em', margin: 0 }}>
-            <i className="fas fa-times-circle" style={{ marginRight: '8px' }}></i>
-            {error}
-          </p>
-        </div>
-      )}
 
       <button
         onClick={handleExportData}

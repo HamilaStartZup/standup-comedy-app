@@ -44,16 +44,16 @@ const EmailPreferences: React.FC = () => {
   };
 
   const cardStyle: CSSProperties = {
-    backgroundColor: '#1a1d27',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     borderRadius: '16px',
     padding: '24px',
-    border: '1px solid #2a2d3a',
+    border: '1px solid var(--ccc-border-medium)',
     borderLeft: '4px solid #e85d75',
   };
 
   const titleStyle: CSSProperties = {
     fontSize: '1.2em',
-    color: '#fff',
+    color: 'var(--ccc-text-primary)',
     marginBottom: '16px',
     display: 'flex',
     alignItems: 'center',
@@ -65,7 +65,7 @@ const EmailPreferences: React.FC = () => {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '12px 0',
-    borderBottom: '1px solid #22253a',
+    borderBottom: '1px solid var(--ccc-border-subtle)',
   };
 
   const statusBoxStyle: CSSProperties = {
@@ -75,7 +75,7 @@ const EmailPreferences: React.FC = () => {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    background: 'rgba(255, 255, 255, 0.04)',
+    background: 'var(--ccc-bg-surface)',
   };
 
   const buttonStyle: CSSProperties = {
@@ -91,7 +91,7 @@ const EmailPreferences: React.FC = () => {
   if (isLoading) {
     return (
       <div style={cardStyle}>
-        <div style={{ color: '#aaa', textAlign: 'center', padding: '20px' }}>
+        <div style={{ color: 'var(--ccc-text-muted)', textAlign: 'center', padding: '20px' }}>
           <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
           Chargement des préférences email...
         </div>
@@ -108,10 +108,10 @@ const EmailPreferences: React.FC = () => {
 
       <div style={rowStyle}>
         <div>
-          <p style={{ color: '#fff', fontWeight: 'bold', marginBottom: '5px' }}>
+          <p style={{ color: 'var(--ccc-text-primary)', fontWeight: 'bold', marginBottom: '5px' }}>
             Notifications par email
           </p>
-          <p style={{ color: '#aaa', fontSize: '0.9em' }}>
+          <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
             Recevez des emails pour les nouvelles candidatures, évènements et mises à jour.
           </p>
         </div>
@@ -122,28 +122,28 @@ const EmailPreferences: React.FC = () => {
         style={{
           ...statusBoxStyle,
           borderLeft: isSubscribed
-            ? '3px solid #28a745'
-            : '3px solid #ffc107',
+            ? '3px solid var(--ccc-success)'
+            : '3px solid var(--ccc-warning)',
         }}
       >
         <i
           className={isSubscribed ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'}
           style={{
             fontSize: '1.3em',
-            color: isSubscribed ? '#28a745' : '#ffc107',
+            color: isSubscribed ? 'var(--ccc-success)' : 'var(--ccc-warning)',
           }}
         ></i>
         <div>
           <p
             style={{
-              color: isSubscribed ? '#28a745' : '#ffc107',
+              color: isSubscribed ? 'var(--ccc-success)' : 'var(--ccc-warning)',
               fontWeight: 'bold',
               marginBottom: '4px',
             }}
           >
             {isSubscribed ? 'Vous êtes abonné aux emails' : 'Vous êtes désabonné des emails'}
           </p>
-          <p style={{ color: '#aaa', fontSize: '0.85em' }}>
+          <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.85em' }}>
             {isSubscribed
               ? 'Vous recevez toutes les notifications par email.'
               : 'Vous ne recevez plus aucune notification par email.'}
@@ -160,7 +160,7 @@ const EmailPreferences: React.FC = () => {
             style={{
               ...buttonStyle,
               background: 'linear-gradient(135deg, #e85d75, #c13057)',
-              color: '#fff',
+              color: 'var(--ccc-text-on-accent)',
             }}
           >
             {isUpdating ? (
@@ -184,13 +184,13 @@ const EmailPreferences: React.FC = () => {
           style={{
             marginTop: '15px',
             padding: '10px 12px',
-            background: 'rgba(255, 255, 255, 0.05)',
+            background: 'var(--ccc-bg-surface)',
             borderRadius: '6px',
-            borderLeft: '3px solid #888',
+            borderLeft: '3px solid var(--ccc-border-medium)',
           }}
         >
-          <p style={{ color: '#888', fontSize: '0.85em' }}>
-            <i className="fas fa-lightbulb" style={{ marginRight: '8px', color: '#ffc107' }}></i>
+          <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.85em' }}>
+            <i className="fas fa-lightbulb" style={{ marginRight: '8px', color: 'var(--ccc-warning)' }}></i>
             Pour vous désabonner, utilisez le lien "Se désabonner" présent dans vos emails.
           </p>
         </div>
@@ -202,12 +202,12 @@ const EmailPreferences: React.FC = () => {
           style={{
             marginTop: '15px',
             padding: '12px 15px',
-            background: 'rgba(255, 255, 255, 0.05)',
+            background: 'var(--ccc-bg-surface)',
             borderRadius: '6px',
-            borderLeft: '3px solid #dc3545',
+            borderLeft: '3px solid var(--ccc-error)',
           }}
         >
-          <p style={{ color: '#dc3545', fontSize: '0.9em', margin: 0 }}>
+          <p style={{ color: 'var(--ccc-error)', fontSize: '0.9em', margin: 0 }}>
             <i className="fas fa-times-circle" style={{ marginRight: '8px' }}></i>
             {error}
           </p>
@@ -219,12 +219,12 @@ const EmailPreferences: React.FC = () => {
           style={{
             marginTop: '15px',
             padding: '12px 15px',
-            background: 'rgba(255, 255, 255, 0.05)',
+            background: 'var(--ccc-bg-surface)',
             borderRadius: '6px',
-            borderLeft: '3px solid #28a745',
+            borderLeft: '3px solid var(--ccc-success)',
           }}
         >
-          <p style={{ color: '#28a745', fontSize: '0.9em', margin: 0 }}>
+          <p style={{ color: 'var(--ccc-success)', fontSize: '0.9em', margin: 0 }}>
             <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
             {successMessage}
           </p>

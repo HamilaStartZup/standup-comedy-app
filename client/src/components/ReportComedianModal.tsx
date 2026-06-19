@@ -87,10 +87,10 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Signaler un humoriste">
       {isChecking ? (
-        <p style={{ color: '#aaa', textAlign: 'center' }}>Vérification...</p>
+        <p style={{ color: 'var(--ccc-text-muted)', textAlign: 'center' }}>Vérification...</p>
       ) : hasReported ? (
         <div>
-          <p style={{ color: '#ffc107', marginBottom: '20px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--ccc-warning)', marginBottom: '20px', textAlign: 'center' }}>
             ⚠️ Vous avez déjà signalé cet humoriste.
           </p>
           <button
@@ -111,12 +111,12 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
         </div>
       ) : (
         <div>
-          <p style={{ color: '#aaa', marginBottom: '20px' }}>
-            Vous signalez : <strong style={{ color: '#fff' }}>{comedianName}</strong>
+          <p style={{ color: 'var(--ccc-text-muted)', marginBottom: '20px' }}>
+            Vous signalez : <strong style={{ color: 'var(--ccc-text-primary)' }}>{comedianName}</strong>
           </p>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', color: '#fff', marginBottom: '10px', fontWeight: 'bold' }}>
+            <label style={{ display: 'block', color: 'var(--ccc-text-primary)', marginBottom: '10px', fontWeight: 'bold' }}>
               Raison du signalement *
             </label>
             <select
@@ -126,9 +126,9 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
                 width: '100%',
                 padding: '10px',
                 borderRadius: '6px',
-                border: '1px solid #555',
-                background: '#222',
-                color: '#fff',
+                border: '1px solid var(--ccc-border-medium)',
+                background: 'var(--ccc-bg-surface)',
+                color: 'var(--ccc-text-primary)',
                 fontSize: '14px'
               }}
             >
@@ -141,7 +141,7 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', color: '#fff', marginBottom: '10px', fontWeight: 'bold' }}>
+            <label style={{ display: 'block', color: 'var(--ccc-text-primary)', marginBottom: '10px', fontWeight: 'bold' }}>
               Description (optionnel)
             </label>
             <textarea
@@ -154,15 +154,15 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
                 width: '100%',
                 padding: '10px',
                 borderRadius: '6px',
-                border: '1px solid #555',
-                background: '#222',
-                color: '#fff',
+                border: '1px solid var(--ccc-border-medium)',
+                background: 'var(--ccc-bg-surface)',
+                color: 'var(--ccc-text-primary)',
                 fontSize: '14px',
                 fontFamily: 'inherit',
                 resize: 'vertical'
               }}
             />
-            <p style={{ color: '#aaa', fontSize: '12px', marginTop: '5px' }}>
+            <p style={{ color: 'var(--ccc-text-muted)', fontSize: '12px', marginTop: '5px' }}>
               {description.length}/1000 caractères
             </p>
           </div>
@@ -174,9 +174,9 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
               style={{
                 padding: '10px 20px',
                 borderRadius: '6px',
-                border: '1px solid #555',
-                background: '#333',
-                color: '#fff',
+                border: '1px solid var(--ccc-border-medium)',
+                background: 'var(--ccc-bg-surface)',
+                color: 'var(--ccc-text-primary)',
                 fontWeight: 'bold',
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
                 opacity: isSubmitting ? 0.6 : 1
@@ -191,7 +191,7 @@ const ReportComedianModal = ({ isOpen, onClose, comedianId, comedianName }: Repo
                 padding: '10px 20px',
                 borderRadius: '6px',
                 border: 'none',
-                background: 'linear-gradient(to right, #dc3545, #c82333)',
+                background: 'linear-gradient(to right, var(--ccc-error), #c82333)',
                 color: 'white',
                 fontWeight: 'bold',
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',

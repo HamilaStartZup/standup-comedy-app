@@ -579,7 +579,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
     letterSpacing: '0.05em',
   };
 
-  const errorStyle: React.CSSProperties = { color: '#ef4444', fontSize: 12, marginTop: 4 };
+  const errorStyle: React.CSSProperties = { color: 'var(--ccc-error)', fontSize: 12, marginTop: 4 };
 
   const infoBadgeStyle: React.CSSProperties = {
     display: 'inline-block',
@@ -632,8 +632,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
             onClick={() => { setBookingMode(m); setErrors({}); setBatchCreatedCount(null); setBatchUnavailable([]); }}
             style={{
               flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700,
-              background: bookingMode === m ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-surface)',
-              color: bookingMode === m ? '#fff' : 'var(--ccc-text-secondary)',
+              background: bookingMode === m ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-inactive)',
+              color: bookingMode === m ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-secondary)',
             }}
           >
             {m === 'unique' ? 'Réservation unique' : 'Série récurrente'}
@@ -656,8 +656,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
                     style={{
                       flex: 1, padding: '8px 4px', borderRadius: 8, border: 'none',
                       cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                      background: recurrenceType === t ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-surface)',
-                      color: recurrenceType === t ? '#fff' : 'var(--ccc-text-secondary)',
+                      background: recurrenceType === t ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-inactive)',
+                      color: recurrenceType === t ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-secondary)',
                     }}
                   >
                     {t === 'daily' ? 'Quotidien' : t === 'weekly' ? 'Hebdo' : 'Mensuel'}
@@ -682,8 +682,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
                         style={{
                           padding: '5px 10px', borderRadius: 6, border: 'none',
                           cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                          background: active ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-surface)',
-                          color: active ? '#fff' : 'var(--ccc-text-secondary)',
+                          background: active ? 'var(--ccc-accent-gradient)' : 'var(--ccc-bg-inactive)',
+                          color: active ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-secondary)',
                         }}
                       >
                         {label}
@@ -794,8 +794,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
                     : config.timeLabel;
               return (
                 <div style={{ marginBottom: 14 }}>
-                  <p style={{ margin: '0 0 6px 0', fontSize: 12, color: '#888' }}>
-                    Mode de tarification : <strong style={{ color: '#ccc' }}>{PRICING_TYPE_LABELS_DISPLAY[pricingType]}</strong>
+                  <p style={{ margin: '0 0 6px 0', fontSize: 12, color: 'var(--ccc-text-muted)' }}>
+                    Mode de tarification : <strong style={{ color: 'var(--ccc-text-secondary)' }}>{PRICING_TYPE_LABELS_DISPLAY[pricingType]}</strong>
                   </p>
                   <span style={config.variant === 'success' ? infoBadgeSuccessStyle : infoBadgeStyle}>
                     {dynamicLabel}
@@ -807,17 +807,17 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
 
             {priceBreakdown && (
               <div style={{ marginBottom: 14 }}>
-                <p style={{ margin: '0 0 6px 0', fontSize: 12, color: '#888' }}>
-                  Mode de tarification : <strong style={{ color: '#ccc' }}>{PRICING_TYPE_LABELS_DISPLAY[pricingType as PricingType] || 'À l\'heure'}</strong>
-                  {availableRecurringDates.length > 0 && <span style={{ marginLeft: 8, color: '#666' }}>— par réservation</span>}
+                <p style={{ margin: '0 0 6px 0', fontSize: 12, color: 'var(--ccc-text-muted)' }}>
+                  Mode de tarification : <strong style={{ color: 'var(--ccc-text-secondary)' }}>{PRICING_TYPE_LABELS_DISPLAY[pricingType as PricingType] || 'À l\'heure'}</strong>
+                  {availableRecurringDates.length > 0 && <span style={{ marginLeft: 8, color: 'var(--ccc-text-muted)' }}>— par réservation</span>}
                 </p>
                 <PriceBreakdown breakdown={priceBreakdown} currency={currency} />
                 {availableRecurringDates.length > 0 && (
                   <div style={{ marginTop: 8, padding: '8px 14px', background: 'rgba(124, 58, 237,0.08)', border: '1px solid rgba(124, 58, 237,0.2)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 13, color: '#ccc' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ccc-text-secondary)' }}>
                       Total estimé ({availableRecurringDates.length} réservation{availableRecurringDates.length > 1 ? 's' : ''})
                     </span>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: '#ff8fa3' }}>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--ccc-accent)' }}>
                       {(priceBreakdown.total * availableRecurringDates.length).toLocaleString('fr-FR')} {currency}
                     </span>
                   </div>
@@ -881,7 +881,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
             style={{
               background: 'var(--ccc-bg-surface)',
               border: errors.date
-                ? '1px solid #ef4444'
+                ? '1px solid var(--ccc-error)'
                 : '1px solid var(--ccc-border-subtle)',
               borderRadius: 10,
               padding: '8px 4px',
@@ -948,8 +948,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
         {/* Récapitulatif des coûts pour le type 'heure' */}
         {showHourSelectors && priceBreakdown && (
           <div style={{ marginBottom: 16 }}>
-            <p style={{ margin: '0 0 8px 0', fontSize: 12, color: '#888' }}>
-              Mode de tarification : <strong style={{ color: '#ccc' }}>{PRICING_TYPE_LABELS_DISPLAY[pricingType as PricingType] || 'À l\'heure'}</strong>
+            <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ccc-text-muted)' }}>
+              Mode de tarification : <strong style={{ color: 'var(--ccc-text-secondary)' }}>{PRICING_TYPE_LABELS_DISPLAY[pricingType as PricingType] || 'À l\'heure'}</strong>
             </p>
             <PriceBreakdown breakdown={priceBreakdown} currency={currency} />
           </div>
@@ -996,8 +996,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
             )}
             {priceBreakdown && (
               <>
-                <p style={{ margin: '8px 0 8px 0', fontSize: 12, color: '#888' }}>
-                  Mode de tarification : <strong style={{ color: '#ccc' }}>{PRICING_TYPE_LABELS_DISPLAY['demi_journee']}</strong>
+                <p style={{ margin: '8px 0 8px 0', fontSize: 12, color: 'var(--ccc-text-muted)' }}>
+                  Mode de tarification : <strong style={{ color: 'var(--ccc-text-secondary)' }}>{PRICING_TYPE_LABELS_DISPLAY['demi_journee']}</strong>
                 </p>
                 <PriceBreakdown breakdown={priceBreakdown} currency={currency} />
               </>
@@ -1017,8 +1017,8 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
                 : config.timeLabel;
           return (
             <div style={{ marginBottom: 16 }}>
-              <p style={{ margin: '0 0 6px 0', fontSize: 12, color: '#888' }}>
-                Mode de tarification : <strong style={{ color: '#ccc' }}>{PRICING_TYPE_LABELS_DISPLAY[pricingType]}</strong>
+              <p style={{ margin: '0 0 6px 0', fontSize: 12, color: 'var(--ccc-text-muted)' }}>
+                Mode de tarification : <strong style={{ color: 'var(--ccc-text-secondary)' }}>{PRICING_TYPE_LABELS_DISPLAY[pricingType]}</strong>
               </p>
               <span style={config.variant === 'success' ? infoBadgeSuccessStyle : infoBadgeStyle}>
                 {dynamicLabel}
@@ -1055,7 +1055,7 @@ const VenueBookingForm: React.FC<VenueBookingFormProps> = ({
               background: isSubmitting
                 ? 'rgba(124, 58, 237,0.5)'
                 : 'var(--ccc-accent-gradient)',
-              color: '#fff',
+              color: 'var(--ccc-text-on-accent)',
               border: 'none',
               borderRadius: 10,
               fontSize: 15,

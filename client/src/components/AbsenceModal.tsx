@@ -51,15 +51,15 @@ function AbsenceModal({
     textAlign: 'center',
   };
   const infoStyle: CSSProperties = {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'var(--ccc-bg-surface)',
     padding: '15px',
     borderRadius: '8px',
     marginBottom: '20px',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
+    border: '1px solid var(--ccc-border-medium)',
   };
   const labelStyle: CSSProperties = {
     display: 'block',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     fontWeight: 'bold',
     marginBottom: '8px',
   };
@@ -72,9 +72,9 @@ function AbsenceModal({
     minHeight: '100px',
     padding: '12px',
     borderRadius: '8px',
-    border: '1px solid #444',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    color: '#ffffff',
+    border: '1px solid var(--ccc-border-medium)',
+    backgroundColor: 'var(--ccc-bg-surface)',
+    color: 'var(--ccc-text-primary)',
     fontSize: '14px',
     resize: 'vertical',
     outline: 'none',
@@ -97,18 +97,18 @@ function AbsenceModal({
   };
   const cancelButtonStyle: CSSProperties = {
     ...buttonBaseStyle,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    color: '#ffffff',
-    border: '1px solid rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'var(--ccc-bg-surface)',
+    color: 'var(--ccc-text-primary)',
+    border: '1px solid var(--ccc-border-medium)',
   };
   const submitButtonStyle: CSSProperties = {
     ...buttonBaseStyle,
-    backgroundColor: isAlreadyAbsent ? '#28a745' : '#dc3545',
-    color: '#ffffff',
+    backgroundColor: isAlreadyAbsent ? 'var(--ccc-btn-success-bg)' : 'var(--ccc-btn-danger-bg)',
+    color: 'var(--ccc-text-on-accent)',
   };
   const disabledButtonStyle: CSSProperties = {
     ...submitButtonStyle,
-    backgroundColor: '#666',
+    backgroundColor: 'var(--ccc-text-faint)',
     cursor: 'not-allowed',
   };
 
@@ -137,7 +137,7 @@ function AbsenceModal({
             borderRadius: '8px',
             padding: '15px',
             marginBottom: '20px',
-            color: '#28a745',
+            color: 'var(--ccc-success)',
             textAlign: 'center',
           }}>
             ✅ Ce participant est actuellement marqué comme absent.<br />
@@ -163,8 +163,8 @@ function AbsenceModal({
               maxLength={500}
             />
             <div style={{ 
-              color: '#aaa', 
-              fontSize: '12px', 
+              color: 'var(--ccc-text-muted)',
+              fontSize: '12px',
               textAlign: 'right',
               marginTop: '-15px',
               marginBottom: '15px' 

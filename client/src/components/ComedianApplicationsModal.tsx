@@ -92,9 +92,9 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ACCEPTED': return '#28a745';
-      case 'REJECTED': return '#dc3545';
-      case 'PENDING': return '#ffc107';
+      case 'ACCEPTED': return 'var(--ccc-success)';
+      case 'REJECTED': return 'var(--ccc-error)';
+      case 'PENDING': return 'var(--ccc-warning)';
       case 'EXPIRED': return '#6c757d';
       case 'WITHDRAWN': return '#6c757d';
       case 'CANCELLED_BY_PLATFORM': return '#6c757d';
@@ -132,7 +132,7 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
     textAlign: 'center',
     marginBottom: '20px',
     paddingBottom: '15px',
-    borderBottom: '2px solid #7c3aed'
+    borderBottom: '2px solid var(--ccc-accent)'
   };
 
   const statsContainerStyle: CSSProperties = {
@@ -161,8 +161,8 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
     padding: '8px 16px',
     borderRadius: '20px',
     border: 'none',
-    backgroundColor: isActive ? '#7c3aed' : 'rgba(255, 255, 255, 0.2)',
-    color: '#ffffff',
+    backgroundColor: isActive ? 'var(--ccc-accent)' : 'rgba(255, 255, 255, 0.2)',
+    color: 'var(--ccc-text-on-accent)',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: 'bold'
@@ -179,7 +179,7 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
   const emptyStateStyle: CSSProperties = {
     textAlign: 'center',
     padding: '40px 20px',
-    color: '#aaa'
+    color: 'rgba(255,255,255,0.67)'
   };
 
   if (!comedian) return null;
@@ -192,11 +192,11 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
           <h2 style={{ fontSize: '1.8em', color: '#ff4b2b', margin: '0 0 10px 0' }}>
             {comedian.firstName} {comedian.lastName}
           </h2>
-          <p style={{ color: '#aaa', margin: 0 }}>{comedian.email}</p>
+          <p style={{ color: 'rgba(255,255,255,0.67)', margin: 0 }}>{comedian.email}</p>
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#aaa' }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.67)' }}>
             Chargement des candidatures...
           </div>
         ) : (
@@ -204,24 +204,24 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
             {/* Statistiques */}
             <div style={statsContainerStyle}>
               <div style={statCardStyle}>
-                <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#ffffff' }}>{stats.total}</div>
-                <div style={{ fontSize: '12px', color: '#aaa' }}>Total</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--ccc-text-on-accent)' }}>{stats.total}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.67)' }}>Total</div>
               </div>
               <div style={statCardStyle}>
-                <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#28a745' }}>{stats.accepted}</div>
-                <div style={{ fontSize: '12px', color: '#aaa' }}>Acceptées</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--ccc-success)' }}>{stats.accepted}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.67)' }}>Acceptées</div>
               </div>
               <div style={statCardStyle}>
-                <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#dc3545' }}>{stats.rejected}</div>
-                <div style={{ fontSize: '12px', color: '#aaa' }}>Refusées</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--ccc-error)' }}>{stats.rejected}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.67)' }}>Refusées</div>
               </div>
               <div style={statCardStyle}>
-                <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#ffc107' }}>{stats.pending}</div>
-                <div style={{ fontSize: '12px', color: '#aaa' }}>En attente</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--ccc-warning)' }}>{stats.pending}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.67)' }}>En attente</div>
               </div>
               <div style={statCardStyle}>
                 <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#6c757d' }}>{stats.expired}</div>
-                <div style={{ fontSize: '12px', color: '#aaa' }}>Expirées</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.67)' }}>Expirées</div>
               </div>
             </div>
 
@@ -272,7 +272,7 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
                         padding: '4px 12px',
                         borderRadius: '15px',
                         backgroundColor: getStatusColor(app.status),
-                        color: '#ffffff',
+                        color: 'var(--ccc-text-on-accent)',
                         fontSize: '12px',
                         fontWeight: 'bold'
                       }}>
@@ -280,17 +280,17 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
                       </span>
                     </div>
                     
-                    <div style={{ fontSize: '14px', color: '#ccc', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', marginBottom: '8px' }}>
                       📅 {new Date(app.event.date).toLocaleDateString('fr-FR')} • 
                       📍 {app.event.location.city}
                     </div>
                     
-                    <div style={{ fontSize: '14px', color: '#ccc', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', marginBottom: '8px' }}>
                       👤 Organisateur: {app.event.organizer.firstName} {app.event.organizer.lastName}
                     </div>
 
                     {app.performanceDetails && (
-                      <div style={{ fontSize: '13px', color: '#aaa', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.67)', marginBottom: '8px' }}>
                         ⏱️ Durée proposée: {app.performanceDetails.duration}min
                       </div>
                     )}
@@ -302,7 +302,7 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
                         borderRadius: '4px',
                         marginTop: '8px',
                         fontSize: '13px',
-                        color: '#ddd'
+                        color: 'var(--ccc-text-subtle)'
                       }}>
                         💬 Message: {app.message}
                       </div>
@@ -321,7 +321,7 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
                       </div>
                     )}
 
-                    <div style={{ fontSize: '11px', color: '#888', marginTop: '8px' }}>
+                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.53)', marginTop: '8px' }}>
                       Candidature envoyée le {new Date(app.createdAt).toLocaleDateString('fr-FR')}
                     </div>
                   </div>
@@ -329,10 +329,10 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
               ) : (
                 <div style={emptyStateStyle}>
                   <div style={{ fontSize: '48px', marginBottom: '15px' }}>📋</div>
-                  <h3 style={{ color: '#ffffff', margin: '0 0 10px 0' }}>
+                  <h3 style={{ color: 'var(--ccc-text-on-accent)', margin: '0 0 10px 0' }}>
                     {filter === 'all' ? 'Aucune candidature' : `Aucune candidature ${getStatusLabel(filter).toLowerCase()}`}
                   </h3>
-                  <p style={{ color: '#aaa', margin: 0 }}>
+                  <p style={{ color: 'rgba(255,255,255,0.67)', margin: 0 }}>
                     {filter === 'all' 
                       ? 'Cet humoriste n\'a encore envoyé aucune candidature.'
                       : 'Aucune candidature ne correspond à ce filtre.'

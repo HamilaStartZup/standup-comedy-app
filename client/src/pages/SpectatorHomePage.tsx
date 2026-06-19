@@ -25,7 +25,7 @@ function parseEventsResponse(data: any): IEvent[] {
 const RADII = [5, 10, 20, 50] as const;
 
 export default function SpectatorHomePage() {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const { showSuccess, showError, showInfo } = useAlert();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -68,7 +68,7 @@ export default function SpectatorHomePage() {
     return p;
   }, [searchLieu, searchVenueType, searchRadius]);
 
-  const { data: eventsRaw, isLoading } = useQuery({
+  const { data: eventsRaw, isLoading, isError: errorEvents } = useQuery({
     queryKey: ['events', 'spectator', queryParams],
     queryFn: async () => {
       const params = new URLSearchParams(queryParams).toString();
@@ -81,7 +81,7 @@ export default function SpectatorHomePage() {
   const eventsData: IEvent[] = eventsRaw ?? [];
 
   // Fetch events the spectator is registered to (includes cancelled ones)
-  const { data: regRaw, isLoading: loadingRegistrations } = useQuery({
+  const { data: regRaw, isLoading: loadingRegistrations, isError: errorRegistrations } = useQuery({
     queryKey: ['events', 'spectator', 'myRegistrations'],
     queryFn: async () => {
       const res = await api.get('/events?myRegistrations=true');
@@ -96,7 +96,7 @@ export default function SpectatorHomePage() {
     return new Set(myRegistrationsList.map((e) => e._id));
   }, [myRegistrationsList]);
 
-  const { data: aroundMeRaw, isLoading: loadingAroundMe } = useQuery({
+  const { data: aroundMeRaw, isLoading: loadingAroundMe, isError: errorAroundMe } = useQuery({
     queryKey: ['events', 'spectator', 'nearMe', user?.city, effectiveRadius],
     queryFn: async () => {
       if (!user?.city?.trim()) return [];
@@ -206,9 +206,7 @@ export default function SpectatorHomePage() {
     return registeredEventIds.has(event._id);
   };
 
-  const openUnregisterConfirm = (eventId: string) => {
-    setUnregisterConfirm({ isOpen: true, eventId });
-  };
+
 
   const handleConfirmUnregister = () => {
     if (unregisterConfirm.eventId) {
@@ -263,8 +261,8 @@ export default function SpectatorHomePage() {
                 padding: '12px 16px',
                 borderRadius: 8,
                 border: 'none',
-                background: 'linear-gradient(135deg, #FF5A7E, #FF7A92)',
-                color: '#fff',
+                background: 'var(--ccc-accent-gradient)',
+                color: 'var(--ccc-text-on-accent)',
                 cursor: 'pointer',
                 fontWeight: 600,
                 fontSize: '0.9rem',
@@ -340,6 +338,16 @@ export default function SpectatorHomePage() {
               <h2 style={{ marginBottom: 16, fontSize: '1.25rem' }}>Événements à venir</h2>
               {isLoading ? (
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
+              ) : errorEvents ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                  <p style={{ color: 'var(--ccc-error)', margin: 0 }}>Impossible de charger les événements.</p>
+                  <button
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['events', 'spectator', queryParams] })}
+                    style={{ padding: '8px 20px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
+                  >
+                    Réessayer
+                  </button>
+                </div>
               ) : upcomingEvents.length === 0 ? (
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Aucun événement trouvé.</p>
               ) : (
@@ -375,6 +383,16 @@ export default function SpectatorHomePage() {
               <h2 style={{ marginBottom: 16, fontSize: '1.25rem' }}>Inscrits (à venir)</h2>
               {loadingRegistrations ? (
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
+              ) : errorRegistrations ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                  <p style={{ color: 'var(--ccc-error)', margin: 0 }}>Impossible de charger vos inscriptions.</p>
+                  <button
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['events', 'spectator', 'myRegistrations'] })}
+                    style={{ padding: '8px 20px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
+                  >
+                    Réessayer
+                  </button>
+                </div>
               ) : registeredUpcoming.length === 0 ? (
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Aucun événement à venir auquel vous êtes inscrit.</p>
               ) : (
@@ -433,6 +451,16 @@ export default function SpectatorHomePage() {
               </div>
               {loadingAroundMe ? (
                 <p style={{ color: 'var(--ccc-text-muted)' }}>Chargement…</p>
+              ) : errorAroundMe ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                  <p style={{ color: 'var(--ccc-error)', margin: 0 }}>Impossible de charger les suggestions.</p>
+                  <button
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['events', 'spectator', 'nearMe'] })}
+                    style={{ padding: '8px 20px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
+                  >
+                    Réessayer
+                  </button>
+                </div>
               ) : aroundMeUpcoming.length === 0 ? (
                 <p style={{ color: 'var(--ccc-text-muted)' }}>
                   Aucun événement à venir dans ce rayon.
@@ -518,7 +546,7 @@ function EventCard({
 
   const imageUrl = (event as any).imageUrl;
   const hasBg = !!imageUrl;
-  const textColor = hasBg ? '#fff' : 'var(--ccc-text-primary)';
+  const textColor = hasBg ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-primary)';
   const textColorMuted = hasBg ? 'rgba(255,255,255,0.92)' : 'var(--ccc-text-secondary)';
   const textColorMuted2 = hasBg ? 'rgba(255,255,255,0.88)' : 'var(--ccc-text-muted)';
   const textShadow = hasBg ? '0 1px 2px rgba(0,0,0,0.8)' : 'none';
@@ -592,7 +620,7 @@ function EventCard({
                   borderRadius: 6,
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: '#fff',
+                  color: 'var(--ccc-text-on-accent)',
                   background: 'rgba(34, 197, 94, 0.95)',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                 }}
@@ -648,9 +676,9 @@ function EventCard({
               marginTop: 8,
               padding: '8px 12px',
               borderRadius: 8,
-              border: '1px solid #28a745',
-              background: 'rgba(40, 167, 69, 0.2)',
-              color: '#5dd879',
+              border: '1px solid var(--ccc-success)',
+              background: 'rgba(40, 167, 69, 0.12)',
+              color: '#166534',
               cursor: isRegistering ? 'wait' : 'pointer',
               fontSize: '0.9rem',
             }}

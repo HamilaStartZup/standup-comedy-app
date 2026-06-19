@@ -24,7 +24,7 @@ const thStyle: React.CSSProperties = {
   border: cellBorder,
   padding: 10,
   textAlign: 'left',
-  background: '#f9fafb',
+  background: 'var(--ccc-bg-surface)',
   fontSize: 12,
   fontWeight: 600,
 };
@@ -67,15 +67,15 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
             body { font-family: system-ui, -apple-system, sans-serif; color: #111; margin: 32px; }
             h1 { font-size: 22px; margin: 0 0 4px; }
             table { width: 100%; border-collapse: collapse; }
-            th, td { border: 1px solid #ddd; padding: 8px 10px; font-size: 13px; }
+            th, td { border: 1px solid var(--ccc-border-light); padding: 8px 10px; font-size: 13px; }
             th { background: #f3f4f6; text-align: left; }
             .booking-block { margin-bottom: 16px; }
-            .detail-row td { background: #fafafa; color: #475569; font-size: 12px; }
+            .detail-row td { background: #fafafa; color: var(--ccc-text-secondary); font-size: 12px; }
             .detail-row td:last-child { text-align: right; }
             .subtotal-row td { font-weight: 600; background: #f3f4f6; }
             .subtotal-row td:last-child { text-align: right; }
             .total { font-size: 16px; font-weight: 700; margin-top: 16px; text-align: right; }
-            .muted { color: #64748b; font-size: 13px; }
+            .muted { color: var(--ccc-text-muted); font-size: 13px; }
             @media print { body { margin: 16px; } }
           </style>
         </head>
@@ -107,7 +107,7 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#fff',
+          background: 'var(--ccc-bg-elevated)',
           borderRadius: 16,
           maxWidth: 720,
           width: '100%',
@@ -126,7 +126,7 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
             borderBottom: '1px solid #e5e7eb',
             position: 'sticky',
             top: 0,
-            background: '#fff',
+            background: 'var(--ccc-bg-elevated)',
             zIndex: 1,
           }}
         >
@@ -140,7 +140,7 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
               style={{
                 padding: '8px 16px',
                 background: 'var(--ccc-accent-gradient)',
-                color: '#fff',
+                color: 'var(--ccc-text-on-accent)',
                 border: 'none',
                 borderRadius: 8,
                 cursor: 'pointer',
@@ -171,23 +171,23 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
 
         <div ref={printRef} style={{ padding: 24, color: '#111' }}>
           <h1 style={{ margin: '0 0 4px', fontSize: 22 }}>Connect Comedy Club</h1>
-          <p className="muted" style={{ margin: '0 0 20px', fontSize: 13, color: '#64748b' }}>
+          <p className="muted" style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--ccc-text-muted)' }}>
             Facture {isSeries ? 'de série' : ''} · {invoiceNumber}
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
             <div>
-              <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#64748b' }}>
+              <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--ccc-text-muted)' }}>
                 Prestataire (salle)
               </p>
               <p style={{ margin: 0, fontWeight: 700 }}>{venue?.name ?? '—'}</p>
               {venue?.companyName && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{venue.companyName}</p>}
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: '#475569' }}>{formatVenueAddress(venue)}</p>
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ccc-text-secondary)' }}>{formatVenueAddress(venue)}</p>
               {venue?.siret && <p style={{ margin: '4px 0 0', fontSize: 13 }}>SIRET : {venue.siret}</p>}
               {venue?.contactEmail && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{venue.contactEmail}</p>}
             </div>
             <div>
-              <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#64748b' }}>
+              <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--ccc-text-muted)' }}>
                 Client
               </p>
               <p style={{ margin: 0, fontWeight: 700 }}>{formatClientName(requester)}</p>
@@ -198,7 +198,7 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
             </div>
           </div>
 
-          <p style={{ margin: '0 0 16px', fontSize: 13, color: '#475569' }}>
+          <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--ccc-text-secondary)' }}>
             Date d&apos;émission :{' '}
             {invoiceDate
               ? new Date(invoiceDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -229,14 +229,14 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
                     <tr>
                       <td style={{ border: cellBorder, padding: 10, fontSize: 13, fontWeight: 600 }}>
                         {dateLabel}
-                        <span style={{ display: 'block', fontWeight: 500, color: '#64748b', marginTop: 4 }}>
+                        <span style={{ display: 'block', fontWeight: 500, color: 'var(--ccc-text-muted)', marginTop: 4 }}>
                           {b.startTime} – {b.endTime}
                         </span>
                       </td>
                       <td style={{ border: cellBorder, padding: 10, fontSize: 13 }}>
                         {getPaymentStatusLabel(b)}
                         {b.paidAt && (
-                          <span style={{ display: 'block', fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                          <span style={{ display: 'block', fontSize: 11, color: 'var(--ccc-text-muted)', marginTop: 4 }}>
                             {new Date(b.paidAt).toLocaleDateString('fr-FR')}
                           </span>
                         )}
@@ -245,21 +245,21 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
                     {breakdown && breakdown.lines.length > 0 && (
                       <>
                         <tr>
-                          <td colSpan={2} style={{ border: cellBorder, padding: '8px 10px', background: '#f9fafb', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#64748b' }}>
+                          <td colSpan={2} style={{ border: cellBorder, padding: '8px 10px', background: '#f9fafb', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--ccc-text-muted)' }}>
                             Détail du montant
                           </td>
                         </tr>
                         {breakdown.lines.map((line, idx) => (
                           <tr key={idx} className="detail-row">
-                            <td style={{ border: cellBorder, padding: '8px 10px 8px 20px', fontSize: 12, color: '#475569' }}>
+                            <td style={{ border: cellBorder, padding: '8px 10px 8px 20px', fontSize: 12, color: 'var(--ccc-text-secondary)' }}>
                               {line.label}
                               {line.note && (
-                                <span style={{ display: 'block', fontSize: 10, color: '#94a3b8', fontStyle: 'italic', marginTop: 2 }}>
+                                <span style={{ display: 'block', fontSize: 10, color: 'var(--ccc-text-faint)', fontStyle: 'italic', marginTop: 2 }}>
                                   {line.note}
                                 </span>
                               )}
                             </td>
-                            <td style={{ border: cellBorder, padding: '8px 10px', fontSize: 12, textAlign: 'right', color: '#475569' }}>
+                            <td style={{ border: cellBorder, padding: '8px 10px', fontSize: 12, textAlign: 'right', color: 'var(--ccc-text-secondary)' }}>
                               {formatInvoiceMoney(line.amount, currency)}
                             </td>
                           </tr>
@@ -285,12 +285,12 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
           </p>
 
           {lines.some((b) => b.paymentStatus === 'refunded') && (
-            <p style={{ marginTop: 12, fontSize: 12, color: '#b45309' }}>
+            <p style={{ marginTop: 12, fontSize: 12, color: 'var(--ccc-card-pending-text)' }}>
               Certaines lignes ont fait l&apos;objet d&apos;un remboursement.
             </p>
           )}
 
-          <p style={{ marginTop: 24, fontSize: 11, color: '#94a3b8' }}>
+          <p style={{ marginTop: 24, fontSize: 11, color: 'var(--ccc-text-faint)' }}>
             Document généré par Connect Comedy Club à titre de justificatif de réservation.
             {isSeries ? ` Série de ${lines.length} date(s).` : ''}
           </p>

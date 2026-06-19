@@ -126,7 +126,7 @@ function TableOfContents({
     backgroundColor: 'rgba(255, 90, 126, 0.2)',
     color: '#FF5A7E',
     fontWeight: 'bold',
-    borderLeftColor: '#7c3aed',
+    borderLeftColor: 'var(--ccc-accent)',
   };
 
   const tocSubLinkStyle: CSSProperties = {
@@ -144,7 +144,7 @@ function TableOfContents({
     width: '56px',
     height: '56px',
     borderRadius: '50%',
-    background: 'linear-gradient(135deg, #7c3aed, #FF5A7E)',
+    background: 'linear-gradient(135deg, var(--ccc-accent), #FF5A7E)',
     border: 'none',
     boxShadow: '0 4px 12px rgba(124, 58, 237, 0.4)',
     color: '#ffffff',

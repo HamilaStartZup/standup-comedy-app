@@ -202,14 +202,31 @@ const CalendarPage = () => {
       <div style={contentWrapperStyle}>
 
       {isLoading && (
-        <p style={{ textAlign:'center', marginTop:'50px', color:'#7c3aed' }}>
+        <p style={{ textAlign:'center', marginTop:'50px', color: 'var(--ccc-accent)' }}>
           Chargement des événements…
         </p>
       )}
       {isError && (
-        <p style={{ textAlign:'center', marginTop:'50px', color:'#dc3545' }}>
-          Erreur lors du chargement des événements.
-        </p>
+        <div style={{ textAlign:'center', marginTop:'50px' }}>
+          <p style={{ color:'var(--ccc-error)', marginBottom: '12px' }}>
+            Erreur lors du chargement des événements.
+          </p>
+          <button
+            onClick={() => { fullQuery.refetch(); upcomingQuery.refetch(); }}
+            style={{
+              padding: '10px 24px',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'var(--ccc-accent-gradient)',
+              color: 'white',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+            }}
+          >
+            Réessayer
+          </button>
+        </div>
       )}
 
       {!isLoading && !isError && (

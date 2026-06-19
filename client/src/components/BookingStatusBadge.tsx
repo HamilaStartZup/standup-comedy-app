@@ -9,10 +9,10 @@ interface BookingStatusBadgeProps {
 }
 
 export const STATUS_CONFIG: Record<VenueBookingStatus, { label: string; color: string; bg: string }> = {
-  PENDING: { label: 'En attente', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
-  ACCEPTED: { label: 'Acceptée — paiement requis', color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
-  REFUSED: { label: 'Refusée', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
-  CONFIRMED: { label: 'Confirmée', color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
+  PENDING: { label: 'En attente', color: 'var(--ccc-warning)', bg: 'rgba(245,158,11,0.15)' },
+  ACCEPTED: { label: 'Acceptée — paiement requis', color: 'var(--ccc-info)', bg: 'rgba(59,130,246,0.15)' },
+  REFUSED: { label: 'Refusée', color: 'var(--ccc-error)', bg: 'rgba(239,68,68,0.15)' },
+  CONFIRMED: { label: 'Confirmée', color: 'var(--ccc-success)', bg: 'rgba(16,185,129,0.15)' },
   CANCELLED_BY_OWNER: { label: 'Annulée par le propriétaire', color: '#6b7280', bg: 'rgba(107,114,128,0.15)' },
   CANCELLED_BY_REQUESTER: { label: 'Annulée par vous', color: '#6b7280', bg: 'rgba(107,114,128,0.15)' },
   EXPIRED: { label: 'Expirée — paiement non effectué', color: '#6b7280', bg: 'rgba(107,114,128,0.15)' },
@@ -41,9 +41,9 @@ function formatCountdown(ms: number): string {
 
 function getUrgencyColor(ms: number): { color: string; bg: string } {
   if (ms <= 0) return { color: '#6b7280', bg: 'rgba(107,114,128,0.15)' };
-  if (ms < 6 * 3600 * 1000) return { color: '#ef4444', bg: 'rgba(239,68,68,0.15)' };   // < 6h → rouge
+  if (ms < 6 * 3600 * 1000) return { color: 'var(--ccc-error)', bg: 'rgba(239,68,68,0.15)' };   // < 6h → rouge
   if (ms < 24 * 3600 * 1000) return { color: '#f97316', bg: 'rgba(249,115,22,0.15)' };  // < 24h → orange
-  return { color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' };                              // > 24h → bleu
+  return { color: 'var(--ccc-info)', bg: 'rgba(59,130,246,0.15)' };                              // > 24h → bleu
 }
 
 const OWNER_LABEL_OVERRIDES: Partial<Record<VenueBookingStatus, string>> = {

@@ -13,7 +13,7 @@ import {
   FRENCH_DEPARTMENTS,
   DEPARTMENTS_ORDER,
 } from '../utils/geographicMatching';
-import { primaryButtonStyle } from '../styles/theme';
+
 
 const VENUE_TYPES_WITH_ALL = [
   { value: '', label: 'Tous les types' },
@@ -39,7 +39,7 @@ const VenuesPage: React.FC = () => {
   const [activeFilters, setActiveFilters] = useState(filtersFromUrl);
   const [page, setPage] = useState(1);
 
-  const { data: venuesResponse, isLoading, error } = useVenues({
+  const { data: venuesResponse, isLoading, error, refetch } = useVenues({
     city: activeFilters.city || undefined,
     venueType: activeFilters.venueType || undefined,
     minCapacity: activeFilters.minCapacity ? parseInt(activeFilters.minCapacity) : undefined,
@@ -145,7 +145,7 @@ const VenuesPage: React.FC = () => {
             style={inputStyle}
           >
             {VENUE_TYPES_WITH_ALL.map((t) => (
-              <option key={t.value} value={t.value} style={{ background: '#ffffff' }}>
+              <option key={t.value} value={t.value} style={{ background: 'var(--ccc-option-bg)' }}>
                 {t.label}
               </option>
             ))}
@@ -160,9 +160,9 @@ const VenuesPage: React.FC = () => {
             }}
             style={inputStyle}
           >
-            <option value="" style={{ background: '#ffffff' }}>Toutes les régions</option>
+            <option value="" style={{ background: 'var(--ccc-option-bg)' }}>Toutes les régions</option>
             {REGION_OPTIONS.filter(Boolean).map((r) => (
-              <option key={r} value={r} style={{ background: '#ffffff' }}>
+              <option key={r} value={r} style={{ background: 'var(--ccc-option-bg)' }}>
                 {r}
               </option>
             ))}
@@ -174,9 +174,9 @@ const VenuesPage: React.FC = () => {
             onChange={(e) => setFilters((p) => ({ ...p, department: e.target.value }))}
             style={inputStyle}
           >
-            <option value="" style={{ background: '#ffffff' }}>Tous les départements</option>
+            <option value="" style={{ background: 'var(--ccc-option-bg)' }}>Tous les départements</option>
             {availableDepartments.map((code) => (
-              <option key={code} value={code} style={{ background: '#ffffff' }}>
+              <option key={code} value={code} style={{ background: 'var(--ccc-option-bg)' }}>
                 {code} — {FRENCH_DEPARTMENTS[code] ?? code}
               </option>
             ))}
@@ -192,7 +192,7 @@ const VenuesPage: React.FC = () => {
           />
           <button
             type="submit"
-            style={{ ...primaryButtonStyle, whiteSpace: 'nowrap' }}
+            style={{ padding: '10px 20px', borderRadius: 'var(--ccc-radius-sm)', border: 'none', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', fontSize: '1em', fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s ease, transform 0.2s ease', boxShadow: 'var(--ccc-shadow-accent)', whiteSpace: 'nowrap' }}
           >
             Rechercher
           </button>
@@ -222,7 +222,22 @@ const VenuesPage: React.FC = () => {
           </div>
         ) : error ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
-            <p style={{ color: '#ef4444', fontSize: 15 }}>Impossible de charger les salles.</p>
+            <p style={{ color: 'var(--ccc-error)', fontSize: 15, marginBottom: 16 }}>Impossible de charger les salles.</p>
+            <button
+              onClick={() => refetch()}
+              style={{
+                padding: '10px 24px',
+                borderRadius: 8,
+                border: 'none',
+                background: 'var(--ccc-accent-gradient)',
+                color: 'white',
+                fontSize: 14,
+                fontWeight: 'bold',
+                cursor: 'pointer',
+              }}
+            >
+              Réessayer
+            </button>
           </div>
         ) : !data || data.length === 0 ? (
           <div
@@ -247,7 +262,7 @@ const VenuesPage: React.FC = () => {
                 style={{
                   padding: '10px 24px',
                   background: 'rgba(124, 58, 237,0.15)',
-                  color: '#7c3aed',
+                  color: 'var(--ccc-accent)',
                   border: '1px solid rgba(124, 58, 237,0.4)',
                   borderRadius: 10,
                   cursor: 'pointer',

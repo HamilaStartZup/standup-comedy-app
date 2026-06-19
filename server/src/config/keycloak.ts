@@ -84,7 +84,8 @@ export const buildAuthorizationUrl = async (
   state: string,
   codeChallenge: string,
   scope: string = 'openid profile email',
-  idpHint?: string
+  idpHint?: string,
+  prompt?: string
 ): Promise<string> => {
   const keycloakCfg = await getKeycloakConfig();
 
@@ -100,6 +101,12 @@ export const buildAuthorizationUrl = async (
   // we pass it to Keycloak using kc_idp_hint
   if (idpHint) {
     parameters.kc_idp_hint = idpHint;
+  }
+
+  // prompt force Keycloak à ne pas réutiliser sa session SSO ; transféré à l'IdP
+  // externe (Google) si forwardParameters=prompt y est configuré.
+  if (prompt) {
+    parameters.prompt = prompt;
   }
 
   const authUrl = client.buildAuthorizationUrl(keycloakCfg, parameters);

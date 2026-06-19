@@ -18,15 +18,121 @@
   --ccc-text-secondary: #475569;
   --ccc-text-muted: #64748b;
   --ccc-text-faint: #94a3b8;
+  --ccc-text-on-accent: #ffffff;
 
   /* Borders */
   --ccc-border-subtle: rgba(15, 23, 42, 0.08);
   --ccc-border-medium: rgba(15, 23, 42, 0.14);
 
+  /* Semantic states */
+  --ccc-success: #10b981;
+  --ccc-error: #ef4444;
+  --ccc-warning: #f59e0b;
+  --ccc-info: #3b82f6;
+
+  /* Shadows */
+  --ccc-shadow-sm: 0 4px 24px rgba(15, 23, 42, 0.08);
+
+  /* Hover states */
+  --ccc-bg-hover: rgba(15, 23, 42, 0.05);
+  --ccc-bg-surface-hover: rgba(15, 23, 42, 0.08);
+
+  /* Options inactives / non-sélectionnées */
+  --ccc-bg-inactive: rgba(15, 23, 42, 0.05);
+
+  /* Options de select (besoin opaque) */
+  --ccc-option-bg: #ffffff;
+
+  /* Overlay */
+  --ccc-bg-overlay: rgba(15, 23, 42, 0.35);
+
+  /* Boutons secondaires / annulation */
+  --ccc-btn-secondary-bg: #ffffff;
+
+  /* Boutons d'action positive (Accepter, Confirmer) */
+  --ccc-btn-success-bg: #10b981;
+
+  /* Boutons d'action destructive (Rejeter, Supprimer) */
+  --ccc-btn-danger-bg: #ef4444;
+
+  /* Navbar */
+  --ccc-navbar-bg: rgba(255, 255, 255, 0.88);
+  --ccc-navbar-border: rgba(15, 23, 42, 0.08);
+
+  /* Accent extras */
+  --ccc-accent-primary-hover: #6d28d9;
+  --ccc-accent-soft-border: rgba(124, 58, 237, 0.32);
+
+  /* Text extras */
+  --ccc-text-inverse: #f8fafc;
+  --ccc-text-on-card: #1e293b;
+  --ccc-text-on-card-muted: #64748b;
+  --ccc-text-accent: #7c3aed;
+
+  /* Borders legers (inputs, tableaux, cartes) */
+  --ccc-input-border: #444;
+  --ccc-border-light: #ddd;
+  --ccc-border-on-card: rgba(15, 23, 42, 0.08);
+  --ccc-border-on-card-strong: rgba(15, 23, 42, 0.12);
+
+  /* Textes très discrets (vides, sous-texte) */
+  --ccc-text-subtle: #aaa;
+
+  /* Statuts de cartes (réservations, candidatures) */
+  --ccc-card-default: #ffffff;
+  --ccc-card-complete-bg: #ecfdf5;
+  --ccc-card-complete-border: #a7f3d0;
+  --ccc-card-complete-text: #059669;
+  --ccc-card-cancelled-bg: #fef2f2;
+  --ccc-card-cancelled-border: #fecaca;
+  --ccc-card-cancelled-text: #dc2626;
+  --ccc-card-pending-bg: #fffbeb;
+  --ccc-card-pending-border: #fde68a;
+  --ccc-card-pending-text: #b45309;
+  --ccc-card-withdrawn-bg: #f8fafc;
+  --ccc-card-withdrawn-border: #e2e8f0;
+  --ccc-card-withdrawn-text: #334155;
+
+  /* Semantic extras */
+  --ccc-semantic-success-dark: #047857;
+  --ccc-semantic-danger-dark: #b91c1c;
+  --ccc-semantic-star: #f59e0b;
+  --ccc-semantic-star-inactive: #cbd5e1;
+
   /* Radius */
   --ccc-radius-sm: 8px;
   --ccc-radius-md: 12px;
   --ccc-radius-full: 9999px;
+
+  /* Shadows */
+  --ccc-shadow-card-hover: 0 8px 32px rgba(15, 23, 42, 0.12);
+  --ccc-shadow-accent: 0 4px 16px rgba(124, 58, 237, 0.22);
+  --ccc-shadow-dropdown: 0 12px 40px rgba(15, 23, 42, 0.12);
+  --ccc-shadow-navbar: 0 1px 0 rgba(15, 23, 42, 0.06);
+
+  /* ── shadcn/ui compatibility ── */
+  /* Ces variables permettent à tailwind.config.ts (root) de fonctionner
+     avec le système --ccc-* via le wrapper hsl(). */
+  --background: 248 100% 99%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 271 81% 56%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 215 60% 95%;
+  --secondary-foreground: 215 25% 27%;
+  --muted: 215 60% 95%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 271 81% 90%;
+  --accent-foreground: 271 81% 56%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 222 47% 88%;
+  --input: 0 0% 27%;
+  --ring: 271 81% 56%;
+  --radius: 0.5rem;
 
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
@@ -42,4 +148,17 @@
   color: var(--ccc-accent);
   font-weight: 700;
   letter-spacing: -0.02em;
+}
+
+.ccc-primary-button {
+  padding: 10px 20px;
+  border-radius: var(--ccc-radius-sm);
+  border: none;
+  background: var(--ccc-accent-gradient);
+  color: var(--ccc-text-on-accent);
+  font-size: 1em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: var(--ccc-shadow-accent);
 }

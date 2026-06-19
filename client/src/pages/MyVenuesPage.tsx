@@ -45,7 +45,7 @@ const MyVenuesPage: React.FC = () => {
             style={{
               padding: '12px 28px',
               background: 'var(--ccc-accent-gradient)',
-              color: '#fff',
+              color: 'var(--ccc-text-on-accent)',
               border: 'none',
               borderRadius: 12,
               fontWeight: 700,
@@ -64,7 +64,7 @@ const MyVenuesPage: React.FC = () => {
           </div>
         ) : error ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
-            <p style={{ color: '#ef4444' }}>Impossible de charger vos salles.</p>
+            <p style={{ color: 'var(--ccc-error)' }}>Impossible de charger vos salles.</p>
           </div>
         ) : myVenues.length === 0 ? (
           <div
@@ -85,7 +85,7 @@ const MyVenuesPage: React.FC = () => {
               style={{
                 padding: '14px 32px',
                 background: 'var(--ccc-accent-gradient)',
-                color: '#fff',
+                color: 'var(--ccc-text-on-accent)',
                 border: 'none',
                 borderRadius: 12,
                 fontWeight: 700,
