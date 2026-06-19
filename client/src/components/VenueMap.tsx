@@ -15,7 +15,7 @@ const VenueMap: React.FC<VenueMapProps> = ({ lat, lng, name }) => {
       <h3 style={{ margin: '0 0 12px 0', fontSize: 16, fontWeight: 700, color: '#fff' }}>
         Localisation
       </h3>
-      <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', height: 220 }}>
+      <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--ccc-border-subtle)', height: 220 }}>
         <MapContainer center={[lat, lng]} zoom={15} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false} attributionControl={false}>
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <Marker position={[lat, lng]} icon={venueMarkerIcon as any}>

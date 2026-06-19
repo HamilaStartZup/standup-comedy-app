@@ -7,7 +7,7 @@ import { loginWithKeycloak, translateOAuthError } from '../services/oauth';
 import api from '../services/api';
 
 function RegisterOrganizerPage() {
-  const { registerMutation, isOAuthEnabled, isOAuthLoading } = useAuth();
+  const { registerMutation, isOAuthEnabled } = useAuth();
   const { showError } = useAlert();
 
   const [oauthModal, setOauthModal] = useState(false);
@@ -95,8 +95,6 @@ function RegisterOrganizerPage() {
         return;
       }
       if (!result.pendingRegistration) {
-        const profile = await api.get('/profile/me');
-
         window.location.href = '/dashboard';
       }
     } catch (error: any) {
@@ -121,8 +119,6 @@ function RegisterOrganizerPage() {
         ...(oauthData.city.trim() && { city: oauthData.city.trim() }),
         consent: { termsAccepted: true, privacyAccepted: true, isAdult: true },
       });
-      const { user } = response.data;
-
       window.location.href = '/dashboard';
     } catch (error: any) {
       showError("Erreur lors de la création du compte. Veuillez réessayer.");
@@ -199,13 +195,13 @@ function RegisterOrganizerPage() {
     margin: '10px 0',
     borderRadius: 8,
     border: '1px solid var(--ccc-border-medium)',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     color: 'var(--ccc-text-primary)',
     fontSize: '1em',
     outline: 'none',
   };
   const errorStyle: CSSProperties = {
-    color: '#ef4444',
+    color: 'var(--ccc-error)',
     fontSize: '0.85em',
     marginTop: 4,
     marginBottom: 8,
@@ -227,17 +223,19 @@ function RegisterOrganizerPage() {
 
   const socialButtonBaseStyle: CSSProperties = {
     width: '100%',
-    padding: '12px',
+    padding: '14px 20px',
     marginBottom: '10px',
-    borderRadius: '8px',
+    borderRadius: '10px',
     border: 'none',
-    fontSize: '1em',
-    fontWeight: 'bold',
+    fontSize: '0.95em',
+    fontWeight: '600',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '10px',
+    gap: '12px',
+    transition: 'all 0.2s ease',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
   };
 
   return (
@@ -251,14 +249,7 @@ function RegisterOrganizerPage() {
             <button
               type="button"
               onClick={() => handleSocialRegister('google')}
-              disabled={isOAuthLoading}
-              style={{
-                ...socialButtonBaseStyle,
-                backgroundColor: '#ffffff',
-                color: '#3c4043',
-                opacity: isOAuthLoading ? 0.7 : 1,
-                cursor: isOAuthLoading ? 'not-allowed' : 'pointer',
-              }}
+              style={{ ...socialButtonBaseStyle, backgroundColor: 'var(--ccc-bg-elevated)', color: '#3c4043' }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -285,7 +276,7 @@ function RegisterOrganizerPage() {
               placeholder="Nom *"
               value={formData.lastName}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.lastName ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.lastName ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.lastName && <div style={errorStyle}>{errors.lastName}</div>}
           </div>
@@ -296,7 +287,7 @@ function RegisterOrganizerPage() {
               placeholder="Prénom *"
               value={formData.firstName}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.firstName ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.firstName ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.firstName && <div style={errorStyle}>{errors.firstName}</div>}
           </div>
@@ -317,7 +308,7 @@ function RegisterOrganizerPage() {
               placeholder="E-mail *"
               value={formData.email}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.email ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.email ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.email && <div style={errorStyle}>{errors.email}</div>}
           </div>
@@ -330,7 +321,7 @@ function RegisterOrganizerPage() {
               onChange={handleChange}
               onFocus={() => setPasswordFocused(true)}
               onBlur={() => setPasswordFocused(false)}
-              style={{ ...inputStyle, borderColor: errors.password ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.password ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.password && <div style={errorStyle}>{errors.password}</div>}
             {passwordFocused && (
@@ -342,13 +333,13 @@ function RegisterOrganizerPage() {
                 marginTop: '4px',
                 border: '1px solid var(--ccc-border-subtle)',
               }}>
-                <div style={{ color: passwordValidation.length ? '#28a745' : '#dc3545', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                <div style={{ color: passwordValidation.length ? 'var(--ccc-success)' : 'var(--ccc-error)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                   {passwordValidation.length ? '✓' : '✗'} 8 caractères min.
                 </div>
-                <div style={{ color: passwordValidation.uppercase ? '#28a745' : '#dc3545', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                <div style={{ color: passwordValidation.uppercase ? 'var(--ccc-success)' : 'var(--ccc-error)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                   {passwordValidation.uppercase ? '✓' : '✗'} 1 majuscule
                 </div>
-                <div style={{ color: passwordValidation.number ? '#28a745' : '#dc3545', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ color: passwordValidation.number ? 'var(--ccc-success)' : 'var(--ccc-error)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {passwordValidation.number ? '✓' : '✗'} 1 chiffre
                 </div>
               </div>
@@ -361,7 +352,7 @@ function RegisterOrganizerPage() {
               placeholder="Confirmer le mot de passe *"
               value={formData.confirmPassword}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.confirmPassword ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.confirmPassword ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.confirmPassword && <div style={errorStyle}>{errors.confirmPassword}</div>}
           </div>
@@ -372,7 +363,7 @@ function RegisterOrganizerPage() {
               placeholder="Téléphone *"
               value={formData.phone}
               onChange={handleChange}
-              style={{ ...inputStyle, borderColor: errors.phone ? '#ef4444' : 'var(--ccc-border-medium)' }}
+              style={{ ...inputStyle, borderColor: errors.phone ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
             />
             {errors.phone && <div style={errorStyle}>{errors.phone}</div>}
           </div>
@@ -412,7 +403,7 @@ function RegisterOrganizerPage() {
                 placeholder="Prénom *"
                 value={oauthData.firstName}
                 onChange={(e) => { setOauthData(p => ({ ...p, firstName: e.target.value })); setOauthErrors(p => ({ ...p, firstName: '' })); }}
-                style={{ ...inputStyle, borderColor: oauthErrors.firstName ? '#ef4444' : 'var(--ccc-border-medium)' }}
+                style={{ ...inputStyle, borderColor: oauthErrors.firstName ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
               />
               {oauthErrors.firstName && <div style={errorStyle}>{oauthErrors.firstName}</div>}
             </div>
@@ -423,7 +414,7 @@ function RegisterOrganizerPage() {
                 placeholder="Nom *"
                 value={oauthData.lastName}
                 onChange={(e) => { setOauthData(p => ({ ...p, lastName: e.target.value })); setOauthErrors(p => ({ ...p, lastName: '' })); }}
-                style={{ ...inputStyle, borderColor: oauthErrors.lastName ? '#ef4444' : 'var(--ccc-border-medium)' }}
+                style={{ ...inputStyle, borderColor: oauthErrors.lastName ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
               />
               {oauthErrors.lastName && <div style={errorStyle}>{oauthErrors.lastName}</div>}
             </div>

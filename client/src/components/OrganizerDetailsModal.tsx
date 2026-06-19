@@ -13,10 +13,10 @@ function OrganizerDetailsModal({ isOpen, onClose, organizer }: OrganizerDetailsM
 
   const sectionTitleStyle: CSSProperties = {
     fontSize: '1.3em',
-    color: '#7c3aed',
+    color: 'var(--ccc-accent)',
     marginTop: '20px',
     marginBottom: '15px',
-    borderBottom: '2px solid #7c3aed',
+    borderBottom: '2px solid var(--ccc-accent)',
     paddingBottom: '8px',
     fontWeight: 'bold'
   };
@@ -35,7 +35,7 @@ function OrganizerDetailsModal({ isOpen, onClose, organizer }: OrganizerDetailsM
   };
 
   const infoValueStyle: CSSProperties = {
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
     flex: 1,
     wordBreak: 'break-word'
   };
@@ -45,7 +45,7 @@ function OrganizerDetailsModal({ isOpen, onClose, organizer }: OrganizerDetailsM
     padding: '4px 12px',
     borderRadius: '15px',
     backgroundColor: '#2196f3',
-    color: '#ffffff',
+    color: 'var(--ccc-text-on-accent)',
     fontSize: '0.9em',
     fontWeight: 'bold',
     marginTop: '5px'
@@ -149,7 +149,7 @@ function OrganizerDetailsModal({ isOpen, onClose, organizer }: OrganizerDetailsM
                     target="_blank" 
                     rel="noopener noreferrer"
                     style={{ 
-                      color: '#7c3aed', 
+                      color: 'var(--ccc-accent)', 
                       textDecoration: 'none',
                       wordBreak: 'break-all'
                     }}
@@ -236,7 +236,7 @@ function OrganizerDetailsModal({ isOpen, onClose, organizer }: OrganizerDetailsM
               {organizer.stats.totalEvents !== undefined && (
                 <div style={infoRowStyle}>
                   <span style={infoLabelStyle}>📅 Évènements organisés:</span>
-                  <span style={{ ...infoValueStyle, color: '#28a745', fontWeight: 'bold' }}>
+                  <span style={{ ...infoValueStyle, color: 'var(--ccc-success)', fontWeight: 'bold' }}>
                     {organizer.stats.totalEvents} évènement{organizer.stats.totalEvents > 1 ? 's' : ''}
                   </span>
                 </div>
@@ -245,7 +245,7 @@ function OrganizerDetailsModal({ isOpen, onClose, organizer }: OrganizerDetailsM
               {organizer.stats.averageRating !== undefined && (
                 <div style={infoRowStyle}>
                   <span style={infoLabelStyle}>⭐ Note moyenne:</span>
-                  <span style={{ ...infoValueStyle, color: '#ffc107', fontWeight: 'bold' }}>
+                  <span style={{ ...infoValueStyle, color: 'var(--ccc-warning)', fontWeight: 'bold' }}>
                     {organizer.stats.averageRating}/5 ⭐
                   </span>
                 </div>
@@ -269,10 +269,10 @@ function OrganizerDetailsModal({ isOpen, onClose, organizer }: OrganizerDetailsM
             padding: '20px', 
             backgroundColor: 'rgba(255, 193, 7, 0.1)', 
             borderRadius: '8px', 
-            border: '1px solid #ffc107',
+            border: '1px solid var(--ccc-warning)',
             marginTop: '20px'
           }}>
-            <p style={{ color: '#ffc107', margin: 0, textAlign: 'center' }}>
+            <p style={{ color: 'var(--ccc-warning)', margin: 0, textAlign: 'center' }}>
               ⚠️ Cet organisateur n'a pas encore complété son profil professionnel.
             </p>
           </div>

@@ -13,7 +13,7 @@ interface BookingInvoiceButtonProps {
 
 const buttonStyle: React.CSSProperties = {
   padding: '8px 16px',
-  background: '#fff',
+  background: 'var(--ccc-bg-elevated)',
   color: '#2563eb',
   border: '1px solid #93c5fd',
   borderRadius: 8,

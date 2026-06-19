@@ -1004,11 +1004,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
 
     if (eventType === 'recurring') {
       if (!recurrenceEndDate) {
-        alert('Veuillez indiquer une date de fin pour la récurrence.');
+        showWarning('Veuillez indiquer une date de fin pour la récurrence.');
         return;
       }
       if (recurringDates.length === 0) {
-        alert('Aucune date générée. Vérifiez la date de début, la date de fin et les options (ex. jours de la semaine pour Hebdomadaire).');
+        showWarning('Aucune date générée. Vérifiez la date de début, la date de fin et les options (ex. jours de la semaine pour Hebdomadaire).');
         return;
       }
     }
@@ -1234,7 +1234,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
     width: '100%',
     padding: isMobile ? '14px 16px' : '12px 16px',
     fontSize: isMobile ? '16px' : '14px', // 16px prevents zoom on iOS
-    border: '1px solid #ddd',
+    border: '1px solid var(--ccc-border-light)',
     borderRadius: '8px',
     background: 'rgba(255, 255, 255, 1)',
     color: '#1a1a1a',
@@ -1405,10 +1405,10 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                   })}
                 </select>
                 {(loadingVenueBookings || loadingUsedVenueBookings) && (
-                  <p style={{ margin: '8px 0 0', fontSize: 12, color: '#888' }}>Chargement des réservations…</p>
+                  <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--ccc-text-muted)' }}>Chargement des réservations…</p>
                 )}
                 {!loadingVenueBookings && !loadingUsedVenueBookings && confirmedVenueBookings.length === 0 && (
-                  <p style={{ margin: '8px 0 0', fontSize: 12, color: '#888', lineHeight: 1.4 }}>
+                  <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--ccc-text-muted)', lineHeight: 1.4 }}>
                     {availableVenueBookingsCount > 0 ? (
                       <>
                         Toutes vos réservations confirmées à venir sont déjà liées à un événement. Une réservation de salle ne
@@ -1491,12 +1491,12 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                   onChange={handleChange}
                   style={{
                     ...inputStyle,
-                    borderColor: errors.title ? '#ef4444' : '#ccc'
+                    borderColor: errors.title ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                   }}
                   placeholder="Ex: Soirée Stand-Up Comedy"
                 />
                 {errors.title && (
-                  <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                  <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                     {errors.title}
                   </p>
                 )}
@@ -1515,12 +1515,12 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     ...inputStyle,
                     minHeight: '100px',
                     resize: 'vertical',
-                    borderColor: errors.description ? '#ef4444' : '#ccc'
+                    borderColor: errors.description ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                   }}
                   placeholder="Décrivez votre évènement en détail..."
                 />
                 {errors.description && (
-                  <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                  <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                     {errors.description}
                   </p>
                 )}
@@ -1541,7 +1541,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         maxHeight: 160,
                         objectFit: 'cover',
                         borderRadius: 8,
-                        border: '1px solid #444',
+                        border: '1px solid var(--ccc-input-border)',
                       }}
                     />
                     <button
@@ -1572,7 +1572,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     padding: '8px',
                     borderRadius: 5,
                     border: '1px solid var(--ccc-border-medium)',
-                    backgroundColor: '#ffffff',
+                    backgroundColor: 'var(--ccc-bg-elevated)',
                     color: 'var(--ccc-text-primary)',
                     cursor: uploadingEventImage ? 'wait' : 'pointer',
                   }}
@@ -1586,7 +1586,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
             {/* Section Localisation */}
             <div style={sectionStyle}>
               <div style={sectionTitleStyle}>
-                <MapPin size={20} style={{ color: '#7c3aed' }} />
+                <MapPin size={20} style={{ color: 'var(--ccc-accent)' }} />
                 <span>Localisation</span>
               </div>
               {fieldsLockedByVenueBooking && (
@@ -1609,12 +1609,12 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
-                      borderColor: errors.venue ? '#ef4444' : '#ccc'
+                      borderColor: errors.venue ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: Le Comedy Club"
                   />
                   {errors.venue && (
-                    <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                    <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                       {errors.venue}
                     </p>
                   )}
@@ -1633,12 +1633,12 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
-                      borderColor: errors.address ? '#ef4444' : '#ccc'
+                      borderColor: errors.address ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: 123 rue de la Comédie"
                   />
                   {errors.address && (
-                    <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                    <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                       {errors.address}
                     </p>
                   )}
@@ -1666,7 +1666,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                 {/* Code postal */}
                 <div style={{ position: 'relative' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: 'var(--ccc-text-secondary)' }}>
-                    Code postal * {isValidatingPostalCode && <span style={{ fontSize: '12px', color: '#888' }}>(validation...)</span>}
+                    Code postal * {isValidatingPostalCode && <span style={{ fontSize: '12px', color: 'var(--ccc-text-muted)' }}>(validation...)</span>}
                   </label>
                   <input
                     type="text"
@@ -1676,14 +1676,14 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     onBlur={validatePostalCode}
                     style={{
                       ...inputStyle,
-                      borderColor: (errors.postalCode || postalCodeError) ? '#ef4444' : '#ccc'
+                      borderColor: (errors.postalCode || postalCodeError) ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: 75001"
                     maxLength={5}
                     disabled={isValidatingPostalCode || fieldsLockedByVenueBooking}
                   />
                   {(errors.postalCode || postalCodeError) && (
-                    <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                    <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                       {errors.postalCode || postalCodeError}
                     </p>
                   )}
@@ -1695,16 +1695,16 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       top: '100%',
                       left: 0,
                       right: 0,
-                      backgroundColor: '#2a2a2a',
-                      border: '1px solid #ccc',
+                      backgroundColor: 'var(--ccc-bg-elevated)',
+                      border: '1px solid var(--ccc-border-medium)',
                       borderRadius: '4px',
                       marginTop: '4px',
                       maxHeight: '200px',
                       overflowY: 'auto',
                       zIndex: 1000,
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+                      boxShadow: 'var(--ccc-shadow-sm)'
                     }}>
-                      <div style={{ padding: '8px', color: '#888', fontSize: '12px', borderBottom: '1px solid #ccc' }}>
+                      <div style={{ padding: '8px', color: 'var(--ccc-text-muted)', fontSize: '12px', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
                         Plusieurs villes possibles pour ce code postal :
                       </div>
                       {citySuggestions.map((option, index) => (
@@ -1714,11 +1714,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                           style={{
                             padding: '12px',
                             cursor: 'pointer',
-                            borderBottom: index < citySuggestions.length - 1 ? '1px solid #333' : 'none',
-                            color: 'var(--ccc-text-secondary)',
+                            borderBottom: index < citySuggestions.length - 1 ? '1px solid var(--ccc-border-subtle)' : 'none',
+                            color: 'var(--ccc-text-primary)',
                             transition: 'background-color 0.2s'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#333'}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--ccc-bg-hover)'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
                           {option.city} ({option.postcode})
@@ -1741,12 +1741,12 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
-                      borderColor: errors.city ? '#ef4444' : '#ccc'
+                      borderColor: errors.city ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: Paris"
                   />
                   {errors.city && (
-                    <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                    <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                       {errors.city}
                     </p>
                   )}
@@ -1765,12 +1765,12 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     disabled={fieldsLockedByVenueBooking}
                     style={{
                       ...inputStyle,
-                      borderColor: errors.country ? '#ef4444' : '#ccc'
+                      borderColor: errors.country ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: France"
                   />
                   {errors.country && (
-                    <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                    <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                       {errors.country}
                     </p>
                   )}
@@ -1781,7 +1781,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
             {/* Section Informations d'évènement */}
             <div style={sectionStyle}>
               <div style={sectionTitleStyle}>
-                <Calendar size={20} style={{ color: '#7c3aed' }} />
+                <Calendar size={20} style={{ color: 'var(--ccc-accent)' }} />
                 <span>Informations d'évènement</span>
               </div>
               {fieldsLockedByVenueBooking && (
@@ -1802,7 +1802,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     alignItems: 'center',
                     gap: '12px',
                     padding: '16px',
-                    backgroundColor: eventType === 'unique' ? 'rgba(124, 58, 237, 0.08)' : 'var(--ccc-bg-surface)',
+                    backgroundColor: eventType === 'unique' ? 'rgba(124, 58, 237, 0.08)' : 'var(--ccc-bg-inactive)',
                     borderRadius: '8px',
                     border: eventType === 'unique' ? '1px solid rgba(124, 58, 237, 0.4)' : '1px solid var(--ccc-border-subtle)',
                     cursor: 'pointer',
@@ -1816,7 +1816,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     checked={eventType === 'unique'}
                     disabled={fieldsLockedByVenueBooking}
                     onChange={() => setEventType('unique')}
-                    style={{ width: '18px', height: '18px', accentColor: '#7c3aed', flexShrink: 0 }}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--ccc-accent)', flexShrink: 0 }}
                   />
                   <span style={{ fontWeight: '500' }}>Événement unique</span>
                 </label>
@@ -1826,7 +1826,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     alignItems: 'center',
                     gap: '12px',
                     padding: '16px',
-                    backgroundColor: eventType === 'recurring' ? 'rgba(124, 58, 237, 0.08)' : 'var(--ccc-bg-surface)',
+                    backgroundColor: eventType === 'recurring' ? 'rgba(124, 58, 237, 0.08)' : 'var(--ccc-bg-inactive)',
                     borderRadius: '8px',
                     border: eventType === 'recurring' ? '1px solid rgba(124, 58, 237, 0.4)' : '1px solid var(--ccc-border-subtle)',
                     cursor: 'pointer',
@@ -1844,7 +1844,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       setRecurrenceStartDate(formData.date);
                       if (!recurrenceEndDate) setRecurrenceEndDate(formData.date);
                     }}
-                    style={{ width: '18px', height: '18px', accentColor: '#7c3aed', flexShrink: 0 }}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--ccc-accent)', flexShrink: 0 }}
                   />
                   <span style={{ fontWeight: '500' }}>Événement récurrent</span>
                 </label>
@@ -1862,9 +1862,9 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       value={formData.date}
                       onChange={handleChange}
                       disabled={fieldsLockedByVenueBooking}
-                      style={{ ...inputStyle, borderColor: errors.date ? '#ef4444' : '#444' }}
+                      style={{ ...inputStyle, borderColor: errors.date ? 'var(--ccc-error)' : 'var(--ccc-input-border)' }}
                     />
-                    {errors.date && <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>{errors.date}</p>}
+                    {errors.date && <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>{errors.date}</p>}
                   </div>
                 </div>
               ) : (
@@ -1881,11 +1881,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         value={recurrenceStartDate}
                         onChange={(e) => setRecurrenceStartDate(e.target.value)}
                         disabled={fieldsLockedByVenueBooking}
-                        style={{ ...inputStyle, borderColor: errors.recurrenceStartDate ? '#ef4444' : '#444' }}
+                        style={{ ...inputStyle, borderColor: errors.recurrenceStartDate ? 'var(--ccc-error)' : 'var(--ccc-input-border)' }}
                         min={new Date().toISOString().split('T')[0]}
                       />
                       {errors.recurrenceStartDate && (
-                        <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>{errors.recurrenceStartDate}</p>
+                        <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>{errors.recurrenceStartDate}</p>
                       )}
                     </div>
                     <div>
@@ -1904,12 +1904,12 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                             flex: 1,
                             minWidth: 0,
                             marginBottom: 0,
-                            borderColor: errors.recurrenceEndDate ? '#ef4444' : '#ccc',
+                            borderColor: errors.recurrenceEndDate ? 'var(--ccc-error)' : 'var(--ccc-input-border)',
                           }}
                           min={recurrenceStartDate || new Date().toISOString().split('T')[0]}
                         />
                         {errors.recurrenceEndDate && (
-                          <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>{errors.recurrenceEndDate}</p>
+                          <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>{errors.recurrenceEndDate}</p>
                         )}
                       </div>
                     </div>
@@ -1946,8 +1946,8 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                             style={{
                               padding: '10px 14px',
                               borderRadius: '8px',
-                              border: recurrenceWeeklyDays.includes(value) ? '1px solid #7c3aed' : '1px solid #444',
-                              background: recurrenceWeeklyDays.includes(value) ? 'rgba(124, 58, 237, 0.12)' : 'var(--ccc-bg-surface)',
+                              border: recurrenceWeeklyDays.includes(value) ? '1px solid var(--ccc-accent)' : '1px solid var(--ccc-border-medium)',
+                              background: recurrenceWeeklyDays.includes(value) ? 'rgba(124, 58, 237, 0.12)' : 'var(--ccc-bg-inactive)',
                               color: 'var(--ccc-text-primary)',
                               cursor: 'pointer',
                               fontWeight: '500',
@@ -2010,7 +2010,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                                     <option key={s.value} value={s.value}>{s.label}</option>
                                   ))}
                                 </select>
-                                <span style={{ color: '#888' }}>→</span>
+                                <span style={{ color: 'var(--ccc-text-muted)' }}>→</span>
                                 <select
                                   value={endVal}
                                   onChange={(e) => setDateTimeForDate(dateStr, startVal, e.target.value)}
@@ -2045,14 +2045,14 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     }}
                     style={{
                       ...selectStyle,
-                      borderColor: errors.startTime ? '#ef4444' : '#ccc',
+                      borderColor: errors.startTime ? 'var(--ccc-error)' : 'var(--ccc-input-border)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       cursor: 'pointer'
                     }}
                   >
-                    <span style={{ color: formData.startTime ? 'rgba(0, 0, 0, 1)' : '#999' }}>
+                    <span style={{ color: formData.startTime ? 'rgba(0, 0, 0, 1)' : 'var(--ccc-text-muted)' }}>
                       {formData.startTime 
                         ? timeSlots.find(slot => slot.value === formData.startTime)?.label 
                         : 'Sélectionnez une heure'}
@@ -2073,8 +2073,8 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       left: 0,
                       right: 0,
                       marginTop: '4px',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #444',
+                      backgroundColor: 'var(--ccc-bg-elevated)',
+                      border: '1px solid var(--ccc-input-border)',
                       borderRadius: '8px',
                       maxHeight: '200px',
                       overflowY: 'auto',
@@ -2095,7 +2095,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                           }}
                           onMouseEnter={(e) => {
                             if (formData.startTime !== slot.value) {
-                              e.currentTarget.style.backgroundColor = 'var(--ccc-bg-surface)';
+                              e.currentTarget.style.backgroundColor = 'var(--ccc-bg-hover)';
                             }
                           }}
                           onMouseLeave={(e) => {
@@ -2110,7 +2110,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     </div>
                   )}
                   {errors.startTime && (
-                    <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                    <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                       {errors.startTime}
                     </p>
                   )}
@@ -2128,7 +2128,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       disabled={fieldsLockedByVenueBooking}
                       style={{
                         ...selectStyle,
-                        borderColor: errors.duration ? '#ef4444' : '#444',
+                        borderColor: errors.duration ? 'var(--ccc-error)' : 'var(--ccc-input-border)',
                         cursor: 'pointer',
                       }}
                     >
@@ -2160,7 +2160,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       );
                     })()}
                     {errors.duration && (
-                      <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                      <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                         {errors.duration}
                       </p>
                     )}
@@ -2177,14 +2177,14 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       }}
                       style={{
                         ...selectStyle,
-                        borderColor: errors.endTime ? '#ef4444' : '#444',
+                        borderColor: errors.endTime ? 'var(--ccc-error)' : 'var(--ccc-input-border)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         cursor: 'pointer'
                       }}
                     >
-                      <span style={{ color: formData.endTime ? 'rgba(0, 0, 0, 1)' : '#999' }}>
+                      <span style={{ color: formData.endTime ? 'rgba(0, 0, 0, 1)' : 'var(--ccc-text-muted)' }}>
                         {formData.endTime 
                           ? timeSlots.find(slot => slot.value === formData.endTime)?.label 
                           : 'Sélectionnez une heure'}
@@ -2205,8 +2205,8 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                         left: 0,
                         right: 0,
                         marginTop: '4px',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #444',
+                        backgroundColor: 'var(--ccc-bg-elevated)',
+                        border: '1px solid var(--ccc-input-border)',
                         borderRadius: '8px',
                         maxHeight: '200px',
                         overflowY: 'auto',
@@ -2227,7 +2227,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                             }}
                             onMouseEnter={(e) => {
                               if (formData.endTime !== slot.value) {
-                                e.currentTarget.style.backgroundColor = 'var(--ccc-bg-surface)';
+                                e.currentTarget.style.backgroundColor = 'var(--ccc-bg-hover)';
                               }
                             }}
                             onMouseLeave={(e) => {
@@ -2242,7 +2242,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                       </div>
                     )}
                     {errors.endTime && (
-                      <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                      <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                         {errors.endTime}
                       </p>
                     )}
@@ -2286,11 +2286,11 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     placeholder="Nombre de places pour spectateur"
                     style={{
                       ...inputStyle,
-                      borderColor: errors.maxSpectators ? '#ef4444' : '#ccc'
+                      borderColor: errors.maxSpectators ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                   />
                   {errors.maxSpectators && (
-                    <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                    <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                       {errors.maxSpectators}
                     </p>
                   )}
@@ -2302,7 +2302,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
             {/* Section Conditions */}
             <div style={sectionStyle}>
               <div style={sectionTitleStyle}>
-                <Users size={20} style={{ color: '#7c3aed' }} />
+                <Users size={20} style={{ color: 'var(--ccc-accent)' }} />
                 <span>Conditions</span>
               </div>
               <div style={sectionGridStyle}>
@@ -2318,13 +2318,13 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     onChange={handleChange}
                     style={{
                       ...inputStyle,
-                      borderColor: errors.minExperience ? '#ef4444' : '#ccc'
+                      borderColor: errors.minExperience ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: 2"
                     min="0"
                   />
                   {errors.minExperience && (
-                    <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                    <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                       {errors.minExperience}
                     </p>
                   )}
@@ -2342,13 +2342,13 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     onChange={handleChange}
                     style={{
                       ...inputStyle,
-                      borderColor: errors.maxComedians ? '#ef4444' : '#ccc'
+                      borderColor: errors.maxComedians ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                     placeholder="Ex: 5"
                     min="1"
                   />
                   {errors.maxComedians && (
-                    <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                    <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                       {errors.maxComedians}
                     </p>
                   )}
@@ -2365,7 +2365,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     onChange={handleChange}
                     style={{
                       ...selectStyle,
-                      borderColor: errors.requiredExperienceLevel ? '#ef4444' : '#ccc'
+                      borderColor: errors.requiredExperienceLevel ? 'var(--ccc-error)' : 'var(--ccc-input-border)'
                     }}
                   >
                     <option value="all">Tous les niveaux</option>
@@ -2374,7 +2374,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                     <option value="200+">Pro (200+ scènes)</option>
                   </select>
                   {errors.requiredExperienceLevel && (
-                    <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+                    <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                       {errors.requiredExperienceLevel}
                     </p>
                   )}
@@ -2409,7 +2409,7 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
                 style={{
                   ...buttonStyle,
                   background: 'var(--ccc-accent-gradient)',
-                  color: '#fff',
+                  color: 'var(--ccc-text-on-accent)',
                   opacity: isSubmitting ? 0.7 : 1
                 }}
               >

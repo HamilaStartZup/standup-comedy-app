@@ -534,18 +534,12 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
   };
 
   const formContainerStyle: CSSProperties = {
-    maxWidth: '1000px',
-    margin: '40px auto',
-    padding: '30px',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: '8px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
-    color: '#ffffff',
+    color: 'var(--ccc-text-primary)',
   };
 
   const formTitleStyle: CSSProperties = {
     fontSize: '2em',
-    color: '#7c3aed',
+    color: 'var(--ccc-accent)',
     marginBottom: '20px',
   };
 
@@ -557,16 +551,17 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
     display: 'block',
     marginBottom: '5px',
     fontWeight: 'bold',
-    color: '#ff4b2b',
+    color: 'var(--ccc-accent)',
+    fontSize: '0.9em',
   };
 
   const inputStyle: CSSProperties = {
     width: '100%',
     padding: '10px',
     borderRadius: '5px',
-    border: '1px solid #555',
-    backgroundColor: '#333',
-    color: '#ffffff',
+    border: '1px solid var(--ccc-border-medium)',
+    backgroundColor: 'var(--ccc-bg-surface)',
+    color: 'var(--ccc-text-primary)',
     boxSizing: 'border-box',
   };
 
@@ -594,7 +589,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #28a745, #218838)',
+    background: 'linear-gradient(to right, var(--ccc-success), #059669)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -607,7 +602,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
     padding: '10px 20px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(to right, #dc3545, #c82333)',
+    background: 'linear-gradient(to right, var(--ccc-error), #c82333)',
     color: 'white',
     fontSize: '1em',
     fontWeight: 'bold',
@@ -626,14 +621,14 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
             id="title" 
             style={{
               ...inputStyle,
-              borderColor: errors.title ? '#ef4444' : '#555'
+              borderColor: errors.title ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
             }} 
             value={formData.title} 
             onChange={handleChange} 
             placeholder="Ex: Soirée Stand-Up Comedy"
           />
           {errors.title && (
-            <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+            <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
               {errors.title}
             </p>
           )}
@@ -645,14 +640,14 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
             id="description" 
             style={{
               ...textAreaStyle,
-              borderColor: errors.description ? '#ef4444' : '#555'
+              borderColor: errors.description ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
             }} 
             value={formData.description} 
             onChange={handleChange} 
             placeholder="Décrivez votre évènement en détail..."
           />
           {errors.description && (
-            <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+            <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
               {errors.description}
             </p>
           )}
@@ -670,7 +665,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
                   maxHeight: 160,
                   objectFit: 'cover',
                   borderRadius: 8,
-                  border: '1px solid #555',
+                  border: '1px solid var(--ccc-border-medium)',
                 }}
               />
               <button
@@ -701,7 +696,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               cursor: uploadingEventImage ? 'wait' : 'pointer',
             }}
           />
-          <p style={{ color: '#888', fontSize: '12px', margin: '4px 0 0' }}>
+          <p style={{ color: 'var(--ccc-text-muted)', fontSize: '12px', margin: '4px 0 0' }}>
             Formats acceptés: JPG, PNG, GIF (max 5MB)
           </p>
         </div>
@@ -714,28 +709,28 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="city"
               style={{
                 ...inputStyle,
-                borderColor: errors.city ? '#ef4444' : '#555'
+                borderColor: errors.city ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }}
               value={formData.city}
               onChange={handleChange}
               placeholder="Ex: Paris"
             />
             {errors.city && (
-              <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                 {errors.city}
               </p>
             )}
           </div>
           <div style={{ ...inputGroupStyle, position: 'relative' }}>
             <label htmlFor="postalCode" style={labelStyle}>
-              Code postal * {isValidatingPostalCode && <span style={{ fontSize: '12px', color: '#888' }}>(validation...)</span>}
+              Code postal * {isValidatingPostalCode && <span style={{ fontSize: '12px', color: 'var(--ccc-text-muted)' }}>(validation...)</span>}
             </label>
             <input
               type="text"
               id="postalCode"
               style={{
                 ...inputStyle,
-                borderColor: (errors.postalCode || postalCodeError) ? '#ef4444' : '#555'
+                borderColor: (errors.postalCode || postalCodeError) ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }}
               value={formData.postalCode}
               onChange={handleChange}
@@ -745,7 +740,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               disabled={isValidatingPostalCode}
             />
             {(errors.postalCode || postalCodeError) && (
-              <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                 {errors.postalCode || postalCodeError}
               </p>
             )}
@@ -757,16 +752,16 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
                 top: '100%',
                 left: 0,
                 right: 0,
-                backgroundColor: '#2a2a2a',
-                border: '1px solid #444',
+                backgroundColor: 'var(--ccc-bg-elevated)',
+                border: '1px solid var(--ccc-border-medium)',
                 borderRadius: '4px',
                 marginTop: '4px',
                 maxHeight: '200px',
                 overflowY: 'auto',
                 zIndex: 1000,
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+                boxShadow: 'var(--ccc-shadow-sm)'
               }}>
-                <div style={{ padding: '8px', color: '#888', fontSize: '12px', borderBottom: '1px solid #444' }}>
+                <div style={{ padding: '8px', color: 'var(--ccc-text-muted)', fontSize: '12px', borderBottom: '1px solid var(--ccc-border-subtle)' }}>
                   Plusieurs villes possibles pour ce code postal :
                 </div>
                 {citySuggestions.map((option, index) => (
@@ -776,11 +771,11 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
                     style={{
                       padding: '12px',
                       cursor: 'pointer',
-                      borderBottom: index < citySuggestions.length - 1 ? '1px solid #333' : 'none',
-                      color: '#ccc',
+                      borderBottom: index < citySuggestions.length - 1 ? '1px solid var(--ccc-border-subtle)' : 'none',
+                      color: 'var(--ccc-text-primary)',
                       transition: 'background-color 0.2s'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#333'}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--ccc-bg-hover)'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     {option.city} ({option.postcode})
@@ -799,14 +794,14 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="address" 
               style={{
                 ...inputStyle,
-                borderColor: errors.address ? '#ef4444' : '#555'
+                borderColor: errors.address ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               value={formData.address} 
               onChange={handleChange} 
               placeholder="Ex: 123 rue de la Comédie"
             />
             {errors.address && (
-              <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                 {errors.address}
               </p>
             )}
@@ -818,14 +813,14 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="country" 
               style={{
                 ...inputStyle,
-                borderColor: errors.country ? '#ef4444' : '#555'
+                borderColor: errors.country ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               value={formData.country} 
               onChange={handleChange} 
               placeholder="Ex: France"
             />
             {errors.country && (
-              <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                 {errors.country}
               </p>
             )}
@@ -840,14 +835,14 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="date" 
               style={{
                 ...inputStyle,
-                borderColor: errors.date ? '#ef4444' : '#555'
+                borderColor: errors.date ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               placeholder="JJ/MM/AAAA" 
               value={formData.date} 
               onChange={handleChange} 
             />
             {errors.date && (
-              <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                 {errors.date}
               </p>
             )}
@@ -859,14 +854,14 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="venue" 
               style={{
                 ...inputStyle,
-                borderColor: errors.venue ? '#ef4444' : '#555'
+                borderColor: errors.venue ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               value={formData.venue} 
               onChange={handleChange} 
               placeholder="Ex: Le Comedy Club"
             />
             {errors.venue && (
-              <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                 {errors.venue}
               </p>
             )}
@@ -875,7 +870,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
             <label htmlFor="venueType" style={labelStyle}>Type de lieu</label>
             <select
               id="venueType"
-              style={{ ...inputStyle, borderColor: errors.venueType ? '#ef4444' : '#555' }}
+              style={{ ...inputStyle, borderColor: errors.venueType ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
               value={formData.venueType}
               onChange={handleChange}
             >
@@ -897,13 +892,13 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               placeholder="Optionnel"
               style={{
                 ...inputStyle,
-                borderColor: errors.maxSpectators ? '#ef4444' : '#555'
+                borderColor: errors.maxSpectators ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }}
               value={formData.maxSpectators}
               onChange={handleChange}
             />
             {errors.maxSpectators && (
-              <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>{errors.maxSpectators}</p>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>{errors.maxSpectators}</p>
             )}
           </div>
         </div>
@@ -916,14 +911,14 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="startTime" 
               style={{
                 ...inputStyle,
-                borderColor: errors.startTime ? '#ef4444' : '#555'
+                borderColor: errors.startTime ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               placeholder="HH:MM" 
               value={formData.startTime} 
               onChange={handleChange} 
             />
             {errors.startTime && (
-              <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                 {errors.startTime}
               </p>
             )}
@@ -935,14 +930,14 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="endTime" 
               style={{
                 ...inputStyle,
-                borderColor: errors.endTime ? '#ef4444' : '#555'
+                borderColor: errors.endTime ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               placeholder="HH:MM" 
               value={formData.endTime} 
               onChange={handleChange} 
             />
             {errors.endTime && (
-              <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                 {errors.endTime}
               </p>
             )}
@@ -957,7 +952,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="minExperience" 
               style={{
                 ...inputStyle,
-                borderColor: errors.minExperience ? '#ef4444' : '#555'
+                borderColor: errors.minExperience ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               value={formData.minExperience} 
               onChange={handleChange} 
@@ -965,7 +960,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               min="0"
             />
             {errors.minExperience && (
-              <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                 {errors.minExperience}
               </p>
             )}
@@ -977,7 +972,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               id="maxPerformers" 
               style={{
                 ...inputStyle,
-                borderColor: errors.maxPerformers ? '#ef4444' : '#555'
+                borderColor: errors.maxPerformers ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
               }} 
               value={formData.maxPerformers} 
               onChange={handleChange} 
@@ -985,7 +980,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
               min="1"
             />
             {errors.maxPerformers && (
-              <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+              <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
                 {errors.maxPerformers}
               </p>
             )}
@@ -1000,7 +995,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
             onChange={handleChange}
             style={{
               ...inputStyle,
-              borderColor: errors.requiredExperienceLevel ? '#ef4444' : '#555'
+              borderColor: errors.requiredExperienceLevel ? 'var(--ccc-error)' : 'var(--ccc-border-medium)'
             }}
           >
             <option value="all">Tous les niveaux</option>
@@ -1009,7 +1004,7 @@ function EditEventForm({ onClose, onEventUpdated, eventToEdit }: EditEventFormPr
             <option value="200+">Pro (200+ scènes)</option>
           </select>
           {errors.requiredExperienceLevel && (
-            <p style={{ color: '#ef4444', fontSize: '12px', margin: '4px 0 0' }}>
+            <p style={{ color: 'var(--ccc-error)', fontSize: '12px', margin: '4px 0 0' }}>
               {errors.requiredExperienceLevel}
             </p>
           )}

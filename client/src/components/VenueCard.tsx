@@ -82,7 +82,7 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
             top: 12,
             left: 12,
             background: venue.isActive ? 'rgba(124, 58, 237,0.9)' : 'rgba(128,128,128,0.9)',
-            color: '#fff',
+            color: 'var(--ccc-text-on-accent)',
             fontSize: 11,
             fontWeight: 700,
             padding: '4px 10px',
@@ -122,7 +122,7 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
             style={{
               fontSize: 15,
               fontWeight: 700,
-              color: '#7c3aed',
+              color: 'var(--ccc-accent)',
             }}
           >
             {venue.pricePerEvent.toLocaleString('fr-FR')} €

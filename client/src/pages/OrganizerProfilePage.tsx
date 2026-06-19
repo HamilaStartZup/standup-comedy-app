@@ -122,7 +122,7 @@ function OrganizerProfilePage() {
     fontSize: 14,
     transition: 'all 0.2s',
     background: active ? ACCENT_GRADIENT : 'transparent',
-    color: active ? '#fff' : 'var(--ccc-text-muted)',
+    color: active ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-muted)',
   });
 
   const contentCardStyle: CSSProperties = {
@@ -188,7 +188,7 @@ function OrganizerProfilePage() {
     boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
     borderRadius: 12,
     padding: '12px 20px',
-    color: '#666',
+    color: 'var(--ccc-text-muted)',
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
@@ -267,7 +267,7 @@ function OrganizerProfilePage() {
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = BORDER;
-                e.currentTarget.style.color = '#666';
+                e.currentTarget.style.color = 'var(--ccc-text-muted)';
               }}
             >
               Modifier
@@ -330,7 +330,7 @@ function OrganizerProfilePage() {
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.borderColor = BORDER;
-                              e.currentTarget.style.color = '#666';
+                              e.currentTarget.style.color = 'var(--ccc-text-muted)';
                             }}
                           >
                             Modifier
@@ -360,7 +360,7 @@ function OrganizerProfilePage() {
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.borderColor = BORDER;
-                                e.currentTarget.style.color = '#666';
+                                e.currentTarget.style.color = 'var(--ccc-text-muted)';
                               }}
                             >
                               Modifier
@@ -403,7 +403,7 @@ function OrganizerProfilePage() {
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.borderColor = BORDER;
-                              e.currentTarget.style.color = '#666';
+                              e.currentTarget.style.color = 'var(--ccc-text-muted)';
                             }}
                           >
                             Modifier
@@ -426,7 +426,7 @@ function OrganizerProfilePage() {
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.borderColor = BORDER;
-                                e.currentTarget.style.color = '#666';
+                                e.currentTarget.style.color = 'var(--ccc-text-muted)';
                               }}
                             >
                               Modifier

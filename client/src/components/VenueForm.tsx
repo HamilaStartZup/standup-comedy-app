@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import LocationPickerMap from './LocationPickerMap';
 import { geocodeAddress } from '../services/api';
+import { useAlert } from '../hooks/useAlert';
 import type { IVenue } from '../types/venue';
 import {
   VENUE_TYPES,
@@ -177,7 +178,7 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  background: '#ffffff',
+  background: 'var(--ccc-bg-elevated)',
   border: '1px solid #d1d5db',
   borderRadius: 10,
   padding: '12px 16px',
@@ -191,17 +192,17 @@ const labelStyle: React.CSSProperties = {
   display: 'block',
   fontSize: 12,
   fontWeight: 600,
-  color: '#aaa',
+  color: 'var(--ccc-text-muted)',
   marginBottom: 6,
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
 };
 
-const errorStyle: React.CSSProperties = { color: '#ef4444', fontSize: 12, marginTop: 4 };
+const errorStyle: React.CSSProperties = { color: 'var(--ccc-error)', fontSize: 12, marginTop: 4 };
 
 const sectionStyle: React.CSSProperties = {
-  background: 'rgba(0,0,0,0.3)',
-  border: '1px solid rgba(255,255,255,0.1)',
+  background: 'var(--ccc-bg-surface)',
+  border: '1px solid var(--ccc-border-subtle)',
   borderRadius: 16,
   padding: 28,
   marginBottom: 20,
@@ -224,6 +225,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
     ...initialData,
     timeRestrictions: { ...defaultData.timeRestrictions, ...initialData?.timeRestrictions },
   });
+  const { showError } = useAlert();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState('');
@@ -243,7 +245,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert('La photo ne doit pas dépasser 5MB.'); return; }
+    if (file.size > 5 * 1024 * 1024) { showError('La photo ne doit pas dépasser 5MB.'); return; }
     setPhotoUploading(true);
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -252,7 +254,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
       setPhotoUploading(false);
       e.target.value = '';
     };
-    reader.onerror = () => { alert('Impossible de lire la photo.'); setPhotoUploading(false); };
+    reader.onerror = () => { showError('Impossible de lire la photo.'); setPhotoUploading(false); };
     reader.readAsDataURL(file);
   };
 
@@ -350,9 +352,9 @@ const VenueForm: React.FC<VenueFormProps> = ({
   const chipStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 18px',
     borderRadius: 24,
-    border: active ? '1px solid #7c3aed' : '1px solid rgba(255,255,255,0.15)',
+    border: active ? '1px solid var(--ccc-accent)' : '1px solid var(--ccc-border-medium)',
     background: active ? 'rgba(124, 58, 237,0.15)' : 'transparent',
-    color: active ? '#7c3aed' : '#aaa',
+    color: active ? 'var(--ccc-accent)' : 'var(--ccc-text-muted)',
     fontSize: 13,
     cursor: 'pointer',
     fontWeight: active ? 600 : 400,
@@ -371,15 +373,15 @@ const VenueForm: React.FC<VenueFormProps> = ({
             type="button"
             onClick={() => onRemove(i)}
             aria-label="Supprimer la photo"
-            style={{ position: 'absolute', top: -6, right: -6, width: 24, height: 24, background: '#ef4444', color: '#fff', border: '2px solid #ffffff', borderRadius: '50%', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}
+            style={{ position: 'absolute', top: -6, right: -6, width: 24, height: 24, background: 'var(--ccc-btn-danger-bg)', color: 'var(--ccc-text-on-accent)', border: '2px solid #ffffff', borderRadius: '50%', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}
           >
             ✕
           </button>
         </div>
       ))}
-      <label style={{ width: 120, height: 84, border: '2px dashed rgba(124, 58, 237,0.4)', borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#7c3aed', gap: 4 }}>
+      <label style={{ width: 120, height: 84, border: '2px dashed rgba(124, 58, 237,0.4)', borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--ccc-accent)', gap: 4 }}>
         <span style={{ fontSize: 24 }}>{photoUploading ? '⏳' : '+'}</span>
-        <span style={{ fontSize: 11, color: '#888' }}>Ajouter</span>
+        <span style={{ fontSize: 11, color: 'var(--ccc-text-muted)' }}>Ajouter</span>
         <input type="file" accept="image/*" onChange={onAdd} style={{ display: 'none' }} disabled={photoUploading} />
       </label>
     </div>
@@ -397,7 +399,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
         <div>
           <label style={labelStyle}>Type de lieu *</label>
           <select value={formData.venueType} onChange={(e) => set('venueType', e.target.value)} style={inputStyle}>
-            {VENUE_TYPES.map((t) => <option key={t.value} value={t.value} style={{ background: '#ffffff' }}>{t.label}</option>)}
+            {VENUE_TYPES.map((t) => <option key={t.value} value={t.value} style={{ background: 'var(--ccc-option-bg)' }}>{t.label}</option>)}
           </select>
           {errors.venueType && <p style={errorStyle}>{errors.venueType}</p>}
         </div>
@@ -454,19 +456,19 @@ const VenueForm: React.FC<VenueFormProps> = ({
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <button type="button" onClick={handleGeocode} disabled={isGeocoding || !formData.address || !formData.city}
-            style={{ padding: '10px 20px', background: 'rgba(124, 58, 237,0.15)', color: '#7c3aed', border: '1px solid rgba(124, 58, 237,0.3)', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            style={{ padding: '10px 20px', background: 'rgba(124, 58, 237,0.15)', color: 'var(--ccc-accent)', border: '1px solid rgba(124, 58, 237,0.3)', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
             {isGeocoding ? '⏳ Détection...' : '📍 Détecter automatiquement'}
           </button>
           {formData.latitude !== '' && formData.longitude !== '' && !geocodeError && (
-            <span style={{ fontSize: 13, color: '#10b981', fontWeight: 600 }}>✓ {Number(formData.latitude).toFixed(4)}, {Number(formData.longitude).toFixed(4)}</span>
+            <span style={{ fontSize: 13, color: 'var(--ccc-success)', fontWeight: 600 }}>✓ {Number(formData.latitude).toFixed(4)}, {Number(formData.longitude).toFixed(4)}</span>
           )}
           {formData.latitude !== '' && (
-            <button type="button" onClick={() => setShowManualCoords((v) => !v)} style={{ background: 'none', border: 'none', color: '#666', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
+            <button type="button" onClick={() => setShowManualCoords((v) => !v)} style={{ background: 'none', border: 'none', color: 'var(--ccc-text-secondary)', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
               {showManualCoords ? 'Masquer' : 'Modifier manuellement'}
             </button>
           )}
         </div>
-        {geocodeError && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#f59e0b' }}>⚠ {geocodeError}</p>}
+        {geocodeError && <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--ccc-warning)' }}>⚠ {geocodeError}</p>}
         {formData.latitude !== '' && formData.longitude !== '' && (
           <LocationPickerMap lat={Number(formData.latitude)} lng={Number(formData.longitude)} name={formData.name}
             onPositionChange={(lat, lng) => setFormData((p) => ({ ...p, latitude: lat, longitude: lng }))} />
@@ -499,8 +501,8 @@ const VenueForm: React.FC<VenueFormProps> = ({
         <div>
           <label style={labelStyle}>Type de configuration *</label>
           <select value={formData.configurationType} onChange={(e) => set('configurationType', e.target.value)} style={inputStyle}>
-            <option value="" style={{ background: '#ffffff' }}>Choisir...</option>
-            {CONFIGURATION_TYPES.map((t) => <option key={t.value} value={t.value} style={{ background: '#ffffff' }}>{t.label}</option>)}
+            <option value="" style={{ background: 'var(--ccc-option-bg)' }}>Choisir...</option>
+            {CONFIGURATION_TYPES.map((t) => <option key={t.value} value={t.value} style={{ background: 'var(--ccc-option-bg)' }}>{t.label}</option>)}
           </select>
           {errors.configurationType && <p style={errorStyle}>{errors.configurationType}</p>}
         </div>
@@ -526,11 +528,11 @@ const VenueForm: React.FC<VenueFormProps> = ({
         </div>
       </div>
       <div style={{ display: 'flex', gap: 24 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ccc', fontSize: 14, cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--ccc-text-secondary)', fontSize: 14, cursor: 'pointer' }}>
           <input type="checkbox" checked={formData.accessiblePMR} onChange={(e) => set('accessiblePMR', e.target.checked)} />
           Accessible PMR
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ccc', fontSize: 14, cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--ccc-text-secondary)', fontSize: 14, cursor: 'pointer' }}>
           <input type="checkbox" checked={formData.parkingAvailable} onChange={(e) => set('parkingAvailable', e.target.checked)} />
           Parking disponible
         </label>
@@ -541,7 +543,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
   // ── Étape 3 : Équipements ──────────────────────────────────────────────
   const renderStep3 = () => (
     <div style={sectionStyle}>
-      <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Équipements</h3>
+      <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: 'var(--ccc-accent)' }}>Équipements</h3>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
         {EQUIPMENT_OPTIONS.map((item) => (
           <button key={item} type="button" onClick={() => toggleArrayItem('equipment', item)} style={chipStyle(formData.equipment.includes(item))}>
@@ -560,7 +562,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
   const renderStep4 = () => (
     <>
       <div style={sectionStyle}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Tarification</h3>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: 'var(--ccc-accent)' }}>Tarification</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
           <div>
             <label style={labelStyle}>{formData.pricingType === 'pourcentage_billetterie' ? 'Pourcentage reversé (%) *' : 'Prix *'}</label>
@@ -580,10 +582,10 @@ const VenueForm: React.FC<VenueFormProps> = ({
           <div>
             <label style={labelStyle}>Devise</label>
             <select value={formData.currency} onChange={(e) => set('currency', e.target.value)} style={inputStyle}>
-              <option value="EUR" style={{ background: '#ffffff' }}>EUR</option>
-              <option value="USD" style={{ background: '#ffffff' }}>USD</option>
-              <option value="GBP" style={{ background: '#ffffff' }}>GBP</option>
-              <option value="CHF" style={{ background: '#ffffff' }}>CHF</option>
+              <option value="EUR" style={{ background: 'var(--ccc-option-bg)' }}>EUR</option>
+              <option value="USD" style={{ background: 'var(--ccc-option-bg)' }}>USD</option>
+              <option value="GBP" style={{ background: 'var(--ccc-option-bg)' }}>GBP</option>
+              <option value="CHF" style={{ background: 'var(--ccc-option-bg)' }}>CHF</option>
             </select>
           </div>
           <div>
@@ -600,8 +602,8 @@ const VenueForm: React.FC<VenueFormProps> = ({
               }}
               style={inputStyle}
             >
-              <option value="" style={{ background: '#ffffff' }}>Choisir...</option>
-              {PRICING_TYPES.map((t) => <option key={t.value} value={t.value} style={{ background: '#ffffff' }}>{t.label}</option>)}
+              <option value="" style={{ background: 'var(--ccc-option-bg)' }}>Choisir...</option>
+              {PRICING_TYPES.map((t) => <option key={t.value} value={t.value} style={{ background: 'var(--ccc-option-bg)' }}>{t.label}</option>)}
             </select>
           </div>
         </div>
@@ -613,7 +615,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
           <div>
             <label style={labelStyle}>Mode de réservation</label>
             <select value={formData.bookingMode} onChange={(e) => set('bookingMode', e.target.value)} style={inputStyle}>
-              {BOOKING_MODES.map((m) => <option key={m.value} value={m.value} style={{ background: '#ffffff' }}>{m.label}</option>)}
+              {BOOKING_MODES.map((m) => <option key={m.value} value={m.value} style={{ background: 'var(--ccc-option-bg)' }}>{m.label}</option>)}
             </select>
           </div>
         </div>
@@ -650,7 +652,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
                 style={{
                   background: 'rgba(124, 58, 237,0.15)',
                   border: '1px solid rgba(124, 58, 237,0.3)',
-                  color: '#7c3aed',
+                  color: 'var(--ccc-accent)',
                   borderRadius: 8,
                   width: 36,
                   height: 46,
@@ -668,9 +670,9 @@ const VenueForm: React.FC<VenueFormProps> = ({
             type="button"
             onClick={() => set('extraFees', [...formData.extraFees, { description: '', amount: '' }])}
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px dashed rgba(255,255,255,0.2)',
-              color: '#aaa',
+              background: 'var(--ccc-bg-surface)',
+              border: '1px dashed var(--ccc-border-medium)',
+              color: 'var(--ccc-text-muted)',
               borderRadius: 8,
               padding: '10px 16px',
               cursor: 'pointer',
@@ -680,9 +682,9 @@ const VenueForm: React.FC<VenueFormProps> = ({
             }}
           >+ Ajouter un frais</button>
           {formData.extraFees.length > 0 && (
-            <div style={{ marginTop: 10, padding: '10px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: '#aaa' }}>Total frais supplémentaires</span>
-              <span style={{ fontSize: 13, color: '#fff', fontWeight: 700 }}>
+            <div style={{ marginTop: 10, padding: '10px 14px', background: 'var(--ccc-bg-surface)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--ccc-text-muted)' }}>Total frais supplémentaires</span>
+              <span style={{ fontSize: 13, color: 'var(--ccc-text-primary)', fontWeight: 700 }}>
                 {formData.extraFees.reduce((sum, fee) => sum + (parseFloat(fee.amount as string) || 0), 0).toFixed(2)} {formData.currency || 'EUR'}
               </span>
             </div>
@@ -704,11 +706,11 @@ const VenueForm: React.FC<VenueFormProps> = ({
         </div>
       </div>
       <div style={sectionStyle}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Restrictions horaires</h3>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: 'var(--ccc-accent)' }}>Restrictions horaires</h3>
 
         {formData.pricingType === 'heure' && (
           <div>
-            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#aaa' }}>Définissez la plage horaire pendant laquelle les réservations à l'heure sont possibles.</p>
+            <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--ccc-text-muted)' }}>Définissez la plage horaire pendant laquelle les réservations à l'heure sont possibles.</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div>
                 <label style={labelStyle}>Heure d'ouverture</label>
@@ -717,8 +719,8 @@ const VenueForm: React.FC<VenueFormProps> = ({
                   onChange={(e) => { setTR('openTime', e.target.value); setTR('closeTime', ''); }}
                   style={{ ...inputStyle, cursor: 'pointer' }}
                 >
-                  <option value="" style={{ background: '#ffffff' }}>--</option>
-                  {HOUR_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
+                  <option value="" style={{ background: 'var(--ccc-option-bg)' }}>--</option>
+                  {HOUR_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ background: 'var(--ccc-option-bg)' }}>{o.label}</option>)}
                 </select>
               </div>
               <div>
@@ -728,10 +730,10 @@ const VenueForm: React.FC<VenueFormProps> = ({
                   onChange={(e) => setTR('closeTime', e.target.value)}
                   style={{ ...inputStyle, cursor: 'pointer' }}
                 >
-                  <option value="" style={{ background: '#ffffff' }}>--</option>
-                  {HOUR_OPTIONS.filter(o => !formData.timeRestrictions.openTime || o.value > formData.timeRestrictions.openTime).map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
+                  <option value="" style={{ background: 'var(--ccc-option-bg)' }}>--</option>
+                  {HOUR_OPTIONS.filter(o => !formData.timeRestrictions.openTime || o.value > formData.timeRestrictions.openTime).map(o => <option key={o.value} value={o.value} style={{ background: 'var(--ccc-option-bg)' }}>{o.label}</option>)}
                   {(!formData.timeRestrictions.openTime || '23:59' > formData.timeRestrictions.openTime) && (
-                    <option value="23:59" style={{ background: '#ffffff' }}>Minuit (23h59)</option>
+                    <option value="23:59" style={{ background: 'var(--ccc-option-bg)' }}>Minuit (23h59)</option>
                   )}
                 </select>
               </div>
@@ -741,8 +743,8 @@ const VenueForm: React.FC<VenueFormProps> = ({
 
         {formData.pricingType === 'demi_journee' && (
           <div>
-            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#aaa' }}>Activez et configurez les créneaux demi-journée disponibles.</p>
-            <div style={{ marginBottom: 16, padding: 12, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}>
+            <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--ccc-text-muted)' }}>Activez et configurez les créneaux demi-journée disponibles.</p>
+            <div style={{ marginBottom: 16, padding: 12, border: '1px solid var(--ccc-border-subtle)', borderRadius: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                 <input type="checkbox" id="matinEnabled" checked={formData.timeRestrictions.matinEnabled} onChange={(e) => setTR('matinEnabled', e.target.checked)} />
                 <label htmlFor="matinEnabled" style={{ ...labelStyle, margin: 0 }}>Créneau Matin</label>
@@ -752,8 +754,8 @@ const VenueForm: React.FC<VenueFormProps> = ({
                   <div>
                     <label style={labelStyle}>Début matin</label>
                     <select value={formData.timeRestrictions.matinStart} onChange={(e) => { setTR('matinStart', e.target.value); setTR('matinEnd', ''); }} style={{ ...inputStyle, cursor: 'pointer' }}>
-                      <option value="" style={{ background: '#ffffff' }}>--</option>
-                      {TIME_OPTIONS_15.filter(o => o.value !== '23:59').map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
+                      <option value="" style={{ background: 'var(--ccc-option-bg)' }}>--</option>
+                      {TIME_OPTIONS_15.filter(o => o.value !== '23:59').map(o => <option key={o.value} value={o.value} style={{ background: 'var(--ccc-option-bg)' }}>{o.label}</option>)}
                     </select>
                   </div>
                   <div>
@@ -769,14 +771,14 @@ const VenueForm: React.FC<VenueFormProps> = ({
                       }}
                       style={{ ...inputStyle, cursor: 'pointer' }}
                     >
-                      <option value="" style={{ background: '#ffffff' }}>--</option>
-                      {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.matinStart || o.value > formData.timeRestrictions.matinStart).map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
+                      <option value="" style={{ background: 'var(--ccc-option-bg)' }}>--</option>
+                      {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.matinStart || o.value > formData.timeRestrictions.matinStart).map(o => <option key={o.value} value={o.value} style={{ background: 'var(--ccc-option-bg)' }}>{o.label}</option>)}
                     </select>
                   </div>
                 </div>
               )}
             </div>
-            <div style={{ padding: 12, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}>
+            <div style={{ padding: 12, border: '1px solid var(--ccc-border-subtle)', borderRadius: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                 <input type="checkbox" id="apremEnabled" checked={formData.timeRestrictions.apremEnabled} onChange={(e) => setTR('apremEnabled', e.target.checked)} />
                 <label htmlFor="apremEnabled" style={{ ...labelStyle, margin: 0 }}>Créneau Après-midi</label>
@@ -790,18 +792,18 @@ const VenueForm: React.FC<VenueFormProps> = ({
                       onChange={(e) => { setTR('apremStart', e.target.value); setTR('apremEnd', ''); }}
                       style={{ ...inputStyle, cursor: 'pointer' }}
                     >
-                      <option value="" style={{ background: '#ffffff' }}>--</option>
+                      <option value="" style={{ background: 'var(--ccc-option-bg)' }}>--</option>
                       {TIME_OPTIONS_15.filter(o =>
                         o.value !== '23:59' &&
                         (!formData.timeRestrictions.matinEnabled || !formData.timeRestrictions.matinEnd || o.value > formData.timeRestrictions.matinEnd)
-                      ).map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
+                      ).map(o => <option key={o.value} value={o.value} style={{ background: 'var(--ccc-option-bg)' }}>{o.label}</option>)}
                     </select>
                   </div>
                   <div>
                     <label style={labelStyle}>Fin après-midi</label>
                     <select value={formData.timeRestrictions.apremEnd} onChange={(e) => setTR('apremEnd', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                      <option value="" style={{ background: '#ffffff' }}>--</option>
-                      {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.apremStart || o.value > formData.timeRestrictions.apremStart).map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
+                      <option value="" style={{ background: 'var(--ccc-option-bg)' }}>--</option>
+                      {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.apremStart || o.value > formData.timeRestrictions.apremStart).map(o => <option key={o.value} value={o.value} style={{ background: 'var(--ccc-option-bg)' }}>{o.label}</option>)}
                     </select>
                   </div>
                 </div>
@@ -812,20 +814,20 @@ const VenueForm: React.FC<VenueFormProps> = ({
 
         {formData.pricingType === 'soiree' && (
           <div>
-            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#aaa' }}>Configurez la plage horaire de votre soirée.</p>
+            <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--ccc-text-muted)' }}>Configurez la plage horaire de votre soirée.</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div>
                 <label style={labelStyle}>Début de soirée</label>
                 <select value={formData.timeRestrictions.soireeStart} onChange={(e) => { setTR('soireeStart', e.target.value); setTR('soireeEnd', ''); }} style={{ ...inputStyle, cursor: 'pointer' }}>
-                  <option value="" style={{ background: '#ffffff' }}>--</option>
-                  {TIME_OPTIONS_15.filter(o => o.value !== '23:59').map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
+                  <option value="" style={{ background: 'var(--ccc-option-bg)' }}>--</option>
+                  {TIME_OPTIONS_15.filter(o => o.value !== '23:59').map(o => <option key={o.value} value={o.value} style={{ background: 'var(--ccc-option-bg)' }}>{o.label}</option>)}
                 </select>
               </div>
               <div>
                 <label style={labelStyle}>Fin de soirée</label>
                 <select value={formData.timeRestrictions.soireeEnd} onChange={(e) => setTR('soireeEnd', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                  <option value="" style={{ background: '#ffffff' }}>--</option>
-                  {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.soireeStart || o.value > formData.timeRestrictions.soireeStart).map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
+                  <option value="" style={{ background: 'var(--ccc-option-bg)' }}>--</option>
+                  {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.soireeStart || o.value > formData.timeRestrictions.soireeStart).map(o => <option key={o.value} value={o.value} style={{ background: 'var(--ccc-option-bg)' }}>{o.label}</option>)}
                 </select>
               </div>
             </div>
@@ -834,7 +836,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
 
         {(['journee', 'forfait', 'pourcentage_billetterie', 'gratuit'] as string[]).includes(formData.pricingType) && (
           <div>
-            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#aaa' }}>
+            <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--ccc-text-muted)' }}>
               {formData.pricingType === 'journee' && "Indiquez les heures d'arrivée et de départ pour une réservation à la journée."}
               {formData.pricingType === 'forfait' && "Définissez la plage horaire durant laquelle la salle est accessible pour ce forfait."}
               {formData.pricingType === 'pourcentage_billetterie' && "Indiquez les heures d'ouverture de la salle pour les événements au pourcentage billetterie."}
@@ -844,15 +846,15 @@ const VenueForm: React.FC<VenueFormProps> = ({
               <div>
                 <label style={labelStyle}>{formData.pricingType === 'journee' ? "Heure d'arrivée" : "Heure d'ouverture"}</label>
                 <select value={formData.timeRestrictions.openTime} onChange={(e) => { setTR('openTime', e.target.value); setTR('closeTime', ''); }} style={{ ...inputStyle, cursor: 'pointer' }}>
-                  <option value="" style={{ background: '#ffffff' }}>--</option>
-                  {TIME_OPTIONS_15.filter(o => o.value !== '23:59').map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
+                  <option value="" style={{ background: 'var(--ccc-option-bg)' }}>--</option>
+                  {TIME_OPTIONS_15.filter(o => o.value !== '23:59').map(o => <option key={o.value} value={o.value} style={{ background: 'var(--ccc-option-bg)' }}>{o.label}</option>)}
                 </select>
               </div>
               <div>
                 <label style={labelStyle}>{formData.pricingType === 'journee' ? 'Heure de départ' : 'Heure de fermeture'}</label>
                 <select value={formData.timeRestrictions.closeTime} onChange={(e) => setTR('closeTime', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                  <option value="" style={{ background: '#ffffff' }}>--</option>
-                  {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.openTime || o.value > formData.timeRestrictions.openTime).map(o => <option key={o.value} value={o.value} style={{ background: '#ffffff' }}>{o.label}</option>)}
+                  <option value="" style={{ background: 'var(--ccc-option-bg)' }}>--</option>
+                  {TIME_OPTIONS_15.filter(o => !formData.timeRestrictions.openTime || o.value > formData.timeRestrictions.openTime).map(o => <option key={o.value} value={o.value} style={{ background: 'var(--ccc-option-bg)' }}>{o.label}</option>)}
                 </select>
               </div>
             </div>
@@ -860,12 +862,12 @@ const VenueForm: React.FC<VenueFormProps> = ({
         )}
 
         {!formData.pricingType && (
-          <p style={{ fontSize: 13, color: '#666', fontStyle: 'italic' }}>Sélectionnez un type de tarification pour configurer les restrictions horaires.</p>
+          <p style={{ fontSize: 13, color: 'var(--ccc-text-muted)', fontStyle: 'italic' }}>Sélectionnez un type de tarification pour configurer les restrictions horaires.</p>
         )}
 
         <div style={{ marginTop: 20 }}>
           <label style={labelStyle}>Jours indisponibles</label>
-          <p style={{ margin: '0 0 10px', fontSize: 13, color: '#aaa' }}>Ces jours seront grisés et non réservables, quel que soit le mode de tarification.</p>
+          <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ccc-text-muted)' }}>Ces jours seront grisés et non réservables, quel que soit le mode de tarification.</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {([['L', 1], ['M', 2], ['M', 3], ['J', 4], ['V', 5], ['S', 6], ['D', 0]] as [string, number][]).map(([label, day]) => {
               const active = formData.disabledWeekdays.includes(day);
@@ -889,7 +891,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
       </div>
 
       <div style={sectionStyle}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Types d'événements acceptés</h3>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: 'var(--ccc-accent)' }}>Types d'événements acceptés</h3>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {ACCEPTED_EVENT_TYPES.map((item) => (
             <button key={item} type="button" onClick={() => toggleArrayItem('acceptedEventTypes', item)} style={chipStyle(formData.acceptedEventTypes.includes(item))}>
@@ -899,13 +901,13 @@ const VenueForm: React.FC<VenueFormProps> = ({
         </div>
       </div>
       <div style={sectionStyle}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Conditions & Règles</h3>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: 'var(--ccc-accent)' }}>Conditions & Règles</h3>
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Politique d'annulation</label>
           <select value={formData.cancellationPolicy} onChange={(e) => set('cancellationPolicy', e.target.value as IVenue['cancellationPolicy'])} style={inputStyle}>
-            {CANCELLATION_POLICIES.map((p) => <option key={p.value} value={p.value} style={{ background: '#ffffff' }}>{p.label}</option>)}
+            {CANCELLATION_POLICIES.map((p) => <option key={p.value} value={p.value} style={{ background: 'var(--ccc-option-bg)' }}>{p.label}</option>)}
           </select>
-          <p style={{ margin: '8px 0 0', fontSize: 13, color: '#ccc' }}>{CANCELLATION_POLICY_DESCRIPTIONS[formData.cancellationPolicy]}</p>
+          <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--ccc-text-secondary)' }}>{CANCELLATION_POLICY_DESCRIPTIONS[formData.cancellationPolicy]}</p>
         </div>
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Conditions d'annulation (texte libre)</label>
@@ -951,7 +953,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
           <input value={formData.siret} onChange={(e) => set('siret', e.target.value)} placeholder="12345678901234" style={inputStyle} />
         </div>
       </div>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ccc', fontSize: 14, cursor: 'pointer' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--ccc-text-secondary)', fontSize: 14, cursor: 'pointer' }}>
         <input type="checkbox" checked={formData.invoicingAvailable} onChange={(e) => set('invoicingAvailable', e.target.checked)} />
         Facturation disponible
       </label>
@@ -1010,16 +1012,17 @@ const VenueForm: React.FC<VenueFormProps> = ({
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: '50%',
-                  background: i < step ? '#10b981' : i === step ? '#7c3aed' : 'rgba(255,255,255,0.1)',
+                  background: i < step ? 'var(--ccc-success)' : i === step ? 'var(--ccc-accent)' : 'rgba(15,23,42,0.08)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontSize: 13, fontWeight: 700,
+                  color: (i < step || i === step) ? 'var(--ccc-text-on-accent)' : 'var(--ccc-text-muted)',
+                  fontSize: 13, fontWeight: 700,
                   flexShrink: 0,
                 }}>
                   {i < step ? '✓' : i + 1}
                 </div>
-                <span style={{ fontSize: 12, color: i === step ? '#7c3aed' : i < step ? '#10b981' : '#888', whiteSpace: 'nowrap', fontWeight: i === step ? 600 : 400 }}>{label}</span>
+                <span style={{ fontSize: 12, color: i === step ? 'var(--ccc-accent)' : i < step ? 'var(--ccc-success)' : 'var(--ccc-text-muted)', whiteSpace: 'nowrap', fontWeight: i === step ? 600 : 400 }}>{label}</span>
                 {i < totalSteps - 1 && (
-                  <div style={{ height: 1, background: i < step ? '#10b981' : 'rgba(255,255,255,0.1)', flex: 1 }} />
+                  <div style={{ height: 1, background: i < step ? 'var(--ccc-success)' : 'var(--ccc-border-subtle)', flex: 1 }} />
                 )}
               </div>
             ))}
@@ -1038,17 +1041,17 @@ const VenueForm: React.FC<VenueFormProps> = ({
         {flat ? (
           // Mode flat : toutes les sections sur une seule page
           <>
-            <h3 style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Informations générales</h3>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 700, color: 'var(--ccc-accent)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Informations générales</h3>
             {renderStep0()}
-            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Localisation</h3>
+            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: 'var(--ccc-accent)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Localisation</h3>
             {renderStep1()}
-            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Caractéristiques</h3>
+            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: 'var(--ccc-accent)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Caractéristiques</h3>
             {renderStep2()}
-            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Équipements</h3>
+            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: 'var(--ccc-accent)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Équipements</h3>
             {renderStep3()}
-            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Conditions de réservation</h3>
+            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: 'var(--ccc-accent)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Conditions de réservation</h3>
             {renderStep4()}
-            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Contact & Légal</h3>
+            <h3 style={{ margin: '20px 0 12px 0', fontSize: 13, fontWeight: 700, color: 'var(--ccc-accent)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Contact & Légal</h3>
             {renderStep5()}
           </>
         ) : (
@@ -1065,8 +1068,8 @@ const VenueForm: React.FC<VenueFormProps> = ({
               style={{
                 padding: '12px 24px',
                 background: 'transparent',
-                color: step === 0 ? '#555' : '#aaa',
-                border: '1px solid rgba(255,255,255,0.15)',
+                color: step === 0 ? 'var(--ccc-text-muted)' : 'var(--ccc-text-secondary)',
+                border: '1px solid var(--ccc-border-medium)',
                 borderRadius: 12,
                 cursor: step === 0 ? 'not-allowed' : 'pointer',
                 fontSize: 14,
@@ -1085,7 +1088,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
               style={{
                 padding: '12px 32px',
                 background: isSubmitting ? 'rgba(124, 58, 237,0.5)' : 'var(--ccc-accent-gradient)',
-                color: '#fff',
+                color: 'var(--ccc-text-on-accent)',
                 border: 'none',
                 borderRadius: 12,
                 fontWeight: 800,
@@ -1102,7 +1105,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
               style={{
                 padding: '12px 32px',
                 background: 'var(--ccc-accent-gradient)',
-                color: '#fff',
+                color: 'var(--ccc-text-on-accent)',
                 border: 'none',
                 borderRadius: 12,
                 fontWeight: 800,

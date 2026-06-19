@@ -12,7 +12,7 @@ const VenuesTabs: React.FC = () => {
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: '10px 22px',
     background: active ? 'rgba(124, 58, 237,0.15)' : 'transparent',
-    color: active ? '#7c3aed' : '#aaa',
+    color: active ? 'var(--ccc-accent)' : 'var(--ccc-text-muted)',
     border: active ? '1px solid rgba(124, 58, 237,0.35)' : '1px solid transparent',
     borderRadius: 24,
     cursor: 'pointer',
@@ -30,7 +30,7 @@ const VenuesTabs: React.FC = () => {
         flexWrap: 'wrap',
         marginBottom: 32,
         padding: '6px 0',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        borderBottom: '1px solid var(--ccc-border-subtle)',
         paddingBottom: 16,
       }}
     >

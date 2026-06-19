@@ -5,10 +5,10 @@ import { useAuth } from '../hooks/useAuth';
 import { listVenues } from '../services/api';
 import { normalizeFilters } from '../hooks/useVenues';
 import NotificationDropdown from './NotificationDropdown';
-import { theme } from '../styles/theme';
+
 
 const NAVBAR_CSS = `
-  .app-navbar { --primary: #7c3aed; --text-primary: #1e293b; --text-secondary: #475569; --bg-light: rgba(15, 23, 42, 0.05); --border: rgba(15, 23, 42, 0.08); --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1); box-sizing: border-box; }
+  .app-navbar { --primary: var(--ccc-accent); --text-primary: var(--ccc-text-primary); --text-secondary: var(--ccc-text-secondary); --bg-light: var(--ccc-bg-surface); --border: var(--ccc-border-subtle); --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1); box-sizing: border-box; }
   .app-navbar *, .app-navbar *::before, .app-navbar *::after { box-sizing: border-box; }
   .app-navbar { padding: 16px 0; padding-top: max(16px, env(safe-area-inset-top)); position: sticky; top: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 1000; border-bottom: 1px solid var(--border); font-family: 'Sora', -apple-system, BlinkMacSystemFont, sans-serif; }
   .app-navbar .navbar-container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
@@ -21,7 +21,7 @@ const NAVBAR_CSS = `
   .app-navbar .header-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
   .app-navbar .user-menu-btn { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--bg-light); color: var(--text-primary); font-size: 14px; font-weight: 600; border: 1px solid var(--border); cursor: pointer; font-family: inherit; max-width: 280px; }
   .app-navbar .user-menu-btn span.user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .app-navbar .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; min-width: 220px; background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); z-index: 2000; overflow: hidden; }
+  .app-navbar .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; min-width: 220px; background: var(--ccc-bg-elevated); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); z-index: 2000; overflow: hidden; }
   .app-navbar .user-dropdown a, .app-navbar .user-dropdown button { display: block; width: 100%; text-align: left; padding: 14px 16px; color: var(--text-primary); text-decoration: none; font-weight: 600; font-size: 15px; border: none; background: transparent; cursor: pointer; font-family: inherit; }
   .app-navbar .user-dropdown a { border-bottom: 1px solid var(--border); }
   .app-navbar .user-dropdown a:hover, .app-navbar .user-dropdown button:hover { background: var(--bg-light); color: var(--primary); }
@@ -41,7 +41,7 @@ const NAVBAR_CSS = `
   .app-navbar .mobile-nav { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 999; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-lg); padding: calc(72px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom)); flex-direction: column; gap: 4px; max-height: 100dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; transform: translateY(-8px); opacity: 0; pointer-events: none; transition: transform 0.25s ease, opacity 0.25s ease; }
   .app-navbar .mobile-nav.is-open { transform: translateY(0); opacity: 1; pointer-events: auto; }
   .app-navbar .mobile-user-card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 8px; background: var(--bg-light); border-radius: 12px; border: 1px solid var(--border); }
-  .app-navbar .mobile-user-avatar { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #7c3aed, #a78bfa); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px; overflow: hidden; flex-shrink: 0; }
+  .app-navbar .mobile-user-avatar { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--ccc-accent), #a78bfa); display: flex; align-items: center; justify-content: center; color: var(--ccc-text-on-accent); font-weight: 700; font-size: 14px; overflow: hidden; flex-shrink: 0; }
   .app-navbar .mobile-user-avatar img { width: 100%; height: 100%; object-fit: cover; }
   .app-navbar .mobile-user-info { min-width: 0; flex: 1; }
   .app-navbar .mobile-user-name { margin: 0; font-weight: 700; font-size: 15px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -51,7 +51,7 @@ const NAVBAR_CSS = `
   .app-navbar .mobile-nav-divider { height: 1px; background: var(--border); margin: 8px 0; }
   .app-navbar .mobile-nav-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
   .app-navbar .btn-nav { padding: 14px 20px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600; font-size: 15px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-family: inherit; width: 100%; transition: all 0.2s; }
-  .app-navbar .btn-nav-primary { background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%); color: white; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }
+  .app-navbar .btn-nav-primary { background: linear-gradient(135deg, var(--ccc-accent) 0%, #a78bfa 100%); color: white; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }
   .app-navbar .btn-nav-secondary { background: transparent; color: var(--text-primary); border: 2px solid rgba(15, 23, 42, 0.14); }
   .app-navbar .mobile-notifications { padding: 8px 16px; }
   @media (max-width: 968px) {
@@ -191,7 +191,7 @@ function Navbar() {
     if (user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN') {
       items.push({ to: '/venues', label: 'Salles', icon: '🏛️' });
     }
-    if (user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || user?.role === 'SUPER_ADMIN') {
+    if (user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN') {
       items.push({ to: aidesEntryPath, label: 'Aides', icon: '📚' });
     }
 
@@ -237,7 +237,7 @@ function Navbar() {
         {user?.role === 'COMEDIAN' && (
           <Link to="/venues" onMouseEnter={prefetchVenues} className={`nav-link${isLinkActive('/venues') ? ' is-active' : ''}`}>Salles</Link>
         )}
-        {(user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN' || user?.role === 'SUPER_ADMIN') && (
+        {(user?.role === 'ORGANIZER' || user?.role === 'COMEDIAN') && (
           <Link to={aidesEntryPath} className={`nav-link${isAidesNavActive ? ' is-active' : ''}`}>Aides</Link>
         )}
       </>
@@ -272,7 +272,7 @@ function Navbar() {
                   >
                     <span>{roleBadge.icon}</span>
                     <span className="user-name">{user.firstName} {user.lastName}</span>
-                    <span aria-hidden style={{ fontSize: '10px', color: theme.colors.text.muted }}>▼</span>
+                    <span aria-hidden style={{ fontSize: '10px', color: 'var(--ccc-text-muted)' }}>▼</span>
                   </button>
                   {isUserMenuOpen && (
                     <div className="user-dropdown" role="menu">

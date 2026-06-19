@@ -1,11 +1,12 @@
-import React, { type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { X } from 'lucide-react';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
   message: string;
-  onConfirm: () => void;
+  /** Si la callback retourne une Promise, les boutons sont désactivés jusqu'à sa résolution (anti double-submit). */
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
   confirmText?: string;
   cancelText?: string;
@@ -24,7 +25,58 @@ const ConfirmDialog = ({
   isDangerous = false,
   isLoading = false,
 }: ConfirmDialogProps) => {
+  const [pending, setPending] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  const busy = isLoading || pending;
+
+  // Réinitialise l'état pending et place le focus dans la modale à l'ouverture
+  useEffect(() => {
+    if (!isOpen) {
+      setPending(false);
+      return;
+    }
+    confirmRef.current?.focus();
+  }, [isOpen]);
+
+  // Escape pour annuler + focus trap (Tab cyclique dans la modale)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) {
+        e.stopPropagation();
+        onCancel();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusables = dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled])');
+        if (!focusables || focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, busy, onCancel]);
+
   if (!isOpen) return null;
+
+  const handleConfirm = () => {
+    if (busy) return;
+    const result = onConfirm();
+    if (result instanceof Promise) {
+      setPending(true);
+      result.finally(() => setPending(false));
+    }
+  };
 
   const containerStyle: CSSProperties = {
     position: 'fixed',
@@ -33,7 +85,7 @@ const ConfirmDialog = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000,
+    zIndex: 1300,
   };
 
   const dialogStyle: CSSProperties = {
@@ -63,8 +115,8 @@ const ConfirmDialog = ({
   const closeButtonStyle: CSSProperties = {
     background: 'none',
     border: 'none',
-    color: '#999',
-    cursor: 'pointer',
+    color: 'var(--ccc-text-muted)',
+    cursor: busy ? 'not-allowed' : 'pointer',
     fontSize: '24px',
     padding: '0',
     display: 'flex',
@@ -91,9 +143,9 @@ const ConfirmDialog = ({
     borderRadius: '8px',
     border: 'none',
     fontWeight: '600',
-    cursor: isLoading ? 'not-allowed' : 'pointer',
+    cursor: busy ? 'not-allowed' : 'pointer',
     transition: 'all 0.2s ease',
-    opacity: isLoading ? 0.7 : 1,
+    opacity: busy ? 0.7 : 1,
   };
 
   const cancelButtonStyle: CSSProperties = {
@@ -105,20 +157,20 @@ const ConfirmDialog = ({
 
   const confirmButtonStyle: CSSProperties = {
     ...baseButtonStyle,
-    backgroundColor: isDangerous ? '#dc3545' : '#7c3aed',
-    color: '#fff',
+    backgroundColor: isDangerous ? 'var(--ccc-error)' : 'var(--ccc-accent)',
+    color: 'var(--ccc-text-on-accent)',
   };
 
   return (
-    <div style={containerStyle} onClick={(e) => e.target === e.currentTarget && onCancel()}>
-      <div style={dialogStyle}>
+    <div style={containerStyle} onClick={(e) => e.target === e.currentTarget && !busy && onCancel()}>
+      <div ref={dialogRef} style={dialogStyle} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div style={headerStyle}>
-          <h2 style={titleStyle}>{title}</h2>
+          <h2 id={titleId} style={titleStyle}>{title}</h2>
           <button
             onClick={onCancel}
-            disabled={isLoading}
+            disabled={busy}
             style={closeButtonStyle}
-            aria-label="Close dialog"
+            aria-label="Fermer la fenêtre"
           >
             <X size={20} />
           </button>
@@ -129,17 +181,19 @@ const ConfirmDialog = ({
         <div style={buttonsStyle}>
           <button
             onClick={onCancel}
-            disabled={isLoading}
+            disabled={busy}
             style={cancelButtonStyle}
           >
             {cancelText}
           </button>
           <button
-            onClick={onConfirm}
-            disabled={isLoading}
+            ref={confirmRef}
+            onClick={handleConfirm}
+            disabled={busy}
             style={confirmButtonStyle}
+            aria-busy={busy}
           >
-            {confirmText}
+            {busy ? 'Veuillez patienter…' : confirmText}
           </button>
         </div>
       </div>

@@ -13,32 +13,32 @@ function ApplicationDetailsModal({ isOpen, onClose, application }: ApplicationDe
 
   const cardDetailStyle: CSSProperties = {
     fontSize: '0.9em',
-    color: '#ccc',
+    color: 'var(--ccc-text-muted)',
     marginBottom: '5px',
   };
 
   const sectionTitleStyle: CSSProperties = {
     fontSize: '1.2em',
-    color: '#7c3aed',
+    color: 'var(--ccc-accent)',
     marginTop: '15px',
     marginBottom: '10px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    borderBottom: '1px solid var(--ccc-border-subtle)',
     paddingBottom: '5px',
   };
 
   const statusBadgeStyle = (status: IApplication['status']): CSSProperties => {
     let backgroundColor = '';
-    let color = '#ffffff';
+    let color = 'var(--ccc-text-on-accent)';
     switch (status) {
       case 'PENDING':
-        backgroundColor = '#ffc107'; // yellow
+        backgroundColor = 'var(--ccc-warning)'; // yellow
         color = '#333';
         break;
       case 'ACCEPTED':
-        backgroundColor = '#28a745'; // green
+        backgroundColor = 'var(--ccc-success)'; // green
         break;
       case 'REJECTED':
-        backgroundColor = '#dc3545'; // red
+        backgroundColor = 'var(--ccc-error)'; // red
         break;
       case 'EXPIRED':
         backgroundColor = '#6c757d'; // gray
@@ -48,7 +48,7 @@ function ApplicationDetailsModal({ isOpen, onClose, application }: ApplicationDe
         break;
       case 'CANCELLED_BY_PLATFORM':
         backgroundColor = '#5a6268';
-        color = '#fff';
+        color = 'var(--ccc-text-on-accent)';
         break;
       default:
         backgroundColor = '#6c757d'; // gray

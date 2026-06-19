@@ -6,10 +6,10 @@ import 'react-day-picker/src/style.css';
 const rdpCss = `
   .rdp {
     --rdp-cell-size: 38px;
-    --rdp-accent-color: #7c3aed;
+    --rdp-accent-color: var(--ccc-accent);
     --rdp-accent-background-color: rgba(124, 58, 237, 0.12);
-    --rdp-selected-border: 2px solid #7c3aed;
-    --rdp-today-color: #7c3aed;
+    --rdp-selected-border: 2px solid var(--ccc-accent);
+    --rdp-today-color: var(--ccc-accent);
     --rdp-day-height: 38px;
     --rdp-day-width: 38px;
     --rdp-day_button-height: 36px;

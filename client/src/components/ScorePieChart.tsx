@@ -27,8 +27,8 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
   const getScoreColor = (score: number): string => {
     if (isLoading) return '#9ca3af'; // Gris pendant le chargement
     if (score >= 70) return '#22c55e'; // Green
-    if (score >= 40) return '#f59e0b'; // Orange
-    return '#ef4444'; // Red
+    if (score >= 40) return 'var(--ccc-warning)'; // Orange
+    return 'var(--ccc-error)'; // Red
   };
 
   const color = getScoreColor(normalizedScore);
@@ -210,7 +210,7 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(124, 58, 237, 0.2)';
-                e.currentTarget.style.color = '#7c3aed';
+                e.currentTarget.style.color = 'var(--ccc-accent)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
@@ -280,7 +280,7 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
                 <span style={{
                   fontSize: '16px',
                   fontWeight: 700,
-                  color: breakdown.geographic >= 0.8 ? '#22c55e' : breakdown.geographic >= 0.5 ? '#f59e0b' : '#ef4444',
+                  color: breakdown.geographic >= 0.8 ? '#22c55e' : breakdown.geographic >= 0.5 ? 'var(--ccc-warning)' : 'var(--ccc-error)',
                   padding: '4px 12px',
                   backgroundColor: breakdown.geographic >= 0.8 ? 'rgba(34, 197, 94, 0.15)' : breakdown.geographic >= 0.5 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                   borderRadius: '20px'
@@ -303,8 +303,8 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
                     background: breakdown.geographic >= 0.8
                       ? 'linear-gradient(90deg, #22c55e 0%, #16a34a 100%)'
                       : breakdown.geographic >= 0.5
-                        ? 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'
-                        : 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)',
+                        ? `linear-gradient(90deg, var(--ccc-warning) 0%, #d97706 100%)`
+                        : `linear-gradient(90deg, var(--ccc-error) 0%, #dc2626 100%)`,
                     borderRadius: '5px',
                     transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                     boxShadow: '0 0 10px rgba(255, 255, 255, 0.2)',
@@ -343,7 +343,7 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
                 <span style={{
                   fontSize: '16px',
                   fontWeight: 700,
-                  color: breakdown.experienceLevel >= 0.8 ? '#22c55e' : breakdown.experienceLevel >= 0.5 ? '#f59e0b' : '#ef4444',
+                  color: breakdown.experienceLevel >= 0.8 ? '#22c55e' : breakdown.experienceLevel >= 0.5 ? 'var(--ccc-warning)' : 'var(--ccc-error)',
                   padding: '4px 12px',
                   backgroundColor: breakdown.experienceLevel >= 0.8 ? 'rgba(34, 197, 94, 0.15)' : breakdown.experienceLevel >= 0.5 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                   borderRadius: '20px'
@@ -366,8 +366,8 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
                     background: breakdown.experienceLevel >= 0.8
                       ? 'linear-gradient(90deg, #22c55e 0%, #16a34a 100%)'
                       : breakdown.experienceLevel >= 0.5
-                        ? 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'
-                        : 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)',
+                        ? `linear-gradient(90deg, var(--ccc-warning) 0%, #d97706 100%)`
+                        : `linear-gradient(90deg, var(--ccc-error) 0%, #dc2626 100%)`,
                     borderRadius: '5px',
                     transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                     boxShadow: '0 0 10px rgba(255, 255, 255, 0.2)',
@@ -405,7 +405,7 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
                 <span style={{
                   fontSize: '16px',
                   fontWeight: 700,
-                  color: breakdown.experienceYears >= 0.8 ? '#22c55e' : breakdown.experienceYears >= 0.5 ? '#f59e0b' : '#ef4444',
+                  color: breakdown.experienceYears >= 0.8 ? '#22c55e' : breakdown.experienceYears >= 0.5 ? 'var(--ccc-warning)' : 'var(--ccc-error)',
                   padding: '4px 12px',
                   backgroundColor: breakdown.experienceYears >= 0.8 ? 'rgba(34, 197, 94, 0.15)' : breakdown.experienceYears >= 0.5 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                   borderRadius: '20px'
@@ -428,8 +428,8 @@ const ScorePieChart: React.FC<ScorePieChartProps> = ({
                     background: breakdown.experienceYears >= 0.8
                       ? 'linear-gradient(90deg, #22c55e 0%, #16a34a 100%)'
                       : breakdown.experienceYears >= 0.5
-                        ? 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'
-                        : 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)',
+                        ? `linear-gradient(90deg, var(--ccc-warning) 0%, #d97706 100%)`
+                        : `linear-gradient(90deg, var(--ccc-error) 0%, #dc2626 100%)`,
                     borderRadius: '5px',
                     transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                     boxShadow: '0 0 10px rgba(255, 255, 255, 0.2)',

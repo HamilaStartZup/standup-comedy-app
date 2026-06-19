@@ -1,4 +1,5 @@
 import React, { useState, useEffect, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
@@ -97,7 +98,7 @@ function ApplyToEventForm({ event, onClose, onApplicationSubmitted }: ApplyToEve
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 50,
+    zIndex: 1200,
   };
 
   const formContentStyle: CSSProperties = {
@@ -123,7 +124,7 @@ function ApplyToEventForm({ event, onClose, onApplicationSubmitted }: ApplyToEve
   const titleStyle: CSSProperties = {
     fontSize: '1.5em',
     fontWeight: '600',
-    color: '#7c3aed',
+    color: 'var(--ccc-accent)',
   };
 
   const closeButtonStyle: CSSProperties = {
@@ -139,16 +140,16 @@ function ApplyToEventForm({ event, onClose, onApplicationSubmitted }: ApplyToEve
     fontSize: '0.875em',
     fontWeight: '500',
     marginBottom: '8px',
-    color: '#ccc',
+    color: 'var(--ccc-text-muted)',
   };
 
   const textareaStyle: CSSProperties = {
     width: '100%',
     padding: '12px',
-    backgroundColor: '#2c2c4d',
+    backgroundColor: 'var(--ccc-bg-surface)',
     borderRadius: '8px',
-    border: '1px solid #444',
-    color: '#ffffff',
+    border: '1px solid var(--ccc-border-medium)',
+    color: 'var(--ccc-text-primary)',
     outline: 'none',
     resize: 'vertical',
     minHeight: '100px',
@@ -187,98 +188,70 @@ function ApplyToEventForm({ event, onClose, onApplicationSubmitted }: ApplyToEve
     opacity: hasApplied || applyMutation.isPending ? 0.7 : 1,
   };
 
+  let content: React.ReactNode;
+
   if (checkingApplication) {
-    return (
-      <div style={formContainerStyle}>
-        <div style={formContentStyle}>
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
-            <div style={{ border: '4px solid rgba(255, 255, 255, 0.3)', borderTop: '4px solid #7c3aed', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite' }}></div>
-            <span style={{ marginLeft: '10px', color: '#ccc' }}>Vérification...</span>
-            <style>{`
-              @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-              }
-            `}</style>
-          </div>
+    content = (
+      <div style={formContentStyle}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+          <div style={{ border: '4px solid var(--ccc-border-medium)', borderTop: '4px solid var(--ccc-accent)', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite' }}></div>
+          <span style={{ marginLeft: '10px', color: 'var(--ccc-text-muted)' }}>Vérification...</span>
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
         </div>
       </div>
     );
-  }
-
-  if (hasScheduleConflict) {
-    return (
-      <div style={formContainerStyle}>
-        <div style={formContentStyle}>
-          <div style={headerStyle}>
-            <h3 style={titleStyle}>Conflit d'agenda</h3>
-            <button onClick={onClose} style={closeButtonStyle}>✕</button>
-          </div>
-          <div style={{ marginBottom: '24px' }}>
-            <p style={{ color: '#ccc', marginBottom: '8px' }}>
-              Vous êtes déjà accepté à un autre évènement qui se déroule au même moment que <strong style={{ color: '#ff4b2b' }}>{event.title}</strong>.
-            </p>
-            <p style={{ color: '#aaa', fontSize: '0.875em' }}>
-              Pour postuler à cet évènement, vous devez d'abord vous désinscrire de l'autre évènement en conflit.
-            </p>
-          </div>
-          <div style={buttonGroupStyle}>
-            <button onClick={onClose} style={cancelButtonDynamicStyle}>Fermer</button>
-          </div>
+  } else if (hasScheduleConflict) {
+    content = (
+      <div style={formContentStyle}>
+        <div style={headerStyle}>
+          <h3 style={titleStyle}>Conflit d'agenda</h3>
+          <button onClick={onClose} style={closeButtonStyle}>✕</button>
+        </div>
+        <div style={{ marginBottom: '24px' }}>
+          <p style={{ color: 'var(--ccc-text-secondary)', marginBottom: '8px' }}>
+            Vous êtes déjà accepté à un autre évènement qui se déroule au même moment que <strong style={{ color: 'var(--ccc-accent)' }}>{event.title}</strong>.
+          </p>
+          <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.875em' }}>
+            Pour postuler à cet évènement, vous devez d'abord vous désinscrire de l'autre évènement en conflit.
+          </p>
+        </div>
+        <div style={buttonGroupStyle}>
+          <button onClick={onClose} style={cancelButtonDynamicStyle}>Fermer</button>
         </div>
       </div>
     );
-  }
-
-  if (hasApplied) {
-    return (
-      <div style={formContainerStyle}>
-        <div style={formContentStyle}>
-          <div style={headerStyle}>
-            <h3 style={titleStyle}>Candidature déjà envoyée</h3>
-            <button
-              onClick={onClose}
-              style={closeButtonStyle}
-            >
-              ✕
-            </button>
-          </div>
-          
-          <div style={{ marginBottom: '24px' }}>
-            <p style={{ color: '#ccc', marginBottom: '8px' }}>
-              Vous avez déjà postulé à l'évènement: <strong style={{ color: '#ff4b2b' }}>{event.title}</strong>
-            </p>
-            <p style={{ color: '#aaa', fontSize: '0.875em' }}>
-              Vous ne pouvez postuler qu'une seule fois par évènement.
-            </p>
-          </div>
-
-          <div style={buttonGroupStyle}>
-            <button
-              onClick={onClose}
-              style={cancelButtonDynamicStyle}
-            >
-              Fermer
-            </button>
-          </div>
+  } else if (hasApplied) {
+    content = (
+      <div style={formContentStyle}>
+        <div style={headerStyle}>
+          <h3 style={titleStyle}>Candidature déjà envoyée</h3>
+          <button onClick={onClose} style={closeButtonStyle}>✕</button>
+        </div>
+        <div style={{ marginBottom: '24px' }}>
+          <p style={{ color: 'var(--ccc-text-secondary)', marginBottom: '8px' }}>
+            Vous avez déjà postulé à l'évènement: <strong style={{ color: 'var(--ccc-accent)' }}>{event.title}</strong>
+          </p>
+          <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.875em' }}>
+            Vous ne pouvez postuler qu'une seule fois par évènement.
+          </p>
+        </div>
+        <div style={buttonGroupStyle}>
+          <button onClick={onClose} style={cancelButtonDynamicStyle}>Fermer</button>
         </div>
       </div>
     );
-  }
-
-  return (
-    <div style={formContainerStyle}>
+  } else {
+    content = (
       <div style={formContentStyle}>
         <div style={headerStyle}>
           <h3 style={titleStyle}>Postuler à l'évènement: {event.title}</h3>
-          <button
-            onClick={onClose}
-            style={closeButtonStyle}
-          >
-            ✕
-          </button>
+          <button onClick={onClose} style={closeButtonStyle}>✕</button>
         </div>
-
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
             <label style={labelStyle}>
@@ -292,7 +265,6 @@ function ApplyToEventForm({ event, onClose, onApplicationSubmitted }: ApplyToEve
               placeholder="Présentez-vous brièvement et expliquez pourquoi vous souhaitez participer à cet évènement..."
             />
           </div>
-
           <div style={buttonGroupStyle}>
             <button
               type="button"
@@ -312,7 +284,12 @@ function ApplyToEventForm({ event, onClose, onApplicationSubmitted }: ApplyToEve
           </div>
         </form>
       </div>
-    </div>
+    );
+  }
+
+  return createPortal(
+    <div style={formContainerStyle}>{content}</div>,
+    document.body
   );
 }
 

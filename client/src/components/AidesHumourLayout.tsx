@@ -1,8 +1,16 @@
+import { Navigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from '../landing-aides/components/Footer';
+import { useAuth } from '../hooks/useAuth';
 import '../landing-aides/styles/aides-humour.css';
 
 export default function AidesHumourLayout({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+
+  if (!isLoading && user?.role === 'SUPER_ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <div
       className="ah-page"

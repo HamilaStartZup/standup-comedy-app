@@ -34,6 +34,11 @@ function StarRating({
             background: 'none',
             border: 'none',
             padding: 4,
+            minWidth: 44,
+            minHeight: 44,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             cursor: disabled ? 'default' : 'pointer',
             fontSize: '1.5rem',
             lineHeight: 1,
@@ -251,8 +256,7 @@ export default function SpectatorRateEventPage() {
                             padding: 16,
                             background: 'var(--ccc-bg-elevated)',
                             borderRadius: 12,
-                            border: '1px solid #e5e7eb',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                            border: '1px solid var(--ccc-border-medium)',
                           }}
                         >
                           <div
@@ -264,11 +268,11 @@ export default function SpectatorRateEventPage() {
                               backgroundImage: p.avatarUrl ? `url(${p.avatarUrl})` : undefined,
                               backgroundSize: p.avatarUrl ? 'cover' : undefined,
                               backgroundPosition: p.avatarUrl ? 'center' : undefined,
-                              background: !p.avatarUrl ? 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)' : undefined,
+                              background: !p.avatarUrl ? 'linear-gradient(135deg, var(--ccc-accent) 0%, #5b21b6 100%)' : undefined,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: '#fff',
+                              color: 'var(--ccc-text-on-accent)',
                               fontWeight: 700,
                               fontSize: '1.1rem',
                             }}
@@ -281,7 +285,7 @@ export default function SpectatorRateEventPage() {
                             <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--ccc-text-primary)' }}>
                               {p.firstName} {p.lastName}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--ccc-text-muted)', marginTop: 2 }}>
                               HUMORISTE
                             </div>
                           </div>

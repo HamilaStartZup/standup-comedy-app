@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import api, { acknowledgePresenceAlert, triggerPresenceCheck } from '../services/api';
 import { getErrorMessage, ErrorMessages, ConfirmMessages } from '../services/systemMessages';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { pageTitleStyle } from '../styles/theme';
+
 
 interface PresenceAlert {
   _id: string;
@@ -112,7 +112,10 @@ const PresenceAlertsPage = () => {
   };
 
   const titleStyle: CSSProperties = {
-    ...pageTitleStyle,
+    fontSize: '2.5em',
+    color: 'var(--ccc-accent)',
+    fontWeight: 700,
+    letterSpacing: '-0.02em',
     margin: 0,
   };
 
@@ -155,7 +158,7 @@ const PresenceAlertsPage = () => {
   const scoreStyle = (score: number): CSSProperties => ({
     fontSize: '1.5em',
     fontWeight: 'bold',
-    color: score < 30 ? '#dc3545' : score < 50 ? '#ffc107' : '#28a745',
+    color: score < 30 ? 'var(--ccc-error)' : score < 50 ? 'var(--ccc-warning)' : 'var(--ccc-success)',
     padding: '8px 16px',
     borderRadius: '8px',
     backgroundColor: score < 30 ? 'rgba(220, 53, 69, 0.2)' : score < 50 ? 'rgba(255, 193, 7, 0.2)' : 'rgba(40, 167, 69, 0.2)',
@@ -166,7 +169,7 @@ const PresenceAlertsPage = () => {
     gap: '20px',
     flexWrap: 'wrap',
     fontSize: '0.95em',
-    color: 'var(--ccc-text-muted)',
+    color: 'var(--ccc-text-subtle)',
   };
 
   const buttonStyle: CSSProperties = {
@@ -183,14 +186,14 @@ const PresenceAlertsPage = () => {
 
   const acknowledgeButtonStyle: CSSProperties = {
     ...buttonStyle,
-    background: 'linear-gradient(to right, #28a745, #218838)',
+    background: 'linear-gradient(to right, var(--ccc-success), #059669)',
     padding: '8px 16px',
     fontSize: '0.9em',
   };
 
   const emptyStateStyle: CSSProperties = {
     textAlign: 'center',
-    color: '#aaa',
+    color: 'var(--ccc-text-subtle)',
     fontSize: '1.2em',
     padding: '40px',
   };
@@ -200,7 +203,7 @@ const PresenceAlertsPage = () => {
       <div style={mainContainerStyle}>
         <Navbar />
         <div style={contentStyle}>
-          <p style={{ color: '#dc3545', fontSize: '1.2em' }}>
+          <p style={{ color: 'var(--ccc-error)', fontSize: '1.2em' }}>
             Accès refusé. Seuls les super-admins peuvent accéder à cette page.
           </p>
         </div>
@@ -215,7 +218,7 @@ const PresenceAlertsPage = () => {
         <div style={pageHeaderStyle}>
           <div>
             <h1 style={titleStyle}>Alertes de Présence</h1>
-            <p style={{ color: '#aaa', fontSize: '1.1em' }}>
+            <p style={{ color: 'var(--ccc-text-subtle)', fontSize: '1.1em' }}>
               Humoristes avec un score de présence inférieur à 75%
             </p>
           </div>
@@ -230,11 +233,11 @@ const PresenceAlertsPage = () => {
 
         <div style={contentStyle}>
           {isLoading && (
-            <p style={{ textAlign: 'center', color: '#aaa' }}>Chargement des alertes...</p>
+            <p style={{ textAlign: 'center', color: 'var(--ccc-text-subtle)' }}>Chargement des alertes...</p>
           )}
 
           {error && (
-            <p style={{ textAlign: 'center', color: '#dc3545' }}>
+            <p style={{ textAlign: 'center', color: 'var(--ccc-error)' }}>
               Erreur: {(error as any).response?.data?.message || (error as any).message}
             </p>
           )}
@@ -250,7 +253,7 @@ const PresenceAlertsPage = () => {
 
           {!isLoading && !error && alertsCount > 0 && (
             <>
-              <div style={{ marginBottom: '20px', color: '#ffc107', fontSize: '1.1em', fontWeight: 'bold' }}>
+              <div style={{ marginBottom: '20px', color: 'var(--ccc-warning)', fontSize: '1.1em', fontWeight: 'bold' }}>
                 {alertsCount} alerte(s) active(s)
               </div>
               {alerts.map((alert) => (
@@ -260,7 +263,7 @@ const PresenceAlertsPage = () => {
                       <div style={comedianNameStyle}>
                         {alert.comedian.firstName} {alert.comedian.lastName}
                       </div>
-                      <div style={{ color: '#aaa', fontSize: '0.9em', marginTop: '4px' }}>
+                      <div style={{ color: 'var(--ccc-text-subtle)', fontSize: '0.9em', marginTop: '4px' }}>
                         {alert.comedian.email}
                       </div>
                     </div>

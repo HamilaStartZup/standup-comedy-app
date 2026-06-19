@@ -111,12 +111,15 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
     });
 
     // Build authorization URL
+    // prompt 'login select_account' : force la ré-auth Keycloak ET le sélecteur
+    // de compte Google (transféré via forwardParameters=prompt sur l'IdP).
     const authUrl = await buildAuthorizationUrl(
       redirectUri,
       state,
       codeChallenge,
       'openid profile email',
-      provider
+      provider,
+      'login select_account'
     );
 
     // Ajouter le nonce à l'URL (pour validation dans l'id_token)

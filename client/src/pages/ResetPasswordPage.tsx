@@ -94,7 +94,7 @@ function ResetPasswordPage() {
     margin: '10px 0',
     borderRadius: '8px',
     border: '1px solid var(--ccc-border-medium)',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--ccc-bg-elevated)',
     color: 'var(--ccc-text-primary)',
     fontSize: '1em',
     outline: 'none',
@@ -180,7 +180,7 @@ function ResetPasswordPage() {
               textAlign: 'left'
             }}>
               <div style={{
-                color: passwordValidation.length ? '#28a745' : '#dc3545',
+                color: passwordValidation.length ? 'var(--ccc-success)' : 'var(--ccc-error)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px'
@@ -192,7 +192,7 @@ function ResetPasswordPage() {
 
           {error && (
             <div style={{
-              color: '#dc3545',
+              color: 'var(--ccc-error)',
               marginBottom: '10px',
               fontSize: '0.9em',
               padding: '10px',
@@ -206,7 +206,7 @@ function ResetPasswordPage() {
 
           {message && (
             <div style={{
-              color: '#28a745',
+              color: 'var(--ccc-success)',
               marginBottom: '10px',
               fontSize: '0.9em',
               padding: '10px',

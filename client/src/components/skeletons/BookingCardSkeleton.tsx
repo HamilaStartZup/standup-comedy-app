@@ -9,7 +9,7 @@ const BookingCardSkeleton: React.FC = () => {
         display: 'flex',
         flexDirection: 'row',
         alignItems: 'stretch',
-        background: '#ffffff',
+        background: 'var(--ccc-bg-elevated)',
         border: '1px solid rgba(0,0,0,0.08)',
         borderRadius: 20,
         overflow: 'hidden',
