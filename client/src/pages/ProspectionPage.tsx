@@ -710,7 +710,7 @@ const ProspectionPage: React.FC = () => {
                 envoi: { ...configForm.envoi, relance72hActive: e.target.checked },
               })}
             />
-            <span>Activer la relance automatique à 72h</span>
+            <span>Activer la relance automatique (lundi → lundi suivant, jeudi → mardi suivant)</span>
           </label>
         </section>
 

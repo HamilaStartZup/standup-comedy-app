@@ -53,7 +53,7 @@ export async function rescheduleProspectionCron(): Promise<void> {
 
   console.log(`✅ Cron prospection planifié: ${expression} (${prospectionConfig.cron.timezone})`);
 
-  // Relance J+3: vérifie chaque heure les contacts envoyés il y a >= 72h
+  // Relance : lundi → lundi suivant, jeudi → mardi suivant (vérifie chaque heure)
   followUpTask = cron.schedule(
     '0 * * * *',
     async () => {
@@ -65,11 +65,11 @@ export async function rescheduleProspectionCron(): Promise<void> {
         const stats = await sendProspectionFollowUpBatch(fresh.envoi.delaiEntreEnvois);
         if (stats.followUpsSent > 0 || stats.followUpsFailed > 0) {
           console.log(
-            `📨 Relances prospection 72h — envoyées: ${stats.followUpsSent}, échecs: ${stats.followUpsFailed}`
+            `📨 Relances prospection — envoyées: ${stats.followUpsSent}, échecs: ${stats.followUpsFailed}, en attente: ${stats.followUpsSkipped}`
           );
         }
       } catch (err) {
-        console.error('❌ Erreur cron relance prospection 72h:', err);
+        console.error('❌ Erreur cron relance prospection:', err);
       }
     },
     { timezone: prospectionConfig.cron.timezone }

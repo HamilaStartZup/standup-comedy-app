@@ -1,12 +1,11 @@
 import sgMail from '@sendgrid/mail';
 import { config } from '../../config/env';
 import { ProspectedVenueModel } from '../../models/ProspectedVenue';
-import { generateProspectionUnsubscribeToken } from '../../utils/prospectionHelpers';
+import { generateProspectionUnsubscribeToken, isProspectionFollowUpDue } from '../../utils/prospectionHelpers';
 import { getSendGridFrom, isEmailsDisabled } from './prospectionConfigService';
 
 const CAMPAIGN = 'invitation-plateforme-v1';
 const FOLLOW_UP_CAMPAIGN = 'invitation-plateforme-v1-relance-72h';
-const FOLLOW_UP_DELAY_HOURS = 72;
 
 if (config.email.smtpPass) {
   sgMail.setApiKey(config.email.smtpPass);
@@ -253,8 +252,7 @@ async function sendProspectionFollowUpEmail(
 
 export async function sendProspectionFollowUpBatch(
   delaySeconds: number
-): Promise<{ followUpsSent: number; followUpsFailed: number }> {
-  const cutoff = new Date(Date.now() - FOLLOW_UP_DELAY_HOURS * 60 * 60 * 1000);
+): Promise<{ followUpsSent: number; followUpsFailed: number; followUpsSkipped: number }> {
   const query: Record<string, unknown> = {
     emailStatus: 'envoye',
     optOut: false,
@@ -263,7 +261,6 @@ export async function sendProspectionFollowUpBatch(
       $elemMatch: {
         campaign: CAMPAIGN,
         status: 'envoye',
-        sentAt: { $lte: cutoff },
       },
     },
     $nor: [
@@ -280,9 +277,20 @@ export async function sendProspectionFollowUpBatch(
   const venues = await ProspectedVenueModel.find(query).lean();
   let followUpsSent = 0;
   let followUpsFailed = 0;
+  let followUpsSkipped = 0;
 
   for (const venue of venues) {
     if (!venue.email) continue;
+
+    const initialEntry = venue.emailHistory
+      ?.filter((h) => h.campaign === CAMPAIGN && h.status === 'envoye')
+      .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime())[0];
+
+    if (!initialEntry || !isProspectionFollowUpDue(new Date(initialEntry.sentAt))) {
+      followUpsSkipped++;
+      continue;
+    }
+
     const result = await sendProspectionFollowUpEmail(
       venue._id.toString(),
       venue.name,
@@ -296,5 +304,5 @@ export async function sendProspectionFollowUpBatch(
     }
   }
 
-  return { followUpsSent, followUpsFailed };
+  return { followUpsSent, followUpsFailed, followUpsSkipped };
 }
