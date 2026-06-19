@@ -23,7 +23,6 @@ import {
   markProspectionInboxReplied,
 } from '../services/api';
 import { getErrorMessage } from '../services/systemMessages';
-import { pageTitleStyle } from '../styles/theme';
 import {
   EMAIL_STATUS_LABELS,
   EMAIL_STATUS_OPTIONS,
@@ -426,7 +425,7 @@ const ProspectionPage: React.FC = () => {
     <div style={{ minHeight: '100vh', background: 'var(--ccc-bg-gradient)', color: 'var(--ccc-text-primary)' }}>
       <Navbar />
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 20px 60px' }}>
-        <h1 style={pageTitleStyle}>Prospection</h1>
+        <h1 className="ccc-page-title">Prospection</h1>
         <p style={{ color: 'var(--ccc-text-muted)', marginBottom: 28, marginTop: -8 }}>
           Recherche via données ouvertes (BPE INSEE, Basilic Culture, OpenStreetMap) puis enrichissement web
           (sites + emails). Sources : <code>PROSPECTION_SEARCH_SOURCES</code> — par défaut{' '}
