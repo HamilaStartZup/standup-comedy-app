@@ -44,6 +44,7 @@ export interface IProspectedVenue {
   source: string;
   emailStatus: ProspectedEmailStatus;
   optOut: boolean;
+  emailEnrichAttemptedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

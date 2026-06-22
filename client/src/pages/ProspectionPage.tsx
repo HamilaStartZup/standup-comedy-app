@@ -272,13 +272,18 @@ const ProspectionPage: React.FC = () => {
     setEnriching(true);
     try {
       const result = await enrichProspectionVenues({
-        limit: 30,
+        limit: 5,
         departements: venueDept ? [venueDept] : undefined,
       });
       showSuccess(result.message);
       queryClient.invalidateQueries({ queryKey: ['prospected-venues'] });
     } catch (err) {
-      showError(getErrorMessage(err, 'Enrichissement impossible'));
+      const isNetwork = !(err as { response?: unknown })?.response;
+      showError(
+        isNetwork
+          ? 'Serveur injoignable (port 3001). Vérifiez que le backend tourne (`npm run dev` dans server/) puis réessayez.'
+          : getErrorMessage(err, 'Enrichissement impossible')
+      );
     } finally {
       setEnriching(false);
     }
@@ -1012,7 +1017,7 @@ const ProspectionPage: React.FC = () => {
                   opacity: enriching ? 0.7 : 1,
                 }}
               >
-                {enriching ? 'Enrichissement…' : 'Enrichir sites & emails (30)'}
+                {enriching ? 'Recherche emails… (~1 min)' : 'Chercher emails (5 lieux)'}
               </button>
             </div>
           </div>

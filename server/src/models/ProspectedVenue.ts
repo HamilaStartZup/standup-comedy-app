@@ -46,6 +46,7 @@ export interface ProspectedVenueDocument extends Document {
     error?: string | null;
   }>;
   optOut: boolean;
+  emailEnrichAttemptedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +86,7 @@ const prospectedVenueSchema = new Schema<ProspectedVenueDocument>(
       error: { type: String, default: null },
     }],
     optOut: { type: Boolean, default: false },
+    emailEnrichAttemptedAt: { type: Date, default: null },
   },
   { timestamps: true, collection: 'prospected_venues' }
 );
@@ -101,6 +103,7 @@ prospectedVenueSchema.index({ 'address.departement': 1 });
 prospectedVenueSchema.index({ type: 1 });
 prospectedVenueSchema.index({ 'address.departement': 1, type: 1 });
 prospectedVenueSchema.index({ emailStatus: 1 });
+prospectedVenueSchema.index({ emailEnrichAttemptedAt: 1 });
 prospectedVenueSchema.index({ name: 1, 'address.postalCode': 1, 'address.departement': 1 });
 
 export const ProspectedVenueModel = mongoose.model<ProspectedVenueDocument>(

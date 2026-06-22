@@ -340,19 +340,23 @@ export const deleteProspectedVenueHandler = async (req: AuthRequest, res: Respon
 export const enrichProspectionVenuesHandler = async (req: AuthRequest, res: Response): Promise<void> => {
   if (!assertSuperAdmin(req, res)) return;
 
-  const limit = Math.min(Math.max(Number(req.body?.limit) || 30, 1), 100);
+  const limit = Math.min(Math.max(Number(req.body?.limit) || 5, 1), 100);
   const departements = Array.isArray(req.body?.departements)
     ? (req.body.departements as string[])
     : [];
 
   try {
-    const result = await enrichVenuesContacts(departements, {
-      discoverWebsites: true,
-      websiteLimit: limit,
-      emailLimit: limit,
-    });
+    console.log(
+      `📧 Recherche emails — départements: ${departements.length ? departements.join(', ') : 'tous'}, limite: ${limit}`
+    );
+    const result = await enrichVenuesContacts(departements, { emailLimit: limit });
+    const message =
+      result.venuesProcessed === 0
+        ? 'Aucun lieu sans email dans ce périmètre.'
+        : `${result.venuesProcessed} lieu(x) analysé(s), ${result.emailsEnriched} email(s) trouvé(s).`;
+    console.log(`📧 Recherche emails terminée — ${message}`);
     res.json({
-      message: `${result.websitesFound} site(s) trouvé(s), ${result.emailsEnriched} email(s) enrichi(s)`,
+      message,
       ...result,
     });
   } catch (err) {

@@ -75,11 +75,7 @@ export async function searchProspectionTargets(
   let websitesFound = 0;
   let emailsEnriched = 0;
   if (enrichEmails) {
-    const enrichResult = await enrichVenuesContacts(allDepts, {
-      discoverWebsites: providers.includes('scraping'),
-      websiteLimit: providers.includes('scraping') ? 40 : 0,
-      emailLimit: 80,
-    });
+    const enrichResult = await enrichVenuesContacts(allDepts, { emailLimit: 80 });
     websitesFound = enrichResult.websitesFound;
     emailsEnriched = enrichResult.emailsEnriched;
   }

@@ -712,11 +712,15 @@ export const enrichProspectionVenues = async (payload?: {
   limit?: number;
   departements?: string[];
 }) => {
-  const res = await api.post('/prospection/enrich', payload ?? {});
+  const res = await api.post('/prospection/enrich', payload ?? {}, {
+    timeout: 600_000, // jusqu'à 10 min (nombreuses recherches web)
+  });
   return res.data as {
     message: string;
     websitesFound: number;
     emailsEnriched: number;
+    phonesEnriched: number;
+    venuesProcessed: number;
   };
 };
 
