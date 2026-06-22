@@ -665,6 +665,11 @@ export const clearProspectionRuns = async () => {
   return res.data as { message: string; deletedCount: number };
 };
 
+export const cancelProspectionRun = async (runId: string) => {
+  const res = await api.post(`/prospection/runs/${runId}/cancel`);
+  return res.data as { message: string };
+};
+
 export const listProspectedVenues = async (params: {
   page?: number;
   limit?: number;

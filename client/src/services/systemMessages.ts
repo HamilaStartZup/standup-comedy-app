@@ -212,6 +212,10 @@ const SAFE_SERVER_MESSAGES = new Set([
   "Numéro de téléphone invalide",
   "Erreur lors de l'envoi du SMS. Réessayez dans quelques instants.",
 
+  // Prospection
+  "Une prospection est déjà en cours",
+  "Prospection interrompue",
+
   // Venue bookings
   "La salle est indisponible à cette date ou sur ce créneau",
   "Vous ne pouvez pas réserver votre propre salle",

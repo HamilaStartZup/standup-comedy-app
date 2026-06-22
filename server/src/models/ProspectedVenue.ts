@@ -19,6 +19,7 @@ export type ProspectedVenueSource =
 
 export type ProspectedEmailStatus =
   | 'non_envoye'
+  | 'a_contacter'
   | 'envoye'
   | 'echec'
   | 'desinscrit'
@@ -76,7 +77,7 @@ const prospectedVenueSchema = new Schema<ProspectedVenueDocument>(
     },
     emailStatus: {
       type: String,
-      enum: ['non_envoye', 'envoye', 'echec', 'desinscrit', 'repondu'],
+      enum: ['non_envoye', 'a_contacter', 'envoye', 'echec', 'desinscrit', 'repondu'],
       default: 'non_envoye',
     },
     emailHistory: [{

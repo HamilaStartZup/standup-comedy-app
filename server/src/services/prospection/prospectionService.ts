@@ -12,12 +12,55 @@ export interface RunProspectionOptions {
   dryRun?: boolean;
 }
 
+const STALE_RUN_MS = 30 * 60 * 1000;
+
+/** Libère les runs bloqués en « running » (redémarrage serveur ou timeout). */
+export async function releaseStaleProspectionRuns(options?: {
+  onStartup?: boolean;
+  maxAgeMs?: number;
+}): Promise<number> {
+  const filter: Record<string, unknown> = { status: 'running' };
+  if (!options?.onStartup) {
+    const maxAgeMs = options?.maxAgeMs ?? STALE_RUN_MS;
+    filter.startedAt = { $lt: new Date(Date.now() - maxAgeMs) };
+  }
+
+  const result = await ProspectionRunModel.updateMany(filter, {
+    $set: {
+      status: 'error',
+      finishedAt: new Date(),
+      error: options?.onStartup
+        ? 'Interrompu au redémarrage du serveur'
+        : 'Interrompu (exécution expirée ou bloquée)',
+    },
+  });
+
+  return result.modifiedCount ?? 0;
+}
+
+export async function cancelProspectionRun(runId: string): Promise<boolean> {
+  const run = await ProspectionRunModel.findOneAndUpdate(
+    { _id: runId, status: 'running' },
+    {
+      $set: {
+        status: 'error',
+        finishedAt: new Date(),
+        error: 'Interrompu manuellement',
+      },
+    },
+    { new: true }
+  );
+  return !!run;
+}
+
 export async function hasRunningProspectionRun(): Promise<boolean> {
   const running = await ProspectionRunModel.findOne({ status: 'running' });
   return !!running;
 }
 
 export async function executeProspectionRun(options: RunProspectionOptions): Promise<string> {
+  await releaseStaleProspectionRuns();
+
   if (await hasRunningProspectionRun()) {
     throw new Error('Une prospection est déjà en cours');
   }

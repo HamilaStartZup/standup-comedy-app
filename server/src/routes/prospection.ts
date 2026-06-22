@@ -6,6 +6,7 @@ import {
   getProspectionRunHandler,
   listProspectionRunsHandler,
   clearProspectionRunsHandler,
+  cancelProspectionRunHandler,
   listProspectedVenuesHandler,
   createProspectedVenueHandler,
   updateProspectedVenueHandler,
@@ -31,6 +32,7 @@ router.post('/run', authMiddleware, runProspectionHandler);
 router.post('/jobs/run', runProspectionHandler);
 router.get('/runs', authMiddleware, listProspectionRunsHandler);
 router.delete('/runs', authMiddleware, clearProspectionRunsHandler);
+router.post('/runs/:id/cancel', authMiddleware, cancelProspectionRunHandler);
 router.get('/runs/:id', authMiddleware, getProspectionRunHandler);
 router.get('/venues', authMiddleware, listProspectedVenuesHandler);
 router.post('/venues', authMiddleware, createProspectedVenueHandler);

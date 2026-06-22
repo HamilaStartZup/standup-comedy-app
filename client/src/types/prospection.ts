@@ -9,6 +9,7 @@ export type ProspectedVenueType =
 
 export type ProspectedEmailStatus =
   | 'non_envoye'
+  | 'a_contacter'
   | 'envoye'
   | 'echec'
   | 'desinscrit'
@@ -110,6 +111,7 @@ export const VENUE_TYPE_OPTIONS: { value: ProspectedVenueType; label: string }[]
 
 export const EMAIL_STATUS_LABELS: Record<ProspectedEmailStatus, string> = {
   non_envoye: 'Non envoyé',
+  a_contacter: 'À contacter',
   envoye: 'Envoyé',
   echec: 'Échec',
   desinscrit: 'Désinscrit',

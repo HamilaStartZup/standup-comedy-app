@@ -8,7 +8,7 @@ import {
   patchProspectionConfig,
   ensureProspectionConfig,
 } from '../services/prospection/prospectionConfigService';
-import { executeProspectionRun } from '../services/prospection/prospectionService';
+import { executeProspectionRun, releaseStaleProspectionRuns, cancelProspectionRun } from '../services/prospection/prospectionService';
 import { rescheduleProspectionCron } from '../services/prospection/prospectionCronManager';
 import { enrichVenuesContacts } from '../services/prospection/venueRepository';
 import {
@@ -21,7 +21,7 @@ import { getDepartmentFromPostalCode } from '../utils/cityMapping';
 import type { ProspectedEmailStatus, ProspectedVenueType } from '../models/ProspectedVenue';
 
 const EMAIL_STATUSES: ProspectedEmailStatus[] = [
-  'non_envoye', 'envoye', 'echec', 'desinscrit', 'repondu',
+  'non_envoye', 'a_contacter', 'envoye', 'echec', 'desinscrit', 'repondu',
 ];
 
 const VENUE_TYPES: ProspectedVenueType[] = [
@@ -365,8 +365,24 @@ export const enrichProspectionVenuesHandler = async (req: AuthRequest, res: Resp
   }
 };
 
+export const cancelProspectionRunHandler = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!assertSuperAdmin(req, res)) return;
+
+  const cancelled = await cancelProspectionRun(req.params.id);
+  if (!cancelled) {
+    res.status(404).json({ message: 'Exécution introuvable ou déjà terminée' });
+    return;
+  }
+
+  res.json({ message: 'Prospection interrompue' });
+};
+
 export const initProspectionModule = async (): Promise<void> => {
   await ensureProspectionConfig();
   await syncProspectedVenueIndexes();
+  const released = await releaseStaleProspectionRuns({ onStartup: true });
+  if (released > 0) {
+    console.log(`📧 ${released} exécution(s) de prospection interrompue(s) au démarrage`);
+  }
   await rescheduleProspectionCron();
 };
