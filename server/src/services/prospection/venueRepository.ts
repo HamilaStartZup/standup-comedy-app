@@ -68,7 +68,8 @@ async function enrichMissingEmail(
 
 async function mergeIntoExisting(
   existing: ProspectedVenueDocument,
-  incoming: ProspectionSearchResult
+  incoming: ProspectionSearchResult,
+  enrichEmail: boolean
 ): Promise<boolean> {
   const updates: Record<string, unknown> = {};
   let changed = false;
@@ -83,9 +84,11 @@ async function mergeIntoExisting(
     changed = true;
   }
 
-  const websiteForEnrichment = (incoming.website ?? existing.website) as string | undefined;
   if (!existing.email) {
-    const email = incoming.email ?? await enrichMissingEmail(existing, websiteForEnrichment);
+    const email = incoming.email
+      ?? (enrichEmail
+        ? await enrichMissingEmail(existing, (incoming.website ?? existing.website) as string | undefined)
+        : null);
     if (email) {
       const assigned = await tryAssignEmail(existing._id.toString(), email);
       if (assigned) {
@@ -102,17 +105,19 @@ async function mergeIntoExisting(
 }
 
 export async function upsertProspectedVenue(
-  result: ProspectionSearchResult
+  result: ProspectionSearchResult,
+  options: { enrichEmail?: boolean } = {}
 ): Promise<UpsertProspectedVenueResult> {
+  const enrichEmail = options.enrichEmail ?? false;
   const existing = await ProspectedVenueModel.findOne(buildDedupFilter(result));
 
   if (existing) {
-    const merged = await mergeIntoExisting(existing, result);
+    const merged = await mergeIntoExisting(existing, result, enrichEmail);
     return merged ? 'merged' : 'duplicate';
   }
 
   let email = result.email ?? null;
-  if (!email && result.website) {
+  if (enrichEmail && !email && result.website) {
     email = await guessEmailFromWebsite(result.website);
   }
 

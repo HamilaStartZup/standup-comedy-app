@@ -205,29 +205,21 @@ async function parseOfficialTheaterWebsite(url: string, venueName: string): Prom
   return { website: url, phone, source: 'site-officiel' };
 }
 
-async function searchDirectoryUrls(name: string, city?: string | null): Promise<string[]> {
-  const cityLabel = city ?? 'Paris';
-  const queries = [
-    `site:offi.fr "${name}" ${cityLabel}`,
-    `site:tpa.fr "${name}" Paris`,
-    `site:theatreinparis.com "${name}" Paris`,
-  ];
-
-  const urls: string[] = [];
-  for (const query of queries) {
-    const found = await searchDdg(query);
-    urls.push(...found);
-    await sleep(800);
-  }
-
-  return [...new Set(urls)];
-}
-
 async function searchOfficialTheaterUrls(name: string, city?: string | null): Promise<string[]> {
   const cityLabel = city ?? 'Paris';
+  const excludeDirs = [
+    '-site:offi.fr',
+    '-site:tpa.fr',
+    '-site:theatreinparis.com',
+    '-site:billetreduc.com',
+    '-site:facebook.com',
+    '-site:fnac.com',
+  ].join(' ');
+
   const queries = [
-    `"${name}" ${cityLabel} théâtre site officiel`,
-    `${name} ${cityLabel} théâtre contact -site:offi.fr -site:tpa.fr`,
+    `"${name}" ${cityLabel} théâtre site officiel ${excludeDirs}`,
+    `"${name}" ${cityLabel} theatre site officiel ${excludeDirs}`,
+    `${name} ${cityLabel} théâtre contact ${excludeDirs}`,
   ];
 
   const urls: string[] = [];
@@ -241,7 +233,8 @@ async function searchOfficialTheaterUrls(name: string, city?: string | null): Pr
 }
 
 /**
- * Recherche directe du site officiel d'un théâtre / salle (hors annuaires).
+ * Recherche directe du site officiel (hors annuaires).
+ * Privilégie les domaines theatre / theater / comedie et lit la page pour le téléphone.
  */
 export async function lookupOfficialTheaterWebsite(
   name: string,
@@ -264,8 +257,21 @@ export async function lookupOfficialTheaterWebsite(
   return parseOfficialTheaterWebsite(website, name);
 }
 
+async function searchDirectoryBySite(
+  name: string,
+  site: string,
+  cityLabel: string,
+  extraTerms = ''
+): Promise<string[]> {
+  const query = [`site:${site}`, `"${name}"`, cityLabel, extraTerms].filter(Boolean).join(' ');
+  const urls = await searchDdg(query);
+  await sleep(800);
+  return urls;
+}
+
 /**
  * Recherche un lieu dans L'Officiel des spectacles, TPA, Theatre in Paris et Paris.fr (IDF).
+ * Ordre : Offi → TPA → Theatre in Paris → paris.fr
  * @see https://www.offi.fr/
  * @see https://www.tpa.fr/
  * @see https://www.theatreinparis.com/
@@ -283,25 +289,34 @@ export async function lookupVenueInDirectories(
     return { website: null, phone: null, source: null };
   }
 
-  const urls = await searchDirectoryUrls(name, city);
+  const cityLabel = city ?? 'Paris';
 
-  for (const url of urls) {
-    if (isOffiVenuePage(url)) {
-      const result = await parseOffiVenuePage(url, name);
-      if (result.website || result.phone) return result;
-    }
-    if (isTpaVenuePage(url)) {
-      const result = await parseDirectoryVenuePage(url, name, 'tpa.fr');
-      if (result.website || result.phone) return result;
-    }
-    if (isParisCulturePage(url)) {
-      const result = await parseDirectoryVenuePage(url, name, 'paris.fr');
-      if (result.website || result.phone) return result;
-    }
-    if (isTheatreInParisVenuePage(url)) {
-      const result = await parseTheatreInParisVenuePage(url, name);
-      if (result.website) return result;
-    }
+  // 1. L'Officiel des spectacles
+  for (const url of await searchDirectoryBySite(name, 'offi.fr', cityLabel)) {
+    if (!isOffiVenuePage(url)) continue;
+    const result = await parseOffiVenuePage(url, name);
+    if (result.website || result.phone) return result;
+  }
+
+  // 2. TPA — Théâtres et Producteurs Associés
+  for (const url of await searchDirectoryBySite(name, 'tpa.fr', 'Paris')) {
+    if (!isTpaVenuePage(url)) continue;
+    const result = await parseDirectoryVenuePage(url, name, 'tpa.fr');
+    if (result.website || result.phone) return result;
+  }
+
+  // 3. Theatre in Paris
+  for (const url of await searchDirectoryBySite(name, 'theatreinparis.com', 'Paris')) {
+    if (!isTheatreInParisVenuePage(url)) continue;
+    const result = await parseTheatreInParisVenuePage(url, name);
+    if (result.website) return result;
+  }
+
+  // 4. paris.fr — théâtres municipaux
+  for (const url of await searchDirectoryBySite(name, 'paris.fr', 'Paris', 'théâtre')) {
+    if (!isParisCulturePage(url)) continue;
+    const result = await parseDirectoryVenuePage(url, name, 'paris.fr');
+    if (result.website || result.phone) return result;
   }
 
   return { website: null, phone: null, source: null };

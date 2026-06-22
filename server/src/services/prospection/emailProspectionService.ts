@@ -1,7 +1,7 @@
 import sgMail from '@sendgrid/mail';
 import { config } from '../../config/env';
 import { ProspectedVenueModel } from '../../models/ProspectedVenue';
-import { generateProspectionUnsubscribeToken, isProspectionFollowUpDue } from '../../utils/prospectionHelpers';
+import { generateProspectionUnsubscribeToken, isProspectionFollowUpDue, isEligibleForProspectionFollowUp } from '../../utils/prospectionHelpers';
 import { getSendGridFrom, isEmailsDisabled } from './prospectionConfigService';
 
 const CAMPAIGN = 'invitation-plateforme-v1';
@@ -206,6 +206,11 @@ async function sendProspectionFollowUpEmail(
     return { sent: false };
   }
 
+  const current = await ProspectedVenueModel.findById(venueId).select('emailStatus').lean();
+  if (!current || !isEligibleForProspectionFollowUp(current.emailStatus)) {
+    return { sent: false };
+  }
+
   if (!config.email.smtpPass) {
     return { sent: false, error: 'SendGrid non configuré' };
   }
@@ -281,6 +286,11 @@ export async function sendProspectionFollowUpBatch(
 
   for (const venue of venues) {
     if (!venue.email) continue;
+
+    if (!isEligibleForProspectionFollowUp(venue.emailStatus)) {
+      followUpsSkipped++;
+      continue;
+    }
 
     const initialEntry = venue.emailHistory
       ?.filter((h) => h.campaign === CAMPAIGN && h.status === 'envoye')

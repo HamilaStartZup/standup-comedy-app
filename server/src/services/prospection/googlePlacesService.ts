@@ -48,6 +48,11 @@ export async function searchGooglePlacesByDepartment(
       status?: string;
     };
 
+    if (data.status === 'REQUEST_DENIED' || data.status === 'INVALID_REQUEST') {
+      console.warn(`Google Places ${data.status} — source ignorée pour ce run`);
+      return results;
+    }
+
     if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
       console.warn(`Google Places status ${data.status} pour ${type} / ${department}`);
       continue;

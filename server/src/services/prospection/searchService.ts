@@ -36,40 +36,52 @@ export async function searchProspectionTargets(
 
     if (providers.includes('bpe')) {
       usedSources.push('insee_bpe');
+      const t0 = Date.now();
       const bpeResults = await searchBpeByDepartment(dept, types, enrichEmails);
+      console.log(`📧 BPE ${dept} — ${bpeResults.length} résultat(s) en ${((Date.now() - t0) / 1000).toFixed(1)}s`);
       batchResults.push(...bpeResults);
     }
 
     if (providers.includes('data_gouv')) {
       usedSources.push('data_gouv');
+      const t0 = Date.now();
       const basilicResults = await searchBasilicByDepartment(dept, types);
+      console.log(`📧 Basilic ${dept} — ${basilicResults.length} résultat(s) en ${((Date.now() - t0) / 1000).toFixed(1)}s`);
       batchResults.push(...basilicResults);
     }
 
     if (providers.includes('overpass')) {
       usedSources.push('openstreetmap');
+      const t0 = Date.now();
       const osmResults = await searchOverpassByDepartment(dept, types, enrichEmails);
+      console.log(`📧 Overpass ${dept} — ${osmResults.length} résultat(s) en ${((Date.now() - t0) / 1000).toFixed(1)}s`);
       batchResults.push(...osmResults);
     }
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (providers.includes('google') && apiKey) {
       usedSources.push('google_places');
+      const t0 = Date.now();
       const googleResults = await searchGooglePlacesByDepartment(dept, types, apiKey, enrichEmails);
+      console.log(`📧 Google Places ${dept} — ${googleResults.length} résultat(s) en ${((Date.now() - t0) / 1000).toFixed(1)}s`);
       batchResults.push(...googleResults);
     } else if (providers.includes('google') && !apiKey) {
       console.warn('⚠️ Google Places activé mais GOOGLE_PLACES_API_KEY absente — ignoré');
     }
 
     found += batchResults.length;
+    const tUpsert = Date.now();
     for (const r of batchResults) {
-      const status = await upsertProspectedVenue(r);
+      const status = await upsertProspectedVenue(r, { enrichEmail: enrichEmails });
       if (status === 'new') newCount++;
       else if (status === 'merged') mergedCount++;
       else duplicates++;
     }
+    console.log(
+      `📧 Import ${dept} — ${batchResults.length} lieux, upsert en ${((Date.now() - tUpsert) / 1000).toFixed(1)}s`
+    );
 
-    await sleep(500);
+    await sleep(200);
   }
 
   let websitesFound = 0;

@@ -7,7 +7,7 @@ export interface DiscoveredVenueContacts {
   source: string | null;
 }
 
-/** Annuaires (Offi, TPA, Theatre in Paris) → site officiel → recherche web. */
+/** Annuaires → site officiel direct → recherche web générique (secours). */
 export async function discoverVenueContacts(
   name: string,
   city?: string | null,

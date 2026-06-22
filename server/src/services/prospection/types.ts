@@ -19,7 +19,7 @@ export interface ProspectionSearchResult {
 export type ProspectionSearchProvider = 'bpe' | 'overpass' | 'data_gouv' | 'scraping' | 'google';
 
 export function getEnabledSearchProviders(): ProspectionSearchProvider[] {
-  const raw = process.env.PROSPECTION_SEARCH_SOURCES ?? 'bpe,overpass,data_gouv,scraping,google';
+  const raw = process.env.PROSPECTION_SEARCH_SOURCES ?? 'bpe,data_gouv';
   return raw
     .split(',')
     .map((s) => s.trim().toLowerCase())

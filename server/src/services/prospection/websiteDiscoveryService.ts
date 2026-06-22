@@ -4,6 +4,13 @@ const DDG_HTML_URL = 'https://html.duckduckgo.com/html/';
 const USER_AGENT = 'ConnectComedyClub-Prospection/1.0';
 
 const BLOCKED_HOST_FRAGMENTS = [
+  'offi.fr',
+  'tpa.fr',
+  'theatreinparis.com',
+  'billetreduc',
+  'fnac.com',
+  'ticketmaster',
+  'digitick',
   'facebook.com',
   'instagram.com',
   'twitter.com',
@@ -23,6 +30,9 @@ const BLOCKED_HOST_FRAGMENTS = [
   'culture.gouv.fr',
   'assoce.fr',
   'helloasso.com',
+  'sortiraparis.com',
+  'lignesduspectacle',
+  'reserver.com',
 ];
 
 function decodeDdgUrl(raw: string): string | null {
@@ -130,12 +140,11 @@ export async function discoverWebsiteFromWeb(
   };
 
   const hint = typeLabel ? typeHints[typeLabel] ?? '' : '';
+  const cityLabel = city ?? 'Paris';
   const queries = [
-    [name, city, hint, 'site officiel contact'].filter(Boolean).join(' ').trim(),
-    [name, city, hint, 'site:offi.fr'].filter(Boolean).join(' ').trim(),
-    [name, 'Paris', 'site:theatreinparis.com'].filter(Boolean).join(' ').trim(),
-    [name, 'Paris', 'site:tpa.fr'].filter(Boolean).join(' ').trim(),
-    [name, city, 'théâtre site officiel'].filter(Boolean).join(' ').trim(),
+    [name, cityLabel, hint, 'site officiel contact'].filter(Boolean).join(' ').trim(),
+    [name, cityLabel, hint, 'contact'].filter(Boolean).join(' ').trim(),
+    [name, cityLabel, 'théâtre'].filter(Boolean).join(' ').trim(),
   ];
 
   try {

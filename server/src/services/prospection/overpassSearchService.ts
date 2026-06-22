@@ -5,8 +5,6 @@ import type { ProspectedVenueType } from '../../models/ProspectedVenue';
 import type { ProspectionSearchResult } from './types';
 import { guessEmailFromWebsite } from './venueEnrichment';
 
-const OVERPASS_URL = process.env.OVERPASS_API_URL ?? 'https://overpass-api.de/api/interpreter';
-
 interface OverpassElement {
   type: 'node' | 'way' | 'relation';
   lat?: number;
@@ -33,6 +31,9 @@ const OVERPASS_BY_TYPE: Record<ProspectedVenueType, OverpassConfig> = {
 function departmentToOverpassRef(department: string): string {
   return department;
 }
+
+/** Paris (75) : zone admin OSM incompatible avec la requête département actuelle. */
+const OVERPASS_SKIP_DEPARTMENTS = new Set(['75']);
 
 function buildOverpassQuery(department: string, amenityTags: string[]): string {
   const ref = departmentToOverpassRef(department);
@@ -88,19 +89,37 @@ function mapOverpassElement(
 }
 
 async function runOverpassQuery(query: string): Promise<OverpassElement[]> {
-  const res = await fetch(OVERPASS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ data: query }),
-  });
+  const endpoints = [
+    process.env.OVERPASS_API_URL,
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+  ].filter((url, i, arr): url is string => !!url && arr.indexOf(url) === i);
 
-  if (!res.ok) {
-    console.warn(`Overpass API erreur HTTP ${res.status}`);
-    return [];
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Accept: 'application/json',
+          'User-Agent': 'ConnectComedyClub-Prospection/1.0',
+        },
+        body: new URLSearchParams({ data: query }),
+      });
+
+      if (!res.ok) {
+        console.warn(`Overpass API erreur HTTP ${res.status} (${url})`);
+        continue;
+      }
+
+      const data = await res.json() as { elements?: OverpassElement[] };
+      return data.elements ?? [];
+    } catch (err) {
+      console.warn(`Overpass échec (${url}):`, err);
+    }
   }
 
-  const data = await res.json() as { elements?: OverpassElement[] };
-  return data.elements ?? [];
+  return [];
 }
 
 export async function searchOverpassByDepartment(
@@ -108,6 +127,10 @@ export async function searchOverpassByDepartment(
   types: ProspectedVenueType[],
   enrichEmails: boolean
 ): Promise<ProspectionSearchResult[]> {
+  if (OVERPASS_SKIP_DEPARTMENTS.has(department)) {
+    return [];
+  }
+
   const results: ProspectionSearchResult[] = [];
   const seen = new Set<string>();
 
@@ -135,7 +158,7 @@ export async function searchOverpassByDepartment(
       console.warn(`Overpass échec ${type}/${department}:`, err);
     }
 
-    await sleep(1500);
+    await sleep(300);
   }
 
   return results;
