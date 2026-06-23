@@ -2,13 +2,28 @@ import { useState, useEffect, type CSSProperties } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { Link } from 'react-router-dom';
-import { getErrorMessage, ErrorMessages } from '../services/systemMessages';
+import { getSignupErrorMessage } from '../services/systemMessages';
 import { loginWithKeycloak, translateOAuthError } from '../services/oauth';
+import { warmupAuthServer } from '../services/authApi';
+import { useRegisterSubmitGuard, SLOW_CONNECTION_MESSAGE } from '../hooks/useRegisterSubmitGuard';
+import { useOAuthPendingRegistration } from '../hooks/useOAuthPendingRegistration';
+import { isValidPhoneNumber, PHONE_VALIDATION_MESSAGE } from '../utils/phoneValidation';
 import api from '../services/api';
 
 function RegisterSpectatorPage() {
   const { registerMutation, isOAuthEnabled } = useAuth();
   const { showError } = useAlert();
+  const { runSubmit, slowConnection, isLocked } = useRegisterSubmitGuard();
+
+  useOAuthPendingRegistration('SPECTATOR', (pending) => {
+    setPendingCode(pending.pendingCode);
+    setOauthData((p) => ({
+      ...p,
+      firstName: pending.firstName || '',
+      lastName: pending.lastName || '',
+    }));
+    setOauthModal(true);
+  });
 
   const [oauthModal, setOauthModal] = useState(false);
   const [pendingCode, setPendingCode] = useState('');
@@ -54,14 +69,8 @@ function RegisterSpectatorPage() {
       }
     }
 
-    if (formData.phone.trim()) {
-      const cleanPhone = formData.phone.replace(/[\s\-\(\)\+]/g, '');
-      const frenchPhoneRegex = /^(0[1-9])[0-9]{8}$/;
-      const belgianPhoneRegex = /^(0[1-9][0-9]{7,8})$/;
-      if (!frenchPhoneRegex.test(cleanPhone) && !belgianPhoneRegex.test(cleanPhone)) {
-        newErrors.phone =
-          'Numéro invalide (format français: 0XXXXXXXXX, belge: 0XXXXXXXX ou 0XXXXXXXXX)';
-      }
+    if (formData.phone.trim() && !isValidPhoneNumber(formData.phone)) {
+      newErrors.phone = PHONE_VALIDATION_MESSAGE;
     }
 
     if (!formData.password.trim()) {
@@ -145,11 +154,8 @@ function RegisterSpectatorPage() {
     const errs: { [key: string]: string } = {};
     if (!oauthData.firstName.trim() || oauthData.firstName.trim().length < 2) errs.firstName = 'Le prénom est requis (min. 2 caractères)';
     if (!oauthData.lastName.trim() || oauthData.lastName.trim().length < 2) errs.lastName = 'Le nom est requis (min. 2 caractères)';
-    if (oauthData.phone.trim()) {
-      const clean = oauthData.phone.replace(/[\s\-\(\)\+]/g, '');
-      if (!/^(0[1-9])[0-9]{8}$/.test(clean) && !/^(0[1-9][0-9]{7,8})$/.test(clean)) {
-        errs.phone = 'Numéro invalide (format français ou belge)';
-      }
+    if (oauthData.phone.trim() && !isValidPhoneNumber(oauthData.phone)) {
+      errs.phone = PHONE_VALIDATION_MESSAGE;
     }
     if (!oauthData.city.trim()) {
       errs.city = 'La ville de résidence est requise';
@@ -192,28 +198,33 @@ function RegisterSpectatorPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLocked || registerMutation.isPending) return;
     if (!validateForm()) return;
 
-    try {
-      const dataToSend = {
-        email: formData.email,
-        phone: formData.phone || '',
-        password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        city: formData.city.trim(),
-        birthDate: formData.birthDate || undefined,
-        role: 'SPECTATOR' as const,
-        consent: {
-          termsAccepted: acceptTerms,
-          privacyAccepted: acceptTerms,
-          isAdult: true,
-        },
-      };
-      await registerMutation.mutateAsync(dataToSend);
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, ErrorMessages.SIGNUP_FAILED));
-    }
+    await runSubmit(async () => {
+      try {
+        await warmupAuthServer();
+
+        const dataToSend = {
+          email: formData.email,
+          phone: formData.phone || '',
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          city: formData.city.trim(),
+          birthDate: formData.birthDate || undefined,
+          role: 'SPECTATOR' as const,
+          consent: {
+            termsAccepted: acceptTerms,
+            privacyAccepted: acceptTerms,
+            isAdult: true,
+          },
+        };
+        await registerMutation.mutateAsync(dataToSend);
+      } catch (error: unknown) {
+        showError(getSignupErrorMessage(error));
+      }
+    });
   };
 
   const validatePassword = (password: string) => {
@@ -387,7 +398,7 @@ function RegisterSpectatorPage() {
             <input
               type="tel"
               name="phone"
-              placeholder="Téléphone (optionnel)"
+              placeholder="Téléphone (optionnel, ex. +224…)"
               value={formData.phone}
               onChange={handleChange}
               style={{ ...inputStyle, borderColor: errors.phone ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
@@ -506,8 +517,14 @@ function RegisterSpectatorPage() {
             {errors.acceptTerms && <div style={errorStyle}>{errors.acceptTerms}</div>}
           </div>
 
-          <button type="submit" style={buttonStyle} disabled={registerMutation.isPending}>
-            {registerMutation.isPending ? 'Création du compte...' : "S'inscrire"}
+          {slowConnection && (
+            <p style={{ margin: '0 0 12px', fontSize: '0.9em', color: 'var(--ccc-text-secondary)', textAlign: 'left' }}>
+              {SLOW_CONNECTION_MESSAGE}
+            </p>
+          )}
+
+          <button type="submit" style={buttonStyle} disabled={registerMutation.isPending || isLocked}>
+            {registerMutation.isPending || isLocked ? 'Création du compte...' : "S'inscrire"}
           </button>
         </form>
 
@@ -550,7 +567,7 @@ function RegisterSpectatorPage() {
             <div>
               <input
                 type="tel"
-                placeholder="Téléphone (optionnel)"
+                placeholder="Téléphone (optionnel, ex. +224…)"
                 value={oauthData.phone}
                 onChange={(e) => { setOauthData(p => ({ ...p, phone: e.target.value })); setOauthErrors(p => ({ ...p, phone: '' })); }}
                 style={{ ...inputStyle, borderColor: oauthErrors.phone ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}

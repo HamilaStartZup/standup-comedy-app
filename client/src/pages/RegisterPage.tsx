@@ -2,13 +2,28 @@ import { useState, useEffect, type CSSProperties } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getErrorMessage, ErrorMessages } from '../services/systemMessages';
+import { getSignupErrorMessage } from '../services/systemMessages';
 import { loginWithKeycloak, translateOAuthError } from '../services/oauth';
+import { warmupAuthServer } from '../services/authApi';
+import { useRegisterSubmitGuard, SLOW_CONNECTION_MESSAGE } from '../hooks/useRegisterSubmitGuard';
+import { useOAuthPendingRegistration } from '../hooks/useOAuthPendingRegistration';
+import { isValidPhoneNumber, PHONE_VALIDATION_MESSAGE } from '../utils/phoneValidation';
 import api from '../services/api';
 
 function RegisterPage() {
   const { registerMutation, isOAuthEnabled } = useAuth();
   const { showError } = useAlert();
+  const { runSubmit, slowConnection, isLocked } = useRegisterSubmitGuard();
+
+  useOAuthPendingRegistration('COMEDIAN', (pending) => {
+    setPendingCode(pending.pendingCode);
+    setOauthData((p) => ({
+      ...p,
+      firstName: pending.firstName || '',
+      lastName: pending.lastName || '',
+    }));
+    setOauthModal(true);
+  });
   const [searchParams] = useSearchParams();
   const urlRole = searchParams.get('role')?.toUpperCase();
   const isLieuRole = urlRole === 'LIEU';
@@ -80,22 +95,11 @@ function RegisterPage() {
       }
     }
 
-    // Validation du téléphone français et belge (mobiles + fixes) - obligatoire pour tous
+    // Téléphone obligatoire — format local FR/BE ou international (+indicatif)
     if (!formData.phone.trim()) {
       newErrors.phone = 'Le numéro de téléphone est requis';
-    } else if (formData.phone.trim()) {
-      // Nettoyer le numéro (supprimer espaces, tirets, parenthèses, +)
-      const cleanPhone = formData.phone.replace(/[\s\-\(\)\+]/g, '');
-
-      // Validation pour numéros français
-      const frenchPhoneRegex = /^(0[1-9])[0-9]{8}$/;
-
-      // Validation pour numéros belges
-      const belgianPhoneRegex = /^(0[1-9][0-9]{7,8})$/;
-
-      if (!frenchPhoneRegex.test(cleanPhone) && !belgianPhoneRegex.test(cleanPhone)) {
-        newErrors.phone = 'Numéro de téléphone invalide (format français: 0XXXXXXXXX, format belge: 0XXXXXXXX ou 0XXXXXXXXX)';
-      }
+    } else if (!isValidPhoneNumber(formData.phone)) {
+      newErrors.phone = PHONE_VALIDATION_MESSAGE;
     }
 
     // Validation du mot de passe
@@ -184,11 +188,8 @@ function RegisterPage() {
     const errs: { [key: string]: string } = {};
     if (!oauthData.firstName.trim() || oauthData.firstName.trim().length < 2) errs.firstName = 'Le prénom est requis (min. 2 caractères)';
     if (!oauthData.lastName.trim() || oauthData.lastName.trim().length < 2) errs.lastName = 'Le nom est requis (min. 2 caractères)';
-    if (oauthData.phone.trim()) {
-      const clean = oauthData.phone.replace(/[\s\-\(\)\+]/g, '');
-      if (!/^(0[1-9])[0-9]{8}$/.test(clean) && !/^(0[1-9][0-9]{7,8})$/.test(clean)) {
-        errs.phone = 'Numéro invalide (format français ou belge)';
-      }
+    if (oauthData.phone.trim() && !isValidPhoneNumber(oauthData.phone)) {
+      errs.phone = PHONE_VALIDATION_MESSAGE;
     }
     if (!oauthData.bio.trim()) {
       errs.bio = 'La biographie est requise';
@@ -230,39 +231,37 @@ function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+    if (isLocked || registerMutation.isPending) return;
+    if (!validateForm()) return;
 
-    try {
-      // Préparer les données pour l'API (sans confirmPassword uniquement)
-      const { confirmPassword, ...registerData } = formData;
+    await runSubmit(async () => {
+      try {
+        await warmupAuthServer();
 
-      // Pour LIEU, ne pas envoyer profile ni champs inutiles
-      const { profile: _profile, ...baseData } = registerData;
+        const { confirmPassword, ...registerData } = formData;
+        const { profile: _profile, ...baseData } = registerData;
 
-      const dataToSend: Record<string, unknown> = {
-        ...baseData,
-        consent: {
-          termsAccepted: acceptTerms,
-          privacyAccepted: acceptTerms,
-          isAdult: true,
-        }
-      };
-
-      if (!isLieuRole) {
-        dataToSend.profile = {
-          ..._profile,
-          experience: parseInt(_profile.experience) || 0
+        const dataToSend: Record<string, unknown> = {
+          ...baseData,
+          consent: {
+            termsAccepted: acceptTerms,
+            privacyAccepted: acceptTerms,
+            isAdult: true,
+          }
         };
-      }
 
-      // Envoyer les données avec profile et consentement au backend
-      await registerMutation.mutateAsync(dataToSend);
-      // La redirection est gérée dans AuthContext
-    } catch (error: any) {
-      showError(getErrorMessage(error, ErrorMessages.SIGNUP_FAILED));
-    }
+        if (!isLieuRole) {
+          dataToSend.profile = {
+            ..._profile,
+            experience: parseInt(_profile.experience) || 0
+          };
+        }
+
+        await registerMutation.mutateAsync(dataToSend);
+      } catch (error: unknown) {
+        showError(getSignupErrorMessage(error));
+      }
+    });
   };
 
   const validatePassword = (password: string) => {
@@ -458,7 +457,7 @@ function RegisterPage() {
             <input
               type="tel"
               name="phone"
-              placeholder="Téléphone *"
+              placeholder="Téléphone * (ex. 06… ou +224…)"
               value={formData.phone}
               onChange={handleChangeRegister}
               style={{ ...inputStyle, borderColor: errors.phone ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
@@ -534,8 +533,14 @@ function RegisterPage() {
             {errors.acceptTerms && <div style={errorStyle}>{errors.acceptTerms}</div>}
           </div>
 
-          <button type="submit" style={buttonStyle} disabled={registerMutation.isPending}>
-            {registerMutation.isPending ? "Création du compte..." : "S'inscrire"}
+          {slowConnection && (
+            <p style={{ margin: '0 0 12px', fontSize: '0.9em', color: 'var(--ccc-text-secondary)', textAlign: 'left' }}>
+              {SLOW_CONNECTION_MESSAGE}
+            </p>
+          )}
+
+          <button type="submit" style={buttonStyle} disabled={registerMutation.isPending || isLocked}>
+            {registerMutation.isPending || isLocked ? "Création du compte..." : "S'inscrire"}
           </button>
         </form>
 

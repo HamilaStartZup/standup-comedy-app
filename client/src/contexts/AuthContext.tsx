@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import api from '../services/api';
+import { registerUser, loginUser } from '../services/authApi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { IUserData } from '../types/user';
 import axios from 'axios';
@@ -184,7 +185,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const registerMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await api.post('/auth/register', data);
+      const response = await registerUser(data);
       return response.data;
     },
     onSuccess: async (data) => {
@@ -195,7 +196,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loginMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await api.post('/auth/login', data);
+      const response = await loginUser(data);
       return response.data;
     },
     onSuccess: async (data) => {
