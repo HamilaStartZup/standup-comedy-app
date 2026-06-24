@@ -47,8 +47,7 @@ function buildInitialEmailHtml(venueName: string, unsubscribeUrl: string): strin
     Seriez-vous disponible pour un échange (visio ou café) dans les prochaines semaines ?
   </p>
   <p style="font-size: 0.9em; color: #666;">
-    Connect Comedy Club — ${siteUrl}<br/>
-    Cet email est adressé à un contact professionnel en lien avec votre activité.
+    Connect Comedy Club — ${siteUrl}
   </p>
   <p style="font-size: 0.8em; color: #999; margin-top: 32px;">
     <a href="${unsubscribeUrl}" style="color: #999;">Se désinscrire de nos communications</a>
@@ -88,8 +87,7 @@ function buildFollowUpEmailHtml(venueName: string, unsubscribeUrl: string): stri
     (visio ou café, selon votre préférence).
   </p>
   <p style="font-size: 0.9em; color: #666;">
-    Connect Comedy Club — ${siteUrl}<br/>
-    Cet email est adressé à un contact professionnel en lien avec votre activité.
+    Connect Comedy Club — ${siteUrl}
   </p>
   <p style="font-size: 0.8em; color: #999; margin-top: 32px;">
     <a href="${unsubscribeUrl}" style="color: #999;">Se désinscrire de nos communications</a>
