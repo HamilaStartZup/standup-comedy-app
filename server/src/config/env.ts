@@ -42,6 +42,11 @@ export const config = {
     url: process.env.FRONTEND_URL || 'http://localhost:3000',
   },
 
+  /** URL publique de la plateforme dans les emails externes (prospection, etc.) */
+  platform: {
+    url: (process.env.PLATFORM_URL || 'https://connectcomedyclub.com').replace(/\/$/, ''),
+  },
+
   api: {
     url: process.env.API_URL || 'http://localhost:3001',
   },

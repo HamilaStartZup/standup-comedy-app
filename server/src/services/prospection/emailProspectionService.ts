@@ -12,7 +12,7 @@ if (config.email.smtpPass) {
 }
 
 function buildInitialEmailHtml(venueName: string, unsubscribeUrl: string): string {
-  const siteUrl = config.frontend.url;
+  const siteUrl = config.platform.url;
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -58,7 +58,7 @@ function buildInitialEmailHtml(venueName: string, unsubscribeUrl: string): strin
 }
 
 function buildFollowUpEmailHtml(venueName: string, unsubscribeUrl: string): string {
-  const siteUrl = config.frontend.url;
+  const siteUrl = config.platform.url;
   return `
 <!DOCTYPE html>
 <html lang="fr">
