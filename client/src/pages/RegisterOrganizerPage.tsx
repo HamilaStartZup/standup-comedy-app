@@ -2,13 +2,28 @@ import { useState, useEffect, type CSSProperties } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { Link } from 'react-router-dom';
-import { getErrorMessage, ErrorMessages } from '../services/systemMessages';
+import { getSignupErrorMessage } from '../services/systemMessages';
 import { loginWithKeycloak, translateOAuthError } from '../services/oauth';
+import { warmupAuthServer } from '../services/authApi';
+import { useRegisterSubmitGuard, SLOW_CONNECTION_MESSAGE } from '../hooks/useRegisterSubmitGuard';
+import { useOAuthPendingRegistration } from '../hooks/useOAuthPendingRegistration';
+import { isValidPhoneNumber, PHONE_VALIDATION_MESSAGE } from '../utils/phoneValidation';
 import api from '../services/api';
 
 function RegisterOrganizerPage() {
   const { registerMutation, isOAuthEnabled } = useAuth();
   const { showError } = useAlert();
+  const { runSubmit, slowConnection, isLocked } = useRegisterSubmitGuard();
+
+  useOAuthPendingRegistration('ORGANIZER', (pending) => {
+    setPendingCode(pending.pendingCode);
+    setOauthData((p) => ({
+      ...p,
+      firstName: pending.firstName || '',
+      lastName: pending.lastName || '',
+    }));
+    setOauthModal(true);
+  });
 
   const [oauthModal, setOauthModal] = useState(false);
   const [pendingCode, setPendingCode] = useState('');
@@ -50,13 +65,8 @@ function RegisterOrganizerPage() {
     }
     if (!formData.phone.trim()) {
       newErrors.phone = "Le numéro de téléphone est requis";
-    } else {
-      const cleanPhone = formData.phone.replace(/[\s\-\(\)\+]/g, '');
-      const frenchPhoneRegex = /^(0[1-9])[0-9]{8}$/;
-      const belgianPhoneRegex = /^(0[1-9][0-9]{7,8})$/;
-      if (!frenchPhoneRegex.test(cleanPhone) && !belgianPhoneRegex.test(cleanPhone)) {
-        newErrors.phone = 'Numéro invalide (format français ou belge)';
-      }
+    } else if (!isValidPhoneNumber(formData.phone)) {
+      newErrors.phone = PHONE_VALIDATION_MESSAGE;
     }
     if (!formData.password.trim()) {
       newErrors.password = 'Le mot de passe est requis';
@@ -129,25 +139,31 @@ function RegisterOrganizerPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLocked || registerMutation.isPending) return;
     if (!validateForm()) return;
-    try {
-      await registerMutation.mutateAsync({
-        email: formData.email.trim(),
-        phone: formData.phone.trim() || '',
-        password: formData.password,
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        city: formData.city.trim() || '',
-        role: 'ORGANIZER' as const,
-        consent: {
-          termsAccepted: acceptTerms,
-          privacyAccepted: acceptTerms,
-          isAdult: true,
-        },
-      });
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, ErrorMessages.SIGNUP_FAILED));
-    }
+
+    await runSubmit(async () => {
+      try {
+        await warmupAuthServer();
+
+        await registerMutation.mutateAsync({
+          email: formData.email.trim(),
+          phone: formData.phone.trim() || '',
+          password: formData.password,
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          city: formData.city.trim() || '',
+          role: 'ORGANIZER' as const,
+          consent: {
+            termsAccepted: acceptTerms,
+            privacyAccepted: acceptTerms,
+            isAdult: true,
+          },
+        });
+      } catch (error: unknown) {
+        showError(getSignupErrorMessage(error));
+      }
+    });
   };
 
   const validatePassword = (password: string) => {
@@ -360,7 +376,7 @@ function RegisterOrganizerPage() {
             <input
               type="tel"
               name="phone"
-              placeholder="Téléphone *"
+              placeholder="Téléphone * (ex. 06… ou +224…)"
               value={formData.phone}
               onChange={handleChange}
               style={{ ...inputStyle, borderColor: errors.phone ? 'var(--ccc-error)' : 'var(--ccc-border-medium)' }}
@@ -381,8 +397,14 @@ function RegisterOrganizerPage() {
             </label>
             {errors.acceptTerms && <div style={errorStyle}>{errors.acceptTerms}</div>}
           </div>
-          <button type="submit" disabled={registerMutation.isPending} style={buttonStyle}>
-            {registerMutation.isPending ? 'Inscription en cours…' : 'Créer mon compte organisateur'}
+          {slowConnection && (
+            <p style={{ margin: '0 0 12px', fontSize: '0.9em', color: 'var(--ccc-text-secondary)', textAlign: 'left' }}>
+              {SLOW_CONNECTION_MESSAGE}
+            </p>
+          )}
+
+          <button type="submit" disabled={registerMutation.isPending || isLocked} style={buttonStyle}>
+            {registerMutation.isPending || isLocked ? 'Inscription en cours…' : 'Créer mon compte organisateur'}
           </button>
         </form>
 

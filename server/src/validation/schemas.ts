@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidPhoneNumber, PHONE_VALIDATION_MESSAGE } from '../utils/phoneValidation';
 
 // ============================================================================
 // SCHÉMAS D'AUTHENTIFICATION
@@ -30,11 +31,8 @@ export const registerSchema = z.object({
     .optional()
     .refine((phone) => {
       if (!phone || phone.trim() === '') return true;
-      const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
-      const frenchPhoneRegex = /^(0[1-9])[0-9]{8}$/;
-      const belgianPhoneRegex = /^(0[1-9][0-9]{7,8})$/;
-      return frenchPhoneRegex.test(cleanPhone) || belgianPhoneRegex.test(cleanPhone);
-    }, 'Numéro de téléphone invalide (format français: 0XXXXXXXXX, format belge: 0XXXXXXXX ou 0XXXXXXXXX)'),
+      return isValidPhoneNumber(phone);
+    }, PHONE_VALIDATION_MESSAGE),
   password: z.string()
     .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
     .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une majuscule')
@@ -443,12 +441,7 @@ export const updateProfileSchema = z.object({
     .max(50, { message: 'Invalid city' })
     .optional(),
   phone: z.string()
-    .refine((phone) => {
-      const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
-      const frenchPhoneRegex = /^(0[1-9])[0-9]{8}$/;
-      const belgianPhoneRegex = /^(0[1-9][0-9]{7,8})$/;
-      return frenchPhoneRegex.test(cleanPhone) || belgianPhoneRegex.test(cleanPhone);
-    }, { message: 'Invalid phone number format' })
+    .refine((phone) => !phone || isValidPhoneNumber(phone), { message: PHONE_VALIDATION_MESSAGE })
     .optional(),
   address: z.string().optional(),
   birthDate: z.string().optional(),
