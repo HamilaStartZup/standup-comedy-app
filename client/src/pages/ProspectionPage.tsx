@@ -138,7 +138,7 @@ const ProspectionPage: React.FC = () => {
   });
 
   useEffect(() => {
-    const running = runsData?.runs?.find((r) => r.status === 'running');
+    const running = runsData?.runs?.find((r: IProspectionRun) => r.status === 'running');
     if (running) {
       setActiveRunId(running._id);
     }
