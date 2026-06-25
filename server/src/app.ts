@@ -32,8 +32,13 @@ export const createApp = () => {
 
   const corsOptions = {
     origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+      const frontendUrl = config.frontend.url;
+      const frontendWwwVariant = frontendUrl?.startsWith('https://www.')
+        ? frontendUrl.replace('https://www.', 'https://')
+        : frontendUrl?.replace('https://', 'https://www.');
       const allowedOrigins = [
-        config.frontend.url,
+        frontendUrl,
+        frontendWwwVariant,
         'http://localhost:5173',
         'http://localhost:3000',
         'http://localhost:5174',

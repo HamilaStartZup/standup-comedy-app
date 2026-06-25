@@ -187,31 +187,30 @@ export const ConfirmMessages = {
  */
 const SAFE_SERVER_MESSAGES = new Set([
   // Authentication errors
-  "Email deja utilise",
   "Email déjà utilisé",
   "Email ou mot de passe incorrect",
-  "Vous avez deja postule pour cet evenement",
-  "Vous avez deja signale cet humoriste",
-  "Votre compte a ete desactive. Veuillez contacter le support.",
+  "Votre compte a été désactivé. Veuillez contacter le support.",
 
   // Event-related
-  "Impossible de postuler a un evenement annule",
-  "Impossible de postuler a un evenement termine",
-  "Vous ne pouvez pas postuler a nouveau apres vous etre retire de cet evenement",
+  "Vous avez déjà postulé pour cet évènement",
+  "Impossible de postuler à un évènement annulé",
+  "Impossible de postuler à un évènement terminé",
+  "Vous ne pouvez pas postuler à nouveau après vous être retiré de cet évènement",
   "Impossible de postuler : l'événement commence dans moins d'une heure ou a déjà commencé.",
   "Impossible de vous désinscrire : l'événement commence dans moins d'une heure ou a déjà commencé.",
 
   // Permission-related
   "Seuls les organisateurs peuvent signaler des humoristes",
   "Vous ne pouvez pas signaler votre propre compte",
-  "Seuls les comediens peuvent ajouter des evenements aux favoris",
+  "Seuls les comédiens et spectateurs peuvent ajouter des évènements aux favoris",
   "Seuls les organisateurs peuvent ajouter des favoris",
-  "Seuls les humoristes peuvent acceder aux recommandations",
+  "Seuls les humoristes peuvent accéder aux recommandations",
 
   // Favorites/Watchlist
-  "Cet humoriste est deja dans vos favoris",
-  "Cet evenement est deja dans vos favoris",
-  "Ce humoriste n'est pas participant a cet evenement.",
+  "Cet humoriste est déjà dans vos favoris",
+  "Cet évènement est déjà dans vos favoris",
+  "Ce humoriste n'est pas participant à cet évènement.",
+  "Vous avez déjà signalé cet humoriste",
 
   // SMS verification
   "La vérification SMS n'est pas configurée",
@@ -294,27 +293,16 @@ function extractServerAndValidationMessage(error: unknown): string | null {
   return null;
 }
 
-export const getErrorMessage = (error: any, contextualFallback?: string): string => {
+export const getErrorMessage = (error: unknown, contextualFallback?: string): string => {
   const serverOrValidation = extractServerAndValidationMessage(error);
-  if (serverOrValidation) {
-    return serverOrValidation;
-  }
+  if (serverOrValidation) return serverOrValidation;
 
-  if (isNetworkOrTimeoutError(error)) {
-    if (isTimeoutError(error)) {
-      return ErrorMessages.TIMEOUT_ERROR;
-    }
-    return ErrorMessages.NETWORK_ERROR;
-  }
+  if (isNetworkOrTimeoutError(error)) return ErrorMessages.NETWORK_ERROR;
 
-  if (contextualFallback) {
-    return contextualFallback;
-  }
+  const status = (error as { response?: { status?: number } })?.response?.status;
+  if (status && HTTP_STATUS_MESSAGES[status]) return HTTP_STATUS_MESSAGES[status];
 
-  const status = error?.response?.status;
-  if (status && HTTP_STATUS_MESSAGES[status]) {
-    return HTTP_STATUS_MESSAGES[status];
-  }
+  if (contextualFallback) return contextualFallback;
 
   return ErrorMessages.GENERIC_ERROR;
 };
