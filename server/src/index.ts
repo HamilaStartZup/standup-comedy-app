@@ -5,6 +5,8 @@ dotenv.config();
 import { config, validateConfig } from './config/env';
 import { connectDatabase } from './config/database';
 import { initializeCronJobs, stopCronJobs } from './services/cronScheduler';
+import { initProspectionModule } from './controllers/prospection';
+import { stopProspectionCron } from './services/prospection/prospectionCronManager';
 import { app } from './app';
 import { sseManager } from './services/sseManager';
 
@@ -12,6 +14,7 @@ const startServer = async () => {
   try {
     validateConfig();
     await connectDatabase();
+    await initProspectionModule();
     initializeCronJobs();
 
     const server = app.listen(config.port, () => {
@@ -23,6 +26,7 @@ const startServer = async () => {
     process.on('SIGTERM', () => {
       console.log('\n⏹️ Signal SIGTERM reçu, arrêt du serveur...');
       stopCronJobs();
+      stopProspectionCron();
       sseManager.shutdown();
       server.close(() => {
         console.log('✅ Serveur arrêté');
@@ -33,6 +37,7 @@ const startServer = async () => {
     process.on('SIGINT', () => {
       console.log('\n⏹️ Signal SIGINT reçu, arrêt du serveur...');
       stopCronJobs();
+      stopProspectionCron();
       sseManager.shutdown();
       server.close(() => {
         console.log('✅ Serveur arrêté');

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
+import { isValidPhoneNumber, PHONE_VALIDATION_MESSAGE } from '../utils/phoneValidation';
 
 const RADII = [5, 10, 20, 50] as const;
 
@@ -76,13 +77,8 @@ export default function SpectatorProfilePage() {
         newErrors.email = "Format d'email invalide";
       }
     }
-    if (formData.phone.trim()) {
-      const cleanPhone = formData.phone.replace(/[\s\-\(\)\+]/g, '');
-      const frenchPhoneRegex = /^(0[1-9])[0-9]{8}$/;
-      const belgianPhoneRegex = /^(0[1-9][0-9]{7,8})$/;
-      if (!frenchPhoneRegex.test(cleanPhone) && !belgianPhoneRegex.test(cleanPhone)) {
-        newErrors.phone = 'Numéro invalide (format français ou belge)';
-      }
+    if (formData.phone.trim() && !isValidPhoneNumber(formData.phone)) {
+      newErrors.phone = PHONE_VALIDATION_MESSAGE;
     }
     if (!formData.city.trim()) {
       newErrors.city = 'La ville est requise';

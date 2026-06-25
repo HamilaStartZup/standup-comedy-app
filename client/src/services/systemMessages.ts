@@ -113,6 +113,11 @@ export const ErrorMessages = {
 
   // Network & General
   NETWORK_ERROR: 'Erreur réseau. Vérifiez votre connexion Internet.',
+  TIMEOUT_ERROR: 'La requête a pris trop de temps. Vérifiez votre connexion et réessayez.',
+  SIGNUP_NETWORK_ERROR:
+    'Connexion lente ou interrompue. Réessayez dans un instant — si le compte a été créé, connectez-vous directement.',
+  SIGNUP_TIMEOUT_ERROR:
+    'Connexion très lente. Patientez encore un peu ou réessayez — si le compte a été créé, connectez-vous directement.',
   SERVER_ERROR: 'Une erreur serveur s\'est produite. Veuillez réessayer plus tard.',
   GENERIC_ERROR: 'Une erreur est survenue. Veuillez réessayer.',
 };
@@ -182,35 +187,39 @@ export const ConfirmMessages = {
  */
 const SAFE_SERVER_MESSAGES = new Set([
   // Authentication errors
-  "Email deja utilise",
+  "Email déjà utilisé",
   "Email ou mot de passe incorrect",
-  "Vous avez deja postule pour cet evenement",
-  "Vous avez deja signale cet humoriste",
-  "Votre compte a ete desactive. Veuillez contacter le support.",
+  "Votre compte a été désactivé. Veuillez contacter le support.",
 
   // Event-related
-  "Impossible de postuler a un evenement annule",
-  "Impossible de postuler a un evenement termine",
-  "Vous ne pouvez pas postuler a nouveau apres vous etre retire de cet evenement",
+  "Vous avez déjà postulé pour cet évènement",
+  "Impossible de postuler à un évènement annulé",
+  "Impossible de postuler à un évènement terminé",
+  "Vous ne pouvez pas postuler à nouveau après vous être retiré de cet évènement",
   "Impossible de postuler : l'événement commence dans moins d'une heure ou a déjà commencé.",
   "Impossible de vous désinscrire : l'événement commence dans moins d'une heure ou a déjà commencé.",
 
   // Permission-related
   "Seuls les organisateurs peuvent signaler des humoristes",
   "Vous ne pouvez pas signaler votre propre compte",
-  "Seuls les comediens peuvent ajouter des evenements aux favoris",
+  "Seuls les comédiens et spectateurs peuvent ajouter des évènements aux favoris",
   "Seuls les organisateurs peuvent ajouter des favoris",
-  "Seuls les humoristes peuvent acceder aux recommandations",
+  "Seuls les humoristes peuvent accéder aux recommandations",
 
   // Favorites/Watchlist
-  "Cet humoriste est deja dans vos favoris",
-  "Cet evenement est deja dans vos favoris",
-  "Ce humoriste n'est pas participant a cet evenement.",
+  "Cet humoriste est déjà dans vos favoris",
+  "Cet évènement est déjà dans vos favoris",
+  "Ce humoriste n'est pas participant à cet évènement.",
+  "Vous avez déjà signalé cet humoriste",
 
   // SMS verification
   "La vérification SMS n'est pas configurée",
   "Numéro de téléphone invalide",
   "Erreur lors de l'envoi du SMS. Réessayez dans quelques instants.",
+
+  // Prospection
+  "Une prospection est déjà en cours",
+  "Prospection interrompue",
 
   // Venue bookings
   "La salle est indisponible à cette date ou sur ce créneau",
@@ -247,44 +256,70 @@ const HTTP_STATUS_MESSAGES: Record<number, string> = {
  *
  * Priority:
  * 1. Server message (if in SAFE_SERVER_MESSAGES)
- * 2. Contextual fallback (if provided)
- * 3. HTTP status code mapping
- * 4. Network error or generic error
+ * 1b. Validation error details
+ * 2. Network / timeout (no HTTP response)
+ * 3. Contextual fallback (if provided)
+ * 4. HTTP status code mapping
+ * 5. Generic error
  */
-export const getErrorMessage = (error: any, contextualFallback?: string): string => {
-  // 1. Server message if in whitelist
-  const serverMessage = error?.response?.data?.message;
+function isNetworkOrTimeoutError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { response?: unknown; code?: string };
+  return !err.response;
+}
+
+function isTimeoutError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { code?: string };
+  return err.code === 'ECONNABORTED';
+}
+
+function extractServerAndValidationMessage(error: unknown): string | null {
+  const serverMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
   if (serverMessage && typeof serverMessage === 'string' && SAFE_SERVER_MESSAGES.has(serverMessage)) {
     return serverMessage;
   }
 
-  // 1b. Zod / middleware validation details (ex. SIRET, photos)
-  const validationErrors = error?.response?.data?.errors;
+  const validationErrors = (error as { response?: { data?: { errors?: { message?: string }[] } } })?.response?.data?.errors;
   if (Array.isArray(validationErrors) && validationErrors.length > 0) {
     const details = validationErrors
-      .map((entry: { message?: string }) => entry?.message)
+      .map((entry) => entry?.message)
       .filter((msg): msg is string => Boolean(msg));
     if (details.length > 0) {
       return details.join(', ');
     }
   }
 
-  // 2. Contextual fallback
-  if (contextualFallback) {
-    return contextualFallback;
-  }
+  return null;
+}
 
-  // 3. HTTP status code mapping
-  const status = error?.response?.status;
-  if (status && HTTP_STATUS_MESSAGES[status]) {
-    return HTTP_STATUS_MESSAGES[status];
-  }
+export const getErrorMessage = (error: unknown, contextualFallback?: string): string => {
+  const serverOrValidation = extractServerAndValidationMessage(error);
+  if (serverOrValidation) return serverOrValidation;
 
-  // 4. Network error
-  if (!error?.response) {
-    return ErrorMessages.NETWORK_ERROR;
-  }
+  if (isNetworkOrTimeoutError(error)) return ErrorMessages.NETWORK_ERROR;
 
-  // 5. Generic error
+  const status = (error as { response?: { status?: number } })?.response?.status;
+  if (status && HTTP_STATUS_MESSAGES[status]) return HTTP_STATUS_MESSAGES[status];
+
+  if (contextualFallback) return contextualFallback;
+
   return ErrorMessages.GENERIC_ERROR;
+};
+
+/** Messages d'erreur adaptés à l'inscription (connexions lentes, compte peut-être déjà créé). */
+export const getSignupErrorMessage = (error: unknown): string => {
+  const serverOrValidation = extractServerAndValidationMessage(error);
+  if (serverOrValidation) {
+    return serverOrValidation;
+  }
+
+  if (isNetworkOrTimeoutError(error)) {
+    if (isTimeoutError(error)) {
+      return ErrorMessages.SIGNUP_TIMEOUT_ERROR;
+    }
+    return ErrorMessages.SIGNUP_NETWORK_ERROR;
+  }
+
+  return getErrorMessage(error, ErrorMessages.SIGNUP_FAILED);
 };

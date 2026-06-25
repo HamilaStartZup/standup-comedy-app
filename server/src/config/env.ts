@@ -42,6 +42,11 @@ export const config = {
     url: process.env.FRONTEND_URL || 'http://localhost:3000',
   },
 
+  /** URL publique de la plateforme dans les emails externes (prospection, etc.) */
+  platform: {
+    url: (process.env.PLATFORM_URL || 'https://connectcomedyclub.com').replace(/\/$/, ''),
+  },
+
   api: {
     url: process.env.API_URL || 'http://localhost:3001',
   },
@@ -67,6 +72,17 @@ export const config = {
     authToken: process.env.TWILIO_AUTH_TOKEN || '',
     messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID || '',
     verifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID || '',
+  },
+
+  prospection: {
+    imap: {
+      host: process.env.PROSPECTION_IMAP_HOST || 'ssl0.ovh.net',
+      port: parseInt(process.env.PROSPECTION_IMAP_PORT || '993', 10),
+      user: process.env.PROSPECTION_IMAP_USER || '',
+      pass: process.env.PROSPECTION_IMAP_PASS || '',
+      mailbox: process.env.PROSPECTION_IMAP_MAILBOX || 'INBOX',
+    },
+    webmailUrl: process.env.PROSPECTION_WEBMAIL_URL || 'https://mail.ovh.net/',
   },
 };
 
