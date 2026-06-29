@@ -9,29 +9,35 @@ import {
 } from '../../utils/prospectionHelpers';
 import type { ProspectionSearchResult } from './types';
 import { guessEmailFromWebsite } from './venueEnrichment';
-import { discoverWebsiteFromWeb } from './websiteDiscoveryService';
+import { discoverVenueContacts } from './venueDiscoveryService';
 
 export type UpsertProspectedVenueResult = 'new' | 'merged' | 'duplicate';
 
 export interface EnrichVenuesContactsResult {
   websitesFound: number;
   emailsEnriched: number;
+  phonesEnriched: number;
+  venuesProcessed: number;
 }
 
 export interface EnrichVenuesContactsOptions {
-  websiteLimit?: number;
   emailLimit?: number;
-  discoverWebsites?: boolean;
 }
 
-async function tryAssignEmail(venueId: string, email: string): Promise<boolean> {
+async function tryAssignEmail(
+  venueId: string,
+  email: string,
+  attemptedAt: Date = new Date()
+): Promise<boolean> {
   const emailTaken = await ProspectedVenueModel.findOne({
     email,
     _id: { $ne: venueId },
   });
   if (emailTaken) return false;
 
-  await ProspectedVenueModel.findByIdAndUpdate(venueId, { $set: { email } });
+  await ProspectedVenueModel.findByIdAndUpdate(venueId, {
+    $set: { email, emailEnrichAttemptedAt: attemptedAt },
+  });
   return true;
 }
 
@@ -46,7 +52,8 @@ async function enrichMissingEmail(
 
 async function mergeIntoExisting(
   existing: ProspectedVenueDocument,
-  incoming: ProspectionSearchResult
+  incoming: ProspectionSearchResult,
+  enrichEmail: boolean
 ): Promise<boolean> {
   const updates: Record<string, unknown> = {};
   let changed = false;
@@ -58,7 +65,7 @@ async function mergeIntoExisting(
   }
 
   if (!existing.phone && incoming.phone) {
-    updates.phone = incoming.phone;
+    updates.phone = normalizePhoneFR(incoming.phone) ?? incoming.phone;
     changed = true;
   }
 
@@ -67,9 +74,11 @@ async function mergeIntoExisting(
     changed = true;
   }
 
-  const websiteForEnrichment = (incoming.website ?? existing.website) as string | undefined;
   if (!existing.email) {
-    const email = incoming.email ?? await enrichMissingEmail(existing, websiteForEnrichment);
+    const email = incoming.email
+      ?? (enrichEmail
+        ? await enrichMissingEmail(existing, (incoming.website ?? existing.website) as string | undefined)
+        : null);
     if (email) {
       const assigned = await tryAssignEmail(existing._id.toString(), email);
       if (assigned) {
@@ -138,17 +147,19 @@ export async function findExistingProspectedVenue(
 }
 
 export async function upsertProspectedVenue(
-  result: ProspectionSearchResult
+  result: ProspectionSearchResult,
+  options: { enrichEmail?: boolean } = {}
 ): Promise<UpsertProspectedVenueResult> {
+  const enrichEmail = options.enrichEmail ?? false;
   const existing = await findExistingProspectedVenue(result);
 
   if (existing) {
-    const merged = await mergeIntoExisting(existing, result);
+    const merged = await mergeIntoExisting(existing, result, enrichEmail);
     return merged ? 'merged' : 'duplicate';
   }
 
   let email = result.email ?? null;
-  if (!email && result.website) {
+  if (enrichEmail && !email && result.website) {
     email = await guessEmailFromWebsite(result.website);
   }
 
@@ -177,74 +188,95 @@ function buildDepartmentFilter(departements: string[]): Record<string, unknown> 
   return { 'address.departement': { $in: departements } };
 }
 
-/** Recherche des sites web (web) puis extraction d'emails depuis les pages contact. */
+interface VenueEmailLookupResult {
+  email: string | null;
+  websiteToSave: string | null;
+  phoneToSave: string | null;
+}
+
+async function findEmailForVenue(venue: ProspectedVenueDocument): Promise<VenueEmailLookupResult> {
+  if (venue.website) {
+    const email = await guessEmailFromWebsite(venue.website);
+    if (email) {
+      return { email, websiteToSave: null, phoneToSave: null };
+    }
+  }
+
+  const discovered = await discoverVenueContacts(
+    venue.name,
+    venue.address?.city,
+    venue.type,
+    venue.address?.departement
+  );
+
+  const websiteToSave = discovered.website && !venue.website ? discovered.website : null;
+  const phoneToSave = discovered.phone && !venue.phone ? discovered.phone : null;
+  const website = discovered.website ?? venue.website ?? null;
+
+  if (!website) {
+    return { email: null, websiteToSave, phoneToSave };
+  }
+
+  const email = await guessEmailFromWebsite(website);
+  return { email, websiteToSave, phoneToSave };
+}
+
+/** Recherche d'emails pour les lieux sans email (site web optionnel en base). */
 export async function enrichVenuesContacts(
   departements: string[] = [],
   options: EnrichVenuesContactsOptions = {}
 ): Promise<EnrichVenuesContactsResult> {
-  const discoverWebsites = options.discoverWebsites ?? true;
-  const websiteLimit = options.websiteLimit ?? 40;
   const emailLimit = options.emailLimit ?? 80;
   const deptFilter = buildDepartmentFilter(departements);
 
   let websitesFound = 0;
   let emailsEnriched = 0;
-
-  if (discoverWebsites) {
-    const withoutWebsite = await ProspectedVenueModel.find({
-      ...deptFilter,
-      optOut: false,
-      $or: [{ website: { $exists: false } }, { website: null }, { website: '' }],
-    })
-      .sort({ updatedAt: -1 })
-      .limit(websiteLimit)
-      .exec();
-
-    for (const venue of withoutWebsite) {
-      const website = await discoverWebsiteFromWeb(venue.name, venue.address?.city, venue.type);
-      await sleep(1000);
-      if (!website) continue;
-
-      await ProspectedVenueModel.findByIdAndUpdate(venue._id, { $set: { website } });
-      websitesFound++;
-
-      if (!venue.email) {
-        const email = await guessEmailFromWebsite(website);
-        if (email && await tryAssignEmail(venue._id.toString(), email)) {
-          emailsEnriched++;
-        }
-      }
-    }
-  }
+  let phonesEnriched = 0;
+  let venuesProcessed = 0;
 
   const withoutEmail = await ProspectedVenueModel.find({
     ...deptFilter,
     optOut: false,
-    website: { $type: 'string', $gt: '' },
     $or: [{ email: { $exists: false } }, { email: null }, { email: '' }],
   })
-    .sort({ updatedAt: -1 })
+    .sort({ emailEnrichAttemptedAt: 1, updatedAt: -1 })
     .limit(emailLimit)
     .exec();
 
   for (const venue of withoutEmail) {
-    if (!venue.website) continue;
-    const email = await guessEmailFromWebsite(venue.website);
-    if (email && await tryAssignEmail(venue._id.toString(), email)) {
-      emailsEnriched++;
+    venuesProcessed++;
+    const attemptedAt = new Date();
+    const { email, websiteToSave, phoneToSave } = await findEmailForVenue(venue);
+
+    const sideUpdates: Record<string, string> = {};
+    if (websiteToSave) {
+      sideUpdates.website = websiteToSave;
+      websitesFound++;
     }
-    await sleep(300);
+    if (phoneToSave) {
+      sideUpdates.phone = phoneToSave;
+      phonesEnriched++;
+    }
+
+    if (email && await tryAssignEmail(venue._id.toString(), email, attemptedAt)) {
+      emailsEnriched++;
+      if (Object.keys(sideUpdates).length > 0) {
+        await ProspectedVenueModel.findByIdAndUpdate(venue._id, { $set: sideUpdates });
+      }
+    } else {
+      await ProspectedVenueModel.findByIdAndUpdate(venue._id, {
+        $set: { emailEnrichAttemptedAt: attemptedAt, ...sideUpdates },
+      });
+    }
+
+    await sleep(500);
   }
 
-  return { websitesFound, emailsEnriched };
+  return { websitesFound, emailsEnriched, phonesEnriched, venuesProcessed };
 }
 
 /** @deprecated Utiliser enrichVenuesContacts */
 export async function enrichVenuesMissingEmail(limit = 50): Promise<number> {
-  const result = await enrichVenuesContacts([], {
-    discoverWebsites: false,
-    emailLimit: limit,
-    websiteLimit: 0,
-  });
+  const result = await enrichVenuesContacts([], { emailLimit: limit });
   return result.emailsEnriched;
 }

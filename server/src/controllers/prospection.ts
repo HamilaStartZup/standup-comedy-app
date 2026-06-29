@@ -8,7 +8,7 @@ import {
   patchProspectionConfig,
   ensureProspectionConfig,
 } from '../services/prospection/prospectionConfigService';
-import { executeProspectionRun } from '../services/prospection/prospectionService';
+import { executeProspectionRun, releaseStaleProspectionRuns, cancelProspectionRun } from '../services/prospection/prospectionService';
 import { rescheduleProspectionCron } from '../services/prospection/prospectionCronManager';
 import { enrichVenuesContacts, findExistingProspectedVenue, upsertProspectedVenue } from '../services/prospection/venueRepository';
 import {
@@ -22,7 +22,7 @@ import { getDepartmentFromPostalCode } from '../utils/cityMapping';
 import type { ProspectedEmailStatus, ProspectedVenueType } from '../models/ProspectedVenue';
 
 const EMAIL_STATUSES: ProspectedEmailStatus[] = [
-  'non_envoye', 'envoye', 'echec', 'desinscrit', 'repondu',
+  'non_envoye', 'a_contacter', 'envoye', 'echec', 'desinscrit', 'repondu',
 ];
 
 const VENUE_TYPES: ProspectedVenueType[] = [
@@ -359,19 +359,23 @@ export const deleteProspectedVenueHandler = async (req: AuthRequest, res: Respon
 export const enrichProspectionVenuesHandler = async (req: AuthRequest, res: Response): Promise<void> => {
   if (!assertSuperAdmin(req, res)) return;
 
-  const limit = Math.min(Math.max(Number(req.body?.limit) || 30, 1), 100);
+  const limit = Math.min(Math.max(Number(req.body?.limit) || 5, 1), 100);
   const departements = Array.isArray(req.body?.departements)
     ? (req.body.departements as string[])
     : [];
 
   try {
-    const result = await enrichVenuesContacts(departements, {
-      discoverWebsites: true,
-      websiteLimit: limit,
-      emailLimit: limit,
-    });
+    console.log(
+      `📧 Recherche emails — départements: ${departements.length ? departements.join(', ') : 'tous'}, limite: ${limit}`
+    );
+    const result = await enrichVenuesContacts(departements, { emailLimit: limit });
+    const message =
+      result.venuesProcessed === 0
+        ? 'Aucun lieu sans email dans ce périmètre.'
+        : `${result.venuesProcessed} lieu(x) analysé(s), ${result.emailsEnriched} email(s) trouvé(s).`;
+    console.log(`📧 Recherche emails terminée — ${message}`);
     res.json({
-      message: `${result.websitesFound} site(s) trouvé(s), ${result.emailsEnriched} email(s) enrichi(s)`,
+      message,
       ...result,
     });
   } catch (err) {
@@ -380,8 +384,24 @@ export const enrichProspectionVenuesHandler = async (req: AuthRequest, res: Resp
   }
 };
 
+export const cancelProspectionRunHandler = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!assertSuperAdmin(req, res)) return;
+
+  const cancelled = await cancelProspectionRun(req.params.id);
+  if (!cancelled) {
+    res.status(404).json({ message: 'Exécution introuvable ou déjà terminée' });
+    return;
+  }
+
+  res.json({ message: 'Prospection interrompue' });
+};
+
 export const initProspectionModule = async (): Promise<void> => {
   await ensureProspectionConfig();
   await syncProspectedVenueIndexes();
+  const released = await releaseStaleProspectionRuns({ onStartup: true });
+  if (released > 0) {
+    console.log(`📧 ${released} exécution(s) de prospection interrompue(s) au démarrage`);
+  }
   await rescheduleProspectionCron();
 };

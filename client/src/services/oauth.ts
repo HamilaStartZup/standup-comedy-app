@@ -3,7 +3,10 @@ import api from './api';
 const POPUP_WIDTH = 500;
 const POPUP_HEIGHT = 600;
 
-interface OAuthTokens {
+const OAUTH_RETURN_CONTEXT_KEY = 'oauth_return_context';
+const OAUTH_PENDING_REGISTRATION_KEY = 'oauth_pending_registration';
+
+export interface OAuthTokens {
   access_token?: string;
   refresh_token?: string;
   id_token?: string;
@@ -15,9 +18,105 @@ interface OAuthTokens {
   userType?: string;
 }
 
+export interface OAuthPendingRegistration {
+  pendingCode: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  userType?: string;
+}
+
+interface OAuthReturnContext {
+  returnPath: string;
+  userType?: string;
+  provider?: string;
+}
+
 interface OAuthStatus {
   enabled: boolean;
   provider: string;
+}
+
+/** Détecte smartphone / tablette — popup OAuth peu fiable sur ces appareils. */
+export function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent;
+  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) {
+    return true;
+  }
+  return navigator.maxTouchPoints > 1 && window.innerWidth < 1024;
+}
+
+export function saveOAuthReturnContext(context: OAuthReturnContext): void {
+  sessionStorage.setItem(OAUTH_RETURN_CONTEXT_KEY, JSON.stringify(context));
+}
+
+export function consumeOAuthReturnContext(): OAuthReturnContext | null {
+  const raw = sessionStorage.getItem(OAUTH_RETURN_CONTEXT_KEY);
+  sessionStorage.removeItem(OAUTH_RETURN_CONTEXT_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as OAuthReturnContext;
+  } catch {
+    return null;
+  }
+}
+
+export function saveOAuthPendingRegistration(data: OAuthPendingRegistration): void {
+  sessionStorage.setItem(OAUTH_PENDING_REGISTRATION_KEY, JSON.stringify(data));
+}
+
+export function consumeOAuthPendingRegistration(expectedUserType: string): OAuthPendingRegistration | null {
+  const raw = sessionStorage.getItem(OAUTH_PENDING_REGISTRATION_KEY);
+  if (!raw) return null;
+  try {
+    const pending = JSON.parse(raw) as OAuthPendingRegistration;
+    if (pending.userType && pending.userType !== expectedUserType) {
+      return null;
+    }
+    sessionStorage.removeItem(OAUTH_PENDING_REGISTRATION_KEY);
+    return pending;
+  } catch {
+    return null;
+  }
+}
+
+export function getRegisterPathForUserType(userType?: string): string {
+  if (userType === 'SPECTATOR') return '/register/spectateur';
+  if (userType === 'ORGANIZER') return '/register/organisateur';
+  return '/register';
+}
+
+export function getPathForRole(role: string): string {
+  if (role === 'ORGANIZER' || role === 'SUPER_ADMIN') return '/dashboard';
+  if (role === 'COMEDIAN') return '/profile/comedian';
+  if (role === 'SPECTATOR') return '/spectateur';
+  if (role === 'LIEU') return '/my-venues-management';
+  return '/';
+}
+
+const POST_LOGIN_REDIRECT_WHITELIST = new Set(['/aides', '/aides/accueil']);
+
+function isSafeReturnPath(path: string): boolean {
+  if (!path.startsWith('/')) return false;
+  const pathOnly = path.split('?')[0];
+  if (!pathOnly || pathOnly.includes('..')) return false;
+  return POST_LOGIN_REDIRECT_WHITELIST.has(pathOnly);
+}
+
+/** Après OAuth pleine page : redirige selon le rôle ou le chemin de retour. */
+export async function redirectAfterOAuthLogin(): Promise<void> {
+  const context = consumeOAuthReturnContext();
+  try {
+    const response = await api.get<{ role: string }>('/profile/me');
+    if (context?.returnPath && isSafeReturnPath(context.returnPath)) {
+      window.location.href = context.returnPath;
+      return;
+    }
+    window.location.href = getPathForRole(response.data.role);
+  } catch {
+    window.location.href = '/login';
+  }
 }
 
 /**
@@ -32,28 +131,44 @@ export const checkOAuthStatus = async (): Promise<OAuthStatus> => {
   }
 };
 
+async function fetchAuthorizationUrl(provider?: string, userType?: string): Promise<string> {
+  const params: Record<string, string> = {};
+  if (provider) params.provider = provider;
+  if (userType) params.userType = userType;
+  const response = await api.get('/auth/oauth/authorize', {
+    params: Object.keys(params).length > 0 ? params : undefined,
+    timeout: 30_000,
+  });
+  return response.data.authorizationUrl;
+}
+
 /**
- * Open OAuth popup and return tokens
- * Optionally accepts a provider name that will be forwarded to the backend
- * and then to Keycloak as kc_idp_hint (google, facebook, github, etc.)
+ * Redirection pleine page (mobile) — la page actuelle est quittée.
  */
-export const loginWithKeycloak = (provider?: string, userType?: string): Promise<OAuthTokens> => {
+async function loginWithKeycloakRedirect(provider?: string, userType?: string): Promise<never> {
+  saveOAuthReturnContext({
+    returnPath: `${window.location.pathname}${window.location.search}`,
+    userType,
+    provider,
+  });
+  const authorizationUrl = await fetchAuthorizationUrl(provider, userType);
+  window.location.href = authorizationUrl;
+  return new Promise(() => {
+    /* navigation en cours */
+  });
+}
+
+/**
+ * Popup OAuth (desktop).
+ */
+function loginWithKeycloakPopup(provider?: string, userType?: string): Promise<OAuthTokens> {
   return new Promise(async (resolve, reject) => {
     try {
-      // Get authorization URL from backend
-      const params: Record<string, string> = {};
-      if (provider) params.provider = provider;
-      if (userType) params.userType = userType;
-      const response = await api.get('/auth/oauth/authorize', {
-        params: Object.keys(params).length > 0 ? params : undefined,
-      });
-      const { authorizationUrl } = response.data;
+      const authorizationUrl = await fetchAuthorizationUrl(provider, userType);
 
-      // Calculate popup position (centered)
       const left = window.screenX + (window.outerWidth - POPUP_WIDTH) / 2;
       const top = window.screenY + (window.outerHeight - POPUP_HEIGHT) / 2;
 
-      // Open popup
       const popup = window.open(
         authorizationUrl,
         'keycloak-login',
@@ -65,9 +180,7 @@ export const loginWithKeycloak = (provider?: string, userType?: string): Promise
         return;
       }
 
-      // Listen for messages from popup
       const messageHandler = (event: MessageEvent) => {
-        // Verify origin
         if (event.origin !== window.location.origin) {
           return;
         }
@@ -79,7 +192,6 @@ export const loginWithKeycloak = (provider?: string, userType?: string): Promise
           if (event.data.error) {
             reject(new Error(event.data.error_description || event.data.error));
           } else if (event.data.pendingRegistration) {
-            // Inscription en attente : renvoyer les infos pour afficher le formulaire
             resolve({
               pendingRegistration: true,
               pendingCode: event.data.pendingCode,
@@ -89,7 +201,6 @@ export const loginWithKeycloak = (provider?: string, userType?: string): Promise
               userType: event.data.userType,
             });
           } else {
-            // Login success: HttpOnly cookie already set by server
             resolve({
               access_token: event.data.access_token,
               refresh_token: event.data.refresh_token,
@@ -103,7 +214,6 @@ export const loginWithKeycloak = (provider?: string, userType?: string): Promise
 
       window.addEventListener('message', messageHandler);
 
-      // Check if popup was closed manually
       const checkPopupClosed = setInterval(() => {
         if (popup.closed) {
           clearInterval(checkPopupClosed);
@@ -115,6 +225,16 @@ export const loginWithKeycloak = (provider?: string, userType?: string): Promise
       reject(error);
     }
   });
+}
+
+/**
+ * OAuth Keycloak — popup sur desktop, redirection pleine page sur mobile.
+ */
+export const loginWithKeycloak = (provider?: string, userType?: string): Promise<OAuthTokens> => {
+  if (isMobileDevice()) {
+    return loginWithKeycloakRedirect(provider, userType);
+  }
+  return loginWithKeycloakPopup(provider, userType);
 };
 
 /**
@@ -153,7 +273,6 @@ export const logoutFromKeycloak = async (idToken?: string, redirect = false): Pr
       return;
     }
 
-    // Silent logout via hidden iframe — not blocked by popup blockers
     await new Promise<void>((resolve) => {
       const iframe = document.createElement('iframe');
       iframe.style.display = 'none';
@@ -169,7 +288,6 @@ export const logoutFromKeycloak = async (idToken?: string, redirect = false): Pr
 
       iframe.onload = cleanup;
       iframe.onerror = cleanup;
-      // Safety timeout if Keycloak never fires load (CSP/network)
       setTimeout(cleanup, 3000);
 
       document.body.appendChild(iframe);
@@ -179,18 +297,10 @@ export const logoutFromKeycloak = async (idToken?: string, redirect = false): Pr
   }
 };
 
-// In-memory storage for Keycloak tokens — never persisted to localStorage to prevent XSS theft
-// The JWT (internal token) is stored in an HttpOnly cookie by the server
 let _inMemoryAccessToken: string | undefined;
 let _inMemoryRefreshToken: string | undefined;
 let _inMemoryIdToken: string | undefined;
 
-/**
- * Store OAuth tokens:
- * - Internal JWT → localStorage (kept for backward compat with Authorization header)
- * - Keycloak access/refresh/id tokens → in-memory only (not accessible to XSS)
- * Note: the server also sets an HttpOnly cookie for the JWT as a secondary protection
- */
 export const storeOAuthTokens = (tokens: OAuthTokens): void => {
   if (tokens.access_token) {
     _inMemoryAccessToken = tokens.access_token;
@@ -205,18 +315,12 @@ export const storeOAuthTokens = (tokens: OAuthTokens): void => {
   }
 };
 
-/**
- * Clear OAuth tokens from all storage locations
- */
 export const clearOAuthTokens = (): void => {
   _inMemoryAccessToken = undefined;
   _inMemoryRefreshToken = undefined;
   _inMemoryIdToken = undefined;
 };
 
-/**
- * Get stored OAuth tokens (Keycloak tokens from memory, JWT from localStorage)
- */
 export const getStoredOAuthTokens = (): Partial<OAuthTokens> => {
   return {
     access_token: _inMemoryAccessToken,
@@ -230,31 +334,28 @@ export const getStoredOAuthTokens = (): Partial<OAuthTokens> => {
  */
 export const translateOAuthError = (error: string): string => {
   const errorMessages: Record<string, string> = {
-    // Backend errors
     'account_not_found': 'Aucun compte trouvé avec cet email. Veuillez d\'abord créer un compte.',
     'account_mismatch': 'Ce compte est déjà lié à un autre identifiant. Contactez le support.',
     'invalid_state': 'Session expirée. Veuillez réessayer.',
     'userinfo_failed': 'Impossible de récupérer vos informations. Veuillez réessayer.',
     'token_exchange_failed': 'Erreur d\'authentification. Veuillez réessayer.',
     'too_many_requests': 'Trop de tentatives. Veuillez réessayer dans une minute.',
-    // Frontend errors
     'Login cancelled': 'Connexion annulée.',
     'Popup blocked': 'Popup bloquée. Veuillez autoriser les popups pour ce site.',
     'No token received': 'Aucun token reçu. Veuillez réessayer.',
+    'exchange_failed': 'Erreur lors de la finalisation de la connexion. Veuillez réessayer.',
+    'auth_failed': 'Une erreur est survenue lors de l\'authentification. Veuillez réessayer.',
   };
 
-  // Check for exact match
   if (errorMessages[error]) {
     return errorMessages[error];
   }
 
-  // Check for partial match
   for (const [key, message] of Object.entries(errorMessages)) {
     if (error.toLowerCase().includes(key.toLowerCase())) {
       return message;
     }
   }
 
-  // Default message
   return error || 'Une erreur est survenue lors de la connexion.';
 };

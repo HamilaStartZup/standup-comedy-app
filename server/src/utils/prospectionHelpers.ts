@@ -1,5 +1,17 @@
 import crypto from 'crypto';
 import { config } from '../config/env';
+import type { ProspectedEmailStatus } from '../models/ProspectedVenue';
+
+/** Statuts exclus des relances automatiques prospection. */
+export const PROSPECTION_NO_FOLLOW_UP_STATUSES: ProspectedEmailStatus[] = [
+  'repondu',
+  'a_contacter',
+  'desinscrit',
+];
+
+export function isEligibleForProspectionFollowUp(status: ProspectedEmailStatus): boolean {
+  return status === 'envoye';
+}
 
 export function generateProspectionUnsubscribeToken(venueId: string, email: string): string {
   const secret = config.email.unsubscribeSecret;

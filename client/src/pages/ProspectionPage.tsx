@@ -12,6 +12,7 @@ import {
   getProspectionRun,
   listProspectionRuns,
   clearProspectionRuns,
+  cancelProspectionRun,
   listProspectedVenues,
   createProspectedVenue,
   updateProspectedVenue,
@@ -23,7 +24,6 @@ import {
   markProspectionInboxReplied,
 } from '../services/api';
 import { getErrorMessage } from '../services/systemMessages';
-import { pageTitleStyle } from '../styles/theme';
 import {
   EMAIL_STATUS_LABELS,
   EMAIL_STATUS_OPTIONS,
@@ -106,6 +106,7 @@ const ProspectionPage: React.FC = () => {
   const [venueSearch, setVenueSearch] = useState('');
   const [enriching, setEnriching] = useState(false);
   const [clearingRuns, setClearingRuns] = useState(false);
+  const [cancelingRunId, setCancelingRunId] = useState<string | null>(null);
   const [venueModalOpen, setVenueModalOpen] = useState(false);
   const [editingVenue, setEditingVenue] = useState<IProspectedVenue | null>(null);
   const [savingVenue, setSavingVenue] = useState(false);
@@ -135,6 +136,13 @@ const ProspectionPage: React.FC = () => {
     enabled: isSuperAdmin,
     refetchInterval: activeRunId ? 3000 : false,
   });
+
+  useEffect(() => {
+    const running = runsData?.runs?.find((r) => r.status === 'running');
+    if (running) {
+      setActiveRunId(running._id);
+    }
+  }, [runsData]);
 
   const { data: venuesData, isLoading: loadingVenues } = useQuery({
     queryKey: ['prospected-venues', venuePage, venueDept, venueType, venueStatus, venueContactFilter, venueSearch],
@@ -273,13 +281,18 @@ const ProspectionPage: React.FC = () => {
     setEnriching(true);
     try {
       const result = await enrichProspectionVenues({
-        limit: 30,
+        limit: 5,
         departements: venueDept ? [venueDept] : undefined,
       });
       showSuccess(result.message);
       queryClient.invalidateQueries({ queryKey: ['prospected-venues'] });
     } catch (err) {
-      showError(getErrorMessage(err, 'Enrichissement impossible'));
+      const isNetwork = !(err as { response?: unknown })?.response;
+      showError(
+        isNetwork
+          ? 'Serveur injoignable (port 3001). Vérifiez que le backend tourne (`npm run dev` dans server/) puis réessayez.'
+          : getErrorMessage(err, 'Enrichissement impossible')
+      );
     } finally {
       setEnriching(false);
     }
@@ -389,11 +402,29 @@ const ProspectionPage: React.FC = () => {
     try {
       const result = await clearProspectionRuns();
       showSuccess(`${result.deletedCount} exécution(s) supprimée(s).`);
+      setActiveRunId(null);
       refetchRuns();
     } catch (err) {
       showError(getErrorMessage(err, 'Impossible d’effacer l’historique'));
     } finally {
       setClearingRuns(false);
+    }
+  };
+
+  const handleCancelRun = async (runId: string) => {
+    const confirmed = window.confirm('Interrompre cette exécution ? Vous pourrez en relancer une nouvelle.');
+    if (!confirmed) return;
+
+    setCancelingRunId(runId);
+    try {
+      const result = await cancelProspectionRun(runId);
+      showSuccess(result.message);
+      if (activeRunId === runId) setActiveRunId(null);
+      refetchRuns();
+    } catch (err) {
+      showError(getErrorMessage(err, 'Impossible d’interrompre l’exécution'));
+    } finally {
+      setCancelingRunId(null);
     }
   };
 
@@ -426,7 +457,7 @@ const ProspectionPage: React.FC = () => {
     <div style={{ minHeight: '100vh', background: 'var(--ccc-bg-gradient)', color: 'var(--ccc-text-primary)' }}>
       <Navbar />
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 20px 60px' }}>
-        <h1 style={pageTitleStyle}>Prospection</h1>
+        <h1 className="ccc-page-title">Prospection</h1>
         <p style={{ color: 'var(--ccc-text-muted)', marginBottom: 28, marginTop: -8 }}>
           Recherche via données ouvertes (BPE INSEE, Basilic Culture, OpenStreetMap) puis enrichissement web
           (sites + emails). Sources : <code>PROSPECTION_SEARCH_SOURCES</code> — par défaut{' '}
@@ -814,6 +845,7 @@ const ProspectionPage: React.FC = () => {
                     <th style={{ padding: 8 }}>Emails enrichis</th>
                     <th style={{ padding: 8 }}>Emails envoyés</th>
                     <th style={{ padding: 8 }}>Dry run</th>
+                    <th style={{ padding: 8 }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -828,6 +860,9 @@ const ProspectionPage: React.FC = () => {
                         }}>
                           {run.status === 'running' ? 'En cours' : run.status === 'done' ? 'Terminé' : 'Erreur'}
                         </span>
+                        {run.status === 'error' && run.error ? (
+                          <div style={{ fontSize: 11, color: 'var(--ccc-text-muted)', marginTop: 4 }}>{run.error}</div>
+                        ) : null}
                       </td>
                       <td style={{ padding: 8 }}>{run.stats.found}</td>
                       <td style={{ padding: 8 }}>{run.stats.new}</td>
@@ -836,6 +871,29 @@ const ProspectionPage: React.FC = () => {
                       <td style={{ padding: 8 }}>{run.stats.emailsEnriched ?? 0}</td>
                       <td style={{ padding: 8 }}>{run.stats.emailsSent} / {run.stats.emailsFailed} échec(s)</td>
                       <td style={{ padding: 8 }}>{run.filtres.dryRun ? 'Oui' : 'Non'}</td>
+                      <td style={{ padding: 8 }}>
+                        {run.status === 'running' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleCancelRun(run._id)}
+                            disabled={cancelingRunId === run._id}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 6,
+                              border: '1px solid #dc2626',
+                              background: 'transparent',
+                              color: '#dc2626',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: cancelingRunId === run._id ? 'wait' : 'pointer',
+                            }}
+                          >
+                            {cancelingRunId === run._id ? '…' : 'Interrompre'}
+                          </button>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1013,7 +1071,7 @@ const ProspectionPage: React.FC = () => {
                   opacity: enriching ? 0.7 : 1,
                 }}
               >
-                {enriching ? 'Enrichissement…' : 'Enrichir sites & emails (30)'}
+                {enriching ? 'Recherche emails… (~1 min)' : 'Chercher emails (5 lieux)'}
               </button>
             </div>
           </div>

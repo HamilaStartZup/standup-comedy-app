@@ -1,28 +1,34 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
+import {
+  storeOAuthTokens,
+  saveOAuthPendingRegistration,
+  getRegisterPathForUserType,
+  redirectAfterOAuthLogin,
+  translateOAuthError,
+} from '../services/oauth';
 
 /**
- * OAuth Callback Page
- * This page is loaded in the popup after Keycloak authentication
- * It exchanges a temporary code for tokens via POST (secure)
+ * Page de retour OAuth (popup desktop ou redirection mobile).
  */
 const OAuthCallback = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isPopup] = useState(() => typeof window !== 'undefined' && Boolean(window.opener));
 
   useEffect(() => {
     const handleCallback = async () => {
       const urlParams = new URLSearchParams(window.location.search);
+      const isPopupFlow = Boolean(window.opener);
 
-      // Nettoyer l'URL immédiatement
       window.history.replaceState({}, document.title, '/auth/callback');
 
-      // Check for errors
       const error = urlParams.get('error');
       const errorDescription = urlParams.get('error_description');
 
       if (error) {
-        if (window.opener) {
+        if (isPopupFlow) {
           window.opener.postMessage(
             { type: 'oauth-callback', error, error_description: errorDescription },
             window.location.origin
@@ -30,28 +36,26 @@ const OAuthCallback = () => {
           setTimeout(() => window.close(), 100);
         } else {
           setStatus('error');
-          setErrorMessage(errorDescription || error);
+          setErrorMessage(translateOAuthError(errorDescription || error));
         }
         return;
       }
 
-      // Get temp code from URL
       const code = urlParams.get('code');
 
       if (!code) {
         setStatus('error');
-        setErrorMessage('No authorization code received');
+        setErrorMessage('Aucun code d\'autorisation reçu.');
         return;
       }
 
       try {
-        // Échanger le code contre les tokens (login) ou les infos d'inscription (inscription)
-        const response = await api.post('/auth/oauth/exchange', { code });
+        const response = await api.post('/auth/oauth/exchange', { code }, { timeout: 60_000 });
 
         if (response.data.pendingRegistration) {
-          // Flux inscription : renvoi les infos au parent pour afficher le formulaire
           const { pendingCode, email, firstName, lastName, userType } = response.data;
-          if (window.opener) {
+
+          if (isPopupFlow) {
             window.opener.postMessage(
               { type: 'oauth-callback', pendingRegistration: true, pendingCode, email, firstName, lastName, userType },
               window.location.origin
@@ -59,15 +63,16 @@ const OAuthCallback = () => {
             setStatus('success');
             setTimeout(() => window.close(), 100);
           } else {
-            window.location.href = '/login';
+            saveOAuthPendingRegistration({ pendingCode, email, firstName, lastName, userType });
+            window.location.href = getRegisterPathForUserType(userType);
           }
           return;
         }
 
-        // Flux connexion normal : cookie HttpOnly posé par le serveur lors du /exchange
         const { access_token, refresh_token, id_token } = response.data;
+        storeOAuthTokens({ access_token, refresh_token, id_token });
 
-        if (window.opener) {
+        if (isPopupFlow) {
           window.opener.postMessage(
             { type: 'oauth-callback', access_token, refresh_token, id_token },
             window.location.origin
@@ -75,17 +80,22 @@ const OAuthCallback = () => {
           setStatus('success');
           setTimeout(() => window.close(), 100);
         } else {
-          window.location.href = '/login';
+          setStatus('success');
+          await redirectAfterOAuthLogin();
         }
       } catch (err: unknown) {
-        setStatus('error');
         const axiosError = err as { response?: { data?: { error?: string } } };
-        setErrorMessage(axiosError.response?.data?.error || 'Failed to complete authentication');
-        if (window.opener) {
+        const message = axiosError.response?.data?.error || 'exchange_failed';
+
+        if (isPopupFlow) {
           window.opener.postMessage(
-            { type: 'oauth-callback', error: 'exchange_failed' },
+            { type: 'oauth-callback', error: message },
             window.location.origin
           );
+          setTimeout(() => window.close(), 100);
+        } else {
+          setStatus('error');
+          setErrorMessage(translateOAuthError(message));
         }
       }
     };
@@ -94,22 +104,30 @@ const OAuthCallback = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="text-center max-w-md">
         {status === 'loading' && (
           <>
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Authentification en cours...</p>
-            <p className="text-sm text-gray-400 mt-2">Cette fenetre va se fermer automatiquement</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto mb-4" />
+            <p className="text-gray-600">Authentification en cours…</p>
+            <p className="text-sm text-gray-400 mt-2">
+              {isPopup ? 'Cette fenêtre va se fermer automatiquement.' : 'Redirection en cours…'}
+            </p>
           </>
         )}
         {status === 'success' && (
-          <p className="text-green-600">Authentification reussie !</p>
+          <p className="text-green-600">Authentification réussie !</p>
         )}
         {status === 'error' && (
           <>
-            <p className="text-red-600">Erreur d'authentification</p>
+            <p className="text-red-600 font-medium">Erreur d'authentification</p>
             <p className="text-sm text-gray-500 mt-2">{errorMessage}</p>
+            <Link
+              to="/login"
+              className="inline-block mt-6 text-violet-600 font-semibold hover:underline"
+            >
+              Retour à la connexion
+            </Link>
           </>
         )}
       </div>

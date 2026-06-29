@@ -20,6 +20,7 @@ export type ProspectedVenueSource =
 
 export type ProspectedEmailStatus =
   | 'non_envoye'
+  | 'a_contacter'
   | 'envoye'
   | 'echec'
   | 'desinscrit'
@@ -38,7 +39,6 @@ export interface ProspectedVenueDocument extends Document {
     departementName?: string;
   };
   website?: string | null;
-  /** Clé normalisée (nom + localisation) pour éviter les doublons, insensible à la casse. */
   dedupKey?: string | null;
   source: ProspectedVenueSource;
   emailStatus: ProspectedEmailStatus;
@@ -49,6 +49,7 @@ export interface ProspectedVenueDocument extends Document {
     error?: string | null;
   }>;
   optOut: boolean;
+  emailEnrichAttemptedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,7 +80,7 @@ const prospectedVenueSchema = new Schema<ProspectedVenueDocument>(
     },
     emailStatus: {
       type: String,
-      enum: ['non_envoye', 'envoye', 'echec', 'desinscrit', 'repondu'],
+      enum: ['non_envoye', 'a_contacter', 'envoye', 'echec', 'desinscrit', 'repondu'],
       default: 'non_envoye',
     },
     emailHistory: [{
@@ -89,6 +90,7 @@ const prospectedVenueSchema = new Schema<ProspectedVenueDocument>(
       error: { type: String, default: null },
     }],
     optOut: { type: Boolean, default: false },
+    emailEnrichAttemptedAt: { type: Date, default: null },
   },
   { timestamps: true, collection: 'prospected_venues' }
 );
@@ -105,6 +107,7 @@ prospectedVenueSchema.index({ 'address.departement': 1 });
 prospectedVenueSchema.index({ type: 1 });
 prospectedVenueSchema.index({ 'address.departement': 1, type: 1 });
 prospectedVenueSchema.index({ emailStatus: 1 });
+prospectedVenueSchema.index({ emailEnrichAttemptedAt: 1 });
 prospectedVenueSchema.index({ name: 1, 'address.postalCode': 1, 'address.departement': 1 });
 prospectedVenueSchema.index(
   { dedupKey: 1 },
@@ -141,11 +144,8 @@ export async function syncProspectedVenueIndexes(): Promise<void> {
   for (const venue of withoutDedupKey) {
     const dedupKey = buildVenueDedupKey(venue.name, venue.address ?? {});
     if (!dedupKey) continue;
-    await ProspectedVenueModel.updateOne(
-      { _id: venue._id },
-      { $set: { dedupKey } }
-    ).catch(() => {
-      // Conflit sur doublon existant — laissé pour fusion manuelle
+    await ProspectedVenueModel.updateOne({ _id: venue._id }, { $set: { dedupKey } }).catch(() => {
+      // Conflit sur doublon existant — fusion manuelle si besoin
     });
   }
 }

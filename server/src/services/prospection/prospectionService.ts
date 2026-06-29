@@ -12,12 +12,55 @@ export interface RunProspectionOptions {
   dryRun?: boolean;
 }
 
+const STALE_RUN_MS = 30 * 60 * 1000;
+
+/** Libère les runs bloqués en « running » (redémarrage serveur ou timeout). */
+export async function releaseStaleProspectionRuns(options?: {
+  onStartup?: boolean;
+  maxAgeMs?: number;
+}): Promise<number> {
+  const filter: Record<string, unknown> = { status: 'running' };
+  if (!options?.onStartup) {
+    const maxAgeMs = options?.maxAgeMs ?? STALE_RUN_MS;
+    filter.startedAt = { $lt: new Date(Date.now() - maxAgeMs) };
+  }
+
+  const result = await ProspectionRunModel.updateMany(filter, {
+    $set: {
+      status: 'error',
+      finishedAt: new Date(),
+      error: options?.onStartup
+        ? 'Interrompu au redémarrage du serveur'
+        : 'Interrompu (exécution expirée ou bloquée)',
+    },
+  });
+
+  return result.modifiedCount ?? 0;
+}
+
+export async function cancelProspectionRun(runId: string): Promise<boolean> {
+  const run = await ProspectionRunModel.findOneAndUpdate(
+    { _id: runId, status: 'running' },
+    {
+      $set: {
+        status: 'error',
+        finishedAt: new Date(),
+        error: 'Interrompu manuellement',
+      },
+    },
+    { new: true }
+  );
+  return !!run;
+}
+
 export async function hasRunningProspectionRun(): Promise<boolean> {
   const running = await ProspectionRunModel.findOne({ status: 'running' });
   return !!running;
 }
 
 export async function executeProspectionRun(options: RunProspectionOptions): Promise<string> {
+  await releaseStaleProspectionRuns();
+
   if (await hasRunningProspectionRun()) {
     throw new Error('Une prospection est déjà en cours');
   }
@@ -36,8 +79,30 @@ export async function executeProspectionRun(options: RunProspectionOptions): Pro
   });
 
   setImmediate(async () => {
+    const runId = run._id;
     try {
-      const searchStats = await searchProspectionTargets(departements, types);
+      console.log(`📧 [Run ${runId}] Phase 1/2 — recherche de lieux (${departements.join(', ') || 'défaut'})…`);
+      const searchStats = await searchProspectionTargets(departements, types, { enrichEmails: false });
+
+      await ProspectionRunModel.findByIdAndUpdate(runId, {
+        $set: {
+          stats: {
+            found: searchStats.found,
+            new: searchStats.new,
+            merged: searchStats.merged,
+            duplicates: searchStats.duplicates,
+            websitesFound: 0,
+            emailsEnriched: 0,
+            emailsSent: 0,
+            emailsFailed: 0,
+          },
+        },
+      });
+      console.log(
+        `📧 [Run ${runId}] Phase 1 terminée — ${searchStats.found} trouvé(s), ${searchStats.new} nouveau(x)`
+      );
+
+      console.log(`📧 [Run ${runId}] Phase 2/2 — envoi emails (max ${maxEmails}, dryRun=${dryRun})…`);
       const emailStats = await sendProspectionBatch(
         departements,
         types,
@@ -46,7 +111,7 @@ export async function executeProspectionRun(options: RunProspectionOptions): Pro
         config.envoi.delaiEntreEnvois
       );
 
-      await ProspectionRunModel.findByIdAndUpdate(run._id, {
+      await ProspectionRunModel.findByIdAndUpdate(runId, {
         $set: {
           status: 'done',
           finishedAt: new Date(),
@@ -62,9 +127,13 @@ export async function executeProspectionRun(options: RunProspectionOptions): Pro
           },
         },
       });
+      console.log(
+        `📧 [Run ${runId}] Terminé — ${emailStats.emailsSent} envoyé(s), ${emailStats.emailsFailed} échec(s)`
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erreur inconnue';
-      await ProspectionRunModel.findByIdAndUpdate(run._id, {
+      console.error(`📧 [Run ${runId}] Erreur:`, message);
+      await ProspectionRunModel.findByIdAndUpdate(runId, {
         $set: { status: 'error', finishedAt: new Date(), error: message },
       });
     }

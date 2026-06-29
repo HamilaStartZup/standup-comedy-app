@@ -1,7 +1,7 @@
 import sgMail from '@sendgrid/mail';
 import { config } from '../../config/env';
 import { ProspectedVenueModel } from '../../models/ProspectedVenue';
-import { generateProspectionUnsubscribeToken, isProspectionFollowUpDue } from '../../utils/prospectionHelpers';
+import { generateProspectionUnsubscribeToken, isProspectionFollowUpDue, isEligibleForProspectionFollowUp } from '../../utils/prospectionHelpers';
 import { getSendGridFrom, isEmailsDisabled } from './prospectionConfigService';
 
 const CAMPAIGN = 'invitation-plateforme-v1';
@@ -12,7 +12,7 @@ if (config.email.smtpPass) {
 }
 
 function buildInitialEmailHtml(venueName: string, unsubscribeUrl: string): string {
-  const siteUrl = config.frontend.url;
+  const siteUrl = config.platform.url;
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -47,8 +47,7 @@ function buildInitialEmailHtml(venueName: string, unsubscribeUrl: string): strin
     Seriez-vous disponible pour un échange (visio ou café) dans les prochaines semaines ?
   </p>
   <p style="font-size: 0.9em; color: #666;">
-    Connect Comedy Club — ${siteUrl}<br/>
-    Cet email est adressé à un contact professionnel en lien avec votre activité.
+    Connect Comedy Club — ${siteUrl}
   </p>
   <p style="font-size: 0.8em; color: #999; margin-top: 32px;">
     <a href="${unsubscribeUrl}" style="color: #999;">Se désinscrire de nos communications</a>
@@ -58,7 +57,7 @@ function buildInitialEmailHtml(venueName: string, unsubscribeUrl: string): strin
 }
 
 function buildFollowUpEmailHtml(venueName: string, unsubscribeUrl: string): string {
-  const siteUrl = config.frontend.url;
+  const siteUrl = config.platform.url;
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -88,8 +87,7 @@ function buildFollowUpEmailHtml(venueName: string, unsubscribeUrl: string): stri
     (visio ou café, selon votre préférence).
   </p>
   <p style="font-size: 0.9em; color: #666;">
-    Connect Comedy Club — ${siteUrl}<br/>
-    Cet email est adressé à un contact professionnel en lien avec votre activité.
+    Connect Comedy Club — ${siteUrl}
   </p>
   <p style="font-size: 0.8em; color: #999; margin-top: 32px;">
     <a href="${unsubscribeUrl}" style="color: #999;">Se désinscrire de nos communications</a>
@@ -206,6 +204,11 @@ async function sendProspectionFollowUpEmail(
     return { sent: false };
   }
 
+  const current = await ProspectedVenueModel.findById(venueId).select('emailStatus').lean();
+  if (!current || !isEligibleForProspectionFollowUp(current.emailStatus)) {
+    return { sent: false };
+  }
+
   if (!config.email.smtpPass) {
     return { sent: false, error: 'SendGrid non configuré' };
   }
@@ -281,6 +284,11 @@ export async function sendProspectionFollowUpBatch(
 
   for (const venue of venues) {
     if (!venue.email) continue;
+
+    if (!isEligibleForProspectionFollowUp(venue.emailStatus)) {
+      followUpsSkipped++;
+      continue;
+    }
 
     const initialEntry = venue.emailHistory
       ?.filter((h) => h.campaign === CAMPAIGN && h.status === 'envoye')
