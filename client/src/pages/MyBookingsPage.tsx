@@ -19,6 +19,7 @@ type BookingStatusFilter =
   | 'PENDING'
   | 'ACCEPTED'
   | 'CONFIRMED'
+  | 'PAST'
   | 'REFUSED'
   | 'EXPIRED'
   | 'CANCELLED_BY_OWNER'
@@ -35,6 +36,9 @@ const isDatePast = (dateStr: string): boolean => {
   today.setHours(0, 0, 0, 0);
   return new Date(dateStr) < today;
 };
+
+const isPastConfirmed = (b: IVenueBooking): boolean =>
+  b.status === 'CONFIRMED' && isDatePast(b.requestedDate);
 
 const getVenueCoverPhoto = (venue: IVenueBooking['venue']): string | undefined =>
   venue?.photos?.[0] || venue?.mainPhoto;
@@ -290,7 +294,9 @@ const MyBookingsPage: React.FC = () => {
       ? true
       : filterStatus === 'ACTIVE'
         ? ACTIVE_BOOKING_STATUSES.includes(b.status)
-        : b.status === filterStatus;
+        : filterStatus === 'PAST'
+          ? isPastConfirmed(b)
+          : b.status === filterStatus;
 
   const recurringGroups = React.useMemo(() => {
     const map = new Map<string, IVenueBooking[]>();
@@ -368,10 +374,10 @@ const MyBookingsPage: React.FC = () => {
           backgroundColor: 'var(--ccc-bg-surface)', borderRadius: 14, padding: 14,
           border: isHighlighted ? '2px solid var(--ccc-accent)' : '1px solid var(--ccc-border)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 12, opacity: past ? 0.7 : 1, flexWrap: 'wrap',
+          gap: 12, flexWrap: 'wrap',
         }}
       >
-        <div style={{ flex: 1, minWidth: 180 }}>
+        <div style={{ flex: 1, minWidth: 180, opacity: past ? 0.7 : 1 }}>
           <div style={{ padding: '5px 14px', borderRadius: 999, border: '1px solid var(--ccc-border-medium)', backgroundColor: 'var(--ccc-bg-elevated)', fontSize: '0.82em', fontWeight: 600, color: 'var(--ccc-text-primary)', display: 'inline-block', marginBottom: 6 }}>
             {dateFormatted}
           </div>
@@ -748,6 +754,7 @@ const MyBookingsPage: React.FC = () => {
                   <option value="PENDING">En attente</option>
                   <option value="ACCEPTED">Acceptée</option>
                   <option value="CONFIRMED">Confirmée</option>
+                  <option value="PAST">Passée</option>
                   <option value="REFUSED">Refusée</option>
                   <option value="EXPIRED">Expirée</option>
                   <option value="CANCELLED_BY_OWNER">Annulée par la salle</option>

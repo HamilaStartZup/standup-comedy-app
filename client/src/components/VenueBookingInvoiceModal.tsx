@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { IVenueBooking } from '../types/venue';
 import {
   formatClientName,
@@ -87,14 +88,14 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
     win.print();
   };
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 1100,
+        zIndex: 1200,
         background: 'rgba(0,0,0,0.75)',
         backdropFilter: 'blur(4px)',
         display: 'flex',
@@ -296,7 +297,8 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
           </p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
