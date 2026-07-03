@@ -389,9 +389,9 @@ const MesSallesPage: React.FC = () => {
                                   <div
                                     key={b._id}
                                     data-booking-id={b._id}
-                                    style={{ backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 20, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, opacity: past ? 0.7 : 1, flexWrap: 'wrap' }}
+                                    style={{ backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 20, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}
                                   >
-                                    <div style={{ flex: 1, minWidth: 200, display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <div style={{ flex: 1, minWidth: 200, display: 'flex', alignItems: 'center', gap: 12, opacity: past ? 0.7 : 1 }}>
                                       {isRespondingGroup && b.status === 'PENDING' && (
                                         <input
                                           type="checkbox"

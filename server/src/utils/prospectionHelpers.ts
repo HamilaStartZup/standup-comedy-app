@@ -62,6 +62,61 @@ export function normalizePhoneFR(phone: string | undefined | null): string | nul
   return phone.trim();
 }
 
+export interface VenueAddressLike {
+  city?: string;
+  postalCode?: string;
+  departement?: string;
+}
+
+/** Nom ou ville normalisé : minuscules, sans accents ni ponctuation (dédup insensible à la casse). */
+export function normalizeVenueLabel(value: string | undefined | null): string {
+  if (!value) return '';
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[''`´]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+export function normalizeWebsiteHost(url: string | undefined | null): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    return parsed.hostname.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    return trimmed.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0] || null;
+  }
+}
+
+/** Clé stable pour identifier un lieu (nom + localisation), insensible majuscules/accents. */
+export function buildVenueDedupKey(name: string, address: VenueAddressLike): string | null {
+  const normalizedName = normalizeVenueLabel(name);
+  if (!normalizedName) return null;
+
+  const dept = (address.departement ?? '').trim();
+  const postal = (address.postalCode ?? '').trim();
+  const city = normalizeVenueLabel(address.city);
+  const location = postal || city;
+  if (!location && !dept) return null;
+
+  return `${normalizedName}|${location}|${dept}`;
+}
+
+export function venueAddressesMatch(a: VenueAddressLike, b: VenueAddressLike): boolean {
+  const postalA = (a.postalCode ?? '').trim();
+  const postalB = (b.postalCode ?? '').trim();
+  if (postalA && postalB && postalA === postalB) return true;
+
+  const cityA = normalizeVenueLabel(a.city);
+  const cityB = normalizeVenueLabel(b.city);
+  if (cityA && cityB && cityA === cityB) return true;
+
+  return false;
+}
+
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const PARIS_TZ = 'Europe/Paris';

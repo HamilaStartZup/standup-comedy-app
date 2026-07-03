@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { buildVenueDedupKey } from '../utils/prospectionHelpers';
 
 export type ProspectedVenueType =
   | 'theatre'
@@ -38,6 +39,7 @@ export interface ProspectedVenueDocument extends Document {
     departementName?: string;
   };
   website?: string | null;
+  dedupKey?: string | null;
   source: ProspectedVenueSource;
   emailStatus: ProspectedEmailStatus;
   emailHistory: Array<{
@@ -70,6 +72,7 @@ const prospectedVenueSchema = new Schema<ProspectedVenueDocument>(
       departementName: String,
     },
     website: { type: String, trim: true },
+    dedupKey: { type: String, trim: true },
     source: {
       type: String,
       enum: ['google_places', 'insee_bpe', 'data_gouv', 'openstreetmap', 'scraping', 'manuel'],
@@ -106,6 +109,13 @@ prospectedVenueSchema.index({ 'address.departement': 1, type: 1 });
 prospectedVenueSchema.index({ emailStatus: 1 });
 prospectedVenueSchema.index({ emailEnrichAttemptedAt: 1 });
 prospectedVenueSchema.index({ name: 1, 'address.postalCode': 1, 'address.departement': 1 });
+prospectedVenueSchema.index(
+  { dedupKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { dedupKey: { $type: 'string', $gt: '' } },
+  }
+);
 
 export const ProspectedVenueModel = mongoose.model<ProspectedVenueDocument>(
   'ProspectedVenue',
@@ -124,4 +134,18 @@ export async function syncProspectedVenueIndexes(): Promise<void> {
     { $or: [{ email: null }, { email: '' }] },
     { $unset: { email: '' } }
   );
+
+  const withoutDedupKey = await ProspectedVenueModel.find({
+    $or: [{ dedupKey: { $exists: false } }, { dedupKey: null }, { dedupKey: '' }],
+  })
+    .select('_id name address')
+    .lean();
+
+  for (const venue of withoutDedupKey) {
+    const dedupKey = buildVenueDedupKey(venue.name, venue.address ?? {});
+    if (!dedupKey) continue;
+    await ProspectedVenueModel.updateOne({ _id: venue._id }, { $set: { dedupKey } }).catch(() => {
+      // Conflit sur doublon existant — fusion manuelle si besoin
+    });
+  }
 }

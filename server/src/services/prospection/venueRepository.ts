@@ -1,5 +1,12 @@
 import { ProspectedVenueModel, type ProspectedVenueDocument } from '../../models/ProspectedVenue';
-import { sleep } from '../../utils/prospectionHelpers';
+import {
+  buildVenueDedupKey,
+  normalizePhoneFR,
+  normalizeVenueLabel,
+  normalizeWebsiteHost,
+  sleep,
+  venueAddressesMatch,
+} from '../../utils/prospectionHelpers';
 import type { ProspectionSearchResult } from './types';
 import { guessEmailFromWebsite } from './venueEnrichment';
 import { discoverVenueContacts } from './venueDiscoveryService';
@@ -15,29 +22,6 @@ export interface EnrichVenuesContactsResult {
 
 export interface EnrichVenuesContactsOptions {
   emailLimit?: number;
-}
-
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function buildDedupFilter(result: ProspectionSearchResult): Record<string, unknown> {
-  if (result.email) {
-    return { email: result.email };
-  }
-
-  const filter: Record<string, unknown> = {
-    name: { $regex: new RegExp(`^${escapeRegex(result.name.trim())}$`, 'i') },
-    'address.departement': result.address.departement ?? '',
-  };
-
-  if (result.address.postalCode) {
-    filter['address.postalCode'] = result.address.postalCode;
-  } else if (result.address.city) {
-    filter['address.city'] = { $regex: new RegExp(`^${escapeRegex(result.address.city.trim())}$`, 'i') };
-  }
-
-  return filter;
 }
 
 async function tryAssignEmail(
@@ -74,8 +58,14 @@ async function mergeIntoExisting(
   const updates: Record<string, unknown> = {};
   let changed = false;
 
+  const dedupKey = buildVenueDedupKey(incoming.name, incoming.address);
+  if (dedupKey && existing.dedupKey !== dedupKey) {
+    updates.dedupKey = dedupKey;
+    changed = true;
+  }
+
   if (!existing.phone && incoming.phone) {
-    updates.phone = incoming.phone;
+    updates.phone = normalizePhoneFR(incoming.phone) ?? incoming.phone;
     changed = true;
   }
 
@@ -104,12 +94,64 @@ async function mergeIntoExisting(
   return true;
 }
 
+/** Recherche un lieu existant (email, téléphone, site, clé normalisée ou nom+ville). */
+export async function findExistingProspectedVenue(
+  result: ProspectionSearchResult
+): Promise<ProspectedVenueDocument | null> {
+  const email = result.email?.toLowerCase().trim();
+  if (email) {
+    const byEmail = await ProspectedVenueModel.findOne({ email });
+    if (byEmail) return byEmail;
+  }
+
+  const phone = normalizePhoneFR(result.phone);
+  if (phone) {
+    const byPhone = await ProspectedVenueModel.findOne({ phone });
+    if (byPhone) return byPhone;
+  }
+
+  const websiteHost = normalizeWebsiteHost(result.website);
+  if (websiteHost) {
+    const withWebsite = await ProspectedVenueModel.find({
+      website: { $type: 'string', $gt: '' },
+    })
+      .limit(2000)
+      .exec();
+    const byWebsite = withWebsite.find(
+      (venue) => normalizeWebsiteHost(venue.website) === websiteHost
+    );
+    if (byWebsite) return byWebsite;
+  }
+
+  const dedupKey = buildVenueDedupKey(result.name, result.address);
+  if (dedupKey) {
+    const byKey = await ProspectedVenueModel.findOne({ dedupKey });
+    if (byKey) return byKey;
+  }
+
+  const normalizedName = normalizeVenueLabel(result.name);
+  const dept = result.address.departement ?? '';
+  if (!normalizedName) return null;
+
+  const candidateFilter: Record<string, unknown> = {};
+  if (dept) candidateFilter['address.departement'] = dept;
+
+  const candidates = await ProspectedVenueModel.find(candidateFilter).limit(1000).exec();
+  return (
+    candidates.find(
+      (venue) =>
+        normalizeVenueLabel(venue.name) === normalizedName &&
+        venueAddressesMatch(venue.address ?? {}, result.address)
+    ) ?? null
+  );
+}
+
 export async function upsertProspectedVenue(
   result: ProspectionSearchResult,
   options: { enrichEmail?: boolean } = {}
 ): Promise<UpsertProspectedVenueResult> {
   const enrichEmail = options.enrichEmail ?? false;
-  const existing = await ProspectedVenueModel.findOne(buildDedupFilter(result));
+  const existing = await findExistingProspectedVenue(result);
 
   if (existing) {
     const merged = await mergeIntoExisting(existing, result, enrichEmail);
@@ -121,6 +163,8 @@ export async function upsertProspectedVenue(
     email = await guessEmailFromWebsite(result.website);
   }
 
+  const dedupKey = buildVenueDedupKey(result.name, result.address);
+
   const doc: Record<string, unknown> = {
     name: result.name,
     type: result.type,
@@ -130,8 +174,9 @@ export async function upsertProspectedVenue(
     emailHistory: [],
     optOut: false,
   };
+  if (dedupKey) doc.dedupKey = dedupKey;
   if (email) doc.email = email;
-  if (result.phone) doc.phone = result.phone;
+  if (result.phone) doc.phone = normalizePhoneFR(result.phone) ?? result.phone;
   if (result.website) doc.website = result.website;
 
   await ProspectedVenueModel.create(doc);

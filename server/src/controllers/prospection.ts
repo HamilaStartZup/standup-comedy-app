@@ -10,11 +10,12 @@ import {
 } from '../services/prospection/prospectionConfigService';
 import { executeProspectionRun, releaseStaleProspectionRuns, cancelProspectionRun } from '../services/prospection/prospectionService';
 import { rescheduleProspectionCron } from '../services/prospection/prospectionCronManager';
-import { enrichVenuesContacts } from '../services/prospection/venueRepository';
+import { enrichVenuesContacts, findExistingProspectedVenue, upsertProspectedVenue } from '../services/prospection/venueRepository';
 import {
   isValidEmail,
   normalizePhoneFR,
   validateProspectionUnsubscribeToken,
+  buildVenueDedupKey,
 } from '../utils/prospectionHelpers';
 import { FRENCH_DEPARTMENTS } from '../constants/frenchDepartments';
 import { getDepartmentFromPostalCode } from '../utils/cityMapping';
@@ -255,20 +256,25 @@ export const createProspectedVenueHandler = async (req: AuthRequest, res: Respon
 
   try {
     const payload = buildVenuePayload(req.body ?? {});
-    await assertEmailAvailable(payload.email);
+    const searchResult = { ...payload, source: 'manuel' as const };
 
-    const venue = await ProspectedVenueModel.create({
-      ...payload,
-      source: 'manuel',
-      emailStatus: 'non_envoye',
-      emailHistory: [],
-      optOut: false,
-    });
+    const status = await upsertProspectedVenue(searchResult);
+    const venue = await findExistingProspectedVenue(searchResult);
+
+    if (status === 'duplicate') {
+      res.status(409).json({ message: 'Ce lieu existe déjà dans la base de prospection', venue });
+      return;
+    }
+
+    if (status === 'merged') {
+      res.status(200).json({ venue, message: 'Lieu existant complété avec les nouvelles informations' });
+      return;
+    }
 
     res.status(201).json({ venue });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur';
-    const status = message.includes('déjà utilisé') ? 409 : 400;
+    const status = message.includes('déjà utilisé') || message.includes('duplicate key') ? 409 : 400;
     res.status(status).json({ message });
   }
 };
@@ -280,11 +286,24 @@ export const updateProspectedVenueHandler = async (req: AuthRequest, res: Respon
     const payload = buildVenuePayload(req.body ?? {});
     await assertEmailAvailable(payload.email, req.params.id);
 
+    const dedupKey = buildVenueDedupKey(payload.name, payload.address);
+    if (dedupKey) {
+      const conflict = await ProspectedVenueModel.findOne({
+        dedupKey,
+        _id: { $ne: req.params.id },
+      });
+      if (conflict) {
+        res.status(409).json({ message: 'Un lieu identique existe déjà (même nom et localisation)' });
+        return;
+      }
+    }
+
     const $set: Record<string, unknown> = {
       name: payload.name,
       type: payload.type,
       address: payload.address,
     };
+    if (dedupKey) $set.dedupKey = dedupKey;
     const $unset: Record<string, string> = {};
 
     if (payload.email) $set.email = payload.email;
