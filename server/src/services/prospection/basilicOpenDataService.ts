@@ -33,6 +33,14 @@ const BASILIC_BY_TYPE: Record<ProspectedVenueType, BasilicQueryConfig> = {
   salle_spectacle: {
     extraWhere: "domaine = 'Arts du spectacle'",
   },
+  cafe_theatre: {
+    extraWhere:
+      "search(nom, 'café-théâtre') OR search(nom, 'cafe theatre') OR search(nom, 'café théâtre') OR search(label_et_appellation, 'café-théâtre')",
+  },
+  comedy_club: {
+    extraWhere:
+      "search(nom, 'comedy club') OR search(nom, 'club de comédie') OR search(label_et_appellation, 'comedy club') OR search(label_et_appellation, 'club de comédie')",
+  },
   centre_culturel: {
     extraWhere:
       "search(label_et_appellation, 'centre culturel') OR search(label_et_appellation, 'médiathèque') OR search(label_et_appellation, 'espace culturel')",

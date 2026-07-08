@@ -9,6 +9,8 @@ const TYPE_SEARCH_CONFIG: Record<ProspectedVenueType, { query: string; nameFilte
   theatre: { query: 'théâtre' },
   cinema: { query: 'cinéma' },
   salle_spectacle: { query: 'salle de spectacle' },
+  cafe_theatre: { query: 'café-théâtre', nameFilter: /café.?théâtre|cafe.?theatre/i },
+  comedy_club: { query: 'comedy club club de comédie', nameFilter: /comedy club|club de comédie|club d'humour/i },
   mjc: { query: 'MJC maison des jeunes et de la culture', nameFilter: /mjc|maison des jeunes/i },
   centre_culturel: { query: 'centre culturel' },
   centre_social: { query: 'centre social', nameFilter: /centre social|social/i },

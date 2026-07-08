@@ -26,7 +26,8 @@ const EMAIL_STATUSES: ProspectedEmailStatus[] = [
 ];
 
 const VENUE_TYPES: ProspectedVenueType[] = [
-  'theatre', 'cinema', 'salle_spectacle', 'mjc', 'centre_culturel', 'centre_social', 'autre',
+  'theatre', 'cinema', 'salle_spectacle', 'cafe_theatre', 'comedy_club',
+  'mjc', 'centre_culturel', 'centre_social', 'autre',
 ];
 
 function parseOptionalString(value: unknown): string | null {

@@ -5,6 +5,8 @@ export type ProspectedVenueType =
   | 'theatre'
   | 'cinema'
   | 'salle_spectacle'
+  | 'cafe_theatre'
+  | 'comedy_club'
   | 'mjc'
   | 'centre_culturel'
   | 'centre_social'
@@ -59,7 +61,7 @@ const prospectedVenueSchema = new Schema<ProspectedVenueDocument>(
     name: { type: String, required: true, trim: true },
     type: {
       type: String,
-      enum: ['theatre', 'cinema', 'salle_spectacle', 'mjc', 'centre_culturel', 'centre_social', 'autre'],
+      enum: ['theatre', 'cinema', 'salle_spectacle', 'cafe_theatre', 'comedy_club', 'mjc', 'centre_culturel', 'centre_social', 'autre'],
       required: true,
     },
     email: { type: String, trim: true, lowercase: true },

@@ -34,6 +34,14 @@ const BPE_QUERY_BY_TYPE: Record<ProspectedVenueType, BpeQueryConfig> = {
   cinema: { typequ: ['F303'] },
   theatre: { typequ: ['F315'], namePattern: /théâtre|theatre/i },
   salle_spectacle: { typequ: ['F315'] },
+  cafe_theatre: {
+    typequ: ['F315'],
+    namePattern: /café.?théâtre|cafe.?theatre/i,
+  },
+  comedy_club: {
+    nameSearch: 'comedy club',
+    namePattern: /comedy club|club de comédie|club d'humour/i,
+  },
   centre_culturel: {
     typequ: ['F312'],
     namePattern: /centre culturel|médiathèque|espace culturel/i,

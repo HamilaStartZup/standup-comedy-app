@@ -3,7 +3,7 @@ import { pickBestWebsite, searchDdg } from './websiteDiscoveryService';
 
 const USER_AGENT = 'ConnectComedyClub-Prospection/1.0';
 const PARIS_AREA_DEPARTMENTS = new Set(['75', '77', '78', '91', '92', '93', '94', '95']);
-const CULTURAL_TYPES = new Set(['theatre', 'cinema', 'salle_spectacle', 'centre_culturel', 'mjc', 'autre']);
+const CULTURAL_TYPES = new Set(['theatre', 'cinema', 'salle_spectacle', 'cafe_theatre', 'comedy_club', 'centre_culturel', 'mjc', 'autre']);
 
 const OFFI_SKIP_FRAGMENTS = [
   '/contact',
@@ -245,7 +245,7 @@ export async function lookupOfficialTheaterWebsite(
   if (!isParisArea(departement, city)) {
     return { website: null, phone: null, source: null };
   }
-  const theaterTypes = new Set(['theatre', 'salle_spectacle', 'cinema', 'centre_culturel', 'autre']);
+  const theaterTypes = new Set(['theatre', 'salle_spectacle', 'cafe_theatre', 'comedy_club', 'cinema', 'centre_culturel', 'autre']);
   if (typeLabel && !theaterTypes.has(typeLabel)) {
     return { website: null, phone: null, source: null };
   }
