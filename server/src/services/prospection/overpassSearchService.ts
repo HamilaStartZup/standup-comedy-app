@@ -141,6 +141,11 @@ export async function searchOverpassByDepartment(
 
   for (const type of types) {
     const cfg = OVERPASS_BY_TYPE[type];
+    if (!cfg) {
+      console.warn(`Overpass: type "${type}" non configuré — ignoré`);
+      continue;
+    }
+
     const query = buildOverpassQuery(department, cfg.amenityTags);
 
     try {

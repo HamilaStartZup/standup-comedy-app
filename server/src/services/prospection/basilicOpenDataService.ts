@@ -62,8 +62,9 @@ function formatDepartmentCode(department: string): string {
   return department.padStart(2, '0');
 }
 
-function buildWhereClause(department: string, type: ProspectedVenueType): string {
+function buildWhereClause(department: string, type: ProspectedVenueType): string | null {
   const cfg = BASILIC_BY_TYPE[type];
+  if (!cfg?.extraWhere) return null;
   const dept = formatDepartmentCode(department);
   return `n_departement = '${dept}' AND (${cfg.extraWhere})`;
 }
@@ -119,6 +120,11 @@ export async function searchBasilicByDepartment(
 
   for (const type of types) {
     const where = buildWhereClause(department, type);
+    if (!where) {
+      console.warn(`Basilic: type "${type}" non configuré — ignoré`);
+      continue;
+    }
+
     let offset = 0;
     let total = Infinity;
 

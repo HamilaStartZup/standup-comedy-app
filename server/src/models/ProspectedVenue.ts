@@ -12,6 +12,26 @@ export type ProspectedVenueType =
   | 'centre_social'
   | 'autre';
 
+export const PROSPECTED_VENUE_TYPES: ProspectedVenueType[] = [
+  'theatre',
+  'cinema',
+  'salle_spectacle',
+  'cafe_theatre',
+  'comedy_club',
+  'mjc',
+  'centre_culturel',
+  'centre_social',
+  'autre',
+];
+
+export function isProspectedVenueType(value: unknown): value is ProspectedVenueType {
+  return typeof value === 'string' && PROSPECTED_VENUE_TYPES.includes(value as ProspectedVenueType);
+}
+
+export function filterProspectedVenueTypes(types: unknown[]): ProspectedVenueType[] {
+  return types.filter(isProspectedVenueType);
+}
+
 export type ProspectedVenueSource =
   | 'google_places'
   | 'insee_bpe'

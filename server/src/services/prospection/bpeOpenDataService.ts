@@ -67,11 +67,16 @@ function buildStreet(record: BpeRecord): string | undefined {
   return parts.length ? parts.join(' ') : undefined;
 }
 
+function getBpeConfig(type: ProspectedVenueType): BpeQueryConfig | null {
+  return BPE_QUERY_BY_TYPE[type] ?? null;
+}
+
 function mapBpeRecord(record: BpeRecord, type: ProspectedVenueType, department: string): ProspectionSearchResult | null {
   const name = (record.nomrs ?? record.cnomrs ?? '').trim();
   if (!name) return null;
 
-  const cfg = BPE_QUERY_BY_TYPE[type];
+  const cfg = getBpeConfig(type);
+  if (!cfg) return null;
   if (cfg.namePattern && !cfg.namePattern.test(name)) return null;
 
   const postalCode = record.codpos != null ? String(record.codpos).padStart(5, '0') : undefined;
@@ -97,9 +102,11 @@ function mapBpeRecord(record: BpeRecord, type: ProspectedVenueType, department: 
   };
 }
 
-function buildWhereClause(department: string, type: ProspectedVenueType): string {
+function buildWhereClause(department: string, type: ProspectedVenueType): string | null {
   const dept = formatDepartmentForBpe(department);
-  const cfg = BPE_QUERY_BY_TYPE[type];
+  const cfg = getBpeConfig(type);
+  if (!cfg) return null;
+
   const clauses = [`dep = '${dept}'`];
 
   if (cfg.typequ?.length === 1) {
@@ -138,6 +145,11 @@ export async function searchBpeByDepartment(
 
   for (const type of types) {
     const where = buildWhereClause(department, type);
+    if (!where) {
+      console.warn(`BPE: type "${type}" non configuré — ignoré`);
+      continue;
+    }
+
     let offset = 0;
     let total = Infinity;
 

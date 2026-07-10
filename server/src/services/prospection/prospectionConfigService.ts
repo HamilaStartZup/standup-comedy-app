@@ -1,3 +1,4 @@
+import { filterProspectedVenueTypes } from '../../models/ProspectedVenue';
 import { ProspectionConfigModel, type ProspectionConfigDocument } from '../../models/ProspectionConfig';
 import { buildCronExpression } from '../../utils/prospectionHelpers';
 import { config } from '../../config/env';
@@ -57,7 +58,13 @@ export async function patchProspectionConfig(
   if (patch.mode !== undefined) current.mode = patch.mode;
   if (patch.cibles) {
     if (patch.cibles.departements !== undefined) current.cibles.departements = patch.cibles.departements;
-    if (patch.cibles.types !== undefined) current.cibles.types = patch.cibles.types as typeof current.cibles.types;
+    if (patch.cibles.types !== undefined) {
+      const validTypes = filterProspectedVenueTypes(patch.cibles.types);
+      if (validTypes.length === 0) {
+        throw new Error('Au moins un type de lieu valide est requis');
+      }
+      current.cibles.types = validTypes;
+    }
   }
   if (patch.envoi) {
     if (patch.envoi.maxEmailsParRun !== undefined) current.envoi.maxEmailsParRun = patch.envoi.maxEmailsParRun;

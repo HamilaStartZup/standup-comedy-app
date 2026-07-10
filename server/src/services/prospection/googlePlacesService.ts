@@ -37,8 +37,13 @@ export async function searchGooglePlacesByDepartment(
   const results: ProspectionSearchResult[] = [];
 
   for (const type of types) {
-    const deptName = FRENCH_DEPARTMENTS[department] ?? department;
     const cfg = TYPE_SEARCH_CONFIG[type];
+    if (!cfg) {
+      console.warn(`Google Places: type "${type}" non configuré — ignoré`);
+      continue;
+    }
+
+    const deptName = FRENCH_DEPARTMENTS[department] ?? department;
     const query = encodeURIComponent(`${cfg.query} ${deptName} France`);
     const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=${apiKey}&language=fr&region=fr`;
 

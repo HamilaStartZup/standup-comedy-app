@@ -1,5 +1,5 @@
 import { ProspectionRunModel } from '../../models/ProspectionRun';
-import type { ProspectedVenueType } from '../../models/ProspectedVenue';
+import { filterProspectedVenueTypes, type ProspectedVenueType } from '../../models/ProspectedVenue';
 import { getProspectionConfig } from './prospectionConfigService';
 import { searchProspectionTargets } from './searchService';
 import { sendProspectionBatch } from './emailProspectionService';
@@ -67,7 +67,15 @@ export async function executeProspectionRun(options: RunProspectionOptions): Pro
 
   const config = await getProspectionConfig();
   const departements = options.departements ?? config.cibles.departements;
-  const types = (options.types ?? config.cibles.types) as ProspectedVenueType[];
+  const requestedTypes = options.types ?? config.cibles.types;
+  const types = filterProspectedVenueTypes(requestedTypes);
+  if (types.length === 0) {
+    throw new Error('Aucun type de lieu valide sélectionné pour la prospection');
+  }
+  if (types.length < requestedTypes.length) {
+    const ignored = requestedTypes.filter((type) => !types.includes(type as ProspectedVenueType));
+    console.warn(`Prospection: types ignorés (non reconnus) — ${ignored.join(', ')}`);
+  }
   const maxEmails = options.maxEmails ?? config.envoi.maxEmailsParRun;
   const dryRun = options.dryRun ?? (options.trigger === 'cron' ? config.envoi.dryRunParDefaut : false);
 
