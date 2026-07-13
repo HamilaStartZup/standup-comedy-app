@@ -9,6 +9,8 @@ export interface IOAuthState extends Document {
   codeVerifier: string;
   nonce: string; // Protection contre les replay attacks
   userType?: 'COMEDIAN' | 'ORGANIZER' | 'SPECTATOR';
+  /** Flux initié par l'app mobile : le callback redirige vers le deep link au lieu du frontend web */
+  mobile?: boolean;
   createdAt: Date;
 }
 
@@ -34,6 +36,10 @@ const OAuthStateSchema = new Schema<IOAuthState>({
   userType: {
     type: String,
     enum: ['COMEDIAN', 'ORGANIZER', 'SPECTATOR'],
+    required: false
+  },
+  mobile: {
+    type: Boolean,
     required: false
   },
   createdAt: {

@@ -26,11 +26,22 @@ import { getAuthCookieOptions } from '../utils/cookieOptions';
 // AMÉLIORATION 5: Liste blanche des redirect URIs autorisées
 // ══════════════════════════════════════════════════════════
 const ALLOWED_REDIRECT_URI_PATTERNS = [
-  /^https:\/\/dev\.connectcomedyclub\.com\/api\/auth\/oauth\/callback$/,
-  /^https:\/\/test\.connectcomedyclub\.com\/api\/auth\/oauth\/callback$/,
-  /^https:\/\/connectcomedyclub\.com\/api\/auth\/oauth\/callback$/,
-  /^http:\/\/localhost:\d+\/api\/auth\/oauth\/callback$/,
+  /^https:\/\/dev\.connectcomedyclub\.com\/api\/auth\/oauth\/callback(\?mobile=true)?$/,
+  /^https:\/\/test\.connectcomedyclub\.com\/api\/auth\/oauth\/callback(\?mobile=true)?$/,
+  /^https:\/\/connectcomedyclub\.com\/api\/auth\/oauth\/callback(\?mobile=true)?$/,
+  /^http:\/\/localhost:\d+\/api\/auth\/oauth\/callback(\?mobile=true)?$/,
+  // Dev uniquement : IP LAN privée pour tester l'app mobile sur device WiFi (API_URL=http://192.168.x.x:3001)
+  ...(config.nodeEnv === 'development'
+    ? [/^http:\/\/(?:192\.168(?:\.\d{1,3}){2}|10(?:\.\d{1,3}){3}):\d+\/api\/auth\/oauth\/callback(\?mobile=true)?$/]
+    : []),
 ];
+
+/**
+ * Deep link de retour vers l'app mobile Android (déclaré dans son AndroidManifest).
+ * Quand le flux a été initié avec ?mobile=true, le callback redirige ici au lieu
+ * du frontend web — mêmes paramètres (code ou error/error_description).
+ */
+const MOBILE_OAUTH_REDIRECT = 'connectcomedyclub://oauth/callback';
 
 const isValidRedirectUri = (uri: string): boolean => {
   return ALLOWED_REDIRECT_URI_PATTERNS.some(pattern => pattern.test(uri));
@@ -71,7 +82,13 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
 
     // Build redirect URI with /api prefix regardless of API_URL format
     const apiBase = config.api.url.replace(/\/api\/?$/, '');
-    const redirectUri = `${apiBase}/api/auth/oauth/callback`;
+    let redirectUri = `${apiBase}/api/auth/oauth/callback`;
+
+    // App mobile : passer ?mobile=true dans la redirect_uri elle-même,
+    // ainsi le callback peut déterminer la cible de redirection même si
+    // le state MongoDB a expiré (TTL dépassé pendant le login Google).
+    const mobile = req.query.mobile === 'true';
+    if (mobile) redirectUri += '?mobile=true';
 
     // Validation de sécurité du redirect URI
     if (!isValidRedirectUri(redirectUri)) {
@@ -108,6 +125,7 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
       codeVerifier,
       nonce,
       ...(userType && { userType: userType as 'COMEDIAN' | 'ORGANIZER' | 'SPECTATOR' }),
+      ...(mobile && { mobile }),
     });
 
     // Build authorization URL
@@ -155,31 +173,50 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
  * Handles OAuth callback, exchanges code for tokens
  */
 export const callback = async (req: Request, res: Response): Promise<void> => {
+  // Cible de redirection : frontend web par défaut, deep link si le flux vient de l'app mobile.
+  // Hors du try pour rester accessible dans le catch.
+  let isMobile = false;
+  const redirectToClient = (res2: Response, params: Record<string, string>): void => {
+    const qs = new URLSearchParams(params).toString();
+    const base = isMobile ? MOBILE_OAUTH_REDIRECT : `${config.frontend.url}/auth/callback`;
+    res2.redirect(`${base}?${qs}`);
+  };
+
   try {
     const { code, state, error, error_description } = req.query;
 
+    // Retrieve and delete pending authorization from MongoDB (atomic operation)
+    // Lu en premier pour connaître la cible de redirection, y compris en cas d'erreur OAuth
+    const pending = typeof state === 'string'
+      ? await OAuthStateModel.findOneAndDelete({ state })
+      : null;
+    // isMobile : priorité au state stocké, fallback sur le query param de la redirect_uri
+    // (permet de rediriger vers l'app mobile même si le state a expiré)
+    isMobile = Boolean(pending?.mobile) || req.query.mobile === 'true';
+
     // Handle OAuth errors
     if (error) {
-      const frontendUrl = `${config.frontend.url}/auth/callback?error=${error}&error_description=${encodeURIComponent(error_description as string || '')}`;
-      res.redirect(frontendUrl);
+      redirectToClient(res, {
+        error: String(error),
+        error_description: (error_description as string) || '',
+      });
       return;
     }
 
     if (!code || !state) {
-      res.redirect(`${config.frontend.url}/auth/callback?error=invalid_request&error_description=Missing code or state`);
+      redirectToClient(res, { error: 'invalid_request', error_description: 'Missing code or state' });
       return;
     }
 
-    // Retrieve and delete pending authorization from MongoDB (atomic operation)
-    const pending = await OAuthStateModel.findOneAndDelete({ state: state as string });
     if (!pending) {
-      res.redirect(`${config.frontend.url}/auth/callback?error=invalid_state&error_description=State mismatch or expired`);
+      redirectToClient(res, { error: 'invalid_state', error_description: 'State mismatch or expired' });
       return;
     }
 
     // Build redirect_uri - must EXACTLY match the one used in authorize
     const apiBase = config.api.url.replace(/\/api\/?$/, '');
-    const redirectUri = `${apiBase}/api/auth/oauth/callback`;
+    let redirectUri = `${apiBase}/api/auth/oauth/callback`;
+    if (req.query.mobile === 'true') redirectUri += '?mobile=true';
 
     // Exchange code for tokens
     const tokens = await exchangeCodeForTokens(
@@ -195,7 +232,7 @@ export const callback = async (req: Request, res: Response): Promise<void> => {
       } catch (idTokenError: any) {
         console.error('❌ [OAuth] ID token validation failed:', idTokenError.message);
         await revokeKeycloakTokens(tokens.access_token, tokens.refresh_token);
-        res.redirect(`${config.frontend.url}/auth/callback?error=invalid_id_token&error_description=${encodeURIComponent('ID token validation failed')}`);
+        redirectToClient(res, { error: 'invalid_id_token', error_description: 'ID token validation failed' });
         return;
       }
     }
@@ -205,7 +242,7 @@ export const callback = async (req: Request, res: Response): Promise<void> => {
     if (!userInfo) {
       // tokens were exchanged but userinfo failed — revoke to close the Keycloak session
       await revokeKeycloakTokens(tokens.access_token, tokens.refresh_token);
-      res.redirect(`${config.frontend.url}/auth/callback?error=userinfo_failed&error_description=Failed to get user info`);
+      redirectToClient(res, { error: 'userinfo_failed', error_description: 'Failed to get user info' });
       return;
     }
 
@@ -247,8 +284,7 @@ export const callback = async (req: Request, res: Response): Promise<void> => {
         });
 
         console.log(`⏳ [OAuth] Inscription en attente de formulaire pour ${maskEmail(userInfo.email)} (${pending.userType})`);
-        const callbackUrl = `${config.frontend.url}/auth/callback?code=${tempCode}`;
-        res.redirect(callbackUrl);
+        redirectToClient(res, { code: tempCode });
         return;
       } else {
         // Connexion sans compte existant et sans userType → refuser
@@ -257,7 +293,10 @@ export const callback = async (req: Request, res: Response): Promise<void> => {
         // compte Keycloak sera réutilisé sans avoir à refaire un flux OAuth complet.
         console.log(`⚠️ [OAuth] Tentative de connexion sans compte existant: ${maskEmail(userInfo.email)}`);
         await revokeKeycloakTokens(tokens.access_token, tokens.refresh_token);
-        res.redirect(`${config.frontend.url}/auth/callback?error=account_not_found&error_description=${encodeURIComponent('Aucun compte trouvé. Veuillez d\'abord créer un compte.')}`);
+        redirectToClient(res, {
+          error: 'account_not_found',
+          error_description: 'Aucun compte trouvé. Veuillez d\'abord créer un compte.',
+        });
         return;
       }
     } else {
@@ -308,14 +347,16 @@ export const callback = async (req: Request, res: Response): Promise<void> => {
     });
 
     // Rediriger avec seulement le code temporaire (pas les tokens dans l'URL)
-    const callbackUrl = `${config.frontend.url}/auth/callback?code=${tempCode}`;
-    res.redirect(callbackUrl);
+    redirectToClient(res, { code: tempCode });
   } catch (error: any) {
     console.error('OAuth callback error:', error?.message || error);
     if (error?.name === 'ValidationError') {
       console.error('Mongoose validation errors:', JSON.stringify(error.errors, null, 2));
     }
-    res.redirect(`${config.frontend.url}/auth/callback?error=auth_failed&error_description=${encodeURIComponent('Une erreur est survenue lors de l\'authentification. Veuillez réessayer.')}`);
+    redirectToClient(res, {
+      error: 'auth_failed',
+      error_description: 'Une erreur est survenue lors de l\'authentification. Veuillez réessayer.',
+    });
   }
 };
 
@@ -442,6 +483,8 @@ export const exchange = async (req: Request, res: Response): Promise<void> => {
     }
 
     res.json({
+      // JWT interne pour les clients sans cookies (app mobile → Authorization: Bearer)
+      token: tempAuth.token,
       access_token: tempAuth.accessToken ? decrypt(tempAuth.accessToken) : undefined,
       refresh_token: tempAuth.refreshToken ? decrypt(tempAuth.refreshToken) : undefined,
       id_token: tempAuth.idToken ? decrypt(tempAuth.idToken) : undefined,
@@ -493,7 +536,7 @@ export const completeRegistration = async (req: Request, res: Response): Promise
         maxAge: 60 * 60 * 1000,
       });
       const fullExistingUser = await UserModel.findById(existing._id).select('-password').lean();
-      res.json({ user: fullExistingUser });
+      res.json({ user: fullExistingUser, token: internalToken });
       return;
     }
 
@@ -558,7 +601,7 @@ export const completeRegistration = async (req: Request, res: Response): Promise
 
     const fullUser = await UserModel.findById(user._id).select('-password').lean();
 
-    res.json({ user: fullUser });
+    res.json({ user: fullUser, token: internalToken });
   } catch (error: any) {
     console.error('OAuth complete-registration error:', error?.message || error);
     if (error?.name === 'ValidationError') {
