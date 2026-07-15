@@ -39,6 +39,7 @@ const LegalMentionsPage = lazy(() => import('./pages/LegalMentionsPage'))
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
 const AboutPage = lazy(() => import('./pages/AboutPage'))
+const AccountDeletionPage = lazy(() => import('./pages/AccountDeletionPage'))
 const VenuesPage = lazy(() => import('./pages/VenuesPage'))
 const VenueDetailPage = lazy(() => import('./pages/VenueDetailPage'))
 const CreateVenuePage = lazy(() => import('./pages/CreateVenuePage'))
@@ -171,6 +172,7 @@ const AppRouter: React.FC = () => {
       <Route path="/politique-confidentialite" element={<PrivacyPolicyPage />} />
       <Route path="/cgu" element={<TermsOfServicePage />} />
       <Route path="/a-propos" element={<AboutPage />} />
+      <Route path="/suppression-compte" element={<AccountDeletionPage />} />
       <Route path="/venues" element={<VenueAccessRoute><VenuesPage /></VenueAccessRoute>} />
       <Route path="/venues/new" element={<VenueOwnerRoute><CreateVenuePage /></VenueOwnerRoute>} />
       <Route path="/venues/:venueId" element={<VenueAccessRoute><VenueDetailPage /></VenueAccessRoute>} />
