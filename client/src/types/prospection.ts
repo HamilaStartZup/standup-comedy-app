@@ -2,6 +2,8 @@ export type ProspectedVenueType =
   | 'theatre'
   | 'cinema'
   | 'salle_spectacle'
+  | 'cafe_theatre'
+  | 'comedy_club'
   | 'mjc'
   | 'centre_culturel'
   | 'centre_social'
@@ -103,6 +105,8 @@ export const VENUE_TYPE_OPTIONS: { value: ProspectedVenueType; label: string }[]
   { value: 'theatre', label: 'Théâtre' },
   { value: 'cinema', label: 'Cinéma' },
   { value: 'salle_spectacle', label: 'Salle de spectacle' },
+  { value: 'cafe_theatre', label: 'Café-théâtre' },
+  { value: 'comedy_club', label: 'Comedy Club' },
   { value: 'mjc', label: 'MJC' },
   { value: 'centre_culturel', label: 'Centre culturel' },
   { value: 'centre_social', label: 'Centre social' },

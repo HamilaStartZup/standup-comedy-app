@@ -33,6 +33,14 @@ const BASILIC_BY_TYPE: Record<ProspectedVenueType, BasilicQueryConfig> = {
   salle_spectacle: {
     extraWhere: "domaine = 'Arts du spectacle'",
   },
+  cafe_theatre: {
+    extraWhere:
+      "search(nom, 'café-théâtre') OR search(nom, 'cafe theatre') OR search(nom, 'café théâtre') OR search(label_et_appellation, 'café-théâtre')",
+  },
+  comedy_club: {
+    extraWhere:
+      "search(nom, 'comedy club') OR search(nom, 'club de comédie') OR search(label_et_appellation, 'comedy club') OR search(label_et_appellation, 'club de comédie')",
+  },
   centre_culturel: {
     extraWhere:
       "search(label_et_appellation, 'centre culturel') OR search(label_et_appellation, 'médiathèque') OR search(label_et_appellation, 'espace culturel')",
@@ -54,8 +62,9 @@ function formatDepartmentCode(department: string): string {
   return department.padStart(2, '0');
 }
 
-function buildWhereClause(department: string, type: ProspectedVenueType): string {
+function buildWhereClause(department: string, type: ProspectedVenueType): string | null {
   const cfg = BASILIC_BY_TYPE[type];
+  if (!cfg?.extraWhere) return null;
   const dept = formatDepartmentCode(department);
   return `n_departement = '${dept}' AND (${cfg.extraWhere})`;
 }
@@ -111,6 +120,11 @@ export async function searchBasilicByDepartment(
 
   for (const type of types) {
     const where = buildWhereClause(department, type);
+    if (!where) {
+      console.warn(`Basilic: type "${type}" non configuré — ignoré`);
+      continue;
+    }
+
     let offset = 0;
     let total = Infinity;
 

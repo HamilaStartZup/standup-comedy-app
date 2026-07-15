@@ -9,6 +9,8 @@ const TYPE_SEARCH_CONFIG: Record<ProspectedVenueType, { query: string; nameFilte
   theatre: { query: 'théâtre' },
   cinema: { query: 'cinéma' },
   salle_spectacle: { query: 'salle de spectacle' },
+  cafe_theatre: { query: 'café-théâtre', nameFilter: /café.?théâtre|cafe.?theatre/i },
+  comedy_club: { query: 'comedy club club de comédie', nameFilter: /comedy club|club de comédie|club d'humour/i },
   mjc: { query: 'MJC maison des jeunes et de la culture', nameFilter: /mjc|maison des jeunes/i },
   centre_culturel: { query: 'centre culturel' },
   centre_social: { query: 'centre social', nameFilter: /centre social|social/i },
@@ -35,8 +37,13 @@ export async function searchGooglePlacesByDepartment(
   const results: ProspectionSearchResult[] = [];
 
   for (const type of types) {
-    const deptName = FRENCH_DEPARTMENTS[department] ?? department;
     const cfg = TYPE_SEARCH_CONFIG[type];
+    if (!cfg) {
+      console.warn(`Google Places: type "${type}" non configuré — ignoré`);
+      continue;
+    }
+
+    const deptName = FRENCH_DEPARTMENTS[department] ?? department;
     const query = encodeURIComponent(`${cfg.query} ${deptName} France`);
     const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=${apiKey}&language=fr&region=fr`;
 

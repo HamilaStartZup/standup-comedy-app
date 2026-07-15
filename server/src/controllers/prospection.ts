@@ -19,15 +19,17 @@ import {
 } from '../utils/prospectionHelpers';
 import { FRENCH_DEPARTMENTS } from '../constants/frenchDepartments';
 import { getDepartmentFromPostalCode } from '../utils/cityMapping';
-import type { ProspectedEmailStatus, ProspectedVenueType } from '../models/ProspectedVenue';
+import {
+  PROSPECTED_VENUE_TYPES,
+  type ProspectedEmailStatus,
+  type ProspectedVenueType,
+} from '../models/ProspectedVenue';
 
 const EMAIL_STATUSES: ProspectedEmailStatus[] = [
   'non_envoye', 'a_contacter', 'envoye', 'echec', 'desinscrit', 'repondu',
 ];
 
-const VENUE_TYPES: ProspectedVenueType[] = [
-  'theatre', 'cinema', 'salle_spectacle', 'mjc', 'centre_culturel', 'centre_social', 'autre',
-];
+const VENUE_TYPES = PROSPECTED_VENUE_TYPES;
 
 function parseOptionalString(value: unknown): string | null {
   if (value == null) return null;
@@ -99,9 +101,14 @@ export const patchProspectionConfigHandler = async (req: AuthRequest, res: Respo
   if (!assertSuperAdmin(req, res)) return;
   const updatedBy = 'Super Administrateur';
 
-  const updated = await patchProspectionConfig({ ...req.body, updatedBy });
-  await rescheduleProspectionCron();
-  res.json({ config: updated });
+  try {
+    const updated = await patchProspectionConfig({ ...req.body, updatedBy });
+    await rescheduleProspectionCron();
+    res.json({ config: updated });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur';
+    res.status(400).json({ message });
+  }
 };
 
 export const runProspectionHandler = async (req: AuthRequest, res: Response): Promise<void> => {

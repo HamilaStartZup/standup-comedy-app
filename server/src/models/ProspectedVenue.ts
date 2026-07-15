@@ -5,10 +5,32 @@ export type ProspectedVenueType =
   | 'theatre'
   | 'cinema'
   | 'salle_spectacle'
+  | 'cafe_theatre'
+  | 'comedy_club'
   | 'mjc'
   | 'centre_culturel'
   | 'centre_social'
   | 'autre';
+
+export const PROSPECTED_VENUE_TYPES: ProspectedVenueType[] = [
+  'theatre',
+  'cinema',
+  'salle_spectacle',
+  'cafe_theatre',
+  'comedy_club',
+  'mjc',
+  'centre_culturel',
+  'centre_social',
+  'autre',
+];
+
+export function isProspectedVenueType(value: unknown): value is ProspectedVenueType {
+  return typeof value === 'string' && PROSPECTED_VENUE_TYPES.includes(value as ProspectedVenueType);
+}
+
+export function filterProspectedVenueTypes(types: unknown[]): ProspectedVenueType[] {
+  return types.filter(isProspectedVenueType);
+}
 
 export type ProspectedVenueSource =
   | 'google_places'
@@ -59,7 +81,7 @@ const prospectedVenueSchema = new Schema<ProspectedVenueDocument>(
     name: { type: String, required: true, trim: true },
     type: {
       type: String,
-      enum: ['theatre', 'cinema', 'salle_spectacle', 'mjc', 'centre_culturel', 'centre_social', 'autre'],
+      enum: ['theatre', 'cinema', 'salle_spectacle', 'cafe_theatre', 'comedy_club', 'mjc', 'centre_culturel', 'centre_social', 'autre'],
       required: true,
     },
     email: { type: String, trim: true, lowercase: true },

@@ -780,6 +780,7 @@ function LandingPage() {
                 <li><Link to="/mentions-legales" className="footer-link-btn">Mentions légales</Link></li>
                 <li><Link to="/politique-confidentialite" className="footer-link-btn">Confidentialité</Link></li>
                 <li><Link to="/cgu" className="footer-link-btn">CGU</Link></li>
+                <li><Link to="/suppression-compte" className="footer-link-btn">Suppression de compte</Link></li>
               </ul>
             </div>
           </div>

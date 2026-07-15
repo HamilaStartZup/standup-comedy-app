@@ -22,6 +22,11 @@ const OVERPASS_BY_TYPE: Record<ProspectedVenueType, OverpassConfig> = {
   cinema: { amenityTags: ['cinema'] },
   theatre: { amenityTags: ['theatre', 'arts_centre'], namePattern: /théâtre|theatre/i },
   salle_spectacle: { amenityTags: ['theatre', 'arts_centre', 'events_venue'] },
+  cafe_theatre: { amenityTags: ['theatre', 'arts_centre'], namePattern: /café.?théâtre|cafe.?theatre/i },
+  comedy_club: {
+    amenityTags: ['theatre', 'arts_centre', 'events_venue', 'bar'],
+    namePattern: /comedy club|club de comédie|club d'humour/i,
+  },
   centre_culturel: { amenityTags: ['arts_centre'], namePattern: /culturel|médiathèque/i },
   mjc: { amenityTags: ['community_centre'], namePattern: /mjc|maison des jeunes|maison de quartier/i },
   centre_social: { amenityTags: ['community_centre'], namePattern: /centre social|socioculturel/i },
@@ -136,6 +141,11 @@ export async function searchOverpassByDepartment(
 
   for (const type of types) {
     const cfg = OVERPASS_BY_TYPE[type];
+    if (!cfg) {
+      console.warn(`Overpass: type "${type}" non configuré — ignoré`);
+      continue;
+    }
+
     const query = buildOverpassQuery(department, cfg.amenityTags);
 
     try {
