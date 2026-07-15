@@ -45,6 +45,7 @@ const VenueDetailPage = lazy(() => import('./pages/VenueDetailPage'))
 const CreateVenuePage = lazy(() => import('./pages/CreateVenuePage'))
 const MyVenuesPage = lazy(() => import('./pages/MyVenuesPage'))
 const MyBookingsPage = lazy(() => import('./pages/MyBookingsPage'))
+const MyInvoicesPage = lazy(() => import('./pages/MyInvoicesPage'))
 const MesSallesPage = lazy(() => import('./pages/MesSallesPage'))
 const LieuProfilePage = lazy(() => import('./pages/LieuProfilePage'))
 const AidesHumourPage = lazy(() => import('./pages/AidesHumourPage'))
@@ -109,7 +110,7 @@ const ScrollToTop: React.FC = () => {
   return null;
 };
 
-const LIEU_ALLOWED_PATHS = ['/my-venues-management', '/my-bookings', '/venues/new', '/dashboard', '/profile/lieu', '/aides', '/aides/accueil'];
+const LIEU_ALLOWED_PATHS = ['/my-venues-management', '/my-bookings', '/my-invoices', '/venues/new', '/dashboard', '/profile/lieu', '/aides', '/aides/accueil'];
 const PUBLIC_PATHS = ['/', '/login', '/register', '/organisateur', '/forgot-password',
   '/reset-password', '/auth/callback', '/mentions-legales', '/politique-confidentialite',
   '/cgu', '/a-propos'];
@@ -178,6 +179,7 @@ const AppRouter: React.FC = () => {
       <Route path="/venues/:venueId" element={<VenueAccessRoute><VenueDetailPage /></VenueAccessRoute>} />
       <Route path="/my-venues" element={<VenueOwnerRoute><MyVenuesPage /></VenueOwnerRoute>} />
       <Route path="/my-bookings" element={<VenueAccessRoute><MyBookingsPage /></VenueAccessRoute>} />
+      <Route path="/my-invoices" element={<VenueAccessRoute><MyInvoicesPage /></VenueAccessRoute>} />
       <Route path="/my-venues-management" element={<VenueOwnerRoute><MesSallesPage /></VenueOwnerRoute>} />
       <Route path="/profile/lieu" element={<VenueOwnerRoute><LieuProfilePage /></VenueOwnerRoute>} />
       <Route path="/aides" element={<AidesHumourPage />} />

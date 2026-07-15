@@ -4,6 +4,8 @@ import { AuthRequest } from '../middleware/auth';
 import { VenueModel, CancellationPolicy } from '../models/Venue';
 import { VenueBookingModel, VenueBookingDocument, VenueBookingStatus } from '../models/VenueBooking';
 import { VenueBlockedDateModel } from '../models/VenueBlockedDate';
+import { InvoiceModel } from '../models/Invoice';
+import { updateInvoiceRefund } from '../services/invoiceSnapshot';
 import { NotificationModel } from '../models/Notification';
 import { stripe } from './stripe';
 import { EventModel, EventDocument } from '../models/Event';
@@ -678,7 +680,17 @@ export const myBookings = async (req: AuthRequest, res: Response): Promise<void>
       .populate('requester', requesterFields)
       .sort({ createdAt: -1 });
 
-    res.status(200).json({ bookings });
+    const invoices = await InvoiceModel.find({ booking: { $in: bookings.map((b) => b._id) } })
+      .select('-stripePaymentIntentId -stripeSessionId -buyerUserId -sellerOwnerId')
+      .lean();
+    const invoiceByBooking = new Map(invoices.map((inv) => [inv.booking.toString(), inv]));
+    const bookingsWithInvoice = bookings.map((b) => {
+      const booking = b.toObject();
+      const invoiceSnapshot = invoiceByBooking.get(b._id.toString());
+      return invoiceSnapshot ? { ...booking, invoiceSnapshot } : booking;
+    });
+
+    res.status(200).json({ bookings: bookingsWithInvoice });
   } catch (error) {
     console.error('Erreur myBookings:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });
@@ -1653,6 +1665,9 @@ export const refundVenueBookings = async (venueId: string): Promise<{ refunded: 
         booking.status = 'CANCELLED_BY_OWNER';
         booking.ownerResponse = 'La salle a été supprimée par le propriétaire. Remboursement intégral en cours.';
         await booking.save();
+        // Le booking est supprimé juste après (suppression salle/compte) : le webhook
+        // charge.refunded ne le retrouvera pas — figer la facture maintenant.
+        await updateInvoiceRefund(booking._id.toString(), refundAmount, new Date());
         // Cascade ADR 0002 : l'événement lié perd sa salle → annulé
         await cascadeCancelLinkedEvent(booking._id, 'Salle supprimée par le LIEU');
         refunded++;

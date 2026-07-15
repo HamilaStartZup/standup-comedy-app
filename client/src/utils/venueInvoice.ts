@@ -52,6 +52,11 @@ export function getBookingLineAmount(booking: IVenueBooking): number {
 
 /** Détail location / caution / frais — même logique que VenueBookingForm et computeBookingAmount. */
 export function getBookingPriceBreakdown(booking: IVenueBooking): InvoicePriceBreakdown | null {
+  // Facture figée côté serveur au paiement : source de vérité tant que le backfill n'est pas fait partout.
+  if (booking.invoiceSnapshot) {
+    return { lines: booking.invoiceSnapshot.lines, subtotal: booking.invoiceSnapshot.subtotal };
+  }
+
   const venue = booking.venue;
   if (!venue) return null;
 

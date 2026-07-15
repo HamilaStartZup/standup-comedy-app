@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { IVenue, IVenueBooking, IVenueBlockedDate } from '../types/venue';
+import type { IVenue, IVenueBooking, IVenueBlockedDate, IInvoiceSnapshot } from '../types/venue';
 import type {
   IProspectionConfig,
   IProspectionInboxMessage,
@@ -496,6 +496,11 @@ export const listVenueBookings = async (venueId: string): Promise<IVenueBooking[
 export const myBookings = async (): Promise<IVenueBooking[]> => {
   const response = await api.get<{ bookings: IVenueBooking[] }>('/venues/bookings/mine');
   return response.data.bookings;
+};
+
+export const myInvoices = async (): Promise<IInvoiceSnapshot[]> => {
+  const response = await api.get<{ invoices: IInvoiceSnapshot[] }>('/invoices/mine');
+  return response.data.invoices;
 };
 
 /** Réservations confirmées déjà utilisées pour créer un événement (organisateur). */

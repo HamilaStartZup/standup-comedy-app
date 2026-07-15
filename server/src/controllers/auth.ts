@@ -3,16 +3,10 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
 import mongoose, { Types } from 'mongoose';
 import { UserModel } from '../models/User';
-import { VenueModel } from '../models/Venue';
 import { PasswordResetRequestModel } from '../models/PasswordResetRequest';
-import { ApplicationModel } from '../models/Application';
-import { AbsenceModel } from '../models/Absence';
-import { EventModel } from '../models/Event';
-import { PresenceAlertModel } from '../models/PresenceAlert';
-import { ComedianReportModel } from '../models/ComedianReport';
-import { NotificationModel } from '../models/Notification';
 import { config } from '../config/env';
 import { AuthRequest } from '../middleware/auth';
+import { deleteUserAndData } from './users';
 import sgMail from '@sendgrid/mail';
 import { emitUserRegistered, emitPasswordReset } from '../services/eventEmitter';
 import { getAuthCookieOptions, AUTH_COOKIE_MAX_AGE } from '../utils/cookieOptions';
@@ -929,29 +923,7 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'Impossible de supprimer un Super Admin' });
     }
 
-    const id = new Types.ObjectId(userId);
-
-    if (user.role === 'COMEDIAN') {
-      await ApplicationModel.deleteMany({ comedian: id });
-      await AbsenceModel.deleteMany({ comedian: id });
-      await PresenceAlertModel.deleteMany({ comedian: id });
-      await ComedianReportModel.deleteMany({ comedian: id });
-      await UserModel.updateMany(
-        { favoriteComedians: id },
-        { $pull: { favoriteComedians: id } }
-      );
-    } else if (user.role === 'ORGANIZER') {
-      const organizerEvents = await EventModel.find({ organizer: id }).select('_id');
-      const eventIds = organizerEvents.map((e) => e._id);
-      await ApplicationModel.deleteMany({ event: { $in: eventIds } });
-      await AbsenceModel.deleteMany({ event: { $in: eventIds } });
-      await AbsenceModel.deleteMany({ organizer: id });
-      await EventModel.deleteMany({ organizer: id });
-    }
-
-    await PasswordResetRequestModel.deleteMany({ user: id });
-    await NotificationModel.deleteMany({ user: id });
-    await UserModel.findByIdAndDelete(userId);
+    await deleteUserAndData(userId, user.role);
 
     console.log(`✅ Compte supprimé: ${user.firstName} ${user.lastName} (${user.email})`);
 

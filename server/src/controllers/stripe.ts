@@ -11,6 +11,7 @@ import { createNotification } from './notification';
 import { computeBookingAmount } from '../utils/venuePricing';
 import { ProcessedStripeEventModel } from '../models/ProcessedStripeEvent';
 import { confirmGroupBookingsPaid, PopulatedGroupBooking } from '../utils/venueBookingHelpers';
+import { createInvoiceSnapshot, updateInvoiceRefund } from '../services/invoiceSnapshot';
 
 const stripe = config.stripe.secretKey ? new Stripe(config.stripe.secretKey) : null;
 
@@ -206,6 +207,8 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
           return;
         }
 
+        await createInvoiceSnapshot(booking._id.toString());
+
         // Notifications pour les deux parties
         try {
           await NotificationModel.create([
@@ -361,6 +364,8 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
           booking.refundedAmount = refund.amount / 100;
           booking.refundedAt = new Date();
           await booking.save();
+
+          await updateInvoiceRefund(booking._id.toString(), booking.refundedAmount, booking.refundedAt);
 
           emitVenueBookingPaymentUpdated(
             booking._id.toString(),
@@ -650,6 +655,8 @@ export const confirmVenueBookingPayment = async (req: AuthRequest, res: Response
       return;
     }
 
+    await createInvoiceSnapshot(booking._id.toString());
+
     // Notifications pour les deux parties
     try {
       await NotificationModel.create([
@@ -930,6 +937,8 @@ export const confirmVenueRefund = async (req: AuthRequest, res: Response): Promi
     booking.refundedAmount = refund.amount / 100;
     booking.refundedAt = new Date();
     await booking.save();
+
+    await updateInvoiceRefund(booking._id.toString(), booking.refundedAmount, booking.refundedAt);
 
     emitVenueBookingPaymentUpdated(
       booking._id.toString(),
