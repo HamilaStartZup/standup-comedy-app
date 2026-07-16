@@ -25,16 +25,14 @@ import {
   checkSlotConflict,
   checkSlotConflictBatch,
 } from '../utils/venueBookingHelpers';
-import { parseCalendarDate, calendarWeekday, isCalendarDatePast } from '../utils/calendarDate';
+import { parseCalendarDate, calendarWeekday, isCalendarDatePast, slotInstant } from '../utils/calendarDate';
 
-function hasBookingEnded(requestedDate: Date, endTime: string): boolean {
+export function hasBookingEnded(requestedDate: Date, endTime: string): boolean {
   const [endHour, endMinute] = endTime.split(':').map(Number);
-  const bookingEnd = new Date(requestedDate);
-  if (!Number.isNaN(endHour) && !Number.isNaN(endMinute)) {
-    bookingEnd.setHours(endHour, endMinute, 0, 0);
-  } else {
-    bookingEnd.setHours(23, 59, 59, 999);
-  }
+  const bookingEnd =
+    Number.isFinite(endHour) && Number.isFinite(endMinute)
+      ? slotInstant(requestedDate, endTime)
+      : slotInstant(requestedDate, '23:59'); // fin de journée, heure de Paris
   return bookingEnd.getTime() < Date.now();
 }
 
@@ -46,7 +44,7 @@ interface RefundCalculation {
   reason: 'grace_period' | 'full_refund' | 'partial_refund' | 'no_refund';
 }
 
-function calculateRefundAmount(
+export function calculateRefundAmount(
   paidAmount: number,
   policy: CancellationPolicy,
   eventDatetime: Date,
@@ -124,14 +122,12 @@ type CancellableBooking = Pick<
  * No-op sinon. Ne touche pas au statut (l'appelant pose CANCELLED_*). Réutilisé par
  * l'annulation unitaire et l'annulation de série.
  */
-async function applyBookingCancellationRefund(
+export async function applyBookingCancellationRefund(
   booking: CancellableBooking,
   policy: CancellationPolicy
 ): Promise<void> {
   if (booking.status !== 'CONFIRMED' || booking.paymentStatus !== 'paid') return;
-  const eventDatetime = new Date(booking.requestedDate);
-  const [startH, startM] = booking.startTime.split(':').map(Number);
-  eventDatetime.setUTCHours(startH, startM, 0, 0);
+  const eventDatetime = slotInstant(booking.requestedDate, booking.startTime);
   const { refundAmount, refundPercent, reason } = calculateRefundAmount(
     booking.paidAmount!,
     policy,
@@ -1628,9 +1624,7 @@ export const getRefundEstimate = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const eventDatetime = new Date(booking.requestedDate);
-    const [h, m] = booking.startTime.split(':').map(Number);
-    eventDatetime.setUTCHours(h, m, 0, 0);
+    const eventDatetime = slotInstant(booking.requestedDate, booking.startTime);
 
     const policy: CancellationPolicy = (booking.venue as { cancellationPolicy: CancellationPolicy }).cancellationPolicy ?? 'moderate';
     const result = calculateRefundAmount(booking.paidAmount, policy, eventDatetime, booking.createdAt);

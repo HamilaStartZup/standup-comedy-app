@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { cancelBooking, cancelBookingGroup, createVenueCheckoutSession, createVenueGroupCheckoutSession, confirmVenuePayment, confirmVenueGroupPayment, confirmVenueRefund } from '../services/api';
+import { cancelBooking, cancelBookingGroup, createVenueCheckoutSession, createVenueGroupCheckoutSession, confirmVenuePayment, confirmVenueGroupPayment, confirmVenueRefund, getRefundEstimate } from '../services/api';
 import { useMyBookings } from '../hooks/useMyBookings';
 import BookingCardSkeleton from '../components/skeletons/BookingCardSkeleton';
 import { SuccessMessages, ErrorMessages, getErrorMessage } from '../services/systemMessages';
@@ -10,8 +10,8 @@ import BookingStatusBadge from '../components/BookingStatusBadge';
 import BookingInvoiceButton from '../components/BookingInvoiceButton';
 import Navbar from '../components/Navbar';
 import VenuesTabs from '../components/VenuesTabs';
-import type { IVenueBooking, CancellationPolicy } from '../types/venue';
-import { calculateRefundEstimate, formatRefundMessage, formatRefundReason, type RefundEstimate } from '../utils/cancellationPolicy';
+import type { IVenueBooking } from '../types/venue';
+import { formatRefundMessage, formatRefundReason, type RefundEstimate } from '../utils/cancellationPolicy';
 
 type BookingStatusFilter =
   | 'ACTIVE'
@@ -43,15 +43,6 @@ const isPastConfirmed = (b: IVenueBooking): boolean =>
 const getVenueCoverPhoto = (venue: IVenueBooking['venue']): string | undefined =>
   venue?.photos?.[0] || venue?.mainPhoto;
 
-/** Estimation de remboursement d'une réservation (null si non payée). Miroir du backend. */
-const computeBookingRefund = (b: IVenueBooking): RefundEstimate | null => {
-  if (b.paymentStatus !== 'paid' || !b.paidAmount) return null;
-  const policy = ((b.venue as { cancellationPolicy?: CancellationPolicy })?.cancellationPolicy) ?? 'moderate';
-  const eventDatetime = new Date(b.requestedDate);
-  const [h, m] = b.startTime.split(':').map(Number);
-  eventDatetime.setUTCHours(h, m, 0, 0);
-  return calculateRefundEstimate(b.paidAmount, policy, eventDatetime, new Date(b.createdAt));
-};
 
 const MyBookingsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -348,7 +339,32 @@ const MyBookingsPage: React.FC = () => {
 
 
   // Calcul de l'estimation de remboursement pour le modal (réservation unique)
-  const refundEstimate = cancelConfirmBooking ? computeBookingRefund(cancelConfirmBooking) : null;
+  // L'estimation vient du serveur (GET refund-estimate) : même code que le remboursement
+  // réellement exécuté — aucun miroir local à maintenir, aucun souci de fuseau horaire.
+  const refundQuery = useQuery({
+    queryKey: ['refund-estimate', cancelConfirmBooking?._id],
+    queryFn: () => getRefundEstimate(cancelConfirmBooking!._id),
+    enabled: !!cancelConfirmBooking && cancelConfirmBooking.paymentStatus === 'paid' && !!cancelConfirmBooking.paidAmount,
+  });
+  const refundEstimate: RefundEstimate | null =
+    refundQuery.data && refundQuery.data.reason !== 'not_paid' ? (refundQuery.data as RefundEstimate) : null;
+
+  // Estimations par occurrence pour la modale de série, via la même API
+  const groupRefundQuery = useQuery({
+    queryKey: ['refund-estimates-group', cancelConfirmGroup?.groupId],
+    queryFn: async () => {
+      const paid = (cancelConfirmGroup?.bookings ?? []).filter(
+        (b) =>
+          ['PENDING', 'ACCEPTED', 'CONFIRMED'].includes(b.status) &&
+          !isDatePast(b.requestedDate) &&
+          b.paymentStatus === 'paid' &&
+          b.paidAmount
+      );
+      const entries = await Promise.all(paid.map(async (b) => [b._id, await getRefundEstimate(b._id)] as const));
+      return Object.fromEntries(entries) as Record<string, RefundEstimate>;
+    },
+    enabled: !!cancelConfirmGroup,
+  });
 
   const toggleGroup = (groupId: string) => {
     setExpandedGroups((prev) => {
@@ -583,7 +599,7 @@ const MyBookingsPage: React.FC = () => {
         const toCancel = cancelConfirmGroup.bookings.filter(
           (b) => ['PENDING', 'ACCEPTED', 'CONFIRMED'].includes(b.status) && !isDatePast(b.requestedDate)
         );
-        const rows = toCancel.map((b) => ({ booking: b, estimate: computeBookingRefund(b) }));
+        const rows = toCancel.map((b) => ({ booking: b, estimate: groupRefundQuery.data?.[b._id] ?? null }));
         const paidTotal = rows.reduce((s, r) => s + (r.booking.paymentStatus === 'paid' ? (r.booking.paidAmount ?? 0) : 0), 0);
         const refundTotal = rows.reduce((s, r) => s + (r.estimate?.refundAmount ?? 0), 0);
         return (

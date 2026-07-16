@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { VenueBookingModel } from '../models/VenueBooking';
 import { VenueBlockedDateModel } from '../models/VenueBlockedDate';
 import { computeBookingAmount } from './venuePricing';
+import { slotInstant } from './calendarDate';
 import { emitVenueBookingPaymentUpdated } from '../services/eventEmitter';
 import { createNotification } from '../controllers/notification';
 import { createInvoiceSnapshotSafe } from '../services/invoiceSnapshot';
@@ -22,8 +23,7 @@ export function computePaymentDeadlineAt(requestedDate: Date, startTime: string)
   const deadline72h = new Date(Date.now() + 72 * 60 * 60 * 1000);
   const [startHour, startMinute] = startTime.split(':').map(Number);
   if (!isNaN(startHour) && !isNaN(startMinute)) {
-    const eventStart = new Date(requestedDate);
-    eventStart.setUTCHours(startHour, startMinute, 0, 0);
+    const eventStart = slotInstant(requestedDate, startTime);
     const deadlineBeforeEvent = new Date(eventStart.getTime() - 6 * 60 * 60 * 1000);
     const minDeadline = new Date(Date.now() + 60 * 60 * 1000);
     const chosen = deadline72h < deadlineBeforeEvent ? deadline72h : deadlineBeforeEvent;
