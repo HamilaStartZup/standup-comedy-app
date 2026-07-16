@@ -1,10 +1,13 @@
+import mongoose from 'mongoose';
 import { VenueBookingModel } from '../models/VenueBooking';
 import { InvoiceModel } from '../models/Invoice';
 import { getBookingPriceBreakdown, formatInvoiceNumber, formatGroupInvoiceNumber } from '../utils/venueInvoice';
+import Logger from '../utils/logger';
 
 /**
  * Fige un snapshot immuable de facture pour un booking payé. Idempotent — un 2e appel
  * (webhook + fallback client, ou retry) ne recalcule/écrase jamais un snapshot existant.
+ * Lève une exception si les données nécessaires sont manquantes.
  */
 export async function createInvoiceSnapshot(bookingId: string): Promise<void> {
   const booking = await VenueBookingModel.findById(bookingId).populate<{
@@ -35,7 +38,15 @@ export async function createInvoiceSnapshot(bookingId: string): Promise<void> {
     { path: 'requester', select: 'firstName lastName email' },
   ]);
 
-  if (!booking || !booking.venue || !booking.requester) return;
+  if (!booking) {
+    throw new Error(`[Invoice] Booking not found: ${bookingId}`);
+  }
+  if (!booking.venue) {
+    throw new Error(`[Invoice] Venue missing for booking ${bookingId} (deleted?)`);
+  }
+  if (!booking.requester) {
+    throw new Error(`[Invoice] Requester missing for booking ${bookingId} (deleted?)`);
+  }
 
   const breakdown = getBookingPriceBreakdown(booking.venue, {
     startTime: booking.startTime,
@@ -98,10 +109,49 @@ export async function createInvoiceSnapshot(bookingId: string): Promise<void> {
   );
 }
 
-/** Met à jour un snapshot existant après remboursement. No-op si pas encore de snapshot (pré-backfill). */
+/**
+ * Met à jour un snapshot existant après remboursement.
+ * Lève une exception si aucun snapshot n'existe (remboursement orphelin).
+ */
 export async function updateInvoiceRefund(bookingId: string, refundedAmount: number, refundedAt: Date): Promise<void> {
-  await InvoiceModel.updateOne(
-    { booking: bookingId },
+  const result = await InvoiceModel.updateOne(
+    { booking: new mongoose.Types.ObjectId(bookingId) },
     { $set: { paymentStatus: 'refunded', refundedAmount, refundedAt } }
   );
+
+  if (result.matchedCount === 0) {
+    // Race : refund.updated peut arriver avant checkout.session.completed → aucun snapshot
+    // encore. L'appelant catche (non-bloquant) et le backfill recrée puis re-rembourse.
+    throw new Error(
+      `[Invoice] Orphan refund for booking ${bookingId} (no snapshot). ` +
+      `Will be recovered by backfill if snapshot created later.`
+    );
+  }
+}
+
+/**
+ * Variantes non-bloquantes des opérations de facture pour les flux de paiement :
+ * l'échec est loggé mais jamais propagé (le backfill rejouera). `context` identifie l'appelant.
+ */
+export async function createInvoiceSnapshotSafe(bookingId: string, context?: string): Promise<void> {
+  try {
+    await createInvoiceSnapshot(bookingId);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    Logger.error(`[Invoice] Snapshot creation failed (non-bloquant): ${message}`, { bookingId, context });
+  }
+}
+
+export async function updateInvoiceRefundSafe(
+  bookingId: string,
+  refundedAmount: number,
+  refundedAt: Date,
+  context?: string
+): Promise<void> {
+  try {
+    await updateInvoiceRefund(bookingId, refundedAmount, refundedAt);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    Logger.error(`[Invoice] Refund update failed (non-bloquant): ${message}`, { bookingId, context });
+  }
 }

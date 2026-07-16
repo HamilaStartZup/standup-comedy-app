@@ -14,14 +14,23 @@ async function backfill() {
   }).select('_id paymentStatus refundedAmount refundedAt');
   console.log(`Found ${bookings.length} paid booking(s) to backfill.`);
 
+  let successCount = 0;
+  let errorCount = 0;
+
   for (const booking of bookings) {
-    await createInvoiceSnapshot(booking._id.toString());
-    if (booking.paymentStatus === 'refunded' && booking.refundedAmount != null && booking.refundedAt) {
-      await updateInvoiceRefund(booking._id.toString(), booking.refundedAmount, booking.refundedAt);
+    try {
+      await createInvoiceSnapshot(booking._id.toString());
+      if (booking.paymentStatus === 'refunded' && booking.refundedAmount != null && booking.refundedAt) {
+        await updateInvoiceRefund(booking._id.toString(), booking.refundedAmount, booking.refundedAt);
+      }
+      successCount++;
+    } catch (err) {
+      errorCount++;
+      console.error(`[Backfill] Error processing booking ${booking._id}:`, err instanceof Error ? err.message : err);
     }
   }
 
-  console.log('Backfill complete.');
+  console.log(`Backfill complete: ${successCount} succeeded, ${errorCount} failed.`);
   await mongoose.disconnect();
 }
 

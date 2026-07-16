@@ -4,7 +4,7 @@ import { VenueBlockedDateModel } from '../models/VenueBlockedDate';
 import { computeBookingAmount } from './venuePricing';
 import { emitVenueBookingPaymentUpdated } from '../services/eventEmitter';
 import { createNotification } from '../controllers/notification';
-import { createInvoiceSnapshot } from '../services/invoiceSnapshot';
+import { createInvoiceSnapshotSafe } from '../services/invoiceSnapshot';
 
 export function timesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean {
   const toMinutes = (t: string) => {
@@ -241,7 +241,9 @@ export async function confirmGroupBookingsPaid(
 
     if (!updated) continue;
     confirmedCount++;
-    await createInvoiceSnapshot(updated._id.toString());
+
+    await createInvoiceSnapshotSafe(updated._id.toString(), 'confirmGroupBookingsPaid');
+
     groupNotifCtx = groupNotifCtx ?? {
       requesterId: updated.requester.toString(),
       ownerId: booking.venue.owner.toString(),

@@ -5,7 +5,7 @@ import { VenueModel, CancellationPolicy } from '../models/Venue';
 import { VenueBookingModel, VenueBookingDocument, VenueBookingStatus } from '../models/VenueBooking';
 import { VenueBlockedDateModel } from '../models/VenueBlockedDate';
 import { InvoiceModel } from '../models/Invoice';
-import { updateInvoiceRefund } from '../services/invoiceSnapshot';
+import { updateInvoiceRefundSafe } from '../services/invoiceSnapshot';
 import { NotificationModel } from '../models/Notification';
 import { stripe } from './stripe';
 import { EventModel, EventDocument } from '../models/Event';
@@ -1667,7 +1667,7 @@ export const refundVenueBookings = async (venueId: string): Promise<{ refunded: 
         await booking.save();
         // Le booking est supprimé juste après (suppression salle/compte) : le webhook
         // charge.refunded ne le retrouvera pas — figer la facture maintenant.
-        await updateInvoiceRefund(booking._id.toString(), refundAmount, new Date());
+        await updateInvoiceRefundSafe(booking._id.toString(), refundAmount, new Date(), 'refundVenueBookings');
         // Cascade ADR 0002 : l'événement lié perd sa salle → annulé
         await cascadeCancelLinkedEvent(booking._id, 'Salle supprimée par le LIEU');
         refunded++;

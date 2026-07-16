@@ -11,7 +11,7 @@ import { createNotification } from './notification';
 import { computeBookingAmount } from '../utils/venuePricing';
 import { ProcessedStripeEventModel } from '../models/ProcessedStripeEvent';
 import { confirmGroupBookingsPaid, PopulatedGroupBooking } from '../utils/venueBookingHelpers';
-import { createInvoiceSnapshot, updateInvoiceRefund } from '../services/invoiceSnapshot';
+import { createInvoiceSnapshotSafe, updateInvoiceRefundSafe } from '../services/invoiceSnapshot';
 
 const stripe = config.stripe.secretKey ? new Stripe(config.stripe.secretKey) : null;
 
@@ -207,7 +207,7 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
           return;
         }
 
-        await createInvoiceSnapshot(booking._id.toString());
+        await createInvoiceSnapshotSafe(booking._id.toString(), 'webhook checkout.session.completed');
 
         // Notifications pour les deux parties
         try {
@@ -365,7 +365,7 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
           booking.refundedAt = new Date();
           await booking.save();
 
-          await updateInvoiceRefund(booking._id.toString(), booking.refundedAmount, booking.refundedAt);
+          await updateInvoiceRefundSafe(booking._id.toString(), booking.refundedAmount, booking.refundedAt, `webhook refund.updated ${refundId}`);
 
           emitVenueBookingPaymentUpdated(
             booking._id.toString(),
@@ -655,7 +655,7 @@ export const confirmVenueBookingPayment = async (req: AuthRequest, res: Response
       return;
     }
 
-    await createInvoiceSnapshot(booking._id.toString());
+    await createInvoiceSnapshotSafe(booking._id.toString(), 'confirmVenueBookingPayment');
 
     // Notifications pour les deux parties
     try {
@@ -938,7 +938,7 @@ export const confirmVenueRefund = async (req: AuthRequest, res: Response): Promi
     booking.refundedAt = new Date();
     await booking.save();
 
-    await updateInvoiceRefund(booking._id.toString(), booking.refundedAmount, booking.refundedAt);
+    await updateInvoiceRefundSafe(booking._id.toString(), booking.refundedAmount, booking.refundedAt, 'confirmVenueRefund');
 
     emitVenueBookingPaymentUpdated(
       booking._id.toString(),
