@@ -42,6 +42,7 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
   const first = lines[0];
   const venue = first.venue;
   const requester = first.requester;
+  const owner = first.invoiceSnapshot?.seller;
   const total = getInvoiceTotal(lines);
   const currency = venue?.currency ?? 'EUR';
   const invoiceNumber = isSeries && first.bookingGroupId
@@ -185,6 +186,11 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
               {venue?.companyName && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{venue.companyName}</p>}
               <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ccc-text-secondary)' }}>{formatVenueAddress(venue)}</p>
               {venue?.siret && <p style={{ margin: '4px 0 0', fontSize: 13 }}>SIRET : {venue.siret}</p>}
+              {(owner?.ownerFirstName || owner?.ownerLastName) && (
+                <p style={{ margin: '4px 0 0', fontSize: 13 }}>
+                  Représenté par : {owner.ownerFirstName ?? ''} {owner.ownerLastName ?? ''}
+                </p>
+              )}
               {venue?.contactEmail && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{venue.contactEmail}</p>}
             </div>
             <div>

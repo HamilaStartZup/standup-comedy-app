@@ -193,6 +193,34 @@ export type VenueBookingStatus =
   | 'CANCELLED_BY_REQUESTER'
   | 'EXPIRED';
 
+export interface IInvoiceSnapshot {
+  invoiceNumber: string;
+  booking: string;
+  bookingGroupId?: string;
+  issuedAt: string;
+  buyer: { firstName?: string; lastName?: string; email: string };
+  seller: {
+    venueName: string;
+    companyName?: string;
+    siret?: string;
+    legalStatus?: string;
+    ownerFirstName?: string;
+    ownerLastName?: string;
+    address: string;
+    postalCode: string;
+    city: string;
+    country: string;
+  };
+  lines: { label: string; amount: number; note?: string }[];
+  subtotal: number;
+  currency: string;
+  paymentStatus: 'paid' | 'refund_pending' | 'refunded';
+  paidAmount?: number;
+  paidAt?: string;
+  refundedAmount?: number;
+  refundedAt?: string;
+}
+
 export interface IVenueBooking {
   _id: string;
   venue: IVenue;
@@ -210,6 +238,7 @@ export interface IVenueBooking {
   paymentDeadlineAt?: string;
   refundedAmount?: number;
   stripeRefundId?: string;
+  invoiceSnapshot?: IInvoiceSnapshot;
   createdAt: string;
   updatedAt: string;
 }

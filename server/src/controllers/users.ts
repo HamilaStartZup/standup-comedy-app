@@ -8,12 +8,17 @@ import { NotificationModel } from '../models/Notification';
 import { PresenceAlertModel } from '../models/PresenceAlert';
 import { ComedianReportModel } from '../models/ComedianReport';
 import { PasswordResetRequestModel } from '../models/PasswordResetRequest';
+import { VenueModel } from '../models/Venue';
+import { VenueBookingModel } from '../models/VenueBooking';
+import { VenueBlockedDateModel } from '../models/VenueBlockedDate';
+import { SpectatorEventRatingModel } from '../models/SpectatorEventRating';
+import { refundVenueBookings } from './venueBooking';
 
 /**
  * Supprime un utilisateur et toutes ses données associées
  * Réutilisé par le cron job et potentiellement d'autres fonctions
  */
-async function deleteUserAndData(userId: string, userRole: string): Promise<{
+export async function deleteUserAndData(userId: string, userRole: string): Promise<{
   applications: number;
   absences: number;
   events: number;
@@ -21,6 +26,10 @@ async function deleteUserAndData(userId: string, userRole: string): Promise<{
   alerts: number;
   reports: number;
   passwordResets: number;
+  ratings: number;
+  venues: number;
+  bookings: number;
+  blockedDates: number;
 }> {
   const stats = {
     applications: 0,
@@ -30,6 +39,10 @@ async function deleteUserAndData(userId: string, userRole: string): Promise<{
     alerts: 0,
     reports: 0,
     passwordResets: 0,
+    ratings: 0,
+    venues: 0,
+    bookings: 0,
+    blockedDates: 0,
   };
 
   if (userRole === 'COMEDIAN') {
@@ -76,13 +89,36 @@ async function deleteUserAndData(userId: string, userRole: string): Promise<{
     const deletedAbsences = await AbsenceModel.deleteMany({ event: { $in: eventIds } });
     stats.absences = deletedAbsences.deletedCount;
 
+    // Supprimer les absences où l'organisateur est directement référencé (héritage du chemin admin)
+    await AbsenceModel.deleteMany({ organizer: userId });
+
     // Supprimer les événements de l'organisateur
     const deletedEvents = await EventModel.deleteMany({ organizer: userId });
     stats.events = deletedEvents.deletedCount;
+  } else if (userRole === 'SPECTATOR') {
+    const deletedRatings = await SpectatorEventRatingModel.deleteMany({ spectator: userId });
+    stats.ratings = deletedRatings.deletedCount;
+  } else if (userRole === 'LIEU') {
+    const ownedVenues = await VenueModel.find({ owner: userId }).select('_id');
+    const venueIds = ownedVenues.map((v) => v._id);
+
+    // Remboursements Stripe des bookings payés — ne supprime pas les documents
+    for (const venueId of venueIds) {
+      await refundVenueBookings(venueId.toString());
+    }
+
+    const deletedBookings = await VenueBookingModel.deleteMany({ venue: { $in: venueIds } });
+    stats.bookings = deletedBookings.deletedCount;
+
+    const deletedBlockedDates = await VenueBlockedDateModel.deleteMany({ venue: { $in: venueIds } });
+    stats.blockedDates = deletedBlockedDates.deletedCount;
+
+    const deletedVenues = await VenueModel.deleteMany({ owner: userId });
+    stats.venues = deletedVenues.deletedCount;
   }
 
   // Supprimer les notifications de l'utilisateur (tous les rôles)
-  const deletedNotifications = await NotificationModel.deleteMany({ userId: userId });
+  const deletedNotifications = await NotificationModel.deleteMany({ user: userId });
   stats.notifications = deletedNotifications.deletedCount;
 
   // Supprimer les demandes de réinitialisation de mot de passe

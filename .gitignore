@@ -171,3 +171,12 @@ server/debug-events.js
 # ======================
 
 *.local
+
+tutorial-render-workspace/
+
+# Config Claude Code personnelle
+.claude/
+
+# Tests locaux (non versionnés)
+server/tests/
+server/jest.config.js

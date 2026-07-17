@@ -4,6 +4,8 @@ import { AuthRequest } from '../middleware/auth';
 import { VenueModel, CancellationPolicy } from '../models/Venue';
 import { VenueBookingModel, VenueBookingDocument, VenueBookingStatus } from '../models/VenueBooking';
 import { VenueBlockedDateModel } from '../models/VenueBlockedDate';
+import { InvoiceModel } from '../models/Invoice';
+import { updateInvoiceRefundSafe } from '../services/invoiceSnapshot';
 import { NotificationModel } from '../models/Notification';
 import { stripe } from './stripe';
 import { EventModel, EventDocument } from '../models/Event';
@@ -23,16 +25,14 @@ import {
   checkSlotConflict,
   checkSlotConflictBatch,
 } from '../utils/venueBookingHelpers';
-import { parseCalendarDate, calendarWeekday, isCalendarDatePast } from '../utils/calendarDate';
+import { parseCalendarDate, calendarWeekday, isCalendarDatePast, slotInstant } from '../utils/calendarDate';
 
-function hasBookingEnded(requestedDate: Date, endTime: string): boolean {
+export function hasBookingEnded(requestedDate: Date, endTime: string): boolean {
   const [endHour, endMinute] = endTime.split(':').map(Number);
-  const bookingEnd = new Date(requestedDate);
-  if (!Number.isNaN(endHour) && !Number.isNaN(endMinute)) {
-    bookingEnd.setHours(endHour, endMinute, 0, 0);
-  } else {
-    bookingEnd.setHours(23, 59, 59, 999);
-  }
+  const bookingEnd =
+    Number.isFinite(endHour) && Number.isFinite(endMinute)
+      ? slotInstant(requestedDate, endTime)
+      : slotInstant(requestedDate, '23:59'); // fin de journée, heure de Paris
   return bookingEnd.getTime() < Date.now();
 }
 
@@ -44,7 +44,7 @@ interface RefundCalculation {
   reason: 'grace_period' | 'full_refund' | 'partial_refund' | 'no_refund';
 }
 
-function calculateRefundAmount(
+export function calculateRefundAmount(
   paidAmount: number,
   policy: CancellationPolicy,
   eventDatetime: Date,
@@ -122,14 +122,12 @@ type CancellableBooking = Pick<
  * No-op sinon. Ne touche pas au statut (l'appelant pose CANCELLED_*). Réutilisé par
  * l'annulation unitaire et l'annulation de série.
  */
-async function applyBookingCancellationRefund(
+export async function applyBookingCancellationRefund(
   booking: CancellableBooking,
   policy: CancellationPolicy
 ): Promise<void> {
   if (booking.status !== 'CONFIRMED' || booking.paymentStatus !== 'paid') return;
-  const eventDatetime = new Date(booking.requestedDate);
-  const [startH, startM] = booking.startTime.split(':').map(Number);
-  eventDatetime.setUTCHours(startH, startM, 0, 0);
+  const eventDatetime = slotInstant(booking.requestedDate, booking.startTime);
   const { refundAmount, refundPercent, reason } = calculateRefundAmount(
     booking.paidAmount!,
     policy,
@@ -678,7 +676,17 @@ export const myBookings = async (req: AuthRequest, res: Response): Promise<void>
       .populate('requester', requesterFields)
       .sort({ createdAt: -1 });
 
-    res.status(200).json({ bookings });
+    const invoices = await InvoiceModel.find({ booking: { $in: bookings.map((b) => b._id) } })
+      .select('-stripePaymentIntentId -stripeSessionId -buyerUserId -sellerOwnerId')
+      .lean();
+    const invoiceByBooking = new Map(invoices.map((inv) => [inv.booking.toString(), inv]));
+    const bookingsWithInvoice = bookings.map((b) => {
+      const booking = b.toObject();
+      const invoiceSnapshot = invoiceByBooking.get(b._id.toString());
+      return invoiceSnapshot ? { ...booking, invoiceSnapshot } : booking;
+    });
+
+    res.status(200).json({ bookings: bookingsWithInvoice });
   } catch (error) {
     console.error('Erreur myBookings:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });
@@ -1616,9 +1624,7 @@ export const getRefundEstimate = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const eventDatetime = new Date(booking.requestedDate);
-    const [h, m] = booking.startTime.split(':').map(Number);
-    eventDatetime.setUTCHours(h, m, 0, 0);
+    const eventDatetime = slotInstant(booking.requestedDate, booking.startTime);
 
     const policy: CancellationPolicy = (booking.venue as { cancellationPolicy: CancellationPolicy }).cancellationPolicy ?? 'moderate';
     const result = calculateRefundAmount(booking.paidAmount, policy, eventDatetime, booking.createdAt);
@@ -1653,6 +1659,9 @@ export const refundVenueBookings = async (venueId: string): Promise<{ refunded: 
         booking.status = 'CANCELLED_BY_OWNER';
         booking.ownerResponse = 'La salle a été supprimée par le propriétaire. Remboursement intégral en cours.';
         await booking.save();
+        // Le booking est supprimé juste après (suppression salle/compte) : le webhook
+        // charge.refunded ne le retrouvera pas — figer la facture maintenant.
+        await updateInvoiceRefundSafe(booking._id.toString(), refundAmount, new Date(), 'refundVenueBookings');
         // Cascade ADR 0002 : l'événement lié perd sa salle → annulé
         await cascadeCancelLinkedEvent(booking._id, 'Salle supprimée par le LIEU');
         refunded++;

@@ -273,10 +273,11 @@ const DirectoryPage: React.FC = () => {
           setOrganizerCancelledCount(0);
           return;
         }
-        const res = await api.get(`/events?organizerId=${selectedUser.id}`);
+        // GET /events est paginee (20 par defaut) : filtrer cote serveur et lire
+        // pagination.total, sinon on ne compte que la premiere page.
+        const res = await api.get(`/events?organizerId=${selectedUser.id}&status=cancelled`);
         const events = Array.isArray(res.data) ? res.data : (res.data?.events || []);
-        const cancelled = events.filter((e: any) => e.status === 'cancelled' || e.status === 'CANCELLED').length;
-        setOrganizerCancelledCount(cancelled);
+        setOrganizerCancelledCount(res.data?.pagination?.total ?? events.length);
       } catch (err) {
         console.error('Erreur récupération évènements organisateur:', err);
         setOrganizerCancelledCount(0);

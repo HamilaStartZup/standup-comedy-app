@@ -1,46 +1,12 @@
-import type { CancellationPolicy } from '../types/venue';
-
 export interface RefundEstimate {
   refundAmount: number;
   refundPercent: 0 | 50 | 100;
   reason: 'grace_period' | 'full_refund' | 'partial_refund' | 'no_refund';
 }
 
-/**
- * Calcule le montant remboursé selon la politique d'annulation de la salle.
- * Miroir exact de la fonction backend calculateRefundAmount().
- */
-export function calculateRefundEstimate(
-  paidAmount: number,
-  policy: CancellationPolicy,
-  eventDatetime: Date,
-  bookingCreatedAt: Date,
-  cancellationTime: Date = new Date()
-): RefundEstimate {
-  const hoursUntilEvent = (eventDatetime.getTime() - cancellationTime.getTime()) / 36e5;
-  const daysUntilEvent = hoursUntilEvent / 24;
-  const hoursSinceBooking = (cancellationTime.getTime() - bookingCreatedAt.getTime()) / 36e5;
-
-  // Période de grâce universelle : < 24h après réservation ET >= 7j avant l'événement
-  if (hoursSinceBooking <= 24 && daysUntilEvent >= 7) {
-    return { refundAmount: paidAmount, refundPercent: 100, reason: 'grace_period' };
-  }
-
-  if (policy === 'flexible') {
-    if (hoursUntilEvent >= 24) return { refundAmount: paidAmount, refundPercent: 100, reason: 'full_refund' };
-    return { refundAmount: 0, refundPercent: 0, reason: 'no_refund' };
-  }
-  if (policy === 'moderate') {
-    if (daysUntilEvent >= 5) return { refundAmount: paidAmount, refundPercent: 100, reason: 'full_refund' };
-    return { refundAmount: 0, refundPercent: 0, reason: 'no_refund' };
-  }
-  if (policy === 'firm') {
-    if (daysUntilEvent >= 30) return { refundAmount: paidAmount, refundPercent: 100, reason: 'full_refund' };
-    if (daysUntilEvent >= 7) return { refundAmount: Math.round(paidAmount * 0.5 * 100) / 100, refundPercent: 50, reason: 'partial_refund' };
-    return { refundAmount: 0, refundPercent: 0, reason: 'no_refund' };
-  }
-  return { refundAmount: 0, refundPercent: 0, reason: 'no_refund' };
-}
+// Le calcul du remboursement vit uniquement côté backend (calculateRefundAmount) :
+// l'estimation affichée vient de GET /venues/bookings/:id/refund-estimate, plus de
+// miroir local à maintenir (dérive de règle métier et de fuseau impossible).
 
 /** Retourne un message lisible pour l'utilisateur sur le remboursement attendu. */
 export function formatRefundMessage(estimate: RefundEstimate, paidAmount: number): string {

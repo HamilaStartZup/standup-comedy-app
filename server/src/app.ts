@@ -24,6 +24,7 @@ import comediansRoutes from './routes/comedians';
 import usersRoutes from './routes/users';
 import stripeRoutes from './routes/stripe';
 import venuesRoutes from './routes/venues';
+import invoicesRoutes from './routes/invoices';
 import prospectionRoutes from './routes/prospection';
 import { handleStripeWebhook } from './controllers/stripe';
 
@@ -100,6 +101,7 @@ export const createApp = () => {
   app.use('/api/users', usersRoutes);
   app.use('/api/stripe', stripeRoutes);
   app.use('/api/venues', venuesRoutes);
+  app.use('/api/invoices', invoicesRoutes);
   app.use('/api/prospection', prospectionRoutes);
 
   app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
