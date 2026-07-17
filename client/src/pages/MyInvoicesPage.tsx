@@ -25,7 +25,7 @@ const MyInvoicesPage: React.FC = () => {
         {!isLoading && (invoices?.length ?? 0) === 0 && <p>Aucune facture pour le moment.</p>}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {invoices?.map((invoice) => (
+          {invoices?.map((invoice: IInvoiceSnapshot) => (
             <div
               key={invoice.booking}
               style={{
