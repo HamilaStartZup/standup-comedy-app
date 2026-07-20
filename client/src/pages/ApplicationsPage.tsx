@@ -512,7 +512,7 @@ function ApplicationsPage() {
   // Récupérer la liste unique des humoristes
   const uniqueComedians = Array.from(new Set(applications.map(app => app.comedian ? `${app.comedian._id}::${app.comedian.firstName} ${app.comedian.lastName}` : '')))
     .filter(Boolean)
-    .map(str => {
+    .map((str: string) => {
       const [id, name] = str.split('::');
       return { id, name };
     });
@@ -601,7 +601,7 @@ function ApplicationsPage() {
           )
           .map(app => `${app.event.organizer._id}::${app.event.organizer.firstName} ${app.event.organizer.lastName}`)
       )
-    ).map(str => {
+    ).map((str: string) => {
       const [id, name] = str.split('::');
       return { id, name };
     });

@@ -365,7 +365,7 @@ function LoginPage() {
           </button>
         </form>
 
-        {/* Social Login Buttons (via Keycloak Identity Providers) */}
+        {/* Social Login (Keycloak) */}
         {isOAuthEnabled && (
           <>
             <div style={{
@@ -379,7 +379,6 @@ function LoginPage() {
               <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, var(--ccc-border-medium))' }} />
             </div>
 
-            {/* Bouton principal - Google */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px' }}>
               <button
                 type="button"
@@ -422,13 +421,7 @@ function LoginPage() {
                 </svg>
                 Continuer avec Google
               </button>
-
             </div>
-
-            {/* Boutons secondaires - GitHub, Microsoft, Apple */}
-            {/* <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              ...
-            </div> */}
           </>
         )}
         <p style={{ marginTop: '15px', marginBottom: '10px' }}>

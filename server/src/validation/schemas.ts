@@ -321,7 +321,6 @@ export const createEventSchema = z.object({
   message: 'End time must be after start time',
   path: ['endTime']
 });
-// Note: on n'exige plus endTime > startTime pour autoriser les événements qui dépassent minuit (fin le lendemain)
 
 export const updateEventSchema = z.object({
   title: z.string()

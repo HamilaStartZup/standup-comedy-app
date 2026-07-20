@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./server
+    container_name: standup_backend_prod
+    ports:
+      - "3000:3000"
+    restart: always
+
+  frontend:
+    build: ./client
+    container_name: standup_frontend_prod
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    restart: always

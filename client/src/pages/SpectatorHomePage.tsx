@@ -93,7 +93,7 @@ export default function SpectatorHomePage() {
 
   // Set of event IDs the user is registered to — reliable source of truth
   const registeredEventIds = useMemo(() => {
-    return new Set(myRegistrationsList.map((e) => e._id));
+    return new Set(myRegistrationsList.map((e: IEvent) => e._id));
   }, [myRegistrationsList]);
 
   const { data: aroundMeRaw, isLoading: loadingAroundMe, isError: errorAroundMe } = useQuery({
@@ -180,7 +180,7 @@ export default function SpectatorHomePage() {
   }, [focusId, aroundMeEvents, myRegistrationsList, loadingAroundMe, loadingRegistrations, showInfo]);
 
   const now = new Date();
-  const allEvents = eventsData || [];
+  const allEvents: IEvent[] = eventsData || [];
   const isUserWithdrawn = (event: IEvent) => {
     const ids = event.withdrawnSpectators;
     if (!ids?.length || !user?._id) return false;
@@ -191,14 +191,14 @@ export default function SpectatorHomePage() {
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const aroundMeUpcoming = aroundMeEvents
-    .filter((e) => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled' && !isUserWithdrawn(e))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .filter((e: IEvent) => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled' && !isUserWithdrawn(e))
+    .sort((a: IEvent, b: IEvent) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const registeredUpcoming = useMemo(
     () =>
       myRegistrationsList
-        .filter((e) => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled')
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+        .filter((e: IEvent) => new Date(e.date) >= now && e.status?.toLowerCase() !== 'cancelled')
+        .sort((a: IEvent, b: IEvent) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     [myRegistrationsList, now]
   );
 
@@ -403,7 +403,7 @@ export default function SpectatorHomePage() {
                     gap: 16,
                   }}
                 >
-                  {registeredUpcoming.map((event) => (
+                  {registeredUpcoming.map((event: IEvent) => (
                     <EventCard
                       key={event._id}
                       event={event}
@@ -473,7 +473,7 @@ export default function SpectatorHomePage() {
                     gap: 16,
                   }}
                 >
-                  {aroundMeUpcoming.map((event) => (
+                  {aroundMeUpcoming.map((event: IEvent) => (
                     <EventCard
                       key={event._id}
                       event={event}

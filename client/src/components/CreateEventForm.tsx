@@ -653,8 +653,8 @@ function CreateEventForm({ onClose, onEventCreated, initialData }: CreateEventFo
   const handleTimeSelect = (timeValue: string, field: 'startTime' | 'endTime') => {
     setFormData(prev => {
       const next = { ...prev, [field]: timeValue };
-      if (field === 'startTime' && prev.durationMinutes > 0) {
-        next.endTime = computeEndFromDuration(prev.date, timeValue, prev.durationMinutes).endTime;
+      if (field === 'startTime' && eventDurationMinutes > 0) {
+        next.endTime = computeEndFromDuration(prev.date, timeValue, eventDurationMinutes).endTime;
       }
       return next;
     });

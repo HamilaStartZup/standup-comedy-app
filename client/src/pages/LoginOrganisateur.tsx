@@ -266,7 +266,7 @@ function LoginOrganisateur() {
           </div>
         )}
 
-        {/* Social Login Buttons (via Keycloak Identity Providers) */}
+        {/* Social Login (Keycloak) */}
         {isOAuthEnabled && (
           <>
             <div style={{
@@ -280,7 +280,6 @@ function LoginOrganisateur() {
               <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, var(--ccc-border-medium))' }} />
             </div>
 
-            {/* Bouton principal - Google */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px' }}>
               <button
                 type="button"
@@ -325,7 +324,6 @@ function LoginOrganisateur() {
               </button>
 
             </div>
-
           </>
         )}
         <p style={{ marginTop: '15px', marginBottom: '10px' }}>

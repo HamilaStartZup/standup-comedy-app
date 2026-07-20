@@ -138,7 +138,7 @@ const ProspectionPage: React.FC = () => {
   });
 
   useEffect(() => {
-    const running = runsData?.runs?.find((r) => r.status === 'running');
+    const running = runsData?.runs?.find((r: IProspectionRun) => r.status === 'running');
     if (running) {
       setActiveRunId(running._id);
     }
@@ -972,7 +972,7 @@ const ProspectionPage: React.FC = () => {
             </p>
           ) : (
             <div style={{ display: 'grid', gap: 12 }}>
-              {inboxData?.messages.map((message) => (
+              {inboxData?.messages.map((message: IProspectionInboxMessage) => (
                 <div
                   key={message._id}
                   style={{
@@ -1156,7 +1156,7 @@ const ProspectionPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {venuesData?.venues.map((v) => (
+                    {venuesData?.venues.map((v: IProspectedVenue) => (
                       <tr key={v._id} style={{ borderBottom: '1px solid var(--ccc-border-subtle)' }}>
                         <td style={{ padding: 8, fontWeight: 600 }}>{v.name}</td>
                         <td style={{ padding: 8 }}>{VENUE_TYPE_OPTIONS.find((t) => t.value === v.type)?.label ?? v.type}</td>

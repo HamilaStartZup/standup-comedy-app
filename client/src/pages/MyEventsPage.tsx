@@ -692,18 +692,11 @@ useEffect(() => {
     const eventDate = new Date(eventDateString);
     let eventEndDateTime: Date;
     if (endTime) {
-      const [endH, endM] = endTime.split(":").map(Number);
-      const endMinutes = endH * 60 + endM;
-      let endDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-      if (startTime) {
-        const [startH, startM] = startTime.split(":").map(Number);
-        const startMinutes = startH * 60 + startM;
-        if (endMinutes <= startMinutes) {
-          endDate.setDate(endDate.getDate() + 1);
-        }
-      }
-      eventEndDateTime = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), endH, endM);
+      // On suppose que endTime est au format "HH:mm" (ex: "23:30")
+      const [hours, minutes] = endTime.split(":").map(Number);
+      eventEndDateTime = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), hours, minutes);
     } else {
+      // Fin de la journée si pas d'heure de fin
       eventEndDateTime = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), 23, 59, 59, 999);
     }
     const now = new Date();
@@ -1522,7 +1515,7 @@ useEffect(() => {
   const totalUpcomingPages = (isOrganizerRole && organizerTab === 'upcoming' && serverEventsPagination)
     ? Math.max(1, serverEventsPagination.totalPages)
     : Math.max(1, Math.ceil(eventsToDisplay.length / ITEMS_PER_PAGE));
-  const paginatedUpcomingEvents = (isOrganizerRole && organizerTab === 'upcoming' && serverEventsPagination)
+  const paginatedUpcomingEvents: IEvent[] = (isOrganizerRole && organizerTab === 'upcoming' && serverEventsPagination)
     ? eventsToDisplay
     : eventsToDisplay.slice(
         (upcomingPage - 1) * ITEMS_PER_PAGE,
