@@ -401,13 +401,18 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
  */
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id_token } = req.body;
+    const { id_token, refresh_token } = req.body;
     const postLogoutRedirectUri = `${config.frontend.url}`;
 
-    // Back-channel logout : termine la session Keycloak côté serveur via le
-    // refresh_token chiffré stocké dans le cookie kc_rt (indépendant du navigateur).
+    // Back-channel logout : termine la session SSO Keycloak côté serveur.
+    // Web : refresh_token chiffré dans le cookie kc_rt (indépendant du navigateur).
+    // Mobile (Bearer, sans cookie) : refresh_token en clair dans le body,
+    // renvoyé par /exchange et conservé dans le Keystore jusqu'au logout.
     const encryptedRefreshToken = req.cookies?.kc_rt;
-    if (encryptedRefreshToken) {
+    if (refresh_token) {
+      // endKeycloakSession avale déjà ses erreurs (non bloquant)
+      await endKeycloakSession(refresh_token);
+    } else if (encryptedRefreshToken) {
       try {
         await endKeycloakSession(decrypt(encryptedRefreshToken));
       } catch (sessionError) {
