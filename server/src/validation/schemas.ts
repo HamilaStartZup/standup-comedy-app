@@ -115,18 +115,17 @@ export const registerSchema = z.object({
     path: ['phone']
   });
 
-export const upgradeToOrganizerSchema = z.object({
-  companyName: z.string().max(200).optional(),
-  description: z.string().max(1000).optional(),
-  website: z.string().url('URL du site invalide').optional().or(z.literal('')),
-  venueTypes: z.array(z.string()).optional(),
-  eventFrequency: z.enum(['weekly', 'monthly', 'occasional']).optional(),
-  averageBudget: z.object({
-    min: z.number().min(0),
-    max: z.number().min(0),
-  }).optional(),
-  postalCode: z.string().min(1, 'Le code postal est requis'),
-});
+const postalCodeRequired = z.string()
+  .regex(/^\d{5}$/, { message: 'Le code postal doit contenir 5 chiffres' });
+const postalCodeOptional = postalCodeRequired.optional();
+const latitudeOptional = z.number()
+  .min(-90, { message: 'La latitude doit être comprise entre -90 et 90' })
+  .max(90, { message: 'La latitude doit être comprise entre -90 et 90' })
+  .optional();
+const longitudeOptional = z.number()
+  .min(-180, { message: 'La longitude doit être comprise entre -180 et 180' })
+  .max(180, { message: 'La longitude doit être comprise entre -180 et 180' })
+  .optional();
 
 export const loginSchema = z.object({
   email: z.string()
@@ -155,9 +154,7 @@ export const locationSchema = z.object({
     .min(1, { message: 'Event location is incomplete or invalid' })
     .max(50, { message: 'Le nom de la ville est trop long' })
     .transform((val) => val.trim()),
-  postalCode: z.string()
-    .regex(/^\d{5}$/, { message: 'Le code postal doit contenir 5 chiffres' })
-    .optional()
+  postalCode: postalCodeOptional
     .transform((val) => val?.trim()),
   department: z.string()
     .max(3, { message: 'Le code département est invalide' })
@@ -174,11 +171,11 @@ export const updateLocationSchema = z.object({
   venueType: z.enum(['theatre', 'salle_polyvalente', 'cafe', 'restaurant', 'autre']).optional(),
   address: z.string().max(200).optional().transform((val) => val?.trim()),
   city: z.string().max(50).optional().transform((val) => val?.trim()),
-  postalCode: z.string().optional().transform((val) => val?.trim()),
+  postalCode: postalCodeOptional.transform((val) => val?.trim()),
   department: z.string().max(3).optional().transform((val) => val?.trim()),
   country: z.string().max(50).optional().transform((val) => val?.trim()),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  latitude: latitudeOptional,
+  longitude: longitudeOptional,
 }).strict().partial();
 
 export const requirementsSchema = z.object({
@@ -437,9 +434,7 @@ export const updateProfileSchema = z.object({
   email: z.string()
     .email('Invalid email format')
     .optional(),
-  city: z.string()
-    .max(50, { message: 'Invalid city' })
-    .optional(),
+  city: z.string().max(50).optional(),
   phone: z.string()
     .refine((phone) => !phone || isValidPhoneNumber(phone), { message: PHONE_VALIDATION_MESSAGE })
     .optional(),
@@ -586,10 +581,10 @@ export const createVenueSchema = z.object({
   description: z.string().min(10).max(2000),
   address: z.string().min(1),
   city: z.string().min(1),
-  postalCode: z.string().min(1),
+  postalCode: postalCodeRequired,
   country: z.string().min(1),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  latitude: latitudeOptional,
+  longitude: longitudeOptional,
   photos: photoArraySchema,
   equipment: z.array(z.string()).optional().default([]),
   capacity: z.number().int().min(1),

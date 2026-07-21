@@ -61,9 +61,7 @@ export const listVenues = async (req: AuthRequest, res: Response): Promise<void>
     const safeLimit = Math.min(limitNum, 50);
 
     const filter: Record<string, unknown> = { isActive: true, isDeleted: { $ne: true } };
-    if (req.query.owner === 'me' && req.user?.id) {
-      filter.owner = req.user.id;
-    } else if (req.user?.role === 'LIEU') {
+    if (req.user?.role === 'LIEU') {
       filter.owner = req.user.id;
     }
     if (venueType) filter.venueType = venueType;
@@ -155,7 +153,7 @@ export const listMyVenues = async (req: AuthRequest, res: Response): Promise<voi
     const [venues, total] = await Promise.all([
       VenueModel.find(filter)
         .collation(collation)
-        .populate('owner', 'firstName lastName organizerProfile.companyName')
+        .populate('owner', 'firstName lastName lieuProfile.companyName')
         .select('name city address capacity venueType pricePerEvent photos isActive owner')
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -181,7 +179,7 @@ export const getVenue = async (req: AuthRequest, res: Response): Promise<void> =
       return;
     }
 
-    const populateFields = userId ? 'firstName lastName organizerProfile.companyName' : 'firstName lastName organizerProfile.companyName';
+    const populateFields = 'firstName lastName lieuProfile.companyName';
     let venue = await VenueModel.findById(venueId).populate('owner', populateFields);
     if (!venue || venue.isDeleted) {
       res.status(404).json({ message: 'Salle introuvable' });
@@ -190,16 +188,15 @@ export const getVenue = async (req: AuthRequest, res: Response): Promise<void> =
 
     // Si l'user est le propriétaire, exposer l'email
     if (userId && venue.owner?.toString() === userId) {
-      venue = await VenueModel.findById(venueId).populate('owner', 'firstName lastName organizerProfile.companyName email');
+      venue = await VenueModel.findById(venueId).populate('owner', 'firstName lastName lieuProfile.companyName email');
     } else if (userId) {
-      // Sinon, vérifier s'il a un booking ACCEPTED
       const hasAcceptedBooking = await VenueBookingModel.exists({
         venue: venueId,
         requester: userId,
         status: 'ACCEPTED',
       });
       if (hasAcceptedBooking) {
-        venue = await VenueModel.findById(venueId).populate('owner', 'firstName lastName organizerProfile.companyName email');
+        venue = await VenueModel.findById(venueId).populate('owner', 'firstName lastName lieuProfile.companyName email');
       }
     }
 

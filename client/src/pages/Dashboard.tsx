@@ -721,30 +721,7 @@ const Dashboard = () => {
                 variant: 'superAdmin',
                 onClick: () => navigate('/events?tab=cancelled')
               })}
-              {/* Card Salles — ORGANIZER uniquement */}
-              <div
-                style={{
-                  ...cardStyle,
-                  ...superAdminCardLayoutStyle,
-                  cursor: 'pointer',
-                }}
-                onClick={() => navigate('/my-venues')}
-              >
-                <div style={cardRowTopStyle}>
-                  <p style={superAdminCardTitleStyle}>Mes salles</p>
-                </div>
-                <div style={cardRowCenterStyle}>
-                  <p style={{ ...superAdminCardValueStyle, fontSize: '1.1rem' }}>
-                    Louer & gérer
-                  </p>
-                </div>
-                <div style={cardRowBottomStyle}>
-                  <p style={{ fontSize: '0.85rem', color: '#333333', lineHeight: 1.4, textAlign: 'center', margin: '0 0 8px' }}>
-                    Mettez vos salles en location et gérez les demandes de réservation.
-                  </p>
-                  <span style={superAdminCardIconStyle}>🏢</span>
-                </div>
-              </div>
+
             </>
           )}
         </div>

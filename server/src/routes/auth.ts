@@ -13,11 +13,10 @@ import {
   deactivateUser,
   reactivateUser,
   deleteUser,
-  upgradeToOrganizer,
 } from '../controllers/auth';
 import { authMiddleware, authorizeRoles } from '../middleware/auth';
 import { validate } from '../middleware/validation';
-import { registerSchema, loginSchema, upgradeToOrganizerSchema } from '../validation/schemas';
+import { registerSchema, loginSchema } from '../validation/schemas';
 
 const router = Router();
 
@@ -41,7 +40,5 @@ router.post('/admin/reset-password', authMiddleware, authorizeRoles('SUPER_ADMIN
 router.patch('/users/:userId/deactivate', authMiddleware, authorizeRoles('SUPER_ADMIN'), deactivateUser);
 router.patch('/users/:userId/reactivate', authMiddleware, authorizeRoles('SUPER_ADMIN'), reactivateUser);
 router.delete('/users/:userId', authMiddleware, authorizeRoles('SUPER_ADMIN'), deleteUser);
-
-router.post('/upgrade-to-organizer', authMiddleware, validate(upgradeToOrganizerSchema), upgradeToOrganizer);
 
 export default router; 

@@ -122,8 +122,6 @@ export interface User {
   // Restriction temporaire (ex: signalement en cours)
   isRestricted?: boolean;
   restrictedAt?: Date;
-  // Permet d'afficher le switch retour vers le compte LIEU
-  canSwitchToLieu?: boolean;
   // Consentement RGPD
   consent?: {
     termsAccepted?: boolean;

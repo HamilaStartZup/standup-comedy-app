@@ -92,7 +92,6 @@ export interface IUserData {
   onboardingCompleted?: boolean;
   emailVerified?: boolean;
   avatarUrl?: string | null;
-  canSwitchToLieu?: boolean;
   createdAt?: string;
   lastLoginAt?: string;
   spectatorPreferences?: {

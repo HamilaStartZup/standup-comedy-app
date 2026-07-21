@@ -79,7 +79,7 @@ const VenueAccessRoute: React.FC<{ children: React.ReactNode }> = ({ children })
 const VenueOwnerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
-  if (user?.role !== 'ORGANIZER' && user?.role !== 'LIEU') return <Navigate to="/dashboard" replace />;
+  if (user?.role !== 'LIEU') return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 };
 

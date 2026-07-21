@@ -32,19 +32,6 @@ api.interceptors.response.use(
   (error) => Promise.reject(error)
 );
 
-export const upgradeToOrganizer = async (payload: {
-  companyName?: string;
-  description?: string;
-  website?: string;
-  venueTypes?: string[];
-  eventFrequency?: string;
-  averageBudget?: { min: number; max: number };
-  postalCode: string;
-}) => {
-  const response = await api.post('/auth/upgrade-to-organizer', payload);
-  return response.data;
-};
-
 // Fonctions pour gérer les absences
 export const markAbsence = async (eventId: string, comedianId: string, reason?: string) => {
   const response = await api.post('/absences', { eventId, comedianId, reason });

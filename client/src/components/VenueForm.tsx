@@ -300,6 +300,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
       if (!formData.address.trim()) errs.address = "L'adresse est requise.";
       if (!formData.city.trim()) errs.city = 'La ville est requise.';
       if (!formData.postalCode.trim()) errs.postalCode = 'Le code postal est requis.';
+      else if (!/^\d{5}$/.test(formData.postalCode.trim())) errs.postalCode = 'Le code postal doit contenir 5 chiffres.';
       if (!formData.country.trim()) errs.country = 'Le pays est requis.';
     }
     if (s === 2) {
