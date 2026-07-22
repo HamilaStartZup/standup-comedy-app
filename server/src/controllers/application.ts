@@ -407,6 +407,17 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response): 
             );
           }
           emitApplicationStatusChanged(app._id.toString(), 'CANCELLED_BY_PLATFORM', otherEventId?.toString() || '', [comedianId]);
+
+          // Notif persistée : sans ça, le comédien perd une place sans trace s'il n'est pas connecté
+          const overlapEvent = app.event as EventDocument | null;
+          await createNotification(
+            comedianId,
+            'application_rejected',
+            'Candidature annulée automatiquement',
+            `Votre candidature pour "${overlapEvent?.title ?? 'un autre événement'}" a été annulée automatiquement car elle chevauchait un autre événement que vous venez d'accepter.`,
+            otherEventId?.toString(),
+            app._id.toString()
+          );
         }
         if (overlapping.length > 0) {
           console.log(`🔄 [PLATFORM] ${overlapping.length} candidature(s) au même créneau annulée(s) pour le comédien`);
@@ -1105,6 +1116,17 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
           .lean();
         if (organizer) {
           await sendWithdrawalNotificationToOrganizer(event, comedian, organizer);
+          // Parité avec le désistement tardif : notif in-app persistée (émet aussi le SSE badge).
+          // Réutilise le type "late_cancellation_organizer" (famille désistement) ; le titre précise que ce n'est PAS tardif.
+          await createNotification(
+            (organizer._id as any).toString(),
+            'late_cancellation_organizer',
+            'Désistement d\'un participant',
+            `${comedian.firstName} ${comedian.lastName} s'est désisté de votre événement "${event.title}".`,
+            (event as any)._id?.toString(),
+            (application._id as any).toString(),
+            comedian._id.toString()
+          );
         }
       }
     }
@@ -1137,6 +1159,9 @@ export const expirePendingApplicationsForEvent = async (eventId: Types.ObjectId)
       status: 'PENDING'
     }).populate('comedian');
 
+    const eventDoc = await EventModel.findById(eventId).select('title');
+    const eventTitle = eventDoc?.title ?? 'un événement';
+
     let expiredCount = 0;
 
     for (const application of pendingApplications) {
@@ -1155,6 +1180,19 @@ export const expirePendingApplicationsForEvent = async (eventId: Types.ObjectId)
           await comedian.save();
           Logger.info(`[STATS] applicationsPending décrementé`, { userId: comedian._id, applicationId: application._id });
         }
+
+        // Cohérence avec toute autre transition de Application.status : SSE + notif persistée
+        // (sinon le comédien voit sa candidature disparaître sans explication)
+        const comedianIdStr = comedianId.toString();
+        emitApplicationStatusChanged(application._id.toString(), 'EXPIRED', eventId.toString(), [comedianIdStr]);
+        await createNotification(
+          comedianIdStr,
+          'application_rejected',
+          'Candidature expirée',
+          `Votre candidature pour "${eventTitle}" a expiré : l'événement est terminé sans réponse à votre candidature.`,
+          eventId.toString(),
+          application._id.toString()
+        );
       }
 
       expiredCount++;

@@ -6,7 +6,6 @@ import { VenueBookingModel, VenueBookingDocument, VenueBookingStatus } from '../
 import { VenueBlockedDateModel } from '../models/VenueBlockedDate';
 import { InvoiceModel } from '../models/Invoice';
 import { updateInvoiceRefundSafe } from '../services/invoiceSnapshot';
-import { NotificationModel } from '../models/Notification';
 import { stripe } from './stripe';
 import { EventModel, EventDocument } from '../models/Event';
 import { cancelEventInternal, notifySeriesCancellation } from '../services/eventCancellation';
@@ -372,37 +371,37 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
     try {
       if (!isAutomatic) {
         // Mode manuel : notifier le propriétaire
-        await NotificationModel.create({
-          user: venue.owner,
-          type: 'venue_booking_request',
-          title: 'Nouvelle demande de réservation',
-          message: `Une demande de réservation a été faite pour votre salle "${venue.name}".`,
-          relatedVenue: venue._id,
-          relatedBooking: booking._id,
-          read: false,
-        });
+        await createNotification(
+          venue.owner.toString(),
+          'venue_booking_request',
+          'Nouvelle demande de réservation',
+          `Une demande de réservation a été faite pour votre salle "${venue.name}".`,
+          undefined, undefined, undefined,
+          venue._id.toString(),
+          booking._id.toString()
+        );
       } else if (initialStatus === 'CONFIRMED') {
         // Mode automatique, salle gratuite → notifier le requester de la confirmation
-        await NotificationModel.create({
-          user: requesterId,
-          type: 'venue_booking_confirmed',
-          title: 'Réservation confirmée',
-          message: `Votre réservation pour "${venue.name}" a été confirmée automatiquement (aucun paiement requis).`,
-          relatedVenue: venue._id,
-          relatedBooking: booking._id,
-          read: false,
-        });
+        await createNotification(
+          requesterId,
+          'venue_booking_confirmed',
+          'Réservation confirmée',
+          `Votre réservation pour "${venue.name}" a été confirmée automatiquement (aucun paiement requis).`,
+          undefined, undefined, undefined,
+          venue._id.toString(),
+          booking._id.toString()
+        );
       } else {
         // Mode automatique, salle payante → notifier le requester du paiement requis
-        await NotificationModel.create({
-          user: requesterId,
-          type: 'venue_booking_payment_required',
-          title: 'Réservation acceptée — paiement requis',
-          message: `Votre réservation pour "${venue.name}" a été acceptée automatiquement. Vous avez 72h pour effectuer le paiement.`,
-          relatedVenue: venue._id,
-          relatedBooking: booking._id,
-          read: false,
-        });
+        await createNotification(
+          requesterId,
+          'venue_booking_payment_required',
+          'Réservation acceptée — paiement requis',
+          `Votre réservation pour "${venue.name}" a été acceptée automatiquement. Vous avez 72h pour effectuer le paiement.`,
+          undefined, undefined, undefined,
+          venue._id.toString(),
+          booking._id.toString()
+        );
       }
     } catch (notifError) {
       console.error('Erreur création notification createBooking:', notifError, { venueId });
@@ -854,39 +853,39 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
     // Notifier le demandeur (découplé : un échec de notif ne doit pas faire échouer la réponse)
     try {
       if (status === 'REFUSED') {
-        await NotificationModel.create({
-          user: booking.requester,
-          type: 'venue_booking_response',
-          title: 'Réservation refusée',
-          message: `Votre demande de réservation pour "${booking.venue.name}" a été refusée.`,
-          relatedVenue: booking.venue._id,
-          relatedBooking: booking._id,
-          read: false,
-        });
+        await createNotification(
+          booking.requester.toString(),
+          'venue_booking_response',
+          'Réservation refusée',
+          `Votre demande de réservation pour "${booking.venue.name}" a été refusée.`,
+          undefined, undefined, undefined,
+          booking.venue._id.toString(),
+          booking._id.toString()
+        );
       } else if ((booking.status as VenueBookingStatus) === 'CONFIRMED') {
         // Salle gratuite ou pourcentage billetterie → notification de confirmation sans paiement
-        await NotificationModel.create({
-          user: booking.requester,
-          type: 'venue_booking_confirmed',
-          title: 'Réservation confirmée',
-          message: `Votre réservation pour "${booking.venue.name}" a été confirmée (aucun paiement requis).`,
-          relatedVenue: booking.venue._id,
-          relatedBooking: booking._id,
-          read: false,
-        });
+        await createNotification(
+          booking.requester.toString(),
+          'venue_booking_confirmed',
+          'Réservation confirmée',
+          `Votre réservation pour "${booking.venue.name}" a été confirmée (aucun paiement requis).`,
+          undefined, undefined, undefined,
+          booking.venue._id.toString(),
+          booking._id.toString()
+        );
       } else {
         // Salle payante → notification demandant le paiement
         const venueDoc = await VenueModel.findById(booking.venue._id);
         const price = venueDoc?.pricePerEvent ?? 0;
-        await NotificationModel.create({
-          user: booking.requester,
-          type: 'venue_booking_payment_required',
-          title: 'Réservation acceptée — paiement requis',
-          message: `Votre réservation pour "${booking.venue.name}" a été acceptée. Prix : ${price}€. Vous avez 72h pour effectuer le paiement.`,
-          relatedVenue: booking.venue._id,
-          relatedBooking: booking._id,
-          read: false,
-        });
+        await createNotification(
+          booking.requester.toString(),
+          'venue_booking_payment_required',
+          'Réservation acceptée — paiement requis',
+          `Votre réservation pour "${booking.venue.name}" a été acceptée. Prix : ${price}€. Vous avez 72h pour effectuer le paiement.`,
+          undefined, undefined, undefined,
+          booking.venue._id.toString(),
+          booking._id.toString()
+        );
       }
     } catch (notifError) {
       console.error('Erreur création notification updateBookingStatus:', notifError, { bookingId, status });
@@ -1234,17 +1233,17 @@ export const cancelBookingByOwner = async (req: AuthRequest, res: Response): Pro
         : booking.paymentStatus === 'refund_pending'
           ? ' Un remboursement est en cours de traitement.'
           : '';
-      await NotificationModel.create({
-        user: booking.requester,
-        type: 'venue_booking_cancelled_by_owner',
-        title: 'Réservation annulée par le propriétaire',
-        message: reason
+      await createNotification(
+        booking.requester.toString(),
+        'venue_booking_cancelled_by_owner',
+        'Réservation annulée par le propriétaire',
+        reason
           ? `Votre réservation pour "${booking.venue.name}" a été annulée par le propriétaire. Motif : ${reason}.${refundInfo}`
           : `Votre réservation pour "${booking.venue.name}" a été annulée par le propriétaire.${refundInfo}`,
-        relatedVenue: booking.venue._id,
-        relatedBooking: booking._id,
-        read: false,
-      });
+        undefined, undefined, undefined,
+        booking.venue._id.toString(),
+        booking._id.toString()
+      );
     } catch (notifError) {
       console.error('Erreur création notification cancelBookingByOwner:', notifError, { bookingId });
     }
@@ -1366,19 +1365,17 @@ export const blockDate = async (req: AuthRequest, res: Response): Promise<void> 
     // Notifications découplées — un échec de notif n'affecte pas le compteur
     await Promise.allSettled(
       savedBookings.map((booking) =>
-        NotificationModel.create({
-          user: booking.requester,
-          type: 'venue_date_blocked',
-          title: 'Réservation annulée — salle indisponible',
-          message: reason
+        createNotification(
+          booking.requester.toString(),
+          'venue_date_blocked',
+          'Réservation annulée — salle indisponible',
+          reason
             ? `Votre réservation pour "${venue.name}" a été annulée car la salle est indisponible ce jour-là. Motif : ${reason}`
             : `Votre réservation pour "${venue.name}" a été annulée car la salle est indisponible ce jour-là.`,
-          relatedVenue: venue._id,
-          relatedBooking: booking._id,
-          read: false,
-        }).catch((notifError) => {
-          console.error('blockDate — échec notification:', notifError, { bookingId: booking._id });
-        })
+          undefined, undefined, undefined,
+          venue._id.toString(),
+          booking._id.toString()
+        )
       )
     );
 
@@ -1675,15 +1672,15 @@ export const refundVenueBookings = async (venueId: string): Promise<{ refunded: 
         );
 
         try {
-          await NotificationModel.create({
-            user: booking.requester,
-            type: 'venue_deleted_refund',
-            title: 'Salle supprimée — remboursement effectué',
-            message: `La salle "${venueName}" a été supprimée. Votre paiement de ${refundAmount}€ sera remboursé intégralement.`,
-            relatedVenue: venueId as any,
-            relatedBooking: booking._id,
-            read: false,
-          });
+          await createNotification(
+            booking.requester._id.toString(),
+            'venue_deleted_refund',
+            'Salle supprimée — remboursement effectué',
+            `La salle "${venueName}" a été supprimée. Votre paiement de ${refundAmount}€ sera remboursé intégralement.`,
+            undefined, undefined, undefined,
+            venueId,
+            booking._id.toString()
+          );
         } catch (notifErr) {
           console.error('[refundVenueBookings] Erreur notification:', notifErr, { bookingId: booking._id });
         }

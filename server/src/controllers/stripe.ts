@@ -4,7 +4,6 @@ import { AuthRequest } from '../middleware/auth';
 import { config } from '../config/env';
 import { EventModel } from '../models/Event';
 import { VenueBookingModel } from '../models/VenueBooking';
-import { NotificationModel } from '../models/Notification';
 import mongoose from 'mongoose';
 import { emitVenueBookingPaymentUpdated } from '../services/eventEmitter';
 import { createNotification } from './notification';
@@ -209,28 +208,26 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
 
         await createInvoiceSnapshotSafe(booking._id.toString(), 'webhook checkout.session.completed');
 
-        // Notifications pour les deux parties
+        // Notifications pour les deux parties (via createNotification → émet aussi le SSE badge)
         try {
-          await NotificationModel.create([
-            {
-              user: booking.requester,
-              type: 'venue_booking_confirmed',
-              title: 'Réservation confirmée',
-              message: `Votre paiement pour "${booking.venue.name}" a été reçu. Réservation confirmée !`,
-              relatedVenue: booking.venue._id,
-              relatedBooking: booking._id,
-              read: false,
-            },
-            {
-              user: booking.venue.owner,
-              type: 'venue_booking_confirmed',
-              title: 'Paiement reçu',
-              message: `Le paiement pour la réservation de "${booking.venue.name}" a été reçu. Réservation confirmée !`,
-              relatedVenue: booking.venue._id,
-              relatedBooking: booking._id,
-              read: false,
-            },
-          ]);
+          await createNotification(
+            booking.requester.toString(),
+            'venue_booking_confirmed',
+            'Réservation confirmée',
+            `Votre paiement pour "${booking.venue.name}" a été reçu. Réservation confirmée !`,
+            undefined, undefined, undefined,
+            booking.venue._id.toString(),
+            booking._id.toString()
+          );
+          await createNotification(
+            booking.venue.owner.toString(),
+            'venue_booking_confirmed',
+            'Paiement reçu',
+            `Le paiement pour la réservation de "${booking.venue.name}" a été reçu. Réservation confirmée !`,
+            undefined, undefined, undefined,
+            booking.venue._id.toString(),
+            booking._id.toString()
+          );
         } catch (notifError) {
           console.error('[Stripe] Erreur notification webhook venue_booking:', notifError, { bookingId, userId });
         }
@@ -657,28 +654,26 @@ export const confirmVenueBookingPayment = async (req: AuthRequest, res: Response
 
     await createInvoiceSnapshotSafe(booking._id.toString(), 'confirmVenueBookingPayment');
 
-    // Notifications pour les deux parties
+    // Notifications pour les deux parties (via createNotification → émet aussi le SSE badge)
     try {
-      await NotificationModel.create([
-        {
-          user: booking.requester,
-          type: 'venue_booking_confirmed',
-          title: 'Réservation confirmée',
-          message: `Votre paiement pour "${booking.venue.name}" a été reçu. Réservation confirmée !`,
-          relatedVenue: booking.venue._id,
-          relatedBooking: booking._id,
-          read: false,
-        },
-        {
-          user: booking.venue.owner,
-          type: 'venue_booking_confirmed',
-          title: 'Paiement reçu',
-          message: `Le paiement pour la réservation de "${booking.venue.name}" a été reçu. Réservation confirmée !`,
-          relatedVenue: booking.venue._id,
-          relatedBooking: booking._id,
-          read: false,
-        },
-      ]);
+      await createNotification(
+        booking.requester.toString(),
+        'venue_booking_confirmed',
+        'Réservation confirmée',
+        `Votre paiement pour "${booking.venue.name}" a été reçu. Réservation confirmée !`,
+        undefined, undefined, undefined,
+        booking.venue._id.toString(),
+        booking._id.toString()
+      );
+      await createNotification(
+        booking.venue.owner.toString(),
+        'venue_booking_confirmed',
+        'Paiement reçu',
+        `Le paiement pour la réservation de "${booking.venue.name}" a été reçu. Réservation confirmée !`,
+        undefined, undefined, undefined,
+        booking.venue._id.toString(),
+        booking._id.toString()
+      );
     } catch (notifError) {
       console.error('Erreur notification confirmVenueBookingPayment:', notifError, { bookingId, userId });
     }

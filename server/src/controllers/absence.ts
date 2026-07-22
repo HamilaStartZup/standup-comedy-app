@@ -97,9 +97,16 @@ export const markAbsence = async (req: AuthRequest, res: Response): Promise<void
       await comedian.save();
     }
 
-    // Créer une notification in-app pour l'organisateur (lui-même, mais pour l'historique)
-    // Note: L'organisateur marque l'absence, donc pas besoin de notification pour lui
-    // Mais on pourrait notifier si un autre admin le fait
+    // Notifier le comédien concerné qu'il a été marqué absent (persistée + SSE badge)
+    await createNotification(
+      comedianId,
+      'absence_marked',
+      'Absence signalée',
+      reason
+        ? `Vous avez été marqué(e) absent(e) à l'événement "${event.title}". Motif : ${reason}`
+        : `Vous avez été marqué(e) absent(e) à l'événement "${event.title}".`,
+      eventId
+    );
 
     res.status(201).json({
       message: 'Absence marquée avec succès',
