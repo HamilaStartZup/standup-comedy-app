@@ -46,8 +46,8 @@ const MyInvoicesPage: React.FC = () => {
               </div>
               <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--ccc-text-secondary)' }}>
                 {invoice.seller.venueName}
-                {joinName(invoice.seller.ownerFirstName, invoice.seller.ownerLastName) &&
-                  ` (${joinName(invoice.seller.ownerFirstName, invoice.seller.ownerLastName)})`}
+                {(invoice.seller.contactName || joinName(invoice.seller.ownerFirstName, invoice.seller.ownerLastName)) &&
+                  ` (${invoice.seller.contactName || joinName(invoice.seller.ownerFirstName, invoice.seller.ownerLastName)})`}
                 {' — '}
                 {joinName(invoice.buyer.firstName, invoice.buyer.lastName)}
               </p>

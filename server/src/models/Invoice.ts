@@ -27,6 +27,7 @@ export interface InvoiceDocument extends Document {
     legalStatus?: string;
     ownerFirstName?: string;
     ownerLastName?: string;
+    contactName?: string;
     address: string;
     postalCode: string;
     city: string;
@@ -75,6 +76,7 @@ const invoiceSchema = new Schema<InvoiceDocument>(
       legalStatus: { type: String },
       ownerFirstName: { type: String },
       ownerLastName: { type: String },
+      contactName: { type: String },
       address: { type: String, required: true },
       postalCode: { type: String, required: true },
       city: { type: String, required: true },

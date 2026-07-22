@@ -58,7 +58,7 @@ router.delete('/bookings/:bookingId', authMiddleware, authorizeRoles('ORGANIZER'
 // Annulation d'une réservation ACCEPTED par le propriétaire
 router.patch('/bookings/:bookingId/cancel', authMiddleware, authorizeRoles('LIEU'), validateBookingId, validate(cancelBookingByOwnerSchema), asyncHandler(cancelBookingByOwner));
 // Estimation du remboursement avant annulation (lecture seule)
-router.get('/bookings/:bookingId/refund-estimate', authMiddleware, authorizeRoles('LIEU'), validateBookingId, asyncHandler(getRefundEstimate));
+router.get('/bookings/:bookingId/refund-estimate', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU', 'COMEDIAN'), validateBookingId, asyncHandler(getRefundEstimate));
 
 router.get('/:venueId/taken-slots', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU', 'COMEDIAN'), validateVenueId, asyncHandler(takenSlots));
 router.get('/:venueId/full-dates', authMiddleware, authorizeRoles('ORGANIZER', 'LIEU', 'COMEDIAN'), validateVenueId, asyncHandler(fullDates));

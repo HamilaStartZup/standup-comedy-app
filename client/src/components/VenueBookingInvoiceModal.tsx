@@ -186,9 +186,9 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
               {venue?.companyName && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{venue.companyName}</p>}
               <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ccc-text-secondary)' }}>{formatVenueAddress(venue)}</p>
               {venue?.siret && <p style={{ margin: '4px 0 0', fontSize: 13 }}>SIRET : {venue.siret}</p>}
-              {(owner?.ownerFirstName || owner?.ownerLastName) && (
+              {(owner?.contactName || owner?.ownerFirstName || owner?.ownerLastName) && (
                 <p style={{ margin: '4px 0 0', fontSize: 13 }}>
-                  Représenté par : {owner.ownerFirstName ?? ''} {owner.ownerLastName ?? ''}
+                  Représenté par : {owner?.contactName || `${owner?.ownerFirstName ?? ''} ${owner?.ownerLastName ?? ''}`.trim()}
                 </p>
               )}
               {venue?.contactEmail && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{venue.contactEmail}</p>}

@@ -18,6 +18,7 @@ export async function createInvoiceSnapshot(bookingId: string): Promise<void> {
       companyName?: string;
       siret?: string;
       legalStatus?: string;
+      contactName?: string;
       address: string;
       postalCode: string;
       city: string;
@@ -32,7 +33,7 @@ export async function createInvoiceSnapshot(bookingId: string): Promise<void> {
   }>([
     {
       path: 'venue',
-      select: 'name owner companyName siret legalStatus address postalCode city country currency pricingType pricePerEvent deposit extraFees',
+      select: 'name owner companyName siret legalStatus contactName address postalCode city country currency pricingType pricePerEvent deposit extraFees',
       populate: { path: 'owner', select: 'firstName lastName' },
     },
     { path: 'requester', select: 'firstName lastName email' },
@@ -90,6 +91,7 @@ export async function createInvoiceSnapshot(bookingId: string): Promise<void> {
           legalStatus: booking.venue.legalStatus,
           ownerFirstName: booking.venue.owner.firstName,
           ownerLastName: booking.venue.owner.lastName,
+          contactName: booking.venue.contactName,
           address: booking.venue.address,
           postalCode: booking.venue.postalCode,
           city: booking.venue.city,

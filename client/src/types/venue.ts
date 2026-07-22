@@ -206,6 +206,7 @@ export interface IInvoiceSnapshot {
     legalStatus?: string;
     ownerFirstName?: string;
     ownerLastName?: string;
+    contactName?: string;
     address: string;
     postalCode: string;
     city: string;
