@@ -67,6 +67,14 @@ const MyBookingsPage: React.FC = () => {
   // useRef guard prevents double-fire in React Strict Mode
   const paymentHandledRef = useRef(false);
 
+  // Gèle le fetch de la liste tant qu'une confirmation de paiement Stripe est en cours,
+  // pour éviter que le fetch de montage (encore ACCEPTED) coure avec confirmVenuePayment
+  // et gagne la course contre l'invalidation (React Query fusionne l'invalidation avec
+  // un fetch déjà en vol au lieu d'en relancer un).
+  const [confirmingPayment, setConfirmingPayment] = useState(
+    () => searchParams.get('payment') === 'success' && !!searchParams.get('session_id')
+  );
+
   // Gestion du highlight — ?bookingId= (notifs) ou ?highlight= (legacy)
   const highlightId = searchParams.get('bookingId') ?? searchParams.get('highlight');
   const highlightIdRef = useRef(highlightId);
@@ -99,14 +107,15 @@ const MyBookingsPage: React.FC = () => {
           } else {
             showError('Le paiement a été reçu mais la confirmation a échoué. Veuillez réessayer.');
           }
-        });
+        })
+        .finally(() => setConfirmingPayment(false));
     } else if (payment === 'cancelled') {
       showError('Paiement annulé.');
       setSearchParams({}, { replace: true });
     }
   }, []);
 
-  const { data, isLoading, error } = useMyBookings();
+  const { data, isLoading, error } = useMyBookings({ enabled: !confirmingPayment });
 
   // Highlight scroll effect
   useEffect(() => {
@@ -684,7 +693,7 @@ const MyBookingsPage: React.FC = () => {
 
         <VenuesTabs />
 
-        {isLoading ? (
+        {isLoading || confirmingPayment ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {Array.from({ length: 3 }).map((_, i) => <BookingCardSkeleton key={i} />)}
           </div>
