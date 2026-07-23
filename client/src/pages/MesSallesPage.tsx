@@ -41,6 +41,10 @@ const MesSallesPage: React.FC = () => {
   const [groupExcluded, setGroupExcluded] = useState<Set<string>>(new Set());
   const [groupActionLoadingId, setGroupActionLoadingId] = useState<string | null>(null);
 
+  // Accordéon indépendant pour chacune des 2 listes de l'onglet Réservations
+  const [seriesExpanded, setSeriesExpanded] = useState(true);
+  const [standaloneExpanded, setStandaloneExpanded] = useState(true);
+
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     const bookingIdParam = searchParams.get('bookingId');
@@ -346,254 +350,279 @@ const MesSallesPage: React.FC = () => {
                   Vous n'avez pas encore de demande de réservation pour vos salles.
                 </p>
               </div>
-            ) : selectedGroupId ? (
-              <div>
-                {(() => {
-                        const groupBookings = recurringGroups.get(selectedGroupId) ?? [];
-                        const first = groupBookings[0];
-                        if (!first) return <p style={{ color: 'var(--ccc-text-muted)' }}>Série introuvable.</p>;
-                        const hasPending = groupBookings.some((b) => b.status === 'PENDING');
-                        return (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => { setSelectedGroupId(null); resetGroupResponse(); }}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 20, padding: '10px 16px', borderRadius: 8, border: '1px solid var(--ccc-border-medium)', background: 'var(--ccc-bg-elevated)', color: 'var(--ccc-text-primary)', cursor: 'pointer', fontSize: 14, fontWeight: 600, boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}
-                            >
-                              ← Retour aux réservations
-                            </button>
-
-                            <div style={{ marginBottom: 20, padding: 16, backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 20, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-                              <div>
-                                <h3 style={{ margin: '0 0 8px 0', color: '#1a1a1a', fontSize: '1.2em' }}>
-                                  {first.requester?.firstName} {first.requester?.lastName}
-                                </h3>
-                                <p style={{ margin: 0, color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
-                                  📍 {first.venue?.name} · {first.venue?.city} · {groupBookings.length} date(s)
-                                </p>
-                                {first.message && (
-                                  <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ccc-text-secondary)', fontStyle: 'italic', background: '#f8fafc', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid rgba(124, 58, 237,0.5)' }}>
-                                    "{first.message}"
-                                  </p>
-                                )}
-                              </div>
-                              <BookingInvoiceButton bookings={groupBookings} isSeries label="Facture série" />
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                              {groupBookings.map((b) => {
-                                const past = hasBookingEnded(b.requestedDate, b.endTime);
-                                const dateFormatted = new Date(b.requestedDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
-                                const isExcluded = groupExcluded.has(b._id);
-                                return (
-                                  <div
-                                    key={b._id}
-                                    data-booking-id={b._id}
-                                    style={{ backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 20, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}
-                                  >
-                                    <div style={{ flex: 1, minWidth: 200, display: 'flex', alignItems: 'center', gap: 12, opacity: past ? 0.7 : 1 }}>
-                                      {isRespondingGroup && b.status === 'PENDING' && (
-                                        <input
-                                          type="checkbox"
-                                          checked={!isExcluded}
-                                          onChange={() => {
-                                            const next = new Set(groupExcluded);
-                                            if (next.has(b._id)) next.delete(b._id); else next.add(b._id);
-                                            setGroupExcluded(next);
-                                          }}
-                                          title="Inclure cette date dans l'acceptation"
-                                          style={{ width: 18, height: 18, cursor: 'pointer', flexShrink: 0 }}
-                                        />
-                                      )}
-                                      <div>
-                                        <div style={{ padding: '6px 16px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)', fontSize: '0.85em', fontWeight: 600, color: '#1a1a1a', display: 'inline-block', marginBottom: 8 }}>
-                                          {dateFormatted}
-                                        </div>
-                                        <div style={{ color: '#1a1a1a', fontWeight: 600 }}>{b.startTime} – {b.endTime}</div>
-                                      </div>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
-                                      <BookingStatusBadge status={b.status} perspective="owner" isPast={past} paymentDeadlineAt={b.paymentDeadlineAt} />
-                                      <BookingInvoiceButton bookings={[b]} compact />
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-
-                            {hasPending && (
-                              <div style={{ marginTop: 20 }}>
-                                {isRespondingGroup ? (
-                                  <div style={{ backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 16, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)' }}>
-                                    <p style={{ fontSize: 12, color: 'var(--ccc-text-muted)', margin: '0 0 8px 0' }}>
-                                      Cochez les dates à inclure dans l'acceptation (décocher = refuser cette date).
-                                    </p>
-                                    <textarea
-                                      value={groupOwnerResponse}
-                                      onChange={(e) => setGroupOwnerResponse(e.target.value)}
-                                      placeholder="Message optionnel pour le demandeur..."
-                                      rows={2}
-                                      style={{ width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', color: '#1a1a1a', fontSize: 13, marginBottom: 10, boxSizing: 'border-box', resize: 'vertical' }}
-                                    />
-                                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                      <button
-                                        onClick={() => handleGroupAction(selectedGroupId, 'ACCEPTED')}
-                                        disabled={groupActionLoadingId === selectedGroupId}
-                                        style={{ padding: '9px 20px', background: '#059669', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: groupActionLoadingId === selectedGroupId ? 0.6 : 1 }}
-                                      >
-                                        ✓ Accepter le lot
-                                      </button>
-                                      <button
-                                        onClick={() => handleGroupAction(selectedGroupId, 'REFUSED')}
-                                        disabled={groupActionLoadingId === selectedGroupId}
-                                        style={{ padding: '9px 20px', background: 'var(--ccc-btn-secondary-bg)', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: groupActionLoadingId === selectedGroupId ? 0.6 : 1 }}
-                                      >
-                                        ✕ Refuser tout
-                                      </button>
-                                      <button
-                                        onClick={resetGroupResponse}
-                                        style={{ padding: '9px 20px', background: 'transparent', color: 'var(--ccc-text-muted)', border: '1px solid #e2e8f0', borderRadius: 10, cursor: 'pointer', fontSize: 13 }}
-                                      >
-                                        Annuler
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={() => setIsRespondingGroup(true)}
-                                    style={{ padding: '10px 22px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
-                                  >
-                                    Répondre au lot
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </>
-                        );
-                })()}
-              </div>
             ) : (
               <div>
-                {recurringGroups.size > 0 && (
-                  <div style={{ marginBottom: 28 }}>
-                    <h3 style={{ color: 'var(--ccc-text-primary)', fontSize: 16, fontWeight: 700, margin: '0 0 14px 0' }}>
-                      🔁 Séries récurrentes ({recurringGroups.size})
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                      {Array.from(recurringGroups.entries()).map(([groupId, groupBookings]) => {
-                          const first = groupBookings[0];
-                          const last = groupBookings[groupBookings.length - 1];
-                          const pendingCount = groupBookings.filter((b) => b.status === 'PENDING').length;
-                          const dateFirst = first?.requestedDate ? new Date(first.requestedDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-                          const dateLast = last?.requestedDate ? new Date(last.requestedDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+                {selectedGroupId ? (() => {
+                  const groupBookings = recurringGroups.get(selectedGroupId) ?? [];
+                  const first = groupBookings[0];
+                  if (!first) return <p style={{ color: 'var(--ccc-text-muted)' }}>Série introuvable.</p>;
+                  const hasPending = groupBookings.some((b) => b.status === 'PENDING');
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedGroupId(null); resetGroupResponse(); }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 20, padding: '10px 16px', borderRadius: 8, border: '1px solid var(--ccc-border-medium)', background: 'var(--ccc-bg-elevated)', color: 'var(--ccc-text-primary)', cursor: 'pointer', fontSize: 14, fontWeight: 600, boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}
+                      >
+                        ← Retour aux réservations
+                      </button>
+
+                      <div style={{ marginBottom: 20, padding: 16, backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 20, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                        <div>
+                          <h3 style={{ margin: '0 0 8px 0', color: '#1a1a1a', fontSize: '1.2em' }}>
+                            {first.requester?.firstName} {first.requester?.lastName}
+                          </h3>
+                          <p style={{ margin: 0, color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
+                            📍 {first.venue?.name} · {first.venue?.city} · {groupBookings.length} date(s)
+                          </p>
+                          {first.message && (
+                            <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ccc-text-secondary)', fontStyle: 'italic', background: '#f8fafc', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid rgba(124, 58, 237,0.5)' }}>
+                              "{first.message}"
+                            </p>
+                          )}
+                        </div>
+                        <BookingInvoiceButton bookings={groupBookings} isSeries label="Facture série" />
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {groupBookings.map((b) => {
+                          const past = hasBookingEnded(b.requestedDate, b.endTime);
+                          const dateFormatted = new Date(b.requestedDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+                          const isExcluded = groupExcluded.has(b._id);
                           return (
                             <div
-                              key={groupId}
-                              onClick={() => { setSelectedGroupId(groupId); resetGroupResponse(); }}
-                              style={{ backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 20, padding: '16px 20px', boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', cursor: 'pointer' }}
+                              key={b._id}
+                              data-booking-id={b._id}
+                              style={{ backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 20, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}
                             >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                                <div>
-                                  <h3 style={{ margin: '0 0 6px 0', color: '#1a1a1a', fontSize: '1.1em' }}>
-                                    {first?.requester?.firstName} {first?.requester?.lastName}
-                                  </h3>
-                                  <p style={{ margin: 0, color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
-                                    📍 {first?.venue?.name} · {first?.venue?.city} · {groupBookings.length} date(s)
-                                  </p>
-                                  <p style={{ margin: '4px 0 0 0', color: 'var(--ccc-text-faint)', fontSize: '0.82em' }}>
-                                    {dateFirst} → {dateLast}
-                                  </p>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
-                                  <span style={{ padding: '6px 16px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)', fontSize: '0.85em', fontWeight: 600, color: '#1a1a1a' }}>
-                                    {groupBookings.length} date(s)
-                                  </span>
-                                  {pendingCount > 0 && (
-                                    <span style={{ padding: '4px 12px', borderRadius: 999, background: 'rgba(245,158,11,0.15)', color: '#b45309', fontSize: '0.75em', fontWeight: 700 }}>
-                                      {pendingCount} en attente
-                                    </span>
-                                  )}
-                                  <BookingInvoiceButton
-                                    bookings={groupBookings}
-                                    isSeries
-                                    label="Facture série"
-                                    onClick={(e) => e.stopPropagation()}
-                                    compact
+                              <div style={{ flex: 1, minWidth: 200, display: 'flex', alignItems: 'center', gap: 12, opacity: past ? 0.7 : 1 }}>
+                                {isRespondingGroup && b.status === 'PENDING' && (
+                                  <input
+                                    type="checkbox"
+                                    checked={!isExcluded}
+                                    onChange={() => {
+                                      const next = new Set(groupExcluded);
+                                      if (next.has(b._id)) next.delete(b._id); else next.add(b._id);
+                                      setGroupExcluded(next);
+                                    }}
+                                    title="Inclure cette date dans l'acceptation"
+                                    style={{ width: 18, height: 18, cursor: 'pointer', flexShrink: 0 }}
                                   />
+                                )}
+                                <div>
+                                  <div style={{ padding: '6px 16px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)', fontSize: '0.85em', fontWeight: 600, color: '#1a1a1a', display: 'inline-block', marginBottom: 8 }}>
+                                    {dateFormatted}
+                                  </div>
+                                  <div style={{ color: '#1a1a1a', fontWeight: 600 }}>{b.startTime} – {b.endTime}</div>
                                 </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+                                <BookingStatusBadge status={b.status} perspective="owner" isPast={past} paymentDeadlineAt={b.paymentDeadlineAt} />
+                                <BookingInvoiceButton bookings={[b]} compact />
                               </div>
                             </div>
                           );
-                      })}
-                    </div>
-                  </div>
-                )}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                    gap: 12,
-                    marginBottom: 8,
-                  }}
-                >
-                  <select
-                    value={selectedVenueId}
-                    onChange={(e) => setSelectedVenueId(e.target.value)}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: 10,
-                      border: '1px solid var(--ccc-border-medium)',
-                      background: 'var(--ccc-bg-elevated)',
-                      color: 'var(--ccc-text-primary)',
-                      fontSize: 14,
-                    }}
-                  >
-                    <option value="ALL">Toutes les salles</option>
-                    {myVenues.map((venue) => (
-                      <option key={venue._id} value={venue._id}>
-                        {venue.name}
-                      </option>
-                    ))}
-                  </select>
+                        })}
+                      </div>
 
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: 10,
-                      border: '1px solid var(--ccc-border-medium)',
-                      background: 'var(--ccc-bg-elevated)',
-                      color: 'var(--ccc-text-primary)',
-                      fontSize: 14,
-                    }}
-                  >
-                    <option value="ALL">Tous les statuts</option>
-                    {bookingStatuses.map((status) => (
-                      <option key={status} value={status}>
-                        {statusLabel(status)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                      {hasPending && (
+                        <div style={{ marginTop: 20 }}>
+                          {isRespondingGroup ? (
+                            <div style={{ backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 16, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)' }}>
+                              <p style={{ fontSize: 12, color: 'var(--ccc-text-muted)', margin: '0 0 8px 0' }}>
+                                Cochez les dates à inclure dans l'acceptation (décocher = refuser cette date).
+                              </p>
+                              <textarea
+                                value={groupOwnerResponse}
+                                onChange={(e) => setGroupOwnerResponse(e.target.value)}
+                                placeholder="Message optionnel pour le demandeur..."
+                                rows={2}
+                                style={{ width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', color: '#1a1a1a', fontSize: 13, marginBottom: 10, boxSizing: 'border-box', resize: 'vertical' }}
+                              />
+                              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                <button
+                                  onClick={() => handleGroupAction(selectedGroupId, 'ACCEPTED')}
+                                  disabled={groupActionLoadingId === selectedGroupId}
+                                  style={{ padding: '9px 20px', background: '#059669', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: groupActionLoadingId === selectedGroupId ? 0.6 : 1 }}
+                                >
+                                  ✓ Accepter le lot
+                                </button>
+                                <button
+                                  onClick={() => handleGroupAction(selectedGroupId, 'REFUSED')}
+                                  disabled={groupActionLoadingId === selectedGroupId}
+                                  style={{ padding: '9px 20px', background: 'var(--ccc-btn-secondary-bg)', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: groupActionLoadingId === selectedGroupId ? 0.6 : 1 }}
+                                >
+                                  ✕ Refuser tout
+                                </button>
+                                <button
+                                  onClick={resetGroupResponse}
+                                  style={{ padding: '9px 20px', background: 'transparent', color: 'var(--ccc-text-muted)', border: '1px solid #e2e8f0', borderRadius: 10, cursor: 'pointer', fontSize: 13 }}
+                                >
+                                  Annuler
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setIsRespondingGroup(true)}
+                              style={{ padding: '10px 22px', background: 'var(--ccc-accent-gradient)', color: 'var(--ccc-text-on-accent)', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
+                            >
+                              Répondre au lot
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })() : (
+                  <>
+                    <style>{`@media (max-width: 768px) { .reservations-grid { grid-template-columns: 1fr !important; } }`}</style>
+                    <div className="reservations-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
+                      <div>
+                        {recurringGroups.size > 0 && (
+                          <div>
+                            <h3
+                              onClick={() => setSeriesExpanded((v) => !v)}
+                              role="button"
+                              tabIndex={0}
+                              aria-expanded={seriesExpanded}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSeriesExpanded((v) => !v); } }}
+                              style={{ color: 'var(--ccc-text-primary)', fontSize: 16, fontWeight: 700, margin: '0 0 14px 0', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                            >
+                              <span>🔁 Séries récurrentes ({recurringGroups.size})</span>
+                              <span style={{ fontSize: 13, color: 'var(--ccc-accent)' }}>{seriesExpanded ? '▲' : '▼'}</span>
+                            </h3>
+                            {seriesExpanded && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                              {Array.from(recurringGroups.entries()).map(([groupId, groupBookings]) => {
+                                  const first = groupBookings[0];
+                                  const last = groupBookings[groupBookings.length - 1];
+                                  const pendingCount = groupBookings.filter((b) => b.status === 'PENDING').length;
+                                  const dateFirst = first?.requestedDate ? new Date(first.requestedDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+                                  const dateLast = last?.requestedDate ? new Date(last.requestedDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+                                  return (
+                                    <div
+                                      key={groupId}
+                                      onClick={() => { setSelectedGroupId(groupId); resetGroupResponse(); }}
+                                      style={{ backgroundColor: 'var(--ccc-bg-elevated)', borderRadius: 20, padding: '16px 20px', boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)', cursor: 'pointer' }}
+                                    >
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                                        <div>
+                                          <h3 style={{ margin: '0 0 6px 0', color: '#1a1a1a', fontSize: '1.1em' }}>
+                                            {first?.requester?.firstName} {first?.requester?.lastName}
+                                          </h3>
+                                          <p style={{ margin: 0, color: 'var(--ccc-text-muted)', fontSize: '0.9em' }}>
+                                            📍 {first?.venue?.name} · {first?.venue?.city} · {groupBookings.length} date(s)
+                                          </p>
+                                          <p style={{ margin: '4px 0 0 0', color: 'var(--ccc-text-faint)', fontSize: '0.82em' }}>
+                                            {dateFirst} → {dateLast}
+                                          </p>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
+                                          <span style={{ padding: '6px 16px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)', fontSize: '0.85em', fontWeight: 600, color: '#1a1a1a' }}>
+                                            {groupBookings.length} date(s)
+                                          </span>
+                                          {pendingCount > 0 && (
+                                            <span style={{ padding: '4px 12px', borderRadius: 999, background: 'rgba(245,158,11,0.15)', color: '#b45309', fontSize: '0.75em', fontWeight: 700 }}>
+                                              {pendingCount} en attente
+                                            </span>
+                                          )}
+                                          <BookingInvoiceButton
+                                            bookings={groupBookings}
+                                            isSeries
+                                            label="Facture série"
+                                            onClick={(e) => e.stopPropagation()}
+                                            compact
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                              })}
+                            </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h3
+                          onClick={() => setStandaloneExpanded((v) => !v)}
+                          role="button"
+                          tabIndex={0}
+                          aria-expanded={standaloneExpanded}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setStandaloneExpanded((v) => !v); } }}
+                          style={{ color: 'var(--ccc-text-primary)', fontSize: 16, fontWeight: 700, margin: '0 0 14px 0', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                        >
+                          <span>Réservations uniques ({standaloneBookings.length})</span>
+                          <span style={{ fontSize: 13, color: 'var(--ccc-accent)' }}>{standaloneExpanded ? '▲' : '▼'}</span>
+                        </h3>
+                        {standaloneExpanded && (
+                        <>
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                            gap: 12,
+                            marginBottom: 16,
+                          }}
+                        >
+                          <select
+                            value={selectedVenueId}
+                            onChange={(e) => setSelectedVenueId(e.target.value)}
+                            style={{
+                              padding: '10px 12px',
+                              borderRadius: 10,
+                              border: '1px solid var(--ccc-border-medium)',
+                              background: 'var(--ccc-bg-elevated)',
+                              color: 'var(--ccc-text-primary)',
+                              fontSize: 14,
+                            }}
+                          >
+                            <option value="ALL">Toutes les salles</option>
+                            {myVenues.map((venue) => (
+                              <option key={venue._id} value={venue._id}>
+                                {venue.name}
+                              </option>
+                            ))}
+                          </select>
 
-                {standaloneBookings.length === 0 ? (
-                  <div
-                    style={{
-                      textAlign: 'center',
-                      padding: '36px 24px',
-                      border: '1px dashed var(--ccc-border-medium)',
-                      borderRadius: 16,
-                      color: 'var(--ccc-text-muted)',
-                    }}
-                  >
-                    {recurringGroups.size > 0
-                      ? 'Aucune réservation individuelle (hors séries).'
-                      : 'Aucune réservation ne correspond à ces filtres.'}
-                  </div>
-                ) : (
-                  standaloneBookings.map((booking) => {
+                          <select
+                            value={selectedStatus}
+                            onChange={(e) => setSelectedStatus(e.target.value)}
+                            style={{
+                              padding: '10px 12px',
+                              borderRadius: 10,
+                              border: '1px solid var(--ccc-border-medium)',
+                              background: 'var(--ccc-bg-elevated)',
+                              color: 'var(--ccc-text-primary)',
+                              fontSize: 14,
+                            }}
+                          >
+                            <option value="ALL">Tous les statuts</option>
+                            {bookingStatuses.map((status) => (
+                              <option key={status} value={status}>
+                                {statusLabel(status)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {standaloneBookings.length === 0 ? (
+                          <div
+                            style={{
+                              textAlign: 'center',
+                              padding: '36px 24px',
+                              border: '1px dashed var(--ccc-border-medium)',
+                              borderRadius: 16,
+                              color: 'var(--ccc-text-muted)',
+                            }}
+                          >
+                            {recurringGroups.size > 0
+                              ? 'Aucune réservation individuelle (hors séries).'
+                              : 'Aucune réservation ne correspond à ces filtres.'}
+                          </div>
+                        ) : (
+                          standaloneBookings.map((booking) => {
                     const isExpiredByDate = hasBookingEnded(booking.requestedDate, booking.endTime);
                     const normalizedStatus = booking.status === 'PENDING' && isExpiredByDate ? 'EXPIRED' : booking.status;
                     const statusColor =
@@ -751,14 +780,18 @@ const MesSallesPage: React.FC = () => {
                     </div>
                     );
                   }))}
+                </>
+                )}
+                </div>
               </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+      )}
+        </div>
+      )}
     </div>
+  </div>
   );
 };
-
 export default MesSallesPage;
