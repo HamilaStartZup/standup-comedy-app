@@ -1,5 +1,4 @@
-import type { IVenueBooking } from '../types/venue';
-import type { IUserData } from '../types/user';
+import type { IVenueBooking, IInvoiceSnapshot } from '../types/venue';
 
 export interface InvoicePriceLine {
   label: string;
@@ -42,12 +41,6 @@ export function formatInvoiceNumber(bookingId: string): string {
 
 export function formatGroupInvoiceNumber(groupId: string): string {
   return `CCC-SER-${groupId.slice(-8).toUpperCase()}`;
-}
-
-export function getBookingLineAmount(booking: IVenueBooking): number {
-  if (booking.paidAmount != null) return booking.paidAmount;
-  const breakdown = getBookingPriceBreakdown(booking);
-  return breakdown?.subtotal ?? 0;
 }
 
 /** Détail location / caution / frais — même logique que VenueBookingForm et computeBookingAmount. */
@@ -120,10 +113,6 @@ export function formatInvoiceMoney(amount: number, currency: string): string {
   return formatMoney(amount, currency);
 }
 
-export function getInvoiceTotal(bookings: IVenueBooking[]): number {
-  return getInvoiceBookings(bookings).reduce((sum, b) => sum + getBookingLineAmount(b), 0);
-}
-
 export function formatPricingLabel(pricingType?: string): string {
   const labels: Record<string, string> = {
     heure: 'À l\'heure',
@@ -137,20 +126,36 @@ export function formatPricingLabel(pricingType?: string): string {
   return pricingType ? (labels[pricingType] ?? pricingType) : '—';
 }
 
-export function formatClientName(user?: IUserData): string {
-  if (!user) return '—';
-  const name = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
-  return name || user.email || '—';
+export interface InvoiceSellerView {
+  name: string;
+  companyName?: string;
+  address: string;
+  siret?: string;
+  representedBy?: string;
+  contactEmail?: string;
 }
 
-export function formatVenueAddress(venue: IVenueBooking['venue']): string {
-  if (!venue) return '—';
-  const parts = [venue.address, venue.postalCode, venue.city, venue.country].filter(Boolean);
-  return parts.join(', ') || '—';
+export interface InvoiceBuyerView {
+  name: string;
+  companyName?: string;
+  email?: string;
 }
 
-export function getPaymentStatusLabel(booking: IVenueBooking): string {
-  switch (booking.paymentStatus) {
+/** Vue normalisée d'une facture pour un booking : snapshot figé prioritaire, repli live seulement en son absence. */
+export interface BookingInvoiceView {
+  booking: IVenueBooking;
+  hasSnapshot: boolean;
+  seller: InvoiceSellerView;
+  buyer: InvoiceBuyerView;
+  lines: InvoicePriceLine[];
+  subtotal: number;
+  currency: string;
+  statusLabel: string;
+  pricingLabel: string;
+}
+
+export function getInvoiceViewStatusLabel(status: IInvoiceSnapshot['paymentStatus']): string {
+  switch (status) {
     case 'paid':
       return 'Payée';
     case 'refunded':
@@ -158,6 +163,87 @@ export function getPaymentStatusLabel(booking: IVenueBooking): string {
     case 'refund_pending':
       return 'Remboursement en cours';
     default:
-      return booking.status === 'CONFIRMED' ? 'Confirmée' : '—';
+      return '—';
   }
+}
+
+function joinAddress(parts: (string | undefined)[]): string {
+  return parts.filter(Boolean).join(', ') || '—';
+}
+
+/**
+ * Source de vérité unique pour l'affichage d'une facture. Le snapshot figé au paiement
+ * gagne toujours (justificatif légal) ; le repli live ne sert que quand rien n'est figé
+ * (cas légitime CONFIRMED non payé). Passe par cette vue interdit toute lecture directe
+ * de `venue.*` / `requester` dans le composant → le bug de données périmées ne peut plus
+ * être réintroduit champ par champ.
+ */
+export function getBookingInvoiceView(booking: IVenueBooking): BookingInvoiceView {
+  const snap = booking.invoiceSnapshot;
+  if (snap) {
+    const s = snap.seller;
+    const representedBy =
+      s.contactName || `${s.ownerFirstName ?? ''} ${s.ownerLastName ?? ''}`.trim() || undefined;
+    const buyerName =
+      `${snap.buyer.firstName ?? ''} ${snap.buyer.lastName ?? ''}`.trim() || snap.buyer.email || '—';
+    return {
+      booking,
+      hasSnapshot: true,
+      seller: {
+        name: s.venueName || '—',
+        companyName: s.companyName,
+        address: joinAddress([s.address, s.postalCode, s.city, s.country]),
+        siret: s.siret,
+        representedBy,
+        contactEmail: s.contactEmail,
+      },
+      buyer: { name: buyerName, companyName: snap.buyer.companyName, email: snap.buyer.email },
+      lines: snap.lines,
+      subtotal: snap.subtotal,
+      currency: snap.currency,
+      statusLabel: getInvoiceViewStatusLabel(snap.paymentStatus),
+      // Type de tarif figé prioritaire ; repli live seulement pour les vieux snapshots d'avant le backfill.
+      pricingLabel: formatPricingLabel(snap.pricingType ?? booking.venue?.pricingType),
+    };
+  }
+
+  // Repli live : aucun snapshot figé à contredire (CONFIRMED non payé).
+  const venue = booking.venue;
+  const requester = booking.requester;
+  const breakdown = getBookingPriceBreakdown(booking);
+  const buyerName = requester
+    ? `${requester.firstName ?? ''} ${requester.lastName ?? ''}`.trim() || requester.email || '—'
+    : '—';
+  // Libellés des statuts figés délégués au helper (source unique) ; seul le cas non-figé
+  // CONFIRMED (facture live pas encore payée) est spécifique au repli.
+  const statusLabel =
+    booking.paymentStatus === 'paid' ||
+    booking.paymentStatus === 'refunded' ||
+    booking.paymentStatus === 'refund_pending'
+      ? getInvoiceViewStatusLabel(booking.paymentStatus)
+      : booking.status === 'CONFIRMED'
+        ? 'Confirmée'
+        : '—';
+  return {
+    booking,
+    hasSnapshot: false,
+    seller: {
+      name: venue?.name ?? '—',
+      companyName: venue?.companyName,
+      address: venue ? joinAddress([venue.address, venue.postalCode, venue.city, venue.country]) : '—',
+      siret: venue?.siret,
+      representedBy: venue?.contactName || undefined,
+      contactEmail: venue?.contactEmail,
+    },
+    buyer: {
+      name: buyerName,
+      companyName: requester?.organizerProfile?.companyName,
+      email: requester?.email,
+    },
+    lines: breakdown?.lines ?? [],
+    subtotal: breakdown?.subtotal ?? booking.paidAmount ?? 0,
+    currency: venue?.currency ?? 'EUR',
+    statusLabel,
+    pricingLabel: formatPricingLabel(venue?.pricingType),
+  };
 }

@@ -2,16 +2,11 @@ import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { IVenueBooking } from '../types/venue';
 import {
-  formatClientName,
   formatGroupInvoiceNumber,
   formatInvoiceMoney,
   formatInvoiceNumber,
-  formatPricingLabel,
-  formatVenueAddress,
-  getBookingPriceBreakdown,
+  getBookingInvoiceView,
   getInvoiceBookings,
-  getInvoiceTotal,
-  getPaymentStatusLabel,
 } from '../utils/venueInvoice';
 
 interface VenueBookingInvoiceModalProps {
@@ -36,20 +31,22 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
   onClose,
 }) => {
   const printRef = useRef<HTMLDivElement>(null);
-  const lines = getInvoiceBookings(bookings);
-  if (lines.length === 0) return null;
+  const views = getInvoiceBookings(bookings).map(getBookingInvoiceView);
+  if (views.length === 0) return null;
 
-  const first = lines[0];
-  const venue = first.venue;
-  const requester = first.requester;
-  const owner = first.invoiceSnapshot?.seller;
-  const total = getInvoiceTotal(lines);
-  const currency = venue?.currency ?? 'EUR';
-  const invoiceNumber = isSeries && first.bookingGroupId
-    ? formatGroupInvoiceNumber(first.bookingGroupId)
-    : formatInvoiceNumber(first._id);
-  const invoiceDate = lines
-    .map((b) => b.paidAt ?? b.updatedAt ?? b.createdAt)
+  // En-tête + n° de série dérivés du 1er booking porteur de snapshot (série mixte payée/non-payée).
+  const header = views.find((v) => v.hasSnapshot) ?? views[0];
+  const seller = header.seller;
+  const buyer = header.buyer;
+  const headerBooking = header.booking;
+  // Une facture = une salle = une devise. On fige celle de l'en-tête pour lignes ET total.
+  const currency = header.currency;
+  const total = views.reduce((sum, v) => sum + v.subtotal, 0);
+  const invoiceNumber = isSeries && headerBooking.bookingGroupId
+    ? formatGroupInvoiceNumber(headerBooking.bookingGroupId)
+    : formatInvoiceNumber(headerBooking._id);
+  const invoiceDate = views
+    .map((v) => v.booking.paidAt ?? v.booking.updatedAt ?? v.booking.createdAt)
     .filter(Boolean)
     .sort()
     .reverse()[0];
@@ -182,26 +179,24 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
               <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--ccc-text-muted)' }}>
                 Prestataire (salle)
               </p>
-              <p style={{ margin: 0, fontWeight: 700 }}>{venue?.name ?? '—'}</p>
-              {venue?.companyName && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{venue.companyName}</p>}
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ccc-text-secondary)' }}>{formatVenueAddress(venue)}</p>
-              {venue?.siret && <p style={{ margin: '4px 0 0', fontSize: 13 }}>SIRET : {venue.siret}</p>}
-              {(owner?.contactName || owner?.ownerFirstName || owner?.ownerLastName) && (
-                <p style={{ margin: '4px 0 0', fontSize: 13 }}>
-                  Représenté par : {owner?.contactName || `${owner?.ownerFirstName ?? ''} ${owner?.ownerLastName ?? ''}`.trim()}
-                </p>
+              <p style={{ margin: 0, fontWeight: 700 }}>{seller.name}</p>
+              {seller.companyName && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{seller.companyName}</p>}
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ccc-text-secondary)' }}>{seller.address}</p>
+              {seller.siret && <p style={{ margin: '4px 0 0', fontSize: 13 }}>SIRET : {seller.siret}</p>}
+              {seller.representedBy && (
+                <p style={{ margin: '4px 0 0', fontSize: 13 }}>Représenté par : {seller.representedBy}</p>
               )}
-              {venue?.contactEmail && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{venue.contactEmail}</p>}
+              {seller.contactEmail && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{seller.contactEmail}</p>}
             </div>
             <div>
               <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--ccc-text-muted)' }}>
                 Client
               </p>
-              <p style={{ margin: 0, fontWeight: 700 }}>{formatClientName(requester)}</p>
-              {requester?.organizerProfile?.companyName && (
-                <p style={{ margin: '4px 0 0', fontSize: 13 }}>{requester.organizerProfile.companyName}</p>
+              <p style={{ margin: 0, fontWeight: 700 }}>{buyer.name}</p>
+              {buyer.companyName && (
+                <p style={{ margin: '4px 0 0', fontSize: 13 }}>{buyer.companyName}</p>
               )}
-              {requester?.email && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{requester.email}</p>}
+              {buyer.email && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{buyer.email}</p>}
             </div>
           </div>
 
@@ -211,11 +206,11 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
               ? new Date(invoiceDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
               : '—'}
             {' · '}
-            Tarification : {formatPricingLabel(venue?.pricingType)}
+            Tarification : {header.pricingLabel}
           </p>
 
-          {lines.map((b) => {
-            const breakdown = getBookingPriceBreakdown(b);
+          {views.map((v) => {
+            const b = v.booking;
             const dateLabel = new Date(b.requestedDate).toLocaleDateString('fr-FR', {
               weekday: 'long',
               day: 'numeric',
@@ -241,7 +236,7 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
                         </span>
                       </td>
                       <td style={{ border: cellBorder, padding: 10, fontSize: 13 }}>
-                        {getPaymentStatusLabel(b)}
+                        {v.statusLabel}
                         {b.paidAt && (
                           <span style={{ display: 'block', fontSize: 11, color: 'var(--ccc-text-muted)', marginTop: 4 }}>
                             {new Date(b.paidAt).toLocaleDateString('fr-FR')}
@@ -249,14 +244,14 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
                         )}
                       </td>
                     </tr>
-                    {breakdown && breakdown.lines.length > 0 && (
+                    {v.lines.length > 0 && (
                       <>
                         <tr>
                           <td colSpan={2} style={{ border: cellBorder, padding: '8px 10px', background: '#f9fafb', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--ccc-text-muted)' }}>
                             Détail du montant
                           </td>
                         </tr>
-                        {breakdown.lines.map((line, idx) => (
+                        {v.lines.map((line, idx) => (
                           <tr key={idx} className="detail-row">
                             <td style={{ border: cellBorder, padding: '8px 10px 8px 20px', fontSize: 12, color: 'var(--ccc-text-secondary)' }}>
                               {line.label}
@@ -276,7 +271,7 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
                             Sous-total
                           </td>
                           <td style={{ border: cellBorder, padding: 10, fontSize: 13, fontWeight: 700, textAlign: 'right' }}>
-                            {formatInvoiceMoney(breakdown.subtotal, currency)}
+                            {formatInvoiceMoney(v.subtotal, currency)}
                           </td>
                         </tr>
                       </>
@@ -291,7 +286,7 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
             Total TTC : {formatInvoiceMoney(total, currency)}
           </p>
 
-          {lines.some((b) => b.paymentStatus === 'refunded') && (
+          {views.some((v) => v.booking.paymentStatus === 'refunded') && (
             <p style={{ marginTop: 12, fontSize: 12, color: 'var(--ccc-card-pending-text)' }}>
               Certaines lignes ont fait l&apos;objet d&apos;un remboursement.
             </p>
@@ -299,7 +294,7 @@ const VenueBookingInvoiceModal: React.FC<VenueBookingInvoiceModalProps> = ({
 
           <p style={{ marginTop: 24, fontSize: 11, color: 'var(--ccc-text-faint)' }}>
             Document généré par Connect Comedy Club à titre de justificatif de réservation.
-            {isSeries ? ` Série de ${lines.length} date(s).` : ''}
+            {isSeries ? ` Série de ${views.length} date(s).` : ''}
           </p>
         </div>
       </div>

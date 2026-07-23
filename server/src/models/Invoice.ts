@@ -18,6 +18,7 @@ export interface InvoiceDocument extends Document {
   buyer: {
     firstName?: string;
     lastName?: string;
+    companyName?: string;
     email: string;
   };
   seller: {
@@ -28,6 +29,7 @@ export interface InvoiceDocument extends Document {
     ownerFirstName?: string;
     ownerLastName?: string;
     contactName?: string;
+    contactEmail?: string;
     address: string;
     postalCode: string;
     city: string;
@@ -36,6 +38,10 @@ export interface InvoiceDocument extends Document {
   lines: InvoicePriceLine[];
   subtotal: number;
   currency: string;
+  eventDate?: Date;
+  startTime?: string;
+  endTime?: string;
+  pricingType?: 'heure' | 'demi_journee' | 'journee' | 'soiree' | 'forfait' | 'pourcentage_billetterie' | 'gratuit';
   paymentStatus: InvoicePaymentStatus;
   paidAmount?: number;
   paidAt?: Date;
@@ -67,6 +73,7 @@ const invoiceSchema = new Schema<InvoiceDocument>(
     buyer: {
       firstName: { type: String },
       lastName: { type: String },
+      companyName: { type: String },
       email: { type: String, required: true },
     },
     seller: {
@@ -77,6 +84,7 @@ const invoiceSchema = new Schema<InvoiceDocument>(
       ownerFirstName: { type: String },
       ownerLastName: { type: String },
       contactName: { type: String },
+      contactEmail: { type: String },
       address: { type: String, required: true },
       postalCode: { type: String, required: true },
       city: { type: String, required: true },
@@ -85,6 +93,13 @@ const invoiceSchema = new Schema<InvoiceDocument>(
     lines: { type: [invoiceLineSchema], default: [] },
     subtotal: { type: Number, required: true },
     currency: { type: String, required: true, default: 'EUR' },
+    eventDate: { type: Date },
+    startTime: { type: String },
+    endTime: { type: String },
+    pricingType: {
+      type: String,
+      enum: ['heure', 'demi_journee', 'journee', 'soiree', 'forfait', 'pourcentage_billetterie', 'gratuit'],
+    },
     paymentStatus: { type: String, enum: ['paid', 'refund_pending', 'refunded'], required: true },
     paidAmount: { type: Number },
     paidAt: { type: Date },

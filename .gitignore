@@ -180,3 +180,4 @@ tutorial-render-workspace/
 # Tests locaux (non versionnés)
 server/tests/
 server/jest.config.js
+client/src/utils/__tests__/

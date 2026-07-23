@@ -198,7 +198,7 @@ export interface IInvoiceSnapshot {
   booking: string;
   bookingGroupId?: string;
   issuedAt: string;
-  buyer: { firstName?: string; lastName?: string; email: string };
+  buyer: { firstName?: string; lastName?: string; companyName?: string; email: string };
   seller: {
     venueName: string;
     companyName?: string;
@@ -207,11 +207,13 @@ export interface IInvoiceSnapshot {
     ownerFirstName?: string;
     ownerLastName?: string;
     contactName?: string;
+    contactEmail?: string;
     address: string;
     postalCode: string;
     city: string;
     country: string;
   };
+  pricingType?: 'heure' | 'demi_journee' | 'journee' | 'soiree' | 'forfait' | 'pourcentage_billetterie' | 'gratuit';
   lines: { label: string; amount: number; note?: string }[];
   subtotal: number;
   currency: string;

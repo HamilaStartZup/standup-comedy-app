@@ -19,6 +19,7 @@ export async function createInvoiceSnapshot(bookingId: string): Promise<void> {
       siret?: string;
       legalStatus?: string;
       contactName?: string;
+      contactEmail?: string;
       address: string;
       postalCode: string;
       city: string;
@@ -29,14 +30,20 @@ export async function createInvoiceSnapshot(bookingId: string): Promise<void> {
       deposit?: number;
       extraFees?: { description: string; amount?: number }[];
     };
-    requester: { _id: unknown; firstName?: string; lastName?: string; email: string };
+    requester: {
+      _id: unknown;
+      firstName?: string;
+      lastName?: string;
+      email: string;
+      organizerProfile?: { companyName?: string };
+    };
   }>([
     {
       path: 'venue',
-      select: 'name owner companyName siret legalStatus contactName address postalCode city country currency pricingType pricePerEvent deposit extraFees',
+      select: 'name owner companyName siret legalStatus contactName contactEmail address postalCode city country currency pricingType pricePerEvent deposit extraFees',
       populate: { path: 'owner', select: 'firstName lastName' },
     },
-    { path: 'requester', select: 'firstName lastName email' },
+    { path: 'requester', select: 'firstName lastName email organizerProfile.companyName' },
   ]);
 
   if (!booking) {
@@ -82,6 +89,7 @@ export async function createInvoiceSnapshot(bookingId: string): Promise<void> {
         buyer: {
           firstName: booking.requester.firstName,
           lastName: booking.requester.lastName,
+          companyName: booking.requester.organizerProfile?.companyName,
           email: booking.requester.email,
         },
         seller: {
@@ -92,6 +100,7 @@ export async function createInvoiceSnapshot(bookingId: string): Promise<void> {
           ownerFirstName: booking.venue.owner.firstName,
           ownerLastName: booking.venue.owner.lastName,
           contactName: booking.venue.contactName,
+          contactEmail: booking.venue.contactEmail,
           address: booking.venue.address,
           postalCode: booking.venue.postalCode,
           city: booking.venue.city,
@@ -100,6 +109,10 @@ export async function createInvoiceSnapshot(bookingId: string): Promise<void> {
         lines: breakdown.lines,
         subtotal: breakdown.subtotal,
         currency: booking.venue.currency ?? 'EUR',
+        eventDate: booking.requestedDate,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        pricingType: booking.venue.pricingType,
         paymentStatus: 'paid',
         paidAmount: booking.paidAmount,
         paidAt: booking.paidAt,
