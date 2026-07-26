@@ -1,5 +1,6 @@
 import { type CSSProperties } from 'react';
 import Modal from './Modal';
+import StatusBadge from './StatusBadge';
 import type { IApplication } from '../pages/ApplicationsPage';
 
 interface ApplicationDetailsModalProps {
@@ -26,69 +27,12 @@ function ApplicationDetailsModal({ isOpen, onClose, application }: ApplicationDe
     paddingBottom: '5px',
   };
 
-  const statusBadgeStyle = (status: IApplication['status']): CSSProperties => {
-    let backgroundColor = '';
-    let color = 'var(--ccc-text-on-accent)';
-    switch (status) {
-      case 'PENDING':
-        backgroundColor = 'var(--ccc-warning)'; // yellow
-        color = '#333';
-        break;
-      case 'ACCEPTED':
-        backgroundColor = 'var(--ccc-success)'; // green
-        break;
-      case 'REJECTED':
-        backgroundColor = 'var(--ccc-error)'; // red
-        break;
-      case 'EXPIRED':
-        backgroundColor = '#6c757d'; // gray
-        break;
-      case 'WITHDRAWN':
-        backgroundColor = '#6c757d';
-        break;
-      case 'CANCELLED_BY_PLATFORM':
-        backgroundColor = '#5a6268';
-        color = 'var(--ccc-text-on-accent)';
-        break;
-      default:
-        backgroundColor = '#6c757d'; // gray
-    }
-    return {
-      display: 'inline-block',
-      padding: '5px 10px',
-      borderRadius: '5px',
-      backgroundColor,
-      color,
-      fontWeight: 'bold',
-      marginTop: '10px',
-    };
-  };
-
-  const translateStatus = (status: IApplication['status']): string => {
-    switch (status) {
-      case 'PENDING':
-        return 'En attente';
-      case 'ACCEPTED':
-        return 'Acceptée';
-      case 'REJECTED':
-        return 'Refusée';
-      case 'EXPIRED':
-        return 'Expirée';
-      case 'WITHDRAWN':
-        return 'Retirée';
-      case 'CANCELLED_BY_PLATFORM':
-        return 'Annulée par la plateforme';
-      default:
-        return status; // Fallback for other statuses
-    }
-  };
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Détails de la Candidature">
       <h2 style={{ fontSize: '1.8em', color: '#ff4b2b', marginBottom: '15px' }}>{application.event.title}</h2>
       
       <h3 style={sectionTitleStyle}>Informations Générales</h3>
-      <p style={cardDetailStyle}>Statut: <span style={statusBadgeStyle(application.status)}>{translateStatus(application.status)}</span></p>
+      <p style={cardDetailStyle}>Statut: <StatusBadge status={application.status} style={{ marginTop: '10px' }} /></p>
       <p style={cardDetailStyle}>Date de l'évènement: {new Date(application.event.date).toLocaleDateString()}</p>
       {application.event.startTime && (
         <p style={cardDetailStyle}>Heure de l'évènement: {application.event.startTime}</p>

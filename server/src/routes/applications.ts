@@ -8,6 +8,7 @@ import {
   getComedianApplications,
   checkApplicationExists,
   getAllApplications,
+  getApplicationTabCounts,
   getApplicationById,
   confirmParticipation,
   deleteApplication,
@@ -53,6 +54,13 @@ router.get('/check/:eventId/:comedianId', authMiddleware, checkApplicationExists
  * Query params: status? (filter), eventId? (filter)
  */
 router.get('/', authMiddleware, getAllApplications);
+
+/**
+ * GET /counts
+ * Compteurs de tous les onglets en une requête ($facet). Doit précéder /:applicationId.
+ * Response: { counts: { … } }
+ */
+router.get('/counts', authMiddleware, getApplicationTabCounts);
 
 /**
  * GET /:applicationId

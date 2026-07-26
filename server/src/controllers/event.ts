@@ -5,6 +5,7 @@ import { AuthRequest } from '../middleware/auth';
 import mongoose from 'mongoose';
 import { ApplicationModel } from '../models/Application';
 import { expirePendingApplicationsForEvent } from './application';
+import { buildEventEndExpr, isEventPast } from '../utils/eventTiming';
 import { sendEventUpdatedNotificationToApplicants, sendEventCancellationToParticipants, sendNewEventNotificationToHumorists, sendEventInvitationToComedian } from '../services/emailService';
 import { notifyComediansByMobilityAsync, notifyComediansByMobilityForRecurringGroupAsync } from '../services/mobilityNotificationService';
 import { config } from '../config/env';
@@ -23,7 +24,7 @@ import {
 } from '../utils/venueBookingEventLink';
 import { VenueBookingModel } from '../models/VenueBooking';
 import { detectZoneType, FRENCH_REGIONS, normalizeDepartment } from '../utils/geographicMatching';
-import { notifyEventCancellation } from '../services/eventCancellation';
+import { notifyEventCancellation, cancelEventInternal, notifySeriesCancellation } from '../services/eventCancellation';
 
 /** Retourne la liste des modifications entre l'ancien et le nouvel évènement (pour l'email aux candidats) */
 function getEventChanges(oldEvent: any, newEvent: any): string[] {
@@ -829,6 +830,30 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>);
     const isGeoFilter = (userRole === 'SPECTATOR' && nearMe) || Boolean(city && city.trim() && cityRadiusKm > 0);
 
+    // "published" (à venir) : événement le plus proche en premier (ascendant).
+    // "completed"/"cancelled" (passés) : le plus récent en premier (descendant) = le plus proche d'aujourd'hui côté passé.
+    const dateSortDirection: 1 | -1 = query.status === 'published' ? 1 : -1;
+
+    // Le statut 'published' → 'completed' n'est basculé que par le cron quotidien (jobs/mark-completed) :
+    // un évènement peut donc rester 'published' plusieurs heures après sa fin réelle.
+    // On revérifie la vraie fin (date+endTime, ou endDate si fourni) pour ne pas afficher
+    // un évènement terminé dans "à venir", et pour le faire quand même apparaître dans "archivée"
+    // sans attendre le cron (sinon il disparaît des deux onglets en attendant).
+    if (query.status === 'published' || query.status === 'completed') {
+      const eventEndExpr = buildEventEndExpr({
+        date: '$date',
+        endDate: '$endDate',
+        endTime: '$endTime',
+        startTime: '$startTime',
+      });
+      if (query.status === 'published') {
+        query.$expr = { $gte: [eventEndExpr, '$$NOW'] };
+      } else {
+        query.status = { $in: ['completed', 'published'] };
+        query.$expr = { $or: [{ $eq: ['$status', 'completed'] }, { $lt: [eventEndExpr, '$$NOW'] }] };
+      }
+    }
+
     // P14: filter out events without a valid organizer at DB level.
     // Ne PAS écraser un filtre organizer déjà posé (ORGANIZER role / organizerId param) :
     // sans ça le serveur renvoyait tous les events d'un statut, le client filtrait ensuite et
@@ -842,7 +867,7 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
       const events = await EventModel.find(query)
         .populate('organizer', 'firstName lastName email organizerProfile.companyName')
         .select('title date endDate startTime endTime status city location isRecurrent recurrenceGroupId imageUrl organizer withdrawnComedians requirements budget description maxSpectators applications venue venueBookingId modifiedByOrganizer cancellationReason')
-        .sort({ date: -1 })
+        .sort({ date: dateSortDirection })
         .skip(skip)
         .limit(limit)
         .lean() as any[];
@@ -853,7 +878,7 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     let events = await EventModel.find(query)
       .populate('organizer', 'firstName lastName email organizerProfile.companyName')
       .select('title date endDate startTime endTime status city location isRecurrent recurrenceGroupId imageUrl organizer withdrawnComedians requirements budget description maxSpectators applications venue venueBookingId modifiedByOrganizer cancellationReason')
-      .sort({ date: -1 })
+      .sort({ date: dateSortDirection })
       .lean() as any[];
 
     // Filtre "près de moi" (rayon en km) pour le spectateur
@@ -1071,6 +1096,64 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
       eventOrganizer: event.organizer?.toString?.() || event.organizer,
       requestingOrganizer: organizerId,
     });
+
+    // Annulation de série récurrente : le client envoie status='cancelled' + cascadeGroup=true
+    // sur un event du groupe. Le serveur résout tout le groupe, partitionne par la règle des
+    // 10 jours (delete >=10j hors stats / cancel <10j compté) et notifie une seule fois
+    // (anti-spam) au lieu d'une notification par occurrence.
+    if (req.body.status === 'cancelled' && req.body.cascadeGroup === true && event.recurrenceGroupId) {
+      const reason = (req.body as any).cancellationReason as string | undefined;
+      const todayMidnight = new Date();
+      todayMidnight.setHours(0, 0, 0, 0);
+
+      const groupEvents = await EventModel.find({
+        recurrenceGroupId: event.recurrenceGroupId,
+        organizer: event.organizer,
+        status: { $in: ['draft', 'published'] },
+        date: { $gte: todayMidnight },
+      });
+
+      // Notifier une seule fois AVANT toute suppression : les candidatures des events
+      // supprimés (≥10j) disparaissent sinon et ne seraient plus retrouvées par eventIds.
+      await notifySeriesCancellation(groupEvents, reason);
+
+      let cancelledCount = 0;
+      let deletedCount = 0;
+      for (const ev of groupEvents) {
+        const eventMidnight = new Date(ev.date);
+        eventMidnight.setHours(0, 0, 0, 0);
+        const diffDays = Math.ceil((eventMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diffDays >= 10) {
+          // Hors stats : suppression pure, sans pénaliser l'organisateur (règle des 10 jours).
+          const affectedApplications = await ApplicationModel.find({
+            event: ev._id,
+            status: { $in: ['PENDING', 'ACCEPTED'] },
+          });
+          const comedianIds = affectedApplications
+            .map((a) => a.comedian?.toString())
+            .filter((id): id is string => !!id);
+          await ApplicationModel.deleteMany({ event: ev._id });
+          await EventModel.findByIdAndDelete(ev._id);
+          emitEventDeleted(ev._id.toString(), [organizerId, ...comedianIds]);
+          deletedCount += 1;
+        } else {
+          await cancelEventInternal(ev, reason, { skipNotify: true });
+          cancelledCount += 1;
+        }
+      }
+
+      if (deletedCount > 0) {
+        await UserModel.findByIdAndUpdate(
+          event.organizer,
+          { $inc: { 'stats.totalEvents': -deletedCount } },
+          { runValidators: false }
+        ).catch(() => {});
+      }
+
+      res.json({ message: 'Série annulée', cancelledCount, deletedCount });
+      return;
+    }
 
     // Sauvegarder l'ancienne ville pour détecter le changement
     const oldCity = event.location?.city;
@@ -1903,37 +1986,9 @@ export const markEventsAsCompletedCron = async (req: Request, res: Response): Pr
     // Traiter chaque évènement
     for (const event of events) {
       try {
-        // Construire la date/heure de fin de l'évènement
-        const eventDate = new Date(event.date);
-        let eventEndDateTime: Date;
-
-        if (event.endTime) {
-          const [endH, endM] = event.endTime.split(':').map(Number);
-          const endMinutes = endH * 60 + endM;
-          let endDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-          if (event.startTime) {
-            const [startH, startM] = event.startTime.split(':').map(Number);
-            const startMinutes = startH * 60 + startM;
-            if (endMinutes <= startMinutes) {
-              endDate.setDate(endDate.getDate() + 1);
-            }
-          }
-          eventEndDateTime = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), endH, endM, 0, 0);
-        } else {
-          // Sinon, considérer la fin de la journée (23:59:59)
-          eventEndDateTime = new Date(
-            eventDate.getFullYear(),
-            eventDate.getMonth(),
-            eventDate.getDate(),
-            23,
-            59,
-            59,
-            999
-          );
-        }
-
-        // Vérifier si l'évènement est vraiment terminé
-        if (now > eventEndDateTime) {
+        // Fin réelle via la règle de timing partagée (priorise endDate → sinon
+        // date+endTime avec passage minuit). Aligne le cron sur les filtres de liste.
+        if (isEventPast(event, now)) {
           event.status = 'completed';
           await event.save();
           updatedCount++;

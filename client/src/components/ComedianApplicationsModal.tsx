@@ -1,6 +1,8 @@
 import { type CSSProperties, useState, useEffect } from 'react';
 import Modal from './Modal';
+import StatusBadge from './StatusBadge';
 import api from '../services/api';
+import { STATUS_META, type AppStatus } from '../utils/applicationStatus';
 
 interface ComedianApplicationsModalProps {
   isOpen: boolean;
@@ -78,41 +80,7 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'ACCEPTED': return 'Acceptée';
-      case 'REJECTED': return 'Refusée';
-      case 'PENDING': return 'En attente';
-      case 'EXPIRED': return 'Expirée';
-      case 'WITHDRAWN': return 'Retirée';
-      case 'CANCELLED_BY_PLATFORM': return 'Annulée par la plateforme';
-      default: return status;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACCEPTED': return 'var(--ccc-success)';
-      case 'REJECTED': return 'var(--ccc-error)';
-      case 'PENDING': return 'var(--ccc-warning)';
-      case 'EXPIRED': return '#6c757d';
-      case 'WITHDRAWN': return '#6c757d';
-      case 'CANCELLED_BY_PLATFORM': return '#6c757d';
-      default: return '#6c757d';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'ACCEPTED': return '✅';
-      case 'REJECTED': return '❌';
-      case 'PENDING': return '⏳';
-      case 'EXPIRED': return '⏰';
-      case 'WITHDRAWN': return '↩';
-      case 'CANCELLED_BY_PLATFORM': return '🚫';
-      default: return '❓';
-    }
-  };
+  const getStatusLabel = (status: string) => STATUS_META[status as AppStatus]?.label ?? status;
 
   const filteredApplications = applications.filter(app => {
     if (filter === 'all') return true;
@@ -268,16 +236,7 @@ function ComedianApplicationsModal({ isOpen, onClose, comedian }: ComedianApplic
                       <h4 style={{ margin: 0, color: '#ff4b2b', fontSize: '16px' }}>
                         {app.event.title}
                       </h4>
-                      <span style={{
-                        padding: '4px 12px',
-                        borderRadius: '15px',
-                        backgroundColor: getStatusColor(app.status),
-                        color: 'var(--ccc-text-on-accent)',
-                        fontSize: '12px',
-                        fontWeight: 'bold'
-                      }}>
-                        {getStatusIcon(app.status)} {getStatusLabel(app.status)}
-                      </span>
+                      <StatusBadge status={app.status} />
                     </div>
                     
                     <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', marginBottom: '8px' }}>

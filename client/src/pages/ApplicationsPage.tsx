@@ -6,9 +6,15 @@ import { useAlert } from '../hooks/useAlert';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ApplicationDetailsModal from '../components/ApplicationDetailsModal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import StatusBadge from '../components/StatusBadge';
+import { STATUS_META, type AppStatus } from '../utils/applicationStatus';
+
+const ARCHIVED_FILTER_STATUSES: AppStatus[] = ['ACCEPTED', 'REJECTED', 'EXPIRED', 'WITHDRAWN'];
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { addFavorite, removeFavorite, getFavorites, addApplicationFavorite, removeApplicationFavorite, getApplicationFavorites } from '../services/api';
 import { checkGeographicCompatibility } from '../utils/geographicMatching';
+import { isEventUpcoming, isEventPast } from '../utils/eventTiming';
+import { comedianTabOf } from '../utils/comedianTab';
 import { getErrorMessage, ErrorMessages, SuccessMessages, WarningMessages, InfoMessages, ConfirmMessages } from '../services/systemMessages';
 import Pagination from '../components/Pagination';
 import type { PaginationMeta } from '../types/pagination';
@@ -57,7 +63,7 @@ export interface IApplication {
 }
 
 type ComedianApplicationTab = 'accepted' | 'pending' | 'rejected' | 'archived' | 'cancelled';
-type OrganizerApplicationTab = 'all' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'favorites';
+type OrganizerApplicationTab = 'all' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'favorites' | 'archived';
 
 const VALID_COMEDIAN_TABS: ComedianApplicationTab[] = ['accepted', 'pending', 'rejected', 'archived', 'cancelled'];
 
@@ -156,11 +162,11 @@ function ApplicationsPage() {
   const messageInputRef = useRef<HTMLInputElement | null>(null);
   const [comedianFilter, setComedianFilter] = useState<string>('all');
   const [selectedEventId] = useState<string>('all');
-  const [sortKey, setSortKey] = useState<'dateAsc' | 'dateDesc' | 'statusAsc' | 'statusDesc'>('dateDesc');
+  const [sortKey, setSortKey] = useState<'dateAsc' | 'dateDesc' | 'statusAsc' | 'statusDesc'>('dateAsc');
   // États pour les filtres spécifiques COMEDIAN
-  const [comedianSortKey, setComedianSortKey] = useState<'dateAsc' | 'dateDesc'>('dateDesc');
+  const [comedianSortKey, setComedianSortKey] = useState<'dateAsc' | 'dateDesc'>('dateAsc');
   const [comedianOrganizerFilter, setComedianOrganizerFilter] = useState<string>('all');
-  const [archivedOutcomeFilter, setArchivedOutcomeFilter] = useState<'all' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED'>('all');
+  const [archivedOutcomeFilter, setArchivedOutcomeFilter] = useState<'all' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'WITHDRAWN'>('all');
   // États pour la recherche par zone d'événement et filtre par niveau d'expérience (organisateur)
   const [eventZoneSearch, setEventZoneSearch] = useState<string>('');
   const [organizerExperienceFilter, setOrganizerExperienceFilter] = useState<'all' | '0-50' | '50-200' | '200+'>('all');
@@ -189,7 +195,7 @@ function ApplicationsPage() {
   // Charger les candidatures avec React Query
   const { data: applicationsData, isLoading: loading, error: applicationsError } = useQuery<{ applications: IApplication[]; pagination: PaginationMeta | null }>({
     queryKey: isComedianView
-      ? ['applications', 'comedian', comedianTab, comedianPage]
+      ? ['applications', 'comedian', comedianTab, comedianPage, comedianSortKey]
       : ['applications', selectedEventId, currentPage, selectedTab, sortKey, eventZoneSearch, organizerExperienceFilter],
     queryFn: async () => {
       if (!user?._id) {
@@ -202,13 +208,15 @@ function ApplicationsPage() {
         if (comedianTab === 'accepted') params.set('tab', 'accepted');
         else if (comedianTab === 'pending') params.set('tab', 'pending');
         else if (comedianTab === 'archived') params.set('tab', 'archived');
-        else if (comedianTab === 'cancelled') params.set('tab', 'pending');
-        else if (comedianTab === 'rejected') params.set('status', 'REJECTED');
+        else if (comedianTab === 'cancelled') params.set('tab', 'cancelled');
+        else if (comedianTab === 'rejected') params.set('tab', 'rejected');
+        params.set('sort', comedianSortKey);
       } else {
         if (selectedEventId !== 'all') params.set('eventId', selectedEventId);
         params.set('page', String(currentPage));
         params.set('limit', '10');
-        if (selectedTab !== 'all' && selectedTab !== 'favorites') params.set('status', selectedTab);
+        if (selectedTab !== 'all' && selectedTab !== 'favorites' && selectedTab !== 'archived') params.set('status', selectedTab);
+        params.set('timeScope', selectedTab === 'archived' ? 'past' : 'upcoming');
         params.set('sort', sortKey);
         if (eventZoneSearch.trim()) params.set('zone', eventZoneSearch.trim());
         if (organizerExperienceFilter !== 'all') params.set('experienceLevel', organizerExperienceFilter);
@@ -221,42 +229,38 @@ function ApplicationsPage() {
       const pagination: PaginationMeta | null = raw?.pagination ?? null;
       return { applications: list, pagination };
     },
-    enabled: isQueryEnabled,
+    // Favoris (organisateur) : liste servie depuis upcomingFavorites (source dédiée) —
+    // inutile de payer la requête liste paginée dont le résultat serait jeté.
+    enabled: isQueryEnabled && !(isOrganizerView && selectedTab === 'favorites'),
   });
 
   const applications: IApplication[] = applicationsData?.applications || [];
   const serverPagination = applicationsData?.pagination || null;
   const error = applicationsError ? (applicationsError as any).response?.data?.message || (applicationsError as any).message || 'Échec de la récupération des candidatures.' : null;
 
-  // Compteurs globaux par statut (limit:1, on lit pagination.total).
-  // Évite que les compteurs de tab reflètent seulement la page courante.
-  const useApplicationCount = (params: Record<string, string>, enabled: boolean) => {
-    const query = useQuery<number>({
-      queryKey: ['applications', 'count', params],
+  // Compteurs de TOUS les onglets en UNE requête (GET /applications/counts, $facet serveur)
+  // au lieu de N requêtes limit:1 — même périmètre & même classifieur que la liste.
+  const useTabCounts = (params: Record<string, string>, enabled: boolean) => {
+    const query = useQuery<Record<string, number>>({
+      queryKey: ['applications', 'counts', params],
       queryFn: async () => {
-        const qs = new URLSearchParams({ ...params, page: '1', limit: '1' }).toString();
-        const res = await api.get(`/applications?${qs}`);
-        return res.data?.pagination?.total ?? 0;
+        const qs = new URLSearchParams(params).toString();
+        const res = await api.get(`/applications/counts${qs ? `?${qs}` : ''}`);
+        return res.data?.counts ?? {};
       },
       enabled: isQueryEnabled && enabled,
       staleTime: 30 * 1000,
     });
-    return query.data ?? null;
+    return query.data ?? {};
   };
 
   const orgEventScope: Record<string, string> = selectedEventId !== 'all' ? { eventId: selectedEventId } : {};
   const orgZoneScope: Record<string, string> = eventZoneSearch.trim() ? { zone: eventZoneSearch.trim() } : {};
   const orgExpScope: Record<string, string> = organizerExperienceFilter !== 'all' ? { experienceLevel: organizerExperienceFilter } : {};
   const orgFilterScope = { ...orgEventScope, ...orgZoneScope, ...orgExpScope };
-  const orgAllCount = useApplicationCount({ ...orgFilterScope }, isOrganizerView);
-  const orgPendingCount = useApplicationCount({ ...orgFilterScope, status: 'PENDING' }, isOrganizerView);
-  const orgAcceptedCount = useApplicationCount({ ...orgFilterScope, status: 'ACCEPTED' }, isOrganizerView);
-  const orgRejectedCount = useApplicationCount({ ...orgFilterScope, status: 'REJECTED' }, isOrganizerView);
-
-  const comedianAcceptedCount = useApplicationCount({ tab: 'accepted' }, isComedianView);
-  const comedianPendingCount = useApplicationCount({ tab: 'pending' }, isComedianView);
-  const comedianRejectedCount = useApplicationCount({ status: 'REJECTED' }, isComedianView);
-  const comedianArchivedCount = useApplicationCount({ tab: 'archived' }, isComedianView);
+  // Organisateur : { all, PENDING, ACCEPTED, REJECTED, archived }. Humoriste : { accepted, pending, rejected, archived, cancelled }.
+  const organizerCounts = useTabCounts({ ...orgFilterScope }, isOrganizerView);
+  const comedianCounts = useTabCounts({}, isComedianView);
 
   // Charger les favoris d'humoristes depuis l'API
   const { data: favoritesData, refetch: refetchFavorites } = useQuery<{ favorites: IUser[] }, Error>({
@@ -307,6 +311,12 @@ function ApplicationsPage() {
       setFavoriteApplicationIds([]);
     }
   }, [applicationFavoritesData, isOrganizerView]);
+
+  // Favoris scopés à-venir, servis depuis leur source dédiée (pas d'intersection avec la page générale paginée).
+  const upcomingFavorites = useMemo(
+    () => (applicationFavoritesData?.favorites ?? []).filter(app => isEventUpcoming(app.event)),
+    [applicationFavoritesData]
+  );
 
   const toggleFavoriteApplication = async (appId: string) => {
     if (!isOrganizerView || !user?._id) return;
@@ -367,6 +377,9 @@ function ApplicationsPage() {
     const statusParam = queryParams.get('status');
     if (statusParam === 'favorites') {
       return 'favorites';
+    }
+    if (statusParam === 'archived') {
+      return 'archived';
     }
     if (statusParam && ['PENDING', 'ACCEPTED', 'REJECTED'].includes(statusParam)) {
       return statusParam as OrganizerApplicationTab;
@@ -450,11 +463,22 @@ function ApplicationsPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedTab, selectedEventId, comedianFilter, sortKey, eventZoneSearch, organizerExperienceFilter]);
+
+  useEffect(() => {
+    // Archivée = événements passés → "le plus proche" d'aujourd'hui = le plus récent (dateDesc).
+    // Les autres onglets = événements à venir → "le plus proche" = le plus tôt (dateAsc).
+    setSortKey(selectedTab === 'archived' ? 'dateDesc' : 'dateAsc');
+  }, [selectedTab]);
   const organizerFilteredApplications = user?.role === 'ORGANIZER'
-    ? getFilteredApplications().filter(app => app.event && app.comedian && app.event.organizer)
+    ? (selectedTab === 'favorites'
+        ? getFilteredApplications().slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+        : getFilteredApplications()
+      ).filter(app => app.event && app.comedian && app.event.organizer)
     : [];
 
-  const totalOrganizerPages = serverPagination?.totalPages ?? Math.max(1, Math.ceil(organizerFilteredApplications.length / ITEMS_PER_PAGE));
+  const totalOrganizerPages = selectedTab === 'favorites'
+    ? Math.max(1, Math.ceil(upcomingFavorites.length / ITEMS_PER_PAGE))
+    : (serverPagination?.totalPages ?? Math.max(1, Math.ceil(organizerFilteredApplications.length / ITEMS_PER_PAGE)));
 
   const clearApplicationParam = () => {
     const params = new URLSearchParams(location.search);
@@ -519,7 +543,7 @@ function ApplicationsPage() {
 
   // Fonction de filtrage combinée
   function getFilteredApplications(): IApplication[] {
-    let filtered = applications;
+    let filtered = selectedTab === 'favorites' ? upcomingFavorites : applications;
     // Filtre par humoriste: seulement utile côté ORGANIZER
     if (user?.role === 'ORGANIZER' && comedianFilter !== 'all') {
       filtered = filtered.filter(app => app.comedian && app.comedian._id === comedianFilter);
@@ -527,16 +551,12 @@ function ApplicationsPage() {
     
     // Tri
     const sortByStatusOrder = (a: IApplication['status'], b: IApplication['status']) => {
-      const order = ['PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED'];
-      return order.indexOf(a) - order.indexOf(b);
+      const order = ['PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'WITHDRAWN', 'CANCELLED_BY_PLATFORM'];
+      // Statut hors liste → rejeté en fin de tri (indexOf renverrait -1 = en tête).
+      const rank = (s: IApplication['status']) => { const i = order.indexOf(s); return i < 0 ? order.length : i; };
+      return rank(a) - rank(b);
     };
     const sorted = [...filtered].sort((a, b) => {
-      // Les candidatures d'événements passés toujours après les actives
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const aPast = a.event?.date ? new Date(a.event.date) < today : false;
-      const bPast = b.event?.date ? new Date(b.event.date) < today : false;
-      if (aPast !== bPast) return aPast ? 1 : -1;
-
       if (sortKey === 'dateAsc') {
         if (!a.event || !a.event.date || !b.event || !b.event.date) return 0;
         return new Date(a.event.date).getTime() - new Date(b.event.date).getTime();
@@ -553,30 +573,13 @@ function ApplicationsPage() {
       }
       return 0;
     });
-    const withFavoritesFilter = selectedTab === 'favorites'
-      ? sorted.filter(app => favoriteApplicationIdsSet.has(app._id))
-      : sorted;
-
-    return withFavoritesFilter;
+    return sorted;
   }
 
-  // Fonctions de filtrage pour les onglets humoriste
-  const todayMidnight = new Date();
-  todayMidnight.setHours(0, 0, 0, 0);
-
-  const isEventUpcoming = (eventDate: string): boolean => {
-    if (!eventDate) return false;
-    const eventDateObj = new Date(eventDate);
-    eventDateObj.setHours(0, 0, 0, 0);
-    return eventDateObj >= todayMidnight;
-  };
-
-  const isEventPast = (eventDate: string): boolean => {
-    if (!eventDate) return false;
-    const eventDateObj = new Date(eventDate);
-    eventDateObj.setHours(0, 0, 0, 0);
-    return eventDateObj < todayMidnight;
-  };
+  // Fonctions de filtrage pour les onglets humoriste.
+  // `isEventUpcoming` / `isEventPast` (règle de timing unifiée, alignée serveur) sont
+  // importés de ../utils/eventTiming et prennent l'évènement complet (date + startTime
+  // + endTime + endDate) au lieu de l'ancienne règle "jour" qui divergeait (écart #7).
 
   /** true si l'événement commence dans moins d'1 h ou a déjà commencé → plus de désinscription possible */
   const isEventWithinOneHour = (event: { date?: string; startTime?: string } | null): boolean => {
@@ -596,7 +599,7 @@ function ApplicationsPage() {
           .filter(app =>
             app.status === 'ACCEPTED' &&
             app.event?.date &&
-            isEventUpcoming(app.event.date) &&
+            isEventUpcoming(app.event) &&
             app.event?.organizer
           )
           .map(app => `${app.event.organizer._id}::${app.event.organizer.firstName} ${app.event.organizer.lastName}`)
@@ -613,48 +616,11 @@ function ApplicationsPage() {
     event?.status === 'CANCELLED' || event?.status === 'cancelled';
 
   const getComedianFilteredApplications = (): IApplication[] => {
-    const base = applications.filter(app => app.event);
-
-    // Étape 1: Filtrage par tab (switch existant)
-    let tabFiltered: IApplication[] = [];
-    switch (comedianTab) {
-      case 'accepted':
-        tabFiltered = base.filter(app =>
-          app.status === 'ACCEPTED' &&
-          app.event?.date &&
-          isEventUpcoming(app.event.date) &&
-          !isEventCancelled(app.event)
-        );
-        break;
-      case 'pending':
-        tabFiltered = base.filter(app =>
-          app.status === 'PENDING' &&
-          app.event?.date &&
-          isEventUpcoming(app.event.date) &&
-          !isEventCancelled(app.event)
-        );
-        break;
-      case 'rejected':
-        tabFiltered = base.filter(app =>
-          app.status === 'REJECTED' &&
-          app.event?.date &&
-          isEventUpcoming(app.event.date)
-        );
-        break;
-      case 'archived':
-        tabFiltered = base.filter(app =>
-          app.event?.date &&
-          isEventPast(app.event.date) &&
-          app.status !== 'PENDING' &&
-          !isEventCancelled(app.event)
-        );
-        break;
-      case 'cancelled':
-        tabFiltered = base.filter(app => isEventCancelled(app.event));
-        break;
-      default:
-        return [];
-    }
+    // Étape 1 : le serveur a déjà isolé le foyer de l'onglet (même classifieur).
+    // On ne re-filtre PAS côté client : un désaccord de bord (date absente, décalage
+    // d'horloge navigateur vs $$NOW) masquerait des lignes que la pagination serveur
+    // a pourtant comptées → liste plus courte que le compteur.
+    const tabFiltered = applications;
 
     // Étape 2: Filtre organisateur (tab "accepted")
     let filtered = tabFiltered;
@@ -686,33 +652,15 @@ function ApplicationsPage() {
     ? getComedianFilteredApplications() 
     : [];
 
-  // Compteurs comedian : on privilégie le total serveur (par tab), avec fallback local
-  // sur la page courante. `cancelled` reste local car non-dérivable d'un tab/status serveur.
+  // Compteurs comedian : total serveur (par tab) prioritaire, fallback local via le MÊME
+  // classifieur que la liste → compteur et liste ne peuvent plus diverger.
+  const countLocal = (t: ComedianApplicationTab) => applications.filter(app => comedianTabOf(app) === t).length;
   const comedianTabCounts = {
-    accepted: comedianAcceptedCount ?? applications.filter(app =>
-      app.status === 'ACCEPTED' &&
-      app.event?.date &&
-      isEventUpcoming(app.event.date) &&
-      !isEventCancelled(app.event)
-    ).length,
-    pending: comedianPendingCount ?? applications.filter(app =>
-      app.status === 'PENDING' &&
-      app.event?.date &&
-      isEventUpcoming(app.event.date) &&
-      !isEventCancelled(app.event)
-    ).length,
-    rejected: comedianRejectedCount ?? applications.filter(app =>
-      app.status === 'REJECTED' &&
-      app.event?.date &&
-      isEventUpcoming(app.event.date)
-    ).length,
-    archived: comedianArchivedCount ?? applications.filter(app =>
-      app.event?.date &&
-      isEventPast(app.event.date) &&
-      app.status !== 'PENDING' &&
-      !isEventCancelled(app.event)
-    ).length,
-    cancelled: applications.filter(app => isEventCancelled(app.event)).length,
+    accepted: comedianCounts.accepted ?? countLocal('accepted'),
+    pending: comedianCounts.pending ?? countLocal('pending'),
+    rejected: comedianCounts.rejected ?? countLocal('rejected'),
+    archived: comedianCounts.archived ?? countLocal('archived'),
+    cancelled: comedianCounts.cancelled ?? countLocal('cancelled'),
   };
 
   const comedianTabTitles: Record<ComedianApplicationTab, string> = {
@@ -741,7 +689,9 @@ function ApplicationsPage() {
     // Réinitialiser tous les filtres au changement de tab
     setComedianOrganizerFilter('all');
     setArchivedOutcomeFilter('all');
-    setComedianSortKey('dateDesc');
+    // Archivée = événements passés → "le plus proche" d'aujourd'hui = le plus récent (dateDesc).
+    // Les autres onglets = événements à venir → "le plus proche" = le plus tôt (dateAsc).
+    setComedianSortKey(comedianTab === 'archived' ? 'dateDesc' : 'dateAsc');
   }, [comedianTab]);
 
   useEffect(() => {
@@ -763,18 +713,20 @@ function ApplicationsPage() {
 
   const validOrganizerApps = applications.filter(app => app.event && app.comedian && app.event.organizer);
   // Compteurs organisateur : totaux serveur (scopés à eventId si filtré) avec fallback local.
-  // Favoris = taille du set global chargé depuis /applications-favorites — pas besoin de query.
-  const allApplicationsCount = orgAllCount ?? validOrganizerApps.length;
-  const pendingApplicationsCount = orgPendingCount ?? validOrganizerApps.filter(app => app.status === 'PENDING').length;
-  const acceptedApplicationsCount = orgAcceptedCount ?? validOrganizerApps.filter(app => app.status === 'ACCEPTED').length;
-  const rejectedApplicationsCount = orgRejectedCount ?? validOrganizerApps.filter(app => app.status === 'REJECTED').length;
-  const favoriteApplicationsCount = favoriteApplicationIdsSet.size;
+  // Favoris = upcomingFavorites (source dédiée, filtrée à-venir) — compteur == liste par construction.
+  const allApplicationsCount = organizerCounts.all ?? validOrganizerApps.length;
+  const pendingApplicationsCount = organizerCounts.PENDING ?? validOrganizerApps.filter(app => app.status === 'PENDING').length;
+  const acceptedApplicationsCount = organizerCounts.ACCEPTED ?? validOrganizerApps.filter(app => app.status === 'ACCEPTED').length;
+  const rejectedApplicationsCount = organizerCounts.REJECTED ?? validOrganizerApps.filter(app => app.status === 'REJECTED').length;
+  const favoriteApplicationsCount = upcomingFavorites.length;
+  const archivedApplicationsCount = organizerCounts.archived ?? validOrganizerApps.filter(app => isEventPast(app.event)).length;
 
   const organizerTabsConfig: Array<{ id: OrganizerApplicationTab; label: string; count: number }> = [
-    { id: 'all', label: 'Toutes', count: allApplicationsCount },
+    { id: 'all', label: 'Actives', count: allApplicationsCount },
     { id: 'PENDING', label: 'En attente', count: pendingApplicationsCount },
     { id: 'ACCEPTED', label: 'Acceptées', count: acceptedApplicationsCount },
     { id: 'REJECTED', label: 'Refusées', count: rejectedApplicationsCount },
+    { id: 'archived', label: 'Archivées', count: archivedApplicationsCount },
     { id: 'favorites', label: 'Favoris', count: favoriteApplicationsCount },
   ];
 
@@ -1052,67 +1004,6 @@ function ApplicationsPage() {
     width: isMobile ? '100%' : 'auto',
   };
 
-  const statusBadgeStyle = (status: IApplication['status']): CSSProperties => {
-    let backgroundColor = '';
-    let color = 'var(--ccc-text-on-accent)';
-    switch (status) {
-      case 'PENDING':
-        backgroundColor = 'var(--ccc-warning)'; // yellow
-        color = '#333';
-        break;
-      case 'ACCEPTED':
-        backgroundColor = 'transparent'; // pas de fond vert
-        color = 'var(--ccc-success)'; // texte vert
-        break;
-      case 'REJECTED':
-        backgroundColor = 'transparent'; // pas de fond rouge
-        color = 'var(--ccc-error)'; // texte rouge
-        break;
-      case 'EXPIRED':
-        backgroundColor = 'transparent'; // pas de fond gris
-        color = 'var(--ccc-text-muted)'; // texte gris
-        break;
-      case 'WITHDRAWN':
-      case 'CANCELLED_BY_PLATFORM':
-        backgroundColor = 'transparent';
-        color = '#6c757d';
-        break;
-      default:
-        backgroundColor = '#6c757d'; // gray
-    }
-    return {
-      display: 'inline-block',
-      padding: '6px 12px',
-      borderRadius: 'var(--ccc-radius-sm)',
-      backgroundColor: (status === 'ACCEPTED' || status === 'REJECTED' || status === 'EXPIRED' || status === 'WITHDRAWN' || status === 'CANCELLED_BY_PLATFORM') ? 'transparent' : backgroundColor,
-      color: status === 'ACCEPTED' ? 'var(--ccc-success)' : (status === 'REJECTED' ? 'var(--ccc-error)' : (status === 'EXPIRED' ? 'var(--ccc-text-muted)' : (status === 'WITHDRAWN' || status === 'CANCELLED_BY_PLATFORM' ? '#6c757d' : color))),
-      fontWeight: 'bold',
-      fontSize: '0.9em',
-      border: status === 'ACCEPTED' ? 'none' : undefined,
-      width: isMobile ? '100%' : 'auto',
-      textAlign: isMobile ? 'center' : 'left',
-    };
-  };
-
-  const translateStatus = (status: IApplication['status']): string => {
-    switch (status) {
-      case 'PENDING':
-        return 'En attente';
-      case 'ACCEPTED':
-        return 'Acceptée';
-      case 'REJECTED':
-        return 'Refusée';
-      case 'EXPIRED':
-        return 'Expirée';
-      case 'WITHDRAWN':
-        return 'Retirée';
-      case 'CANCELLED_BY_PLATFORM':
-        return 'Annulée par la plateforme';
-      default:
-        return status; // Fallback for other statuses not directly related to application (e.g., event status)
-    }
-  };
-
   const actionButtonStyle: CSSProperties = {
     padding: '8px 15px',
     borderRadius: 'var(--ccc-radius-sm)',
@@ -1312,8 +1203,8 @@ function ApplicationsPage() {
                 onChange={e => setSortKey(e.target.value as any)}
                 style={{ ...filterSelectStyle, minWidth: 220, marginLeft: 'auto' }}
               >
-                <option value="dateDesc">Trier: Date (plus récent)</option>
-                <option value="dateAsc">Trier: Date (plus ancien)</option>
+                <option value="dateAsc">Trier: Évènement (le plus proche)</option>
+                <option value="dateDesc">Trier: Évènement (le plus lointain)</option>
                 <option value="statusAsc">Trier: Statut (En attente→Acceptée→Refusée)</option>
                 <option value="statusDesc">Trier: Statut (Refusée→Acceptée→En attente)</option>
               </select>
@@ -1341,8 +1232,8 @@ function ApplicationsPage() {
                     onChange={e => setComedianSortKey(e.target.value as 'dateAsc' | 'dateDesc')}
                     style={{ ...filterSelectStyle, minWidth: 200 }}
                   >
-                    <option value="dateDesc">Trier: Date (plus récent)</option>
-                    <option value="dateAsc">Trier: Date (plus ancien)</option>
+                    <option value="dateAsc">Trier: Évènement (le plus proche)</option>
+                    <option value="dateDesc">Trier: Évènement (le plus lointain)</option>
                   </select>
                 </>
               )}
@@ -1354,8 +1245,8 @@ function ApplicationsPage() {
                   onChange={e => setComedianSortKey(e.target.value as 'dateAsc' | 'dateDesc')}
                   style={{ ...filterSelectStyle, minWidth: 200 }}
                 >
-                  <option value="dateDesc">Trier: Date (plus récent)</option>
-                  <option value="dateAsc">Trier: Date (plus ancien)</option>
+                  <option value="dateAsc">Trier: Évènement (le plus proche)</option>
+                  <option value="dateDesc">Trier: Évènement (le plus lointain)</option>
                 </select>
               )}
 
@@ -1368,17 +1259,17 @@ function ApplicationsPage() {
                     style={{ ...filterSelectStyle, minWidth: 180 }}
                   >
                     <option value="all">Tous les statuts</option>
-                    <option value="ACCEPTED">Acceptées</option>
-                    <option value="REJECTED">Refusées</option>
-                    <option value="EXPIRED">Expirées</option>
+                    {ARCHIVED_FILTER_STATUSES.map(s => (
+                      <option key={s} value={s}>{STATUS_META[s].label}</option>
+                    ))}
                   </select>
                   <select
                     value={comedianSortKey}
                     onChange={e => setComedianSortKey(e.target.value as 'dateAsc' | 'dateDesc')}
                     style={{ ...filterSelectStyle, minWidth: 200 }}
                   >
-                    <option value="dateDesc">Trier: Date (plus récent)</option>
-                    <option value="dateAsc">Trier: Date (plus ancien)</option>
+                    <option value="dateAsc">Trier: Évènement (le plus proche)</option>
+                    <option value="dateDesc">Trier: Évènement (le plus lointain)</option>
                   </select>
                 </>
               )}
@@ -1471,7 +1362,7 @@ function ApplicationsPage() {
                       data-application-id={app._id}
                       style={{
                         ...applicationCardStyle,
-                        ...(app.status === 'PENDING' ? applicationCardStylePending : app.status === 'ACCEPTED' ? applicationCardStyleAccepted : app.status === 'REJECTED' ? applicationCardStyleRejected : app.status === 'EXPIRED' ? applicationCardStyleExpired : ((app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM') || app.status === 'CANCELLED_BY_PLATFORM') ? applicationCardStyleWithdrawn : {}),
+                        ...(app.status === 'PENDING' ? applicationCardStylePending : app.status === 'ACCEPTED' ? applicationCardStyleAccepted : app.status === 'REJECTED' ? applicationCardStyleRejected : app.status === 'EXPIRED' ? applicationCardStyleExpired : (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM') ? applicationCardStyleWithdrawn : {}),
                       }}
                       onClick={() => { setSelectedApplication(app); setIsModalOpen(true); }}
                     >
@@ -1532,13 +1423,16 @@ function ApplicationsPage() {
                         </div>
 
                         <div style={comedianApplicationStatusStyle}>
-                          <span style={statusBadgeStyle(app.status)}>Statut: {translateStatus(app.status)}</span>
+                          <StatusBadge status={app.status} />
                           {/* Tag Annulé quand l'événement a été annulé par l'organisateur */}
                           {user?.role === 'COMEDIAN' && isEventCancelled(app.event) && (
                             <span style={{
-                              ...statusBadgeStyle(app.status),
-                              marginTop: '8px',
                               display: 'inline-block',
+                              padding: '4px 12px',
+                              borderRadius: 20,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              marginTop: '8px',
                               backgroundColor: 'rgba(0,0,0,0.12)',
                               color: 'var(--ccc-text-muted)',
                               border: '1px solid rgba(0,0,0,0.2)',
@@ -1546,18 +1440,8 @@ function ApplicationsPage() {
                               Annulé
                             </span>
                           )}
-                          {/* Afficher le statut supplémentaire sur les cartes archivées */}
-                          {comedianTab === 'archived' && app.status !== 'EXPIRED' && !isEventCancelled(app.event) && (
-                            <span style={{
-                              ...statusBadgeStyle(app.status),
-                              marginTop: '8px',
-                              display: 'block',
-                            }}>
-                              {app.status === 'ACCEPTED' ? '✓ Acceptée' : app.status === 'REJECTED' ? '✕ Refusée' : ''}
-                            </span>
-                          )}
                           {/* Candidature acceptée SANS modification de l'événement : uniquement "Me désinscrire" */}
-                          {user?.role === 'COMEDIAN' && !isEventCancelled(app.event) && comedianTab === 'accepted' && app.status === 'ACCEPTED' && app.event?.date && isEventUpcoming(app.event.date) && !wasEventUpdatedAfterApplication(app) && !isEventWithinOneHour(app.event) && (
+                          {user?.role === 'COMEDIAN' && !isEventCancelled(app.event) && comedianTab === 'accepted' && app.status === 'ACCEPTED' && app.event?.date && isEventUpcoming(app.event) && !wasEventUpdatedAfterApplication(app) && !isEventWithinOneHour(app.event) && (
                             <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                               <button
                                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
@@ -1592,7 +1476,7 @@ function ApplicationsPage() {
                             </div>
                           )}
                           {/* Candidature acceptée ET événement modifié par l'organisateur : "Je reste inscrit" + "Me désinscrire" */}
-                          {user?.role === 'COMEDIAN' && !isEventCancelled(app.event) && comedianTab === 'accepted' && app.status === 'ACCEPTED' && wasEventUpdatedAfterApplication(app) && app.event?.date && isEventUpcoming(app.event.date) && !isEventWithinOneHour(app.event) && (
+                          {user?.role === 'COMEDIAN' && !isEventCancelled(app.event) && comedianTab === 'accepted' && app.status === 'ACCEPTED' && wasEventUpdatedAfterApplication(app) && app.event?.date && isEventUpcoming(app.event) && !isEventWithinOneHour(app.event) && (
                             <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                               <button
                                 disabled={confirmingAppId === app._id}
@@ -1687,7 +1571,7 @@ function ApplicationsPage() {
                     data-application-id={app._id}
                     style={{
                       ...applicationCardStyle,
-                      ...(app.status === 'PENDING' ? applicationCardStylePending : app.status === 'ACCEPTED' ? applicationCardStyleAccepted : app.status === 'REJECTED' ? applicationCardStyleRejected : app.status === 'EXPIRED' ? applicationCardStyleExpired : ((app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM') || app.status === 'CANCELLED_BY_PLATFORM') ? applicationCardStyleWithdrawn : {}),
+                      ...(app.status === 'PENDING' ? applicationCardStylePending : app.status === 'ACCEPTED' ? applicationCardStyleAccepted : app.status === 'REJECTED' ? applicationCardStyleRejected : app.status === 'EXPIRED' ? applicationCardStyleExpired : (app.status === 'WITHDRAWN' || app.status === 'CANCELLED_BY_PLATFORM') ? applicationCardStyleWithdrawn : {}),
                       ...(isOrgPast ? { opacity: 0.45, filter: 'grayscale(0.3)', cursor: 'default' } : {}),
                     }}
                     onMouseEnter={(e) => {
@@ -1763,7 +1647,7 @@ function ApplicationsPage() {
                           {favoriteApplicationIdsSet.has(app._id) ? '★' : '☆'}
                         </button>
                       )}
-                      <span style={statusBadgeStyle(app.status)}>Statut: {translateStatus(app.status)}</span>
+                      <StatusBadge status={app.status} />
                       {app.status === 'PENDING' && (
                         <div style={actionsContainerStyle}>
                           <button 

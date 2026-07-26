@@ -8,6 +8,8 @@ export interface IEvent {
   time?: string;
   startTime?: string;
   endTime?: string;
+  /** Fin réelle pour un évènement multi-jours (prioritaire sur date+endTime). */
+  endDate?: string;
   location: { venue?: string; venueType?: 'theatre' | 'salle_polyvalente' | 'cafe' | 'restaurant' | 'autre'; address: string; city: string; postalCode?: string; department?: string; country: string; latitude?: number; longitude?: number; };
   organizer: IUserData;
   status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED' | 'draft' | 'published' | 'cancelled' | 'completed';

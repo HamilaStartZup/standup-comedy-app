@@ -12,8 +12,10 @@ import EventCalendar from '../components/EventCalendar';
 import EventDetailModal from '../components/EventDetailModal';
 import ScorePieChart from '../components/ScorePieChart';
 import ConfirmDialog from '../components/ConfirmDialog';
+import StatusBadge from '../components/StatusBadge';
 import { FRENCH_REGIONS, FRENCH_DEPARTMENTS, DEPARTMENTS_ORDER } from '../utils/geographicMatching';
 import { getOrganizerName, translateEventStatus } from '../utils/eventHelpers';
+import { isEventPast } from '../utils/eventTiming';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
@@ -51,8 +53,8 @@ type RecommendationItem = {
   breakdown?: { geographic: number; experienceLevel: number; experienceYears: number };
   matchReasons?: string[];
 };
-type OrganizerTab = 'upcoming' | 'full' | 'archived' | 'cancelled' | 'calendar' | 'favoriteComedians' | 'recurringEvents';
-type EventsSubTab = 'upcoming' | 'full' | 'archived' | 'cancelled' | 'recurringEvents';
+type OrganizerTab = 'upcoming' | 'archived' | 'cancelled' | 'calendar' | 'favoriteComedians' | 'recurringEvents';
+type EventsSubTab = 'upcoming' | 'archived' | 'cancelled' | 'recurringEvents';
 type SuperAdminTab = 'full' | 'upcoming' | 'archived' | 'cancelled';
 
 interface RatingsSummaryData {
@@ -314,7 +316,7 @@ function MyEventsPage() {
     const tabParam = params.get('tab');
 
     if (isOrganizerView && tabParam) {
-      const validOrganizerTabs: OrganizerTab[] = ['upcoming', 'full', 'archived', 'cancelled', 'calendar', 'favoriteComedians', 'recurringEvents'];
+      const validOrganizerTabs: OrganizerTab[] = ['upcoming', 'archived', 'cancelled', 'calendar', 'favoriteComedians', 'recurringEvents'];
       if (validOrganizerTabs.includes(tabParam as OrganizerTab)) {
         setOrganizerTab(tabParam as OrganizerTab);
       } else {
@@ -686,29 +688,8 @@ useEffect(() => {
     return eventStart.getTime() <= oneHourFromNow;
   };
 
-  // Fonction utilitaire pour comparer les dates (ignorer l'heure)
-  const isEventPast = (eventDateString: string, endTime?: string, startTime?: string): boolean => {
-    // Si endTime n'est pas fourni, on considère la fin de la journée
-    const eventDate = new Date(eventDateString);
-    let eventEndDateTime: Date;
-    if (endTime) {
-      const [endH, endM] = endTime.split(":").map(Number);
-      const endMinutes = endH * 60 + endM;
-      let endDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-      if (startTime) {
-        const [startH, startM] = startTime.split(":").map(Number);
-        const startMinutes = startH * 60 + startM;
-        if (endMinutes <= startMinutes) {
-          endDate.setDate(endDate.getDate() + 1);
-        }
-      }
-      eventEndDateTime = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), endH, endM);
-    } else {
-      eventEndDateTime = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), 23, 59, 59, 999);
-    }
-    const now = new Date();
-    return now > eventEndDateTime;
-  };
+  // `isEventPast` (règle de timing unifiée) est importé de ../utils/eventTiming :
+  // lit date + startTime + endTime + endDate (passage minuit, festivals multi-jours).
 
   // Fonction utilitaire pour obtenir le nom de l'organisateur de manière sécurisée
   const getOrganizerIdFromEvent = (organizer: any): string | undefined => {
@@ -861,7 +842,7 @@ useEffect(() => {
             return;
           }
           // **LOGIQUE UNIVERSELLE** : TOUS les évènements passés sont archivés
-          const eventIsPast = isEventPast(event.date, event.endTime);
+          const eventIsPast = isEventPast(event);
           if (eventIsPast) {
             archived.push(event);
           } else {
@@ -1079,11 +1060,6 @@ useEffect(() => {
     return base;
   }, [isOrganizerView, upcomingEvents, completionFilter]);
 
-  const filteredOrganizerCompletedEvents = useMemo(() => {
-    if (!isOrganizerView) return completedUpcomingEvents;
-    return completedUpcomingEvents;
-  }, [isOrganizerView, completedUpcomingEvents]);
-
   const filteredOrganizerArchivedEvents = useMemo(() => {
     if (!isOrganizerView) return archivedEventsToShow;
     return archivedEventsToShow;
@@ -1183,8 +1159,6 @@ useEffect(() => {
       switch (organizerTab) {
         case 'upcoming':
           return filteredOrganizerUpcomingEvents;
-        case 'full':
-          return filteredOrganizerCompletedEvents;
         case 'archived':
           return filteredOrganizerArchivedEvents;
         case 'cancelled':
@@ -1221,7 +1195,6 @@ useEffect(() => {
     comedianTab,
     filteredUpcomingEvents,
     filteredOrganizerUpcomingEvents,
-    filteredOrganizerCompletedEvents,
     filteredOrganizerArchivedEvents,
     filteredOrganizerCancelledEvents,
     acceptedUpcomingEvents,
@@ -1243,13 +1216,12 @@ useEffect(() => {
 
   const organizerTabCounts: Record<OrganizerTab, number> = useMemo(() => ({
     upcoming: upcomingTotal ?? (isOrganizerView ? upcomingDisplayItems.length : filteredUpcomingEvents.length),
-    full: completedUpcomingEvents.length,
     archived: archivedTotal ?? archivedEventsToShow.length,
     cancelled: cancelledTotal ?? cancelledEvents.length,
     calendar: (upcomingTotal ?? upcomingEvents.length) + (archivedTotal ?? archivedEventsToShow.length) + (cancelledTotal ?? cancelledEvents.length),
     favoriteComedians: favoriteComedianIds.length,
     recurringEvents: recurringGroups.size,
-  }), [isOrganizerView, upcomingDisplayItems.length, filteredUpcomingEvents, completedUpcomingEvents, archivedEventsToShow, cancelledEvents, upcomingEvents, favoriteComedianIds, recurringGroups.size, upcomingTotal, archivedTotal, cancelledTotal]);
+  }), [isOrganizerView, upcomingDisplayItems.length, filteredUpcomingEvents, archivedEventsToShow, cancelledEvents, upcomingEvents, favoriteComedianIds, recurringGroups.size, upcomingTotal, archivedTotal, cancelledTotal]);
 
   const superAdminTabCounts: Record<SuperAdminTab, number> = useMemo(() => ({
     full: completedUpcomingEvents.length,
@@ -1267,7 +1239,6 @@ useEffect(() => {
 
   const organizerTabTitles: Record<OrganizerTab, string> = {
     upcoming: 'Évènements à venir',
-    full: 'Évènements complets',
     archived: 'Évènements archivés',
     cancelled: 'Évènements annulés',
     calendar: 'Calendrier',
@@ -1313,10 +1284,7 @@ useEffect(() => {
     (isOrganizerView && organizerTab === 'upcoming') ||
     (isSuperAdminView && superAdminTab === 'upcoming')
   );
-  const showCompletedSection = !isComedianView && (
-    (isOrganizerView && organizerTab === 'full') ||
-    (isSuperAdminView && superAdminTab === 'full')
-  );
+  const showCompletedSection = !isComedianView && isSuperAdminView && superAdminTab === 'full';
   const showArchivedSection = !isComedianView && (
     (isOrganizerView && organizerTab === 'archived') ||
     (isSuperAdminView && superAdminTab === 'archived')
@@ -1539,19 +1507,15 @@ useEffect(() => {
     }
   }, [upcomingPage, totalUpcomingPages]);
 
-  const totalCompletedPages = (isOrganizerRole && organizerTab === 'full' && serverEventsPagination)
-    ? Math.max(1, serverEventsPagination.totalPages)
-    : Math.max(1, Math.ceil(completedUpcomingEvents.length / ITEMS_PER_PAGE));
-  const paginatedCompletedEvents = (isOrganizerRole && organizerTab === 'full' && serverEventsPagination)
-    ? completedUpcomingEvents
-    : completedUpcomingEvents.slice(
-        (completedPage - 1) * ITEMS_PER_PAGE,
-        completedPage * ITEMS_PER_PAGE
-      );
+  const totalCompletedPages = Math.max(1, Math.ceil(completedUpcomingEvents.length / ITEMS_PER_PAGE));
+  const paginatedCompletedEvents = completedUpcomingEvents.slice(
+    (completedPage - 1) * ITEMS_PER_PAGE,
+    completedPage * ITEMS_PER_PAGE
+  );
 
   useEffect(() => {
-    if (!(isOrganizerRole && organizerTab === 'full')) setCompletedPage(1);
-  }, [completedUpcomingEvents, isOrganizerRole, organizerTab]);
+    setCompletedPage(1);
+  }, [completedUpcomingEvents]);
 
   useEffect(() => {
     if (completedPage > totalCompletedPages) {
@@ -1781,27 +1745,28 @@ useEffect(() => {
 
     setIsCancelling(true);
     try {
-      let cancelledCount = 0;
-      let skippedCount = 0;
-      for (const ev of eventsToProcess) {
-        const eventDate = new Date(ev.date);
-        const eventMidnight = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-        const diffDays = Math.ceil((eventMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
-        if (diffDays < 10) {
-          await api.put(`/events/${ev._id}`, { status: 'cancelled', cancellationReason: cancelReason });
-          cancelledCount += 1;
+      if (isGroup) {
+        // Un seul appel : le serveur résout tout le groupe récurrent, partitionne par la règle
+        // des 10 jours (delete ≥10j hors stats / cancel <10j) et notifie une seule fois (anti-spam).
+        const { data } = await api.put(`/events/${eventsToProcess[0]._id}`, {
+          status: 'cancelled',
+          cancellationReason: cancelReason,
+          cascadeGroup: true,
+        });
+        const cancelledCount = data?.cancelledCount ?? 0;
+        const deletedCount = data?.deletedCount ?? 0;
+        if (cancelledCount > 0 || deletedCount > 0) {
+          showSuccess(`${cancelledCount} annulée(s), ${deletedCount} supprimée(s) (>10 jours) — sans impact sur vos statistiques.`);
+          refetch();
+          refreshUser();
         } else {
-          skippedCount += 1;
+          showInfo(InfoMessages.EVENT_NOT_CANCELLED_OLD);
         }
-      }
-      if (cancelledCount > 0) {
-        showSuccess(isGroup
-          ? `Groupe annulé : ${cancelledCount} évènement(s) déplacé(s) vers "Évènements annulés".${skippedCount > 0 ? ` ${skippedCount} évènement(s) non annulé(s) (date à plus de 10 jours).` : ''}`
-          : 'Évènement annulé et déplacé vers "Évènements annulés".');
+      } else {
+        await api.put(`/events/${eventsToProcess[0]._id}`, { status: 'cancelled', cancellationReason: cancelReason });
+        showSuccess('Évènement annulé et déplacé vers "Évènements annulés".');
         refetch();
         refreshUser();
-      } else if (skippedCount > 0) {
-        showInfo(InfoMessages.EVENT_NOT_CANCELLED_OLD);
       }
     } catch (err: any) {
       showError(err.response?.data?.message || err.message);
@@ -2087,8 +2052,8 @@ useEffect(() => {
   };
 
   const comedianTabs: ComedianTab[] = ['opportunities', 'accepted', 'favorites', 'recommendations'];
-  const organizerTabs: OrganizerTab[] = ['upcoming', 'full', 'archived', 'cancelled', 'calendar', 'favoriteComedians', 'recurringEvents'];
-  const eventsSubTabs: EventsSubTab[] = ['upcoming', 'full', 'archived', 'cancelled', 'recurringEvents'];
+  const organizerTabs: OrganizerTab[] = ['upcoming', 'archived', 'cancelled', 'calendar', 'favoriteComedians', 'recurringEvents'];
+  const eventsSubTabs: EventsSubTab[] = ['upcoming', 'archived', 'cancelled', 'recurringEvents'];
   const superAdminTabs: SuperAdminTab[] = ['full', 'upcoming', 'archived', 'cancelled'];
   const isEventsSubTabActive = eventsSubTabs.includes(organizerTab as EventsSubTab);
   const eventsDropdownValue: EventsSubTab | '' = isEventsSubTabActive ? (organizerTab as EventsSubTab) : '';
@@ -2774,23 +2739,12 @@ useEffect(() => {
             if (comedianApplicationsMap.size > 0) {
               relatedApplication = comedianApplicationsMap.get(event._id);
               if (relatedApplication) {
-                let color = 'var(--ccc-warning)';
-                let bg = 'rgba(255, 193, 7, 0.18)';
-                let label = 'Candidature: En attente';
-                if (relatedApplication.status === 'ACCEPTED') {
-                  color = 'var(--ccc-success)';
-                  bg = 'rgba(40, 167, 69, 0.18)';
-                  label = 'Candidature: Acceptée';
-                } else if (relatedApplication.status === 'REJECTED') {
-                  color = 'var(--ccc-error)';
-                  bg = 'rgba(220, 53, 69, 0.2)';
-                  label = 'Candidature: Refusée';
-                } else if (relatedApplication.status === 'WITHDRAWN') {
-                  color = 'var(--ccc-text-muted)';
-                  bg = 'rgba(136, 136, 136, 0.15)';
-                  label = 'Candidature: Retirée';
-                }
-                comedianApplicationChip = renderStatusChip(label, color, bg);
+                comedianApplicationChip = (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: '0.85em', color: 'var(--ccc-text-on-card-muted)' }}>Candidature:</span>
+                    <StatusBadge status={relatedApplication.status} />
+                  </span>
+                );
               }
             }
 

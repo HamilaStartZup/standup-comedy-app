@@ -27,6 +27,8 @@ import { FilterQuery } from 'mongoose';
 import Logger from '../utils/logger';
 import { detectZoneType, matchesMobilityZone, normalizeDepartment, getRegionByDepartment, FRENCH_REGIONS } from '../utils/geographicMatching';
 import { escapeRegex } from '../utils/regex';
+import { buildEventEndExpr } from '../utils/eventTiming';
+import { ComedianTab, comedianTabMatchStages, isComedianTab } from '../utils/applicationTabs';
 
 // Fonction pour construire avatarUrl à partir de avatar.data
 const buildAvatarDataUrl = (user: any): string | undefined => {
@@ -610,6 +612,179 @@ export const checkApplicationExists = async (req: AuthRequest, res: Response): P
   }
 };
 
+type ApplicationScope =
+  | { ok: false; status: number; body: Record<string, unknown> }
+  | {
+      ok: true;
+      role: string;
+      dbFilter: FilterQuery<ApplicationDocument>;
+      resolvedExperienceLevel: '0-50' | '50-200' | '200+' | null;
+      comedianTab?: ComedianTab;
+      queryTimeScope?: 'upcoming' | 'past';
+    };
+
+/**
+ * Résout le périmètre d'une requête sur les candidatures : rôle + ownership, filtres
+ * optionnels (eventId / status / comedianId / zone / experienceLevel), onglet humoriste
+ * et timeScope. Partagé par la LISTE (getAllApplications) et les COMPTEURS
+ * (getApplicationTabCounts) → un seul endroit résout les garde-fous d'accès.
+ */
+async function resolveApplicationScope(req: AuthRequest, userId: string): Promise<ApplicationScope> {
+  const { status, eventId, comedianId, tab, zone, experienceLevel, timeScope } = req.query as Record<string, string | string[] | undefined>;
+  const currentUser = await UserModel.findById(userId).select('role').lean();
+
+  const dbFilter: FilterQuery<ApplicationDocument> = {};
+  let ownedEventIds: Types.ObjectId[] | undefined;
+  let comedianTab: ComedianTab | undefined;
+
+  if (currentUser?.role === 'SUPER_ADMIN') {
+    // no role filter
+  } else if (currentUser?.role === 'COMEDIAN') {
+    dbFilter.comedian = new Types.ObjectId(userId);
+    if (isComedianTab(tab)) comedianTab = tab;
+  } else if (currentUser?.role === 'ORGANIZER') {
+    ownedEventIds = (await EventModel.find({ organizer: userId }).distinct('_id')) as Types.ObjectId[];
+    dbFilter.event = { $in: ownedEventIds };
+  } else {
+    return { ok: false, status: 403, body: { error: 'Accès refusé' } };
+  }
+
+  // Optional filters — role-aware guards, never replace ownership constraints
+  if (eventId && !Array.isArray(eventId) && Types.ObjectId.isValid(eventId)) {
+    if (currentUser?.role === 'ORGANIZER') {
+      const eventObjectId = new Types.ObjectId(eventId);
+      if (!ownedEventIds!.some(id => id.equals(eventObjectId))) {
+        return { ok: false, status: 403, body: { error: 'Accès refusé' } };
+      }
+      dbFilter.event = eventObjectId;
+    } else {
+      // COMEDIAN or SUPER_ADMIN: safe narrowing on own data / admin access
+      dbFilter.event = new Types.ObjectId(eventId);
+    }
+  }
+  if (status) {
+    const statusArray = Array.isArray(status) ? status : [status];
+    dbFilter.status = { $in: statusArray };
+  }
+  if (comedianId && !Array.isArray(comedianId) && Types.ObjectId.isValid(comedianId)) {
+    if (currentUser?.role === 'COMEDIAN') {
+      if (comedianId !== userId) {
+        return { ok: false, status: 403, body: { error: 'Accès refusé' } };
+      }
+      // Filter already set to own userId — no override needed
+    } else {
+      // ORGANIZER: narrowing within owned events; SUPER_ADMIN: no restriction
+      dbFilter.comedian = new Types.ObjectId(comedianId);
+    }
+  }
+
+  const VALID_EXPERIENCE_LEVELS = ['0-50', '50-200', '200+'] as const;
+  type ExperienceLevelValue = typeof VALID_EXPERIENCE_LEVELS[number];
+  const isOrganizerOrAdmin = currentUser?.role === 'ORGANIZER' || currentUser?.role === 'SUPER_ADMIN';
+
+  const resolvedExperienceLevel: ExperienceLevelValue | null =
+    isOrganizerOrAdmin &&
+    experienceLevel &&
+    !Array.isArray(experienceLevel) &&
+    (VALID_EXPERIENCE_LEVELS as readonly string[]).includes(experienceLevel)
+      ? (experienceLevel as ExperienceLevelValue)
+      : null;
+
+  if (isOrganizerOrAdmin && zone && !Array.isArray(zone) && zone.trim() && !comedianId) {
+    const searchZone = await detectZoneType(zone.trim());
+
+    // Pré-filtre DB : ne charge que les comédiens dont au moins une mobilityZone
+    // peut potentiellement matcher (superset du match exact via matchesMobilityZone).
+    const candidateDepts = new Set<string>();
+    const candidateRegions = new Set<string>();
+    if (searchZone.type === 'ville') {
+      if (searchZone.department) candidateDepts.add(searchZone.department);
+      if (searchZone.region) candidateRegions.add(searchZone.region);
+    } else if (searchZone.type === 'departement') {
+      candidateDepts.add(normalizeDepartment(searchZone.value));
+      const r = getRegionByDepartment(searchZone.value);
+      if (r) candidateRegions.add(r);
+    } else if (searchZone.type === 'region') {
+      candidateRegions.add(searchZone.value);
+      (FRENCH_REGIONS[searchZone.value] || []).forEach(d => candidateDepts.add(d));
+    }
+
+    const cityRegex = new RegExp(escapeRegex(searchZone.value), 'i');
+    const orPrefilter: Array<Record<string, unknown>> = [
+      { 'profile.mobilityZone': { $elemMatch: { type: 'ville', value: cityRegex } } },
+    ];
+    if (candidateDepts.size > 0) {
+      orPrefilter.push({ 'profile.mobilityZone': { $elemMatch: { type: 'departement', value: { $in: [...candidateDepts] } } } });
+    }
+    if (candidateRegions.size > 0) {
+      orPrefilter.push({ 'profile.mobilityZone': { $elemMatch: { type: 'region', value: { $in: [...candidateRegions] } } } });
+    }
+
+    const candidates = await UserModel.find({ role: 'COMEDIAN', $or: orPrefilter })
+      .select('_id profile.mobilityZone')
+      .lean();
+
+    const matchingComedianIds = candidates
+      .filter((c: any) => {
+        const mobilityZones = c.profile?.mobilityZone;
+        if (!mobilityZones || mobilityZones.length === 0) return false;
+        return mobilityZones.some((mz: any) => matchesMobilityZone(mz, searchZone));
+      })
+      .map((c: any) => c._id as Types.ObjectId);
+    dbFilter.comedian = { $in: matchingComedianIds };
+  }
+
+  const queryTimeScope = (!Array.isArray(timeScope) && (timeScope === 'upcoming' || timeScope === 'past')) ? timeScope : undefined;
+
+  return { ok: true, role: currentUser!.role, dbFilter, resolvedExperienceLevel, comedianTab, queryTimeScope };
+}
+
+/**
+ * Base commune du pipeline : filtre + exclusion des candidatures orphelines
+ * (comedian/event supprimé) + calcul optionnel de `_eventEnd` (règle timing partagée).
+ * Sans ça le count gonfle et la pagination affiche moins d'items que le compteur.
+ */
+function buildApplicationBasePipeline(
+  dbFilter: FilterQuery<ApplicationDocument>,
+  resolvedExperienceLevel: string | null,
+  withEventEnd: boolean,
+): Record<string, unknown>[] {
+  return [
+    { $match: dbFilter },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'comedian',
+        foreignField: '_id',
+        as: 'comedianDoc',
+        pipeline: [{ $project: { _id: 1, 'profile.numberOfScenes': 1 } }],
+      },
+    },
+    { $match: { 'comedianDoc.0': { $exists: true } } },
+    ...(resolvedExperienceLevel ? [{ $match: { 'comedianDoc.0.profile.numberOfScenes': resolvedExperienceLevel } }] : []),
+    {
+      $lookup: {
+        from: 'events',
+        localField: 'event',
+        foreignField: '_id',
+        as: 'eventDoc',
+        pipeline: [{ $project: { _id: 1, date: 1, startTime: 1, endTime: 1, endDate: 1, status: 1 } }],
+      },
+    },
+    { $match: { 'eventDoc.0': { $exists: true } } },
+    ...(withEventEnd ? [{
+      $addFields: {
+        _eventEnd: buildEventEndExpr({
+          date: { $arrayElemAt: ['$eventDoc.date', 0] },
+          endDate: { $arrayElemAt: ['$eventDoc.endDate', 0] },
+          endTime: { $arrayElemAt: ['$eventDoc.endTime', 0] },
+          startTime: { $arrayElemAt: ['$eventDoc.startTime', 0] },
+        }),
+      },
+    }] : []),
+  ];
+}
+
 /**
  * Récupère toutes les candidatures visibles par l'utilisateur
  * Filtre selon le rôle: Super Admin voit tout, Comédien voit les siennes, Organisateur voit celles de ses évènements
@@ -622,154 +797,47 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const { status, eventId, comedianId, sort, tab, zone, experienceLevel } = req.query as Record<string, string | string[] | undefined>;
-
-    const currentUser = await UserModel.findById(userId).select('role').lean();
-
-    const dbFilter: FilterQuery<ApplicationDocument> = {};
-
-    let ownedEventIds: Types.ObjectId[] | undefined;
-
-    if (currentUser?.role === 'SUPER_ADMIN') {
-      // no role filter
-    } else if (currentUser?.role === 'COMEDIAN') {
-      dbFilter.comedian = new Types.ObjectId(userId);
-      // tab → status mapping for comedians
-      if (tab === 'pending') dbFilter.status = 'PENDING';
-      else if (tab === 'accepted') dbFilter.status = 'ACCEPTED';
-      else if (tab === 'archived') dbFilter.status = { $in: ['REJECTED', 'EXPIRED'] };
-    } else if (currentUser?.role === 'ORGANIZER') {
-      ownedEventIds = (await EventModel.find({ organizer: userId }).distinct('_id')) as Types.ObjectId[];
-      dbFilter.event = { $in: ownedEventIds };
-    } else {
-      res.status(403).json({ error: 'Accès refusé' });
+    const scope = await resolveApplicationScope(req, userId);
+    if (scope.ok === false) {
+      res.status(scope.status).json(scope.body);
       return;
     }
+    const { dbFilter, resolvedExperienceLevel, comedianTab, queryTimeScope } = scope;
 
-    // Optional filters — role-aware guards, never replace ownership constraints
-    if (eventId && !Array.isArray(eventId) && Types.ObjectId.isValid(eventId)) {
-      if (currentUser?.role === 'ORGANIZER') {
-        const eventObjectId = new Types.ObjectId(eventId);
-        if (!ownedEventIds!.some(id => id.equals(eventObjectId))) {
-          res.status(403).json({ error: 'Accès refusé' });
-          return;
-        }
-        dbFilter.event = eventObjectId;
-      } else {
-        // COMEDIAN or SUPER_ADMIN: safe narrowing on own data / admin access
-        dbFilter.event = new Types.ObjectId(eventId);
-      }
-    }
-    if (status) {
-      const statusArray = Array.isArray(status) ? status : [status];
-      dbFilter.status = { $in: statusArray };
-    }
-    if (comedianId && !Array.isArray(comedianId) && Types.ObjectId.isValid(comedianId)) {
-      if (currentUser?.role === 'COMEDIAN') {
-        if (comedianId !== userId) {
-          res.status(403).json({ error: 'Accès refusé' });
-          return;
-        }
-        // Filter already set to own userId — no override needed
-      } else {
-        // ORGANIZER: narrowing within owned events; SUPER_ADMIN: no restriction
-        dbFilter.comedian = new Types.ObjectId(comedianId);
-      }
-    }
-
-    const VALID_EXPERIENCE_LEVELS = ['0-50', '50-200', '200+'] as const;
-    type ExperienceLevelValue = typeof VALID_EXPERIENCE_LEVELS[number];
-    const isOrganizerOrAdmin = currentUser?.role === 'ORGANIZER' || currentUser?.role === 'SUPER_ADMIN';
-
-    const resolvedExperienceLevel: ExperienceLevelValue | null =
-      isOrganizerOrAdmin &&
-      experienceLevel &&
-      !Array.isArray(experienceLevel) &&
-      (VALID_EXPERIENCE_LEVELS as readonly string[]).includes(experienceLevel)
-        ? (experienceLevel as ExperienceLevelValue)
-        : null;
-
-    if (isOrganizerOrAdmin && zone && !Array.isArray(zone) && zone.trim() && !comedianId) {
-      const searchZone = await detectZoneType(zone.trim());
-
-      // Pré-filtre DB : ne charge que les comédiens dont au moins une mobilityZone
-      // peut potentiellement matcher (superset du match exact via matchesMobilityZone).
-      // Évite un scan complet de la collection users à chaque requête.
-      const candidateDepts = new Set<string>();
-      const candidateRegions = new Set<string>();
-      if (searchZone.type === 'ville') {
-        if (searchZone.department) candidateDepts.add(searchZone.department);
-        if (searchZone.region) candidateRegions.add(searchZone.region);
-      } else if (searchZone.type === 'departement') {
-        candidateDepts.add(normalizeDepartment(searchZone.value));
-        const r = getRegionByDepartment(searchZone.value);
-        if (r) candidateRegions.add(r);
-      } else if (searchZone.type === 'region') {
-        candidateRegions.add(searchZone.value);
-        (FRENCH_REGIONS[searchZone.value] || []).forEach(d => candidateDepts.add(d));
-      }
-
-      const cityRegex = new RegExp(escapeRegex(searchZone.value), 'i');
-      const orPrefilter: Array<Record<string, unknown>> = [
-        { 'profile.mobilityZone': { $elemMatch: { type: 'ville', value: cityRegex } } },
-      ];
-      if (candidateDepts.size > 0) {
-        orPrefilter.push({ 'profile.mobilityZone': { $elemMatch: { type: 'departement', value: { $in: [...candidateDepts] } } } });
-      }
-      if (candidateRegions.size > 0) {
-        orPrefilter.push({ 'profile.mobilityZone': { $elemMatch: { type: 'region', value: { $in: [...candidateRegions] } } } });
-      }
-
-      const candidates = await UserModel.find({ role: 'COMEDIAN', $or: orPrefilter })
-        .select('_id profile.mobilityZone')
-        .lean();
-
-      const matchingComedianIds = candidates
-        .filter((c: any) => {
-          const mobilityZones = c.profile?.mobilityZone;
-          if (!mobilityZones || mobilityZones.length === 0) return false;
-          return mobilityZones.some((mz: any) => matchesMobilityZone(mz, searchZone));
-        })
-        .map((c: any) => c._id as Types.ObjectId);
-      dbFilter.comedian = { $in: matchingComedianIds };
-    }
-
+    const { sort } = req.query as Record<string, string | string[] | undefined>;
     const { page, limit, skip } = parsePaginationWithDefaults(req.query as Record<string, unknown>);
 
+    const STATUS_ORDER = ['PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'WITHDRAWN', 'CANCELLED_BY_PLATFORM'];
     const sortMap: Record<string, Record<string, 1 | -1>> = {
-      dateAsc: { createdAt: 1 },
-      dateDesc: { createdAt: -1 },
-      statusAsc: { status: 1 },
-      statusDesc: { status: -1 },
+      dateAsc: { _eventDate: 1, createdAt: -1 },
+      dateDesc: { _eventDate: -1, createdAt: -1 },
+      statusAsc: { _statusRank: 1, createdAt: -1 },
+      statusDesc: { _statusRank: -1, createdAt: -1 },
     };
     const dbSort: Record<string, 1 | -1> = (sort && !Array.isArray(sort) && sortMap[sort]) ? sortMap[sort] : { createdAt: -1 };
 
-    // Exclure les candidatures orphelines (comedian/event supprimé) au niveau DB.
-    // Sinon le count gonfle et la pagination affiche moins d'items que le compteur (cf. UI).
+    // Onglet humoriste : le filtre temporel est encapsulé dans comedianTabMatchStages.
+    // timeScope (query) ne concerne plus que la vue organisateur.
+    const resolvedTimeScope = queryTimeScope;
+    const needEventEnd = Boolean(comedianTab) || Boolean(resolvedTimeScope);
+
     const orphanFilterPipeline = [
-      { $match: dbFilter },
+      ...buildApplicationBasePipeline(dbFilter, resolvedExperienceLevel, needEventEnd),
       {
-        $lookup: {
-          from: 'users',
-          localField: 'comedian',
-          foreignField: '_id',
-          as: 'comedianDoc',
-          pipeline: [{ $project: { _id: 1, 'profile.numberOfScenes': 1 } }],
+        $addFields: {
+          _statusRank: { $let: {
+            vars: { idx: { $indexOfArray: [STATUS_ORDER, '$status'] } },
+            // Statut hors liste → rejeté en fin de tri (et non en tête via -1).
+            in: { $cond: [{ $lt: ['$$idx', 0] }, STATUS_ORDER.length, '$$idx'] },
+          } },
+          _eventDate: { $convert: { input: { $arrayElemAt: ['$eventDoc.date', 0] }, to: 'date', onError: null, onNull: null } },
         },
       },
-      { $match: { 'comedianDoc.0': { $exists: true } } },
-      ...(resolvedExperienceLevel ? [{ $match: { 'comedianDoc.0.profile.numberOfScenes': resolvedExperienceLevel } }] : []),
-      {
-        $lookup: {
-          from: 'events',
-          localField: 'event',
-          foreignField: '_id',
-          as: 'eventDoc',
-          pipeline: [{ $project: { _id: 1 } }],
-        },
-      },
-      { $match: { 'eventDoc.0': { $exists: true } } },
-      { $project: { _id: 1, createdAt: 1, status: 1 } },
+      // Onglet humoriste : classifieur unique — MÊMES étapes que les compteurs.
+      ...(comedianTab ? comedianTabMatchStages(comedianTab) : []),
+      // Vue organisateur : fenêtre temporelle "à venir" / "passé".
+      ...(resolvedTimeScope ? [{ $match: { $expr: (resolvedTimeScope === 'past' ? { $lt: ['$_eventEnd', '$$NOW'] } : { $gte: ['$_eventEnd', '$$NOW'] }) } }] : []),
+      { $project: { _id: 1, createdAt: 1, status: 1, _statusRank: 1, _eventDate: 1 } },
     ];
 
     const [validRefs, totalArr] = await Promise.all([
@@ -778,11 +846,11 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
         { $sort: dbSort },
         { $skip: skip },
         { $limit: limit },
-      ]),
+      ] as any),
       ApplicationModel.aggregate([
         ...orphanFilterPipeline,
         { $count: 'total' },
-      ]),
+      ] as any),
     ]);
     const total: number = totalArr[0]?.total ?? 0;
     const pageIds = validRefs.map((d: any) => d._id);
@@ -792,7 +860,7 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
         .select('+performanceDetails +message +organizerMessage')
         .populate({
           path: 'event',
-          select: 'title date startTime endTime organizer location updatedAt modifiedByOrganizer status requirements participants',
+          select: 'title date startTime endTime endDate organizer location updatedAt modifiedByOrganizer status requirements participants',
           populate: { path: 'organizer', select: 'firstName lastName email' }
         })
         .populate({ path: 'comedian', select: 'firstName lastName email phone avatarUrl profile avatar' })
@@ -814,6 +882,66 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
   } catch (error) {
     console.error('Erreur lors de la récupération des candidatures:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération des candidatures' });
+  }
+};
+
+/**
+ * Compteurs de TOUS les onglets en UNE requête (un seul round-trip, un seul $lookup
+ * partagé via $facet) au lieu de N appels séparés à getAllApplications?limit=1.
+ * Réutilise le MÊME périmètre (resolveApplicationScope) et le MÊME classifieur
+ * (comedianTabMatchStages) que la liste → compteur et liste ne peuvent pas diverger.
+ *
+ * Réponse : { counts: { … } } — clés d'onglet humoriste (accepted/pending/rejected/
+ * archived/cancelled) ou organisateur (all/PENDING/ACCEPTED/REJECTED/archived).
+ */
+export const getApplicationTabCounts = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Utilisateur non authentifié.' });
+      return;
+    }
+
+    const scope = await resolveApplicationScope(req, userId);
+    if (scope.ok === false) {
+      res.status(scope.status).json(scope.body);
+      return;
+    }
+    const { role, dbFilter, resolvedExperienceLevel } = scope;
+
+    const base = buildApplicationBasePipeline(dbFilter, resolvedExperienceLevel, true);
+    const upcoming = [{ $match: { $expr: { $gte: ['$_eventEnd', '$$NOW'] } } }];
+    const past = [{ $match: { $expr: { $lt: ['$_eventEnd', '$$NOW'] } } }];
+    const count = { $count: 'n' };
+
+    // Chaque branche $facet part des MÊMES documents (base partagée) → lookups joués une fois.
+    const facet: Record<string, unknown[]> =
+      role === 'COMEDIAN'
+        ? {
+            accepted: [...comedianTabMatchStages('accepted'), count],
+            pending: [...comedianTabMatchStages('pending'), count],
+            rejected: [...comedianTabMatchStages('rejected'), count],
+            archived: [...comedianTabMatchStages('archived'), count],
+            cancelled: [...comedianTabMatchStages('cancelled'), count],
+          }
+        : {
+            all: [...upcoming, count],
+            PENDING: [{ $match: { status: 'PENDING' } }, ...upcoming, count],
+            ACCEPTED: [{ $match: { status: 'ACCEPTED' } }, ...upcoming, count],
+            REJECTED: [{ $match: { status: 'REJECTED' } }, ...upcoming, count],
+            archived: [...past, count],
+          };
+
+    const [agg] = await ApplicationModel.aggregate([...base, { $facet: facet }] as any);
+    const counts: Record<string, number> = {};
+    for (const key of Object.keys(facet)) {
+      counts[key] = agg?.[key]?.[0]?.n ?? 0;
+    }
+
+    res.json({ counts });
+  } catch (error) {
+    console.error('Erreur lors du comptage des candidatures:', error);
+    res.status(500).json({ message: 'Erreur lors du comptage des candidatures' });
   }
 };
 
