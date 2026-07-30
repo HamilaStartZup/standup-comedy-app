@@ -297,8 +297,14 @@ export const getEventRatingsSummary = async (req: AuthRequest, res: Response): P
     }
 
     const organizerId = (event.organizer as any)?.toString?.() ?? event.organizer;
-    if (organizerId !== userId && userRole !== 'SUPER_ADMIN') {
-      res.status(403).json({ message: 'Seul l\'organisateur de cet événement peut consulter les notes.' });
+    const participantsList = (event.participants || []) as any[];
+    const isOrganizer = organizerId === userId || userRole === 'SUPER_ADMIN';
+    const isParticipatingComedian =
+      userRole === 'COMEDIAN' &&
+      participantsList.some((p: any) => (p._id?.toString?.() || p.toString?.()) === userId);
+
+    if (!isOrganizer && !isParticipatingComedian) {
+      res.status(403).json({ message: 'Vous n\'avez pas accès aux notes de cet événement.' });
       return;
     }
 
@@ -318,8 +324,7 @@ export const getEventRatingsSummary = async (req: AuthRequest, res: Response): P
       }
     }
 
-    const participants = (event.participants || []) as any[];
-    const comedianRatings = participants.map((p: any) => {
+    let comedianRatings = participantsList.map((p: any) => {
       const cid = p._id?.toString?.() || p.toString?.();
       const agg = comedianSums[cid];
       const averageRating = agg && agg.count > 0 ? Math.round((agg.sum / agg.count) * 10) / 10 : null;
@@ -331,6 +336,11 @@ export const getEventRatingsSummary = async (req: AuthRequest, res: Response): P
         ratingCount: agg?.count ?? 0,
       };
     });
+
+    // Un humoriste ne voit que sa propre note, jamais celle de ses collègues.
+    if (!isOrganizer) {
+      comedianRatings = comedianRatings.filter((c) => c.comedianId === userId);
+    }
 
     res.status(200).json({
       eventTitle: event.title,
