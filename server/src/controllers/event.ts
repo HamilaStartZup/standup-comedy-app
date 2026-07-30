@@ -717,6 +717,7 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
 
     const organizerId = req.query.organizerId as string;
     const city = req.query.city as string;
+    const cityPostalCode = req.query.cityPostalCode as string | undefined; // désambiguïse la ville choisie dans la liste (ex. Paris vs Parisot)
     const cityRadius = req.query.cityRadius as string; // rayon autour de la ville recherchée
     const type = req.query.type as string; // recherche par mot-clé (titre / description)
     const venueType = req.query.venueType as string; // filtre par type de lieu
@@ -904,7 +905,7 @@ export const getEventsList = async (req: AuthRequest, res: Response): Promise<vo
     if (city && city.trim() && cityRadiusKm > 0) {
       const { getEventCoordinates } = await import('../services/spectatorNotificationService');
       const { getCityCoordinates, distanceKm } = await import('../utils/cityMapping');
-      const cityCoords = await getCityCoordinates(city.trim());
+      const cityCoords = await getCityCoordinates(city.trim(), cityPostalCode);
       if (cityCoords) {
         const coordsArray = await Promise.all(events.map(ev => getEventCoordinates(ev as any)));
         const inRadius: typeof events = events.filter((_ev, i) => {
