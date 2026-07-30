@@ -7,6 +7,7 @@ import { ApplicationDocument } from '../models/Application';
 import { Event, Application } from '../types';
 import { Types } from 'mongoose';
 import { UserModel } from '../models/User';
+import { SpectatorEventRatingModel } from '../models/SpectatorEventRating';
 import {
   sendApplicationNotificationToOrganizer,
   sendApplicationStatusToComedian,
@@ -877,6 +878,29 @@ export const getAllApplications = async (req: AuthRequest, res: Response): Promi
       }
       return app;
     });
+
+    if (req.user?.role === 'COMEDIAN' && comedianTab === 'archived') {
+      const eventIds = applications.map(app => app.event?._id).filter(Boolean);
+      const ratings = await SpectatorEventRatingModel.find({ event: { $in: eventIds } })
+        .select('event comedianRatings')
+        .lean();
+      const ratingByEvent = new Map<string, { sum: number; count: number }>();
+      for (const r of ratings) {
+        for (const cr of r.comedianRatings || []) {
+          if (String(cr.comedian) !== String(userId)) continue;
+          const key = String(r.event);
+          const agg = ratingByEvent.get(key) ?? { sum: 0, count: 0 };
+          agg.sum += cr.rating;
+          agg.count += 1;
+          ratingByEvent.set(key, agg);
+        }
+      }
+      for (const app of applications) {
+        const agg = app.event?._id ? ratingByEvent.get(String(app.event._id)) : undefined;
+        app.myRating = agg ? Math.round((agg.sum / agg.count) * 10) / 10 : null;
+        app.myRatingCount = agg ? agg.count : null;
+      }
+    }
 
     res.json({ applications, pagination: buildPaginationResult({ page, limit }, total) });
   } catch (error) {

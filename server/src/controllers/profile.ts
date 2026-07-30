@@ -4,6 +4,7 @@ import { UserModel } from '../models/User';
 import { ApplicationModel } from '../models/Application';
 import { EventModel } from '../models/Event';
 import { NotificationModel } from '../models/Notification';
+import { SpectatorEventRatingModel } from '../models/SpectatorEventRating';
 import { AuthRequest } from '../middleware/auth';
 import { emitProfileUpdated } from '../services/eventEmitter';
 import { getCityCoordinates } from '../utils/cityMapping';
@@ -36,6 +37,20 @@ export const getMyProfile = async (req: AuthRequest, res: Response): Promise<any
     };
     if ('avatar' in responseData) {
       delete (responseData as any).avatar;
+    }
+
+    if (req.user?.role === 'COMEDIAN') {
+      const [agg] = await SpectatorEventRatingModel.aggregate([
+        { $match: { 'comedianRatings.comedian': user._id } },
+        { $unwind: '$comedianRatings' },
+        { $match: { 'comedianRatings.comedian': user._id } },
+        { $group: { _id: null, averageRating: { $avg: '$comedianRatings.rating' }, ratingsCount: { $sum: 1 } } },
+      ]);
+      (responseData as any).stats = {
+        ...userObj.stats,
+        averageRating: agg ? Math.round(agg.averageRating * 10) / 10 : undefined,
+        ratingsCount: agg ? agg.ratingsCount : undefined,
+      };
     }
 
     return res.json(responseData);
