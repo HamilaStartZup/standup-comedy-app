@@ -11,6 +11,8 @@ import { computeBookingAmount } from '../utils/venuePricing';
 import { ProcessedStripeEventModel } from '../models/ProcessedStripeEvent';
 import { confirmGroupBookingsPaid, PopulatedGroupBooking } from '../utils/venueBookingHelpers';
 import { createInvoiceSnapshotSafe, updateInvoiceRefundSafe } from '../services/invoiceSnapshot';
+import { claimSpectatorSeat } from '../services/spectatorSeat';
+import Logger from '../utils/logger';
 
 const stripe = config.stripe.secretKey ? new Stripe(config.stripe.secretKey) : null;
 
@@ -301,17 +303,25 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
           return;
         }
 
-        const spectatorRegistrations = eventDoc.spectatorRegistrations || [];
-        if (spectatorRegistrations.some((id) => id.toString() === userId)) {
+        const claim = await claimSpectatorSeat(eventId, userId);
+        if (claim.ok === true) {
+          console.log('[Stripe] Spectateur inscrit après paiement:', userId, '→ événement', eventId);
+        } else if (claim.reason === 'already_registered') {
           console.log('[Stripe] Spectateur déjà inscrit, skip:', userId);
-          res.status(200).send('OK');
-          return;
+        } else if (claim.reason === 'full' || claim.reason === 'withdrawn') {
+          // Paiement déjà encaissé (1€, pas de persistance de ticket à rembourser) : on inscrit
+          // quand même et on logue pour rendre l'overbooking détectable.
+          await EventModel.findByIdAndUpdate(eventId, {
+            $addToSet: { spectatorRegistrations: new mongoose.Types.ObjectId(userId) },
+          });
+          Logger.error('Inscription spectateur après paiement malgré capacité dépassée', {
+            eventId,
+            userId,
+            maxSpectators: eventDoc.maxSpectators,
+            spectatorRegistrationsCount: eventDoc.spectatorRegistrations?.length ?? 0,
+            reason: claim.reason,
+          });
         }
-
-        await EventModel.findByIdAndUpdate(eventId, {
-          $addToSet: { spectatorRegistrations: new mongoose.Types.ObjectId(userId) },
-        });
-        console.log('[Stripe] Spectateur inscrit après paiement:', userId, '→ événement', eventId);
       } catch (e) {
         console.error('[Stripe] Erreur inscription spectateur après webhook:', e);
       }
@@ -454,17 +464,36 @@ export const confirmRegistrationAfterPayment = async (req: AuthRequest, res: Res
       return;
     }
 
-    const spectatorRegistrations = eventDoc.spectatorRegistrations || [];
-    if (spectatorRegistrations.some((id) => id.toString() === userId)) {
+    const claim = await claimSpectatorSeat(eventId, userId);
+    if (claim.ok === true) {
+      console.log('[Stripe] Inscription confirmée après paiement (confirmRegistration):', userId, '→', eventId);
+      res.status(200).json({ message: 'Inscription enregistrée', eventId });
+      return;
+    }
+
+    if (claim.reason === 'already_registered') {
       res.status(200).json({ message: 'Déjà inscrit', eventId });
       return;
     }
 
-    await EventModel.findByIdAndUpdate(eventId, {
-      $addToSet: { spectatorRegistrations: new mongoose.Types.ObjectId(userId) },
-    });
-    console.log('[Stripe] Inscription confirmée après paiement (confirmRegistration):', userId, '→', eventId);
-    res.status(200).json({ message: 'Inscription enregistrée', eventId });
+    if (claim.reason === 'full' || claim.reason === 'withdrawn') {
+      // Paiement déjà encaissé (1€, pas de persistance de ticket à rembourser) : on inscrit
+      // quand même et on logue pour rendre l'overbooking détectable.
+      await EventModel.findByIdAndUpdate(eventId, {
+        $addToSet: { spectatorRegistrations: new mongoose.Types.ObjectId(userId) },
+      });
+      Logger.error('Inscription spectateur après paiement malgré capacité dépassée', {
+        eventId,
+        userId,
+        maxSpectators: eventDoc.maxSpectators,
+        spectatorRegistrationsCount: eventDoc.spectatorRegistrations?.length ?? 0,
+        reason: claim.reason,
+      });
+      res.status(200).json({ message: 'Inscription enregistrée', eventId });
+      return;
+    }
+
+    res.status(404).json({ message: 'Événement non trouvé' });
   } catch (error: any) {
     console.error('Stripe confirmRegistrationAfterPayment error:', error);
     res.status(500).json({ message: 'Erreur lors de la confirmation' });
@@ -928,18 +957,28 @@ export const confirmVenueRefund = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    booking.paymentStatus = 'refunded';
-    booking.refundedAmount = refund.amount / 100;
-    booking.refundedAt = new Date();
-    await booking.save();
+    const refundedAmount = refund.amount / 100;
+    const refundedAt = new Date();
 
-    await updateInvoiceRefundSafe(booking._id.toString(), booking.refundedAmount, booking.refundedAt, 'confirmVenueRefund');
+    // Atomic update — prevents race condition with le webhook refund.updated
+    const updated = await VenueBookingModel.findOneAndUpdate(
+      { _id: booking._id, paymentStatus: 'refund_pending' },
+      { paymentStatus: 'refunded', refundedAmount, refundedAt },
+      { new: true }
+    );
+
+    if (!updated) {
+      res.status(200).json({ message: 'Déjà remboursé', paymentStatus: 'refunded' });
+      return;
+    }
+
+    await updateInvoiceRefundSafe(updated._id.toString(), refundedAmount, refundedAt, 'confirmVenueRefund');
 
     emitVenueBookingPaymentUpdated(
-      booking._id.toString(),
+      updated._id.toString(),
       booking.venue._id.toString(),
-      booking.status,
-      booking.paymentStatus,
+      updated.status,
+      updated.paymentStatus,
       [booking.requester.toString(), booking.venue.owner.toString()]
     );
 
@@ -947,13 +986,13 @@ export const confirmVenueRefund = async (req: AuthRequest, res: Response): Promi
       booking.requester.toString(),
       'venue_booking_refunded',
       'Remboursement effectué',
-      `Votre remboursement de ${booking.refundedAmount}€ pour "${booking.venue.name}" a été traité.`,
+      `Votre remboursement de ${refundedAmount}€ pour "${booking.venue.name}" a été traité.`,
       undefined, undefined, undefined,
       booking.venue._id.toString(),
       booking._id.toString()
     );
 
-    res.status(200).json({ message: 'Remboursement confirmé', paymentStatus: 'refunded', refundedAmount: booking.refundedAmount });
+    res.status(200).json({ message: 'Remboursement confirmé', paymentStatus: 'refunded', refundedAmount });
   } catch (error: any) {
     console.error('Stripe confirmVenueRefund error:', error);
     res.status(500).json({ message: 'Erreur lors de la confirmation du remboursement' });

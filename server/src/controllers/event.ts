@@ -18,6 +18,7 @@ import { notifySpectatorsInRadius, notifySpectatorsOfEventSeries } from '../serv
 import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 import { escapeRegex } from '../utils/regex';
 import Logger from '../utils/logger';
+import { claimSpectatorSeat, SeatClaimFailure } from '../services/spectatorSeat';
 import {
   assertVenueBookingAvailableForNewEvent,
   getUsedVenueBookingIdsForOrganizer,
@@ -999,9 +1000,19 @@ export const registerSpectator = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    await EventModel.findByIdAndUpdate(eventId, {
-      $addToSet: { spectatorRegistrations: new mongoose.Types.ObjectId(userId) },
-    });
+    const claim = await claimSpectatorSeat(eventId, userId);
+    if (claim.ok === false) {
+      const responses: Record<SeatClaimFailure, [number, string]> = {
+        not_found: [404, 'Événement non trouvé'],
+        cancelled: [400, 'Cet événement est annulé'],
+        already_registered: [409, 'Vous êtes déjà inscrit à cet événement'],
+        withdrawn: [403, 'Vous vous êtes désinscrit de cet événement ; la réinscription n\'est pas possible.'],
+        full: [409, 'Plus de places disponibles pour les spectateurs'],
+      };
+      const [status, message] = responses[claim.reason];
+      res.status(status).json({ message });
+      return;
+    }
 
     if (event.organizer) {
       emitSpectatorRegistered(eventId, userId, event.organizer.toString());
