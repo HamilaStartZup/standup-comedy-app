@@ -321,9 +321,25 @@ export const handleStripeWebhook = async (req: express.Request, res: Response): 
             spectatorRegistrationsCount: eventDoc.spectatorRegistrations?.length ?? 0,
             reason: claim.reason,
           });
+        } else if (claim.reason === 'cancelled') {
+          // Paiement déjà encaissé sur un événement annulé entre-temps : pas d'inscription
+          // (correct), mais il faut une trace pour déclencher un remboursement manuel.
+          Logger.error('Paiement encaissé pour un événement annulé, spectateur non inscrit', {
+            eventId,
+            userId,
+            reason: claim.reason,
+          });
         }
       } catch (e) {
+        // Return 500 so Stripe retries the webhook instead of silently losing the registration
         console.error('[Stripe] Erreur inscription spectateur après webhook:', e);
+        try {
+          await ProcessedStripeEventModel.deleteOne({ stripeEventId: event.id });
+        } catch (cleanupErr) {
+          console.error('[Stripe] Erreur nettoyage dedup record:', cleanupErr);
+        }
+        res.status(500).send('Internal error');
+        return;
       }
     }
   }
@@ -490,6 +506,18 @@ export const confirmRegistrationAfterPayment = async (req: AuthRequest, res: Res
         reason: claim.reason,
       });
       res.status(200).json({ message: 'Inscription enregistrée', eventId });
+      return;
+    }
+
+    if (claim.reason === 'cancelled') {
+      // Paiement déjà encaissé sur un événement annulé entre-temps : pas d'inscription
+      // (correct), mais il faut une trace pour déclencher un remboursement manuel.
+      Logger.error('Paiement encaissé pour un événement annulé, spectateur non inscrit', {
+        eventId,
+        userId,
+        reason: claim.reason,
+      });
+      res.status(400).json({ message: 'Cet événement est annulé', eventId });
       return;
     }
 

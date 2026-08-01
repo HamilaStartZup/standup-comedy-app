@@ -1073,30 +1073,20 @@ export const confirmParticipation = async (req: AuthRequest, res: Response): Pro
  * Retire une candidature en changeant son statut à WITHDRAWN
  * Conserve la candidature dans la base de données mais la marque comme retirée
  */
-export const deleteApplication = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { applicationId } = req.params;
-    const application = await ApplicationModel.findById(applicationId).populate<{ event: IPopulatedEvent; comedian: IPopulatedUser }>('event').populate('comedian');
+/**
+ * Logique de retrait d'une candidature (statut → WITHDRAWN, retrait des participants,
+ * détection annulation tardive, notifications/emails, SSE). Partagée par le retrait
+ * authentifié (deleteApplication) et le retrait par lien email tokenisé (respondToEventUpdate)
+ * pour éviter deux implémentations divergentes du même effet de bord.
+ * @param application candidature populée avec `event` et `comedian` (voir ApplicationModel.findById(...).populate(...))
+ */
+async function withdrawApplicationInternal(application: any): Promise<void> {
+    const applicationId = (application._id as any).toString();
 
-    if (!application) {
-      res.status(404).json({ message: 'Candidature non trouvée' });
-      return;
-    }
-
-    // Vérifier si l'utilisateur est le candidat ou l'organisateur de l'évènement
-    const isComedian = (application.comedian as IPopulatedUser)._id.toString() === req.user?.id;
-    const isOrganizer = (application.event as IPopulatedEvent).organizer._id.toString() === req.user?.id;
-
-    if (!isComedian && !isOrganizer) {
-      res.status(403).json({ message: 'Non autorisé à retirer cette candidature' });
-      return;
-    }
-
-    // Pour l'humoriste : à partir d'1 h avant le début, plus de désinscription possible
-    if (isComedian && application.event && isEventWithinOneHour(application.event as any)) {
-      res.status(400).json({
-        message: 'Impossible de vous désinscrire : l\'événement commence dans moins d\'une heure ou a déjà commencé.'
-      });
+    // WITHDRAWN est un état terminal : re-traiter un retrait (double clic, ou surtout un
+    // prefetch GET du lien email par un scanner/anti-virus) re-émettrait le SSE et les
+    // effets de bord. On sort tôt pour rendre l'opération idempotente.
+    if (application.status === 'WITHDRAWN') {
       return;
     }
 
@@ -1290,7 +1280,36 @@ export const deleteApplication = async (req: AuthRequest, res: Response): Promis
     const eventId = (application.event as any)?._id?.toString() || application.event?.toString() || '';
     const organizerId = (application.event as any)?.organizer?._id?.toString() || (application.event as any)?.organizer?.toString() || '';
     emitApplicationWithdrawn(applicationId, eventId, organizerId);
+}
 
+export const deleteApplication = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { applicationId } = req.params;
+    const application = await ApplicationModel.findById(applicationId).populate<{ event: IPopulatedEvent; comedian: IPopulatedUser }>('event').populate('comedian');
+
+    if (!application) {
+      res.status(404).json({ message: 'Candidature non trouvée' });
+      return;
+    }
+
+    // Vérifier si l'utilisateur est le candidat ou l'organisateur de l'évènement
+    const isComedian = (application.comedian as IPopulatedUser)._id.toString() === req.user?.id;
+    const isOrganizer = (application.event as IPopulatedEvent).organizer._id.toString() === req.user?.id;
+
+    if (!isComedian && !isOrganizer) {
+      res.status(403).json({ message: 'Non autorisé à retirer cette candidature' });
+      return;
+    }
+
+    // Pour l'humoriste : à partir d'1 h avant le début, plus de désinscription possible
+    if (isComedian && application.event && isEventWithinOneHour(application.event as any)) {
+      res.status(400).json({
+        message: 'Impossible de vous désinscrire : l\'événement commence dans moins d\'une heure ou a déjà commencé.'
+      });
+      return;
+    }
+
+    await withdrawApplicationInternal(application);
     res.status(204).send();
   } catch (error) {
     console.error('Erreur lors du retrait de la candidature:', error);
@@ -1361,33 +1380,61 @@ export const expirePendingApplicationsForEvent = async (eventId: Types.ObjectId)
 /**
  * Gère la réponse d'un humoriste après mise à jour d'évènement (via lien email avec token JWT)
  */
+/**
+ * GET /respond-update — NON-MUTANT. Historiquement cet endpoint appliquait le retrait
+ * directement sur un GET, ce qui exposait la mutation aux prefetchers de liens email
+ * (scanners/anti-virus de messagerie qui suivent les URLs sans clic humain). Il se
+ * contente désormais de rediriger vers la page front de confirmation, laquelle déclenche
+ * le POST après un clic explicite de l'utilisateur.
+ */
 export const respondToEventUpdate = async (req: Request, res: Response): Promise<void> => {
+  const { token, action } = req.query as { token?: string; action?: string };
+  const params = new URLSearchParams();
+  if (token) params.set('token', token);
+  if (action) params.set('action', action);
+  res.redirect(`${config.frontend.url}/applications/respond?${params.toString()}`);
+};
+
+/**
+ * POST /respond-update — applique la réponse de l'humoriste (keep/withdraw) après
+ * confirmation explicite depuis la page front. Vérifie le token JWT signé (applicationId).
+ */
+export const respondToEventUpdatePost = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { token, action } = req.query as { token?: string; action?: 'keep' | 'withdraw' };
+    const { token, action } = req.body as { token?: string; action?: 'keep' | 'withdraw' };
     if (!token || !action) {
-      res.status(400).send('Requête invalide');
+      res.status(400).json({ message: 'Requête invalide' });
       return;
     }
 
+    let applicationId: string;
     try {
       const payload = jwt.verify(token, config.jwt.secret as string) as any;
-      const applicationId = payload.applicationId as string;
-      if (!applicationId) {
-        res.status(400).send('Token invalide');
-        return;
-      }
-
-      if (action === 'withdraw') {
-        await ApplicationModel.findByIdAndDelete(applicationId);
-        res.redirect(`${config.frontend.url}/applications?update=withdrawn`);
-        return;
-      }
-
-      // keep: on ne change rien, simple confirmation
-      res.redirect(`${config.frontend.url}/applications?update=kept`);
+      applicationId = payload.applicationId as string;
     } catch (_e) {
-      res.status(400).send('Lien expiré ou invalide');
+      res.status(400).json({ message: 'Lien expiré ou invalide' });
+      return;
     }
+    if (!applicationId) {
+      res.status(400).json({ message: 'Token invalide' });
+      return;
+    }
+
+    if (action === 'withdraw') {
+      const application = await ApplicationModel.findById(applicationId)
+        .populate<{ event: IPopulatedEvent; comedian: IPopulatedUser }>('event')
+        .populate('comedian');
+      if (!application) {
+        res.status(404).json({ message: 'Candidature introuvable' });
+        return;
+      }
+      await withdrawApplicationInternal(application);
+      res.status(200).json({ status: 'withdrawn' });
+      return;
+    }
+
+    // keep: on ne change rien, simple confirmation
+    res.status(200).json({ status: 'kept' });
   } catch (error) {
     console.error('Erreur lors du traitement de la réponse à la mise à jour:', error);
     res.status(500).json({ message: 'Erreur serveur' });

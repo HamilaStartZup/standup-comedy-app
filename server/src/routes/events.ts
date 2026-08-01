@@ -20,7 +20,6 @@ import {
   processCompletedEvents,
   resetParticipations,
   markEventsAsCompletedCron,
-  registerSpectator,
   unregisterSpectator,
   uploadEventImage,
 } from '../controllers/event';
@@ -99,8 +98,6 @@ router.get('/user/my-events', authMiddleware, asyncHandler(getOrganizerEvents));
 // GET /api/events/venue-bookings-in-use — réservations de salle déjà liées à un événement
 router.get('/venue-bookings-in-use', authMiddleware, asyncHandler(getVenueBookingIdsInUse));
 
-// POST /api/events/:eventId/spectator-register - Inscription spectateur
-router.post('/:eventId/spectator-register', authMiddleware, asyncHandler(registerSpectator));
 // DELETE /api/events/:eventId/spectator-register - Désinscription spectateur
 router.delete('/:eventId/spectator-register', authMiddleware, asyncHandler(unregisterSpectator));
 

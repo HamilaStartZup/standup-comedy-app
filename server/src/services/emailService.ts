@@ -1008,6 +1008,12 @@ export const sendEventUpdatedNotificationToApplicants = async (
 
     const loginUrl = `${frontendBase}/login?redirect=/applications`;
 
+    // Lien tokenisé (JWT applicationId) vers la page front de confirmation. Le clic ouvre
+    // une page qui POST au backend — un prefetch GET du lien ne déclenche donc aucun retrait.
+    const responseToken = jwt.sign({ applicationId: (app._id as any).toString() }, config.jwt.secret as string, { expiresIn: '7d' });
+    const keepUrl = `${frontendBase}/applications/respond?token=${responseToken}&action=keep`;
+    const withdrawUrl = `${frontendBase}/applications/respond?token=${responseToken}&action=withdraw`;
+
     const html = `
     <div style="font-family: Arial, sans-serif; background: #f8f9fa; padding: 30px;">
       <div style="max-width: 600px; margin: auto; background: white; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); padding: 24px;">
@@ -1022,10 +1028,14 @@ export const sendEventUpdatedNotificationToApplicants = async (
           <div><b>📍 Lieu:</b> ${event.location?.address || ''} ${event.location?.city ? `- ${event.location.city}` : ''}</div>
           ${event.startTime ? `<div><b>⏰ Heure:</b> ${event.startTime}</div>` : ''}
         </div>
-        <p>Pour confirmer si vous restez inscrit ou vous désinscrire, connectez-vous sur votre espace candidatures.</p>
+        <p>Souhaitez-vous rester inscrit à cet évènement mis à jour, ou vous retirer ?</p>
         <div style="text-align:center; margin-top: 20px;">
-          <a href="${loginUrl}" style="display:inline-block;padding:12px 24px;background:#667eea;color:#fff;border-radius:24px;text-decoration:none;font-weight:bold">Se connecter</a>
+          <a href="${keepUrl}" style="display:inline-block;margin:6px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:24px;text-decoration:none;font-weight:bold">✅ Rester inscrit</a>
+          <a href="${withdrawUrl}" style="display:inline-block;margin:6px;padding:12px 24px;background:#dc2626;color:#fff;border-radius:24px;text-decoration:none;font-weight:bold">✋ Me retirer</a>
         </div>
+        <p style="text-align:center;margin-top:12px;font-size:0.9em;">
+          ou <a href="${loginUrl}" style="color:#667eea;">connectez-vous à votre espace candidatures</a>
+        </p>
         <p style="color:#888; margin-top:24px;">Cet email est automatique. Merci de ne pas y répondre.</p>
 
         <!-- Footer de désabonnement -->
@@ -1055,8 +1065,11 @@ Date: ${new Date(event.date).toLocaleDateString('fr-FR')}
 Lieu: ${event.location?.address || ''} ${event.location?.city ? `- ${event.location.city}` : ''}
 ${event.startTime ? `Heure: ${event.startTime}` : ''}
 
-Pour confirmer si vous restez inscrit ou vous désinscrire, connectez-vous sur votre espace candidatures:
-${config.frontend.url}/login?redirect=/applications
+Souhaitez-vous rester inscrit ou vous retirer ?
+Rester inscrit : ${keepUrl}
+Me retirer : ${withdrawUrl}
+
+ou connectez-vous à votre espace candidatures : ${config.frontend.url}/login?redirect=/applications
 
 L'équipe Connect Comedy Club
     `.trim();
@@ -3704,13 +3717,23 @@ L'équipe Connect Comedy Club
  * Max 1 envoi par jour (géré par l'appelant avec lastDailyRecapAt).
  */
 export const sendDailySpectatorRecapEmail = async (
-  spectator: { email: string; firstName?: string; lastName?: string },
+  spectator: { _id?: string; id?: string; email: string; firstName?: string; lastName?: string },
   events: Array<{ title?: string; date?: Date; location?: { city?: string } }>
 ): Promise<void> => {
   if (!config.email.smtpUser || !config.email.smtpPass) {
     console.warn('📧 Email non configuré, récap spectateur ignoré');
     return;
   }
+
+  const spectatorId = (spectator._id || spectator.id)?.toString();
+  if (spectatorId && !(await checkUserEmailSubscription(spectatorId))) {
+    console.log(`⏭️ Spectateur ${spectator.email} est désabonné - récap non envoyé`);
+    return;
+  }
+
+  const unsubscribeUrl = spectatorId
+    ? generateUnsubscribeUrl(spectatorId, spectator.email)
+    : `${config.frontend.url}/unsubscribe`;
 
   const name = [spectator.firstName, spectator.lastName].filter(Boolean).join(' ') || 'Spectateur';
   const eventList = events
@@ -3731,6 +3754,9 @@ export const sendDailySpectatorRecapEmail = async (
         <a href="${config.frontend.url}/spectateur" style="display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#FF5A7E,#FF7A92);color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">Voir sur l'accueil</a>
       </p>
       <p style="color:#888;font-size:12px;">Connect Comedy Club – 1 récap par jour maximum.</p>
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e0e0e0; text-align: center; color: #666; font-size: 12px;">
+        <a href="${unsubscribeUrl}" style="color: #666; text-decoration: underline;">Se désabonner de tous les emails</a>
+      </div>
     </div>
   `.trim();
 
@@ -3739,6 +3765,10 @@ export const sendDailySpectatorRecapEmail = async (
     to: spectator.email,
     subject: `Récap : ${events.length} événement(s) près de chez vous`,
     html: htmlContent,
+    headers: {
+      'List-Unsubscribe': `<${unsubscribeUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
     categories: ['spectator-recap', 'evenement'],
   });
 };

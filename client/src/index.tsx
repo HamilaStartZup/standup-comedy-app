@@ -18,6 +18,7 @@ const RegisterOrganizerPage = lazy(() => import('./pages/RegisterOrganizerPage')
 const MyEventsPage = lazy(() => import('./pages/MyEventsPage'))
 const OrganizerProfilePage = lazy(() => import('./pages/OrganizerProfilePage'))
 const ApplicationsPage = lazy(() => import('./pages/ApplicationsPage'))
+const EventUpdateResponsePage = lazy(() => import('./pages/EventUpdateResponsePage'))
 const ComedianProfilePage = lazy(() => import('./pages/ComedianProfilePage'))
 const ComedianDashboardPage = lazy(() => import('./pages/ComedianDashboardPage'))
 const DirectoryPage = lazy(() => import('./pages/DirectoryPage'))
@@ -158,6 +159,7 @@ const AppRouter: React.FC = () => {
       <Route path="/spectateur/profile" element={<SpectatorProfilePage />} />
       <Route path="/events" element={<MyEventsPage />} />
       <Route path="/profile/organizer" element={<OrganizerProfilePage />} />
+      <Route path="/applications/respond" element={<EventUpdateResponsePage />} />
       <Route path="/applications" element={<ApplicationsPage />} />
       <Route path="/profile/comedian/:id" element={<ComedianProfilePage />} />
       <Route path="/profile/comedian" element={<ComedianProfilePage />} />

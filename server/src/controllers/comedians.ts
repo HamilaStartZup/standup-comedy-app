@@ -1,6 +1,8 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { UserModel } from '../models/User';
+import { EventModel } from '../models/Event';
+import { ApplicationModel } from '../models/Application';
 import {
   detectZoneType,
   matchesMobilityZone
@@ -68,23 +70,42 @@ export const searchComediansByZone = async (req: AuthRequest, res: Response) => 
     const startIndex = (pageNum - 1) * limitNum;
     const paginatedComedians = matchingComedians.slice(startIndex, startIndex + limitNum);
 
+    // Coordonnées (email/phone) visibles seulement pour SUPER_ADMIN, ou pour un organisateur
+    // si le comédien a déjà candidaté à l'un de ses évènements (même règle que getUserProfile).
+    const isAdmin = req.user?.role === 'SUPER_ADMIN';
+    let comediansWithContactAccess = new Set<string>();
+    if (!isAdmin && req.user?.role === 'ORGANIZER') {
+      const ownedEventIds = await EventModel.find({ organizer: req.user.id }).distinct('_id');
+      if (ownedEventIds.length > 0) {
+        const comedianIds = paginatedComedians.map(c => c._id);
+        const applicants = await ApplicationModel.find({
+          comedian: { $in: comedianIds },
+          event: { $in: ownedEventIds },
+        }).distinct('comedian');
+        comediansWithContactAccess = new Set(applicants.map(id => id.toString()));
+      }
+    }
+
     // Formater les résultats
-    const formattedComedians = paginatedComedians.map(comedian => ({
-      _id: comedian._id,
-      firstName: comedian.firstName,
-      lastName: comedian.lastName,
-      email: comedian.email,
-      city: comedian.city,
-      phone: comedian.phone,
-      stageName: (comedian as any).profile?.stageName,
-      bio: (comedian as any).profile?.bio,
-      numberOfScenes: (comedian as any).profile?.numberOfScenes,
-      comedyStyle: (comedian as any).profile?.comedyStyle || [],
-      performanceLanguages: (comedian as any).profile?.performanceLanguages || [],
-      mobilityZone: (comedian as any).profile?.mobilityZone || [],
-      socialLinks: (comedian as any).profile?.socialLinks,
-      stats: comedian.stats
-    }));
+    const formattedComedians = paginatedComedians.map(comedian => {
+      const hasContactAccess = isAdmin || comediansWithContactAccess.has(comedian._id.toString());
+      return {
+        _id: comedian._id,
+        firstName: comedian.firstName,
+        lastName: comedian.lastName,
+        email: hasContactAccess ? comedian.email : undefined,
+        city: comedian.city,
+        phone: hasContactAccess ? comedian.phone : undefined,
+        stageName: (comedian as any).profile?.stageName,
+        bio: (comedian as any).profile?.bio,
+        numberOfScenes: (comedian as any).profile?.numberOfScenes,
+        comedyStyle: (comedian as any).profile?.comedyStyle || [],
+        performanceLanguages: (comedian as any).profile?.performanceLanguages || [],
+        mobilityZone: (comedian as any).profile?.mobilityZone || [],
+        socialLinks: (comedian as any).profile?.socialLinks,
+        stats: comedian.stats
+      };
+    });
 
     return res.status(200).json({
       comedians: formattedComedians,

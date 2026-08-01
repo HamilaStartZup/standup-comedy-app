@@ -122,11 +122,6 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
     const { userId } = req.params;
     const updateData = req.body;
 
-    // Log sans inclure le contenu complet de avatarUrl (peut être une énorme chaîne base64)
-    const safeLogData = { ...updateData };
-    if (safeLogData.avatarUrl && typeof safeLogData.avatarUrl === 'string' && safeLogData.avatarUrl.length > 100) {
-      safeLogData.avatarUrl = `[base64 image: ${safeLogData.avatarUrl.length} caractères]`;
-    }
     console.log('📝 [updateUserProfile] Données reçues:', {
       userId,
       updateDataKeys: Object.keys(updateData),
@@ -144,13 +139,6 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
       res.status(404).json({ message: 'Utilisateur non trouvé' });
       return;
     }
-
-    console.log('👤 Utilisateur trouvé, avant mise à jour:', {
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone
-    });
 
     // Update basic user fields
     if (updateData.firstName) user.firstName = updateData.firstName;
@@ -186,13 +174,6 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
         (user as any).avatar = undefined;
       }
     }
-
-    console.log('✏️ Utilisateur après mise à jour des champs:', {
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone
-    });
 
     // Handle comedianProfile updates
     if (user.role === 'COMEDIAN') {

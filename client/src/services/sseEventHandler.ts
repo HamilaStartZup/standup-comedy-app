@@ -249,15 +249,6 @@ export const handleSSEEvent = (queryClient: QueryClient, event: SSEEvent): void 
       break;
 
     // === SPECTATEURS ===
-    case 'SPECTATOR_REGISTERED':
-      console.log('🎟️ [SSE] Spectateur inscrit:', event.data.eventId, event.data.userId);
-      queryClient.invalidateQueries({ queryKey: ['events'], exact: false });
-      if (event.data.eventId) {
-        queryClient.invalidateQueries({ queryKey: ['event', event.data.eventId], exact: false });
-        queryClient.invalidateQueries({ queryKey: ['spectators', event.data.eventId], exact: false });
-      }
-      break;
-
     case 'SPECTATOR_UNREGISTERED':
       console.log('🎟️ [SSE] Spectateur désinscrit:', event.data.eventId, event.data.userId);
       queryClient.invalidateQueries({ queryKey: ['events'], exact: false });

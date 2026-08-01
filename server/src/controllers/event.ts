@@ -10,7 +10,7 @@ import { sendEventUpdatedNotificationToApplicants, sendEventCancellationToPartic
 import { notifyComediansByMobilityAsync, notifyComediansByMobilityForRecurringGroupAsync } from '../services/mobilityNotificationService';
 import { config } from '../config/env';
 import { AbsenceModel } from '../models/Absence';
-import { emitEventCreated, emitEventUpdated, emitEventDeleted, emitEventCompleted, emitSpectatorRegistered, emitSpectatorUnregistered } from '../services/eventEmitter';
+import { emitEventCreated, emitEventUpdated, emitEventDeleted, emitEventCompleted, emitSpectatorUnregistered } from '../services/eventEmitter';
 import { Types } from 'mongoose';
 import { extractPostalCode, getDepartmentFromPostalCode } from '../utils/cityMapping';
 import { getCityCoordinates } from '../utils/cityMapping';
@@ -18,7 +18,6 @@ import { notifySpectatorsInRadius, notifySpectatorsOfEventSeries } from '../serv
 import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 import { escapeRegex } from '../utils/regex';
 import Logger from '../utils/logger';
-import { claimSpectatorSeat, SeatClaimFailure } from '../services/spectatorSeat';
 import {
   assertVenueBookingAvailableForNewEvent,
   getUsedVenueBookingIdsForOrganizer,
@@ -959,73 +958,6 @@ export const getEventById = async (req: Request, res: Response): Promise<void> =
 // ============================================================================
 // SPECTATOR REGISTRATION (s'inscrire à un événement)
 // ============================================================================
-export const registerSpectator = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { eventId } = req.params;
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
-
-    if (!userId || userRole !== 'SPECTATOR') {
-      res.status(403).json({ message: 'Seuls les spectateurs peuvent s\'inscrire à un événement' });
-      return;
-    }
-    if (!eventId || !mongoose.Types.ObjectId.isValid(eventId)) {
-      res.status(400).json({ message: 'ID d\'événement invalide' });
-      return;
-    }
-
-    const event = await EventModel.findById(eventId);
-    if (!event) {
-      res.status(404).json({ message: 'Événement non trouvé' });
-      return;
-    }
-    if (event.status?.toLowerCase() === 'cancelled') {
-      res.status(400).json({ message: 'Cet événement est annulé' });
-      return;
-    }
-
-    const withdrawnSpectators = (event as any).withdrawnSpectators || [];
-    if (withdrawnSpectators.some((id: mongoose.Types.ObjectId) => id.toString() === userId)) {
-      res.status(403).json({ message: 'Vous vous êtes désinscrit de cet événement ; la réinscription n\'est pas possible.' });
-      return;
-    }
-    const spectatorRegistrations = event.spectatorRegistrations || [];
-    if (spectatorRegistrations.some((id) => id.toString() === userId)) {
-      res.status(409).json({ message: 'Vous êtes déjà inscrit à cet événement' });
-      return;
-    }
-    const maxSpectators = (event as any).maxSpectators;
-    if (maxSpectators != null && typeof maxSpectators === 'number' && spectatorRegistrations.length >= maxSpectators) {
-      res.status(409).json({ message: 'Plus de places disponibles pour les spectateurs' });
-      return;
-    }
-
-    const claim = await claimSpectatorSeat(eventId, userId);
-    if (claim.ok === false) {
-      const responses: Record<SeatClaimFailure, [number, string]> = {
-        not_found: [404, 'Événement non trouvé'],
-        cancelled: [400, 'Cet événement est annulé'],
-        already_registered: [409, 'Vous êtes déjà inscrit à cet événement'],
-        withdrawn: [403, 'Vous vous êtes désinscrit de cet événement ; la réinscription n\'est pas possible.'],
-        full: [409, 'Plus de places disponibles pour les spectateurs'],
-      };
-      const [status, message] = responses[claim.reason];
-      res.status(status).json({ message });
-      return;
-    }
-
-    if (event.organizer) {
-      emitSpectatorRegistered(eventId, userId, event.organizer.toString());
-    }
-
-    const updated = await EventModel.findById(eventId).populate('organizer', 'firstName lastName email').populate('spectatorRegistrations', 'firstName lastName');
-    res.status(201).json({ message: 'Inscription enregistrée', event: updated });
-  } catch (error) {
-    console.error('Register spectator error:', error);
-    res.status(500).json({ message: 'Erreur lors de l\'inscription' });
-  }
-};
-
 export const unregisterSpectator = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { eventId } = req.params;
@@ -1333,14 +1265,6 @@ export const deleteEvent = async (req: AuthRequest, res: Response): Promise<void
 
     const event = await EventModel.findById(eventId).populate('organizer', 'firstName lastName email');
 
-    console.log('🔍 DEBUG Suppression évènement:', {
-      eventId,
-      userId: organizerId,
-      eventOrganizer: event?.organizer,
-      eventOrganizerId: event?.organizer?._id?.toString(),
-      eventOrganizerString: event?.organizer?.toString()
-    });
-
     if (!event) {
       res.status(404).json({ message: 'Évènement non trouvé' });
       return;
@@ -1349,13 +1273,25 @@ export const deleteEvent = async (req: AuthRequest, res: Response): Promise<void
     // Vérifier si l'utilisateur est l'organisateur de l'évènement
     const organizerIdFromEvent = (event.organizer as any)._id?.toString() || event.organizer.toString();
     if (organizerIdFromEvent !== organizerId) {
-      console.log('❌ Autorisation refusée:', {
-        eventOrganizer: event.organizer,
-        organizerId: organizerIdFromEvent,
-        userId: organizerId,
-        match: organizerIdFromEvent === organizerId
-      });
       res.status(403).json({ message: 'Non autorisé à supprimer cet évènement' });
+      return;
+    }
+
+    // Règle des 10 jours (stats organisateur) : la suppression pure (hors stats) n'est
+    // permise qu'à ≥10j de l'évènement. En dessous, seule l'annulation (status='cancelled',
+    // comptée dans les stats) est autorisée — via PUT /events/:id.
+    const todayMidnight = new Date();
+    todayMidnight.setHours(0, 0, 0, 0);
+    const eventMidnight = new Date(event.date);
+    eventMidnight.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((eventMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 10) {
+      // Passé ou en cours : l'évènement est conservé en base (historique/stats) et n'est retiré
+      // qu'à la suppression du compte organisateur. À l'approche (< 10j), on oriente vers l'annulation.
+      const message = diffDays < 0
+        ? 'Cet évènement est passé : il est conservé dans votre historique et ne peut pas être supprimé.'
+        : 'Impossible de supprimer cet évènement à moins de 10 jours : utilisez l\'annulation (statut "cancelled").';
+      res.status(400).json({ message });
       return;
     }
 

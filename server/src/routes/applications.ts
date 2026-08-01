@@ -12,7 +12,8 @@ import {
   getApplicationById,
   confirmParticipation,
   deleteApplication,
-  respondToEventUpdate
+  respondToEventUpdate,
+  respondToEventUpdatePost
 } from '../controllers/application';
 
 const router = express.Router();
@@ -22,11 +23,16 @@ const router = express.Router();
 // ============================================================================
 
 /**
- * GET /respond-update
- * Gère la réponse d'un humoriste après mise à jour d'évènement (via lien email)
- * Query params: token (JWT), action ('keep' | 'withdraw')
+ * GET /respond-update — non-mutant : redirige le lien email vers la page front de
+ * confirmation (évite qu'un prefetch GET déclenche le retrait). Query: token, action.
  */
 router.get('/respond-update', respondToEventUpdate);
+
+/**
+ * POST /respond-update — applique la réponse (keep/withdraw) après confirmation front.
+ * Body: token (JWT), action ('keep' | 'withdraw').
+ */
+router.post('/respond-update', respondToEventUpdatePost);
 
 // ============================================================================
 // PROTECTED ROUTES (authentification requise)

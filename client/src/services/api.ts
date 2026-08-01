@@ -74,12 +74,6 @@ export const checkIsEventFavorite = async (eventId: string) => {
   return response.data;
 };
 
-// Inscription / désinscription spectateur à un événement
-export const registerSpectatorToEvent = async (eventId: string) => {
-  const response = await api.post(`/events/${eventId}/spectator-register`);
-  return response.data;
-};
-
 /** Crée une session Stripe Checkout pour acheter une place à 1€. Rediriger vers data.url */
 export const createStripeCheckoutSession = async (eventId: string): Promise<{ url: string }> => {
   const response = await api.post<{ url: string }>('/stripe/create-checkout-session', { eventId });

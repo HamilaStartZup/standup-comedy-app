@@ -21,6 +21,11 @@ interface PasswordResetRequest {
     firstName: string;
     lastName: string;
   };
+  // Renseigné dès qu'un admin a envoyé le lien de réinitialisation (marqueur « traité »).
+  completedBy?: {
+    firstName: string;
+    lastName: string;
+  } | null;
   status: string;
 }
 
@@ -29,9 +34,7 @@ function PasswordResetManagementPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState('');
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [resetting, setResetting] = useState(false);
+  const [resettingUserId, setResettingUserId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
@@ -53,30 +56,20 @@ function PasswordResetManagementPage() {
 
   const requests: PasswordResetRequest[] = requestsData?.requests || [];
 
-  const handleResetPassword = async (userId: string) => {
-    if (!newPassword || newPassword.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères');
-      return;
-    }
-
-    setResetting(true);
+  const handleSendResetLink = async (userId: string) => {
+    setResettingUserId(userId);
     setError('');
 
     try {
-      await api.post('/auth/admin/reset-password', {
-        userId,
-        newPassword
-      });
-      setSuccessMessage('Mot de passe réinitialisé avec succès !');
-      setSelectedUserId(null);
-      setNewPassword('');
+      await api.post('/auth/admin/reset-password', { userId });
+      setSuccessMessage('Lien de réinitialisation envoyé à l\'utilisateur !');
       // Invalider la query pour recharger les demandes
       queryClient.invalidateQueries({ queryKey: ['password-reset-requests'] });
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur lors de la réinitialisation');
     } finally {
-      setResetting(false);
+      setResettingUserId(null);
     }
   };
 
@@ -106,17 +99,6 @@ function PasswordResetManagementPage() {
     fontWeight: 'bold',
     cursor: 'pointer',
     margin: '5px',
-  };
-
-  const inputStyle: CSSProperties = {
-    padding: '10px',
-    borderRadius: '8px',
-    border: '1px solid var(--ccc-border-medium)',
-    backgroundColor: 'var(--ccc-bg-elevated)',
-    color: 'var(--ccc-text-primary)',
-    fontSize: '1em',
-    width: '100%',
-    marginBottom: '10px',
   };
 
   if (user?.role !== 'SUPER_ADMIN') {
@@ -204,42 +186,26 @@ function PasswordResetManagementPage() {
                       </p>
                     </div>
                     <div style={{ minWidth: '250px' }}>
-                      {selectedUserId === request.userId.id ? (
-                        <div>
-                          <input
-                            type="password"
-                            placeholder="Nouveau mot de passe (min 8 caractères)"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            style={inputStyle}
-                            minLength={8}
-                          />
-                          <div style={{ display: 'flex', gap: '10px' }}>
-                            <button
-                              onClick={() => handleResetPassword(request.userId.id)}
-                              style={buttonStyle}
-                              disabled={resetting || newPassword.length < 8}
-                            >
-                              {resetting ? 'Réinitialisation...' : 'Confirmer'}
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedUserId(null);
-                                setNewPassword('');
-                              }}
-                              style={{ ...buttonStyle, background: 'var(--ccc-btn-secondary-bg)', color: 'var(--ccc-text-secondary)' }}
-                            >
-                              Annuler
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setSelectedUserId(request.userId.id)}
-                          style={buttonStyle}
-                        >
-                          Réinitialiser le mot de passe
-                        </button>
+                      {request.completedBy && (
+                        <p style={{ color: 'var(--ccc-success, #16a34a)', fontSize: '0.9em', marginBottom: '8px' }}>
+                          ✉️ Lien envoyé — en attente que l'utilisateur choisisse son mot de passe
+                        </p>
+                      )}
+                      <button
+                        onClick={() => handleSendResetLink(request.userId.id)}
+                        style={buttonStyle}
+                        disabled={resettingUserId === request.userId.id}
+                      >
+                        {resettingUserId === request.userId.id
+                          ? 'Envoi...'
+                          : request.completedBy
+                            ? 'Renvoyer le lien'
+                            : 'Envoyer un lien de réinitialisation'}
+                      </button>
+                      {request.completedBy && (
+                        <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.8em', marginTop: '6px' }}>
+                          Un renvoi invalide le lien précédent.
+                        </p>
                       )}
                     </div>
                   </div>

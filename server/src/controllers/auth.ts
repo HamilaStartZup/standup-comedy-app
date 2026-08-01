@@ -10,6 +10,7 @@ import { deleteUserAndData } from './users';
 import sgMail from '@sendgrid/mail';
 import { emitUserRegistered, emitPasswordReset } from '../services/eventEmitter';
 import { getAuthCookieOptions, AUTH_COOKIE_MAX_AGE } from '../utils/cookieOptions';
+import { getSuperAdminIds } from '../utils/superAdminCache';
 import { parsePaginationWithDefaults, buildPaginationResult } from '../utils/pagination';
 
 /**
@@ -23,11 +24,11 @@ export const logoutClassic = async (_req: Request, res: Response) => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    console.log('📝 [REGISTER] Données reçues:', JSON.stringify(req.body, null, 2));
     const { email, phone, password, firstName, lastName, role, city, birthDate, profile: profileData, consent } = req.body;
 
-    console.log('📝 [REGISTER] Rôle:', role);
-    console.log('📝 [REGISTER] Profile data:', profileData);
+    if (role === 'SUPER_ADMIN') {
+      return res.status(403).json({ message: 'Ce rôle ne peut pas être obtenu par inscription' });
+    }
 
     // Téléphone obligatoire pour humoristes, organisateurs et lieux
     if ((role === 'COMEDIAN' || role === 'ORGANIZER' || role === 'LIEU') && (!phone || typeof phone !== 'string' || !phone.trim())) {
@@ -126,8 +127,6 @@ export const register = async (req: Request, res: Response) => {
       userData.lieuProfile = lieuProfile;
     }
 
-    console.log('📝 [REGISTER] Données utilisateur à créer:', JSON.stringify({ ...userData, password: '***' }, null, 2));
-    
     const user = new UserModel(userData);
 
     try {
@@ -141,8 +140,10 @@ export const register = async (req: Request, res: Response) => {
       throw saveError;
     }
 
-    // Émettre un évènement SSE pour notifier tous les clients
-    emitUserRegistered(user._id.toString());
+    // Émettre un évènement SSE ciblé aux Super Admins uniquement
+    getSuperAdminIds().then(adminIds => {
+      if (adminIds.length > 0) emitUserRegistered(user._id.toString(), adminIds);
+    }).catch(err => console.error('Erreur émission SSE USER_REGISTERED aux superAdmins:', err));
 
     // Générer le token JWT
     if (!config.jwt.secret) {
@@ -660,6 +661,8 @@ export const resetPassword = async (req: Request, res: Response) => {
     resetRequest.completedAt = new Date();
     await resetRequest.save();
 
+    emitPasswordReset(user._id.toString());
+
     res.status(200).json({
       message: 'Mot de passe réinitialisé avec succès'
     });
@@ -683,6 +686,7 @@ export const getPasswordResetRequests = async (req: AuthRequest, res: Response) 
     })
       .populate('userId', 'firstName lastName email role')
       .populate('requestedBy', 'firstName lastName email')
+      .populate('completedBy', 'firstName lastName email')
       .sort({ requestedAt: -1 });
 
     res.status(200).json({
@@ -695,6 +699,9 @@ export const getPasswordResetRequests = async (req: AuthRequest, res: Response) 
         requestedAt: req.requestedAt,
         expiresAt: req.expiresAt,
         requestedBy: req.requestedBy,
+        // Renseigné dès qu'un admin a envoyé le lien : le front l'utilise pour
+        // afficher « lien envoyé » et proposer « Renvoyer » plutôt que « Envoyer ».
+        completedBy: req.completedBy,
         status: req.status
       }))
     });
@@ -713,14 +720,10 @@ export const adminResetPassword = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'Accès refusé' });
     }
 
-    const { userId, newPassword } = req.body;
+    const { userId } = req.body;
 
-    if (!userId || !newPassword) {
-      return res.status(400).json({ message: 'userId et newPassword requis' });
-    }
-
-    if (newPassword.length < 8) {
-      return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères' });
+    if (!userId) {
+      return res.status(400).json({ message: 'userId requis' });
     }
 
     // Trouver l'utilisateur
@@ -729,24 +732,27 @@ export const adminResetPassword = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
 
-    // Mettre à jour le mot de passe
-    user.password = newPassword;
-    await user.save();
+    // Générer un lien de réinitialisation à usage unique plutôt que de choisir
+    // le mot de passe à la place de l'utilisateur (jamais de mot de passe en clair par email)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 3600000); // 1 heure
 
-    // Émettre un évènement SSE pour notifier tous les clients
-    emitPasswordReset(userId);
-
-    // Marquer toutes les demandes en attente comme complétées
-    await PasswordResetRequestModel.updateMany(
+    await PasswordResetRequestModel.findOneAndUpdate(
       { userId: user._id, status: 'pending' },
       {
-        status: 'completed',
-        completedAt: new Date(),
-        completedBy: req.user.id
-      }
+        userId: user._id,
+        email: user.email,
+        resetToken,
+        expiresAt,
+        requestedAt: new Date(),
+        status: 'pending',
+        completedBy: req.user.id,
+      },
+      { upsert: true }
     );
 
-    // Envoyer un email à l'utilisateur avec son nouveau mot de passe
+    const resetUrl = `${config.frontend.url}/reset-password?token=${resetToken}`;
+
     try {
       sgMail.setApiKey(config.email.smtpPass);
       await sgMail.send({
@@ -755,31 +761,30 @@ export const adminResetPassword = async (req: AuthRequest, res: Response) => {
           name: 'Connect Comedy Club'
         },
         to: user.email,
-        subject: '🔐 Votre mot de passe a été réinitialisé',
+        subject: '🔐 Réinitialisation de votre mot de passe',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
             <div style="background-color: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              <h2 style="color: #7c3aed; margin-bottom: 20px;">🔐 Mot de passe réinitialisé</h2>
+              <h2 style="color: #7c3aed; margin-bottom: 20px;">🔐 Réinitialisation de mot de passe</h2>
               <p>Bonjour ${user.firstName},</p>
               <p>Votre demande de réinitialisation de mot de passe a été traitée par un administrateur.</p>
-              
-              <div style="background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                <p style="margin: 0; font-weight: bold; color: #856404;">⚠️ Important : Conservez ce mot de passe en sécurité</p>
-                <p style="margin: 10px 0 0 0; font-size: 1.2em; color: #000; font-family: monospace; word-break: break-all;">
-                  <strong>Votre nouveau mot de passe :</strong><br/>
-                  ${newPassword}
-                </p>
+              <p>Cliquez sur le bouton ci-dessous pour créer votre nouveau mot de passe :</p>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${resetUrl}" style="display: inline-block; padding: 15px 30px; background: #7c3aed; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                  Choisir mon nouveau mot de passe
+                </a>
               </div>
-              
-              <p style="margin-top: 25px;">Vous pouvez maintenant vous connecter avec ce nouveau mot de passe :</p>
-              <a href="${config.frontend.url}/login" style="display: inline-block; padding: 12px 24px; background: #7c3aed; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold;">
-                Se connecter
-              </a>
-              
-              <p style="margin-top: 30px; color: #666; font-size: 0.9em;">
-                <strong>Conseil de sécurité :</strong> Nous vous recommandons de changer ce mot de passe après votre première connexion pour un mot de passe que vous seul connaissez.
+
+              <p style="color: #666; font-size: 0.9em; margin-top: 20px;">
+                <strong>⚠️ Important :</strong> Ce lien expire dans 1 heure. Si vous n'êtes pas à l'origine de cette demande, contactez le support.
               </p>
-              
+
+              <p style="color: #999; font-size: 0.85em; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br/>
+                <span style="word-break: break-all; color: #7c3aed;">${resetUrl}</span>
+              </p>
+
               <p style="margin-top: 30px; color: #666; font-size: 0.9em;">
                 Cordialement,<br/>
                 L'équipe Connect Comedy Club
@@ -787,16 +792,16 @@ export const adminResetPassword = async (req: AuthRequest, res: Response) => {
             </div>
           </div>
         `,
-        text: `Bonjour ${user.firstName},\n\nVotre demande de réinitialisation de mot de passe a été traitée par un administrateur.\n\nVotre nouveau mot de passe : ${newPassword}\n\nVous pouvez maintenant vous connecter avec ce nouveau mot de passe.\n\nConseil de sécurité : Nous vous recommandons de changer ce mot de passe après votre première connexion.\n\nCordialement,\nL'équipe Connect Comedy Club`
+        text: `Bonjour ${user.firstName},\n\nVotre demande de réinitialisation de mot de passe a été traitée par un administrateur.\n\nCliquez sur ce lien pour créer votre nouveau mot de passe : ${resetUrl}\n\nCe lien expire dans 1 heure.\n\nCordialement,\nL'équipe Connect Comedy Club`
       });
-      console.log(`✅ Email envoyé à ${user.email} avec le nouveau mot de passe`);
+      console.log(`✅ Email de réinitialisation envoyé à ${user.email}`);
     } catch (emailError) {
       console.error('❌ Erreur lors de l\'envoi de l\'email à l\'utilisateur:', emailError);
       // Ne pas faire échouer la réinitialisation si l'email échoue
     }
 
     res.status(200).json({
-      message: `Mot de passe réinitialisé avec succès pour ${user.firstName} ${user.lastName}. Un email a été envoyé à l'utilisateur.`
+      message: `Un lien de réinitialisation a été envoyé à ${user.firstName} ${user.lastName}.`
     });
   } catch (error) {
     console.error('Erreur lors de la réinitialisation admin:', error);

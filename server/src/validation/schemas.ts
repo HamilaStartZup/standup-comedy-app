@@ -43,7 +43,7 @@ export const registerSchema = z.object({
   lastName: z.string()
     .min(2, 'Le nom doit contenir au moins 2 caractères')
     .regex(/^[a-zA-ZÀ-ÿ\s'-]+$/, 'Le nom ne peut contenir que des lettres, espaces, apostrophes et tirets'),
-  role: z.enum(['COMEDIAN', 'ORGANIZER', 'SUPER_ADMIN', 'SPECTATOR', 'LIEU']),
+  role: z.enum(['COMEDIAN', 'ORGANIZER', 'SPECTATOR', 'LIEU']),
   city: z.string().optional(),
   birthDate: z.string().optional(),
   profile: z.object({

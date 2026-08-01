@@ -1,5 +1,6 @@
 import { useState, useEffect, type CSSProperties } from 'react';
 import Navbar from '../components/Navbar';
+import EmailPreferences from '../components/EmailPreferences';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
@@ -360,6 +361,12 @@ export default function SpectatorProfilePage() {
                 {updateMutation.isPending ? 'Enregistrement…' : 'Enregistrer les modifications'}
               </button>
             </form>
+          )}
+
+          {!isLoading && !isError && (
+            <div style={{ marginTop: 24 }}>
+              <EmailPreferences />
+            </div>
           )}
         </div>
       </div>

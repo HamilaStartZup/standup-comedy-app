@@ -279,13 +279,17 @@ export const getComedianAbsences = async (req: AuthRequest, res: Response): Prom
  */
 export const syncAbsences = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (req.user?.role !== 'SUPER_ADMIN') {
+      res.status(403).json({ message: 'Non autorisé. Seul un SUPER_ADMIN peut synchroniser les absences.' });
+      return;
+    }
+
     // Récupérer tous les humoristes
     const comedians = await UserModel.find({ role: 'COMEDIAN' });
 
     let updated = 0;
     for (const comedian of comedians) {
       const absCount = await AbsenceModel.countDocuments({ comedian: comedian._id });
-      console.log(`SYNC: ${comedian.email} - absences trouvées: ${absCount}`);
       await UserModel.updateOne(
         { _id: comedian._id },
         { $set: { 'stats.absences': absCount } }

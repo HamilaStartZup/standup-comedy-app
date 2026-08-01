@@ -56,7 +56,6 @@ export enum SSEEventType {
   COMEDIAN_REPORT_UPDATED = 'COMEDIAN_REPORT_UPDATED',
 
   // Spectateurs
-  SPECTATOR_REGISTERED = 'SPECTATOR_REGISTERED',
   SPECTATOR_UNREGISTERED = 'SPECTATOR_UNREGISTERED',
   SPECTATOR_RATING_SUBMITTED = 'SPECTATOR_RATING_SUBMITTED',
 
@@ -203,8 +202,8 @@ export const emitProfileUpdated = (userId: string) => {
   appEventEmitter.emitTargetedSSEEvent(SSEEventType.PROFILE_UPDATED, { userId }, [userId]);
 };
 
-export const emitUserRegistered = (userId: string) => {
-  appEventEmitter.emitSSEEvent(SSEEventType.USER_REGISTERED, { userId }); // reste global
+export const emitUserRegistered = (userId: string, adminIds: string[]) => {
+  appEventEmitter.emitTargetedSSEEvent(SSEEventType.USER_REGISTERED, { userId }, adminIds);
 };
 
 export const emitPasswordReset = (userId: string) => {
@@ -267,10 +266,6 @@ export const emitComedianReportUpdated = (reportId: string, comedianId: string) 
 };
 
 // === SPECTATEURS ===
-export const emitSpectatorRegistered = (eventId: string, spectatorId: string, organizerId: string) => {
-  appEventEmitter.emitTargetedSSEEvent(SSEEventType.SPECTATOR_REGISTERED, { eventId, spectatorId }, [organizerId]);
-};
-
 export const emitSpectatorUnregistered = (eventId: string, spectatorId: string, organizerId: string) => {
   appEventEmitter.emitTargetedSSEEvent(SSEEventType.SPECTATOR_UNREGISTERED, { eventId, spectatorId }, [organizerId]);
 };
