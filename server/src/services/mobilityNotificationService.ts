@@ -1,13 +1,15 @@
 /**
  * Service de notification par mobilité
- * Envoie des emails aux humoristes dont la zone de mobilité
- * correspond à la localisation d'un événement publié
+ * Envoie des emails aux humoristes pour un événement publié.
+ * Filtre par zone de mobilité si config.notifications.mobilityFilterEnabled est actif ;
+ * sinon notifie tous les humoristes abonnés.
  */
 
 import { sendEventNotificationByMobility, sendRecurringEventNotificationByMobility } from './emailService';
 import { UserModel } from '../models/User';
 import { EventDocument } from '../models/Event';
 import { getCityGeoInfo, getCityGeoInfoByPostalCode } from '../utils/cityMapping';
+import { config } from '../config/env';
 
 /**
  * Résultat d'une notification par mobilité
@@ -17,9 +19,15 @@ export interface MobilityNotificationResult {
   comedians: { _id: string; email: string }[];
 }
 
+/** Clause de requête sur la zone de mobilité, appliquée seulement si le filtre est actif */
+const mobilityZoneQueryClause = () =>
+  config.notifications.mobilityFilterEnabled
+    ? { 'profile.mobilityZone': { $exists: true, $not: { $size: 0 } } }
+    : {};
+
 /**
- * Notifie par email les humoristes dont la zone de mobilité
- * correspond à la localisation de l'événement
+ * Notifie par email les humoristes pour un événement publié
+ * (filtré par zone de mobilité seulement si le filtre est actif, cf. config.notifications)
  *
  * @param event - L'événement publié
  * @param organizer - Les infos de l'organisateur (optionnel)
@@ -38,12 +46,13 @@ export const notifyComediansByMobility = async (
       return { count: 0, comedians: [] };
     }
 
-    // 2. Trouver tous les comédiens avec une zone de mobilité définie et abonnés aux emails
+    // 2. Trouver tous les comédiens abonnés aux emails (zone de mobilité requise
+    //    seulement si le filtre géographique est actif)
     // Exclure ceux déjà dans la liste d'exclusion
     const query: any = {
       role: 'COMEDIAN',
-      'profile.mobilityZone': { $exists: true, $not: { $size: 0 } },
-      'emailSubscriptions.globalSubscribed': { $ne: false }
+      'emailSubscriptions.globalSubscribed': { $ne: false },
+      ...mobilityZoneQueryClause(),
     };
 
     if (excludeComedianIds && excludeComedianIds.length > 0) {
@@ -52,10 +61,16 @@ export const notifyComediansByMobility = async (
 
     const comedians = await UserModel.find(query).lean();
 
+    console.log(`[MobilityNotification] Filtre géographique ${config.notifications.mobilityFilterEnabled ? 'actif' : 'désactivé'}`);
+
     if (comedians.length === 0) {
-      console.log('[MobilityNotification] Aucun comédien avec zone de mobilité trouvé');
+      console.log('[MobilityNotification] Aucun comédien trouvé');
       return { count: 0, comedians: [] };
     }
+
+    let targets = comedians;
+
+    if (config.notifications.mobilityFilterEnabled) {
 
     // 3. Récupérer les infos géographiques : priorité au département stocké en base
     //    Puis au code postal stocké ou extrait de l'adresse
@@ -102,7 +117,7 @@ export const notifyComediansByMobility = async (
     console.log(`[MobilityNotification] Ville: ${event.location.city} (normalisé: ${eventCity}) → Département: ${eventDepartment}, Région: ${eventRegion}`);
 
     // 4. Filtrer les comédiens dont la zone de mobilité matche
-    const matchingComedians = comedians.filter(comedian => {
+    targets = comedians.filter(comedian => {
       const mobilityZones = (comedian as any).profile?.mobilityZone;
       if (!mobilityZones || !Array.isArray(mobilityZones) || mobilityZones.length === 0) {
         return false;
@@ -146,16 +161,18 @@ export const notifyComediansByMobility = async (
       });
     });
 
-    if (matchingComedians.length === 0) {
+    if (targets.length === 0) {
       console.log(`[MobilityNotification] Aucun comédien ne matche pour l'événement à ${event.location.city}`);
       return { count: 0, comedians: [] };
     }
 
-    console.log(`[MobilityNotification] ${matchingComedians.length} comédiens matchent pour l'événement "${event.title}" à ${event.location.city}`);
+    }
+
+    console.log(`[MobilityNotification] ${targets.length} comédiens ciblés pour l'événement "${event.title}" à ${event.location.city}`);
 
     // 5. Envoyer les emails en parallèle (avec gestion des erreurs individuelles)
     const emailResults = await Promise.allSettled(
-      matchingComedians.map(comedian =>
+      targets.map(comedian =>
         sendEventNotificationByMobility(comedian, event, organizer)
       )
     );
@@ -164,7 +181,7 @@ export const notifyComediansByMobility = async (
     const notifiedComedians: { _id: string; email: string }[] = [];
     emailResults.forEach((result, index) => {
       if (result.status === 'fulfilled') {
-        const comedian = matchingComedians[index] as any;
+        const comedian = targets[index] as any;
         notifiedComedians.push({
           _id: comedian._id?.toString() || '',
           email: comedian.email || ''
@@ -175,7 +192,7 @@ export const notifyComediansByMobility = async (
     const failureCount = emailResults.filter(r => r.status === 'rejected').length;
 
     if (failureCount > 0) {
-      console.warn(`[MobilityNotification] ${failureCount} emails ont échoué sur ${matchingComedians.length}`);
+      console.warn(`[MobilityNotification] ${failureCount} emails ont échoué sur ${targets.length}`);
     }
 
     console.log(`[MobilityNotification] ${notifiedComedians.length} humoristes notifiés avec succès pour l'événement "${event.title}" à ${event.location.city}`);
@@ -204,9 +221,9 @@ export const notifyComediansByMobilityAsync = (
 };
 
 /**
- * Notifie par email les humoristes dont la zone de mobilité correspond à la localisation
- * d'une série d'événements récurrents. Envoie UN SEUL email par humoriste avec toutes les dates
- * (au lieu d'un email par date).
+ * Notifie par email les humoristes pour une série d'événements récurrents (filtré par zone
+ * de mobilité seulement si le filtre est actif). Envoie UN SEUL email par humoriste avec
+ * toutes les dates (au lieu d'un email par date).
  *
  * @param events - Les événements du groupe récurrent (même lieu, dates différentes)
  * @param organizer - Les infos de l'organisateur
@@ -229,14 +246,20 @@ export const notifyComediansByMobilityForRecurringGroup = async (
 
     const comedians = await UserModel.find({
       role: 'COMEDIAN',
-      'profile.mobilityZone': { $exists: true, $not: { $size: 0 } },
-      'emailSubscriptions.globalSubscribed': { $ne: false }
+      'emailSubscriptions.globalSubscribed': { $ne: false },
+      ...mobilityZoneQueryClause(),
     }).lean();
 
+    console.log(`[MobilityNotification] Filtre géographique ${config.notifications.mobilityFilterEnabled ? 'actif' : 'désactivé'} (groupe récurrent)`);
+
     if (comedians.length === 0) {
-      console.log('[MobilityNotification] Aucun comédien avec zone de mobilité trouvé');
+      console.log('[MobilityNotification] Aucun comédien trouvé');
       return 0;
     }
+
+    let targets = comedians;
+
+    if (config.notifications.mobilityFilterEnabled) {
 
     // Priorité 1: Utiliser le département stocké en base
     let geoInfo: { department: string | null; region: string | null };
@@ -272,7 +295,7 @@ export const notifyComediansByMobilityForRecurringGroup = async (
     const eventDepartment = geoInfo.department;
     const eventRegion = geoInfo.region;
 
-    const matchingComedians = comedians.filter(comedian => {
+    targets = comedians.filter(comedian => {
       const mobilityZones = (comedian as any).profile?.mobilityZone;
       if (!mobilityZones || !Array.isArray(mobilityZones) || mobilityZones.length === 0) return false;
       return mobilityZones.some((zone: { type: string; value: string }) => {
@@ -301,21 +324,22 @@ export const notifyComediansByMobilityForRecurringGroup = async (
       });
     });
 
-    if (matchingComedians.length === 0) {
+    if (targets.length === 0) {
       console.log(`[MobilityNotification] Aucun comédien ne matche pour l'événement récurrent à ${event.location.city}`);
       return 0;
     }
+    }
 
-    console.log(`[MobilityNotification] ${matchingComedians.length} comédiens matchent pour le groupe récurrent "${event.title}" (${events.length} dates) à ${event.location.city}`);
+    console.log(`[MobilityNotification] ${targets.length} comédiens ciblés pour le groupe récurrent "${event.title}" (${events.length} dates) à ${event.location.city}`);
 
     const emailResults = await Promise.allSettled(
-      matchingComedians.map(comedian => sendRecurringEventNotificationByMobility(comedian, events, organizer))
+      targets.map(comedian => sendRecurringEventNotificationByMobility(comedian, events, organizer))
     );
 
     const successCount = emailResults.filter(r => r.status === 'fulfilled').length;
     const failureCount = emailResults.filter(r => r.status === 'rejected').length;
     if (failureCount > 0) {
-      console.warn(`[MobilityNotification] ${failureCount} emails récurrents ont échoué sur ${matchingComedians.length}`);
+      console.warn(`[MobilityNotification] ${failureCount} emails récurrents ont échoué sur ${targets.length}`);
     }
     console.log(`[MobilityNotification] ${successCount} humoristes notifiés (1 email chacun avec ${events.length} dates) pour "${event.title}"`);
 
@@ -362,11 +386,12 @@ export const notifyComediansOfLateCancellation = async (
       return 0;
     }
 
-    // 2. Trouver tous les comédiens avec une zone de mobilité et abonnés aux emails
+    // 2. Trouver tous les comédiens abonnés aux emails (zone de mobilité requise
+    //    seulement si le filtre géographique est actif)
     const query: any = {
       role: 'COMEDIAN',
-      'profile.mobilityZone': { $exists: true, $not: { $size: 0 } },
-      'emailSubscriptions.globalSubscribed': { $ne: false }
+      'emailSubscriptions.globalSubscribed': { $ne: false },
+      ...mobilityZoneQueryClause(),
     };
 
     if (excludeComedianIds && excludeComedianIds.length > 0) {
@@ -375,13 +400,18 @@ export const notifyComediansOfLateCancellation = async (
 
     const comedians = await UserModel.find(query).lean();
 
+    console.log(`[LateCancellationNotification] Filtre géographique ${config.notifications.mobilityFilterEnabled ? 'actif' : 'désactivé'}`);
+
     if (comedians.length === 0) {
-      console.log('[LateCancellationNotification] Aucun comédien avec zone de mobilité trouvé');
+      console.log('[LateCancellationNotification] Aucun comédien trouvé');
       return 0;
     }
 
+    let targets = comedians;
+
     console.log(`[LateCancellationNotification] ${comedians.length} comédiens à filtrer`);
 
+    if (config.notifications.mobilityFilterEnabled) {
     // 3. Récupérer les infos géographiques de l'événement
     let geoInfo: { department: string | null; region: string | null };
 
@@ -414,7 +444,7 @@ export const notifyComediansOfLateCancellation = async (
     const eventRegion = geoInfo.region;
 
     // 4. Filtrer les comédiens par zone de mobilité
-    const matchingComedians = comedians.filter(comedian => {
+    targets = comedians.filter(comedian => {
       const mobilityZones = comedian.profile?.mobilityZone || [];
 
       for (const zone of mobilityZones) {
@@ -450,17 +480,18 @@ export const notifyComediansOfLateCancellation = async (
       return false;
     });
 
-    if (matchingComedians.length === 0) {
+    if (targets.length === 0) {
       console.log('[LateCancellationNotification] Aucun comédien ne correspond à la zone de mobilité');
       return 0;
     }
+    }
 
-    console.log(`[LateCancellationNotification] ${matchingComedians.length} comédiens correspondants trouvés`);
+    console.log(`[LateCancellationNotification] ${targets.length} comédiens ciblés`);
 
     // 5. Importer et utiliser la fonction d'email urgente
     const { sendUrgentAvailabilityToComedians } = await import('./emailService');
 
-    const comedianEmails = matchingComedians.map(c => c.email);
+    const comedianEmails = targets.map(c => c.email);
 
     // Déterminer si c'est une notification de suivi (nouvelle place)
     const notificationCount = event.lateCancellationNotificationCount || 0;
@@ -473,9 +504,9 @@ export const notifyComediansOfLateCancellation = async (
       isFollowUpNotification
     );
 
-    console.log(`[LateCancellationNotification] ✅ ${matchingComedians.length} humoristes notifiés pour "${event.title}"`);
+    console.log(`[LateCancellationNotification] ✅ ${targets.length} humoristes notifiés pour "${event.title}"`);
 
-    return matchingComedians.length;
+    return targets.length;
 
   } catch (error) {
     console.error('[LateCancellationNotification] Erreur lors de la notification:', error);

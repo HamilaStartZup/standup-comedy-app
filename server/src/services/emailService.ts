@@ -1912,8 +1912,7 @@ Système de relance automatique - Ne pas répondre à cet email
 };
 
 /**
- * Envoie une notification email à un humoriste pour un événement
- * dans sa zone de mobilité
+ * Envoie une notification email à un humoriste pour un événement publié
  *
  * @param comedian - L'humoriste à notifier
  * @param event - L'événement publié (doit être populé avec organizer)
@@ -2030,8 +2029,8 @@ export const sendEventNotificationByMobility = async (
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;box-shadow:0 3px 12px rgba(24,36,56,0.08);">
         <tr>
           <td style="padding:28px 24px;background:#1f1b2c;color:#ffffff;text-align:center;">
-            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;line-height:30px;">📍 Évènement dans votre zone</p>
-            <p style="margin:8px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;color:#d9d6ff;">Cet évènement correspond à votre zone de mobilité.</p>
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;line-height:30px;">📍 Nouvel évènement publié</p>
+            <p style="margin:8px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;color:#d9d6ff;">Un nouvel évènement vient d'être publié.</p>
           </td>
         </tr>
         <tr>
@@ -2040,7 +2039,7 @@ export const sendEventNotificationByMobility = async (
               <tr>
                 <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#1f2a41;">
                   Bonjour${comedian.firstName ? ` ${comedian.firstName}` : ''},<br/><br/>
-                  Un nouvel évènement vient d'être publié dans votre zone de mobilité. Ne manquez pas cette opportunité !
+                  Un nouvel évènement vient d'être publié. Ne manquez pas cette opportunité !
                 </td>
               </tr>
               <tr>
@@ -2135,7 +2134,7 @@ export const sendEventNotificationByMobility = async (
         <tr>
           <td style="padding:40px 24px 20px 24px;border-top:1px solid #e0e0e0;text-align:center;">
             <p style="margin:0 0 10px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#666;">
-              Vous recevez cet email car cet évènement est dans votre zone de mobilité.
+              Vous recevez cet email car vous êtes inscrit sur Connect Comedy Club.
             </p>
             <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;">
               <a href="${unsubscribeUrl}" style="color:#666;text-decoration:underline;">
@@ -2152,11 +2151,11 @@ export const sendEventNotificationByMobility = async (
 
     // Version texte simple pour améliorer la délivrabilité
     const textContent = `
-Évènement dans votre zone de mobilité !
+Nouvel évènement publié !
 
 Bonjour${comedian.firstName ? ` ${comedian.firstName}` : ''},
 
-Un nouvel évènement vient d'être publié dans votre zone de mobilité !
+Un nouvel évènement vient d'être publié !
 
 ${organizerData ? `Organisateur: ${organizerData.firstName || ''} ${organizerData.lastName || ''}
 Email: ${organizerData.email || ''}` : ''}
@@ -2339,8 +2338,8 @@ export const sendRecurringEventNotificationByMobility = async (
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;box-shadow:0 3px 12px rgba(24,36,56,0.08);">
         <tr>
           <td style="padding:28px 24px;background:#1f1b2c;color:#ffffff;text-align:center;">
-            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;line-height:30px;">📍 Événement récurrent dans votre zone</p>
-            <p style="margin:8px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;color:#d9d6ff;">${events.length} date(s) correspondent à votre zone de mobilité.</p>
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;line-height:30px;">📍 Nouvel événement récurrent publié</p>
+            <p style="margin:8px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;color:#d9d6ff;">${events.length} date(s) disponibles.</p>
           </td>
         </tr>
         <tr>
@@ -2349,7 +2348,7 @@ export const sendRecurringEventNotificationByMobility = async (
               <tr>
                 <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#1f2a41;">
                   Bonjour${comedian.firstName ? ` ${comedian.firstName}` : ''},<br/><br/>
-                  Un nouvel événement récurrent vient d'être publié dans votre zone. Plusieurs dates sont proposées.
+                  Un nouvel événement récurrent vient d'être publié. Plusieurs dates sont proposées.
                 </td>
               </tr>
               <tr>
@@ -2432,7 +2431,7 @@ export const sendRecurringEventNotificationByMobility = async (
         <tr>
           <td style="padding:40px 24px 20px 24px;border-top:1px solid #e0e0e0;text-align:center;">
             <p style="margin:0 0 10px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#666;">
-              Vous recevez cet email car cet événement récurrent est dans votre zone de mobilité.
+              Vous recevez cet email car vous êtes inscrit sur Connect Comedy Club.
             </p>
             <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;">
               <a href="${unsubscribeUrl}" style="color:#666;text-decoration:underline;">Se désabonner de tous les emails</a>
@@ -2453,11 +2452,11 @@ export const sendRecurringEventNotificationByMobility = async (
       .join('\n');
 
     const textContent = `
-Événement récurrent dans votre zone de mobilité !
+Nouvel événement récurrent publié !
 
 Bonjour${comedian.firstName ? ` ${comedian.firstName}` : ''},
 
-Un nouvel événement récurrent vient d'être publié dans votre zone (${events.length} date(s)).
+Un nouvel événement récurrent vient d'être publié (${events.length} date(s)).
 
 Organisateur: ${organizer.firstName || ''} ${organizer.lastName || ''}
 Email: ${organizer.email || ''}

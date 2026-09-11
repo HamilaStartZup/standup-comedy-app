@@ -74,6 +74,13 @@ export const config = {
     verifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID || '',
   },
 
+  notifications: {
+    /** Filtre les notifications d'événement sur la zone de mobilité de l'humoriste.
+     *  Désactivé par défaut depuis 2026-09 : tous les humoristes abonnés sont notifiés.
+     *  MOBILITY_FILTER_ENABLED=true pour rétablir l'ancien comportement. */
+    mobilityFilterEnabled: process.env.MOBILITY_FILTER_ENABLED === 'true',
+  },
+
   prospection: {
     imap: {
       host: process.env.PROSPECTION_IMAP_HOST || 'ssl0.ovh.net',
