@@ -231,10 +231,7 @@ const AvatarSchema = new Schema({
 const EmailSubscriptionsSchema = new Schema({
   globalSubscribed: { type: Boolean, default: true },
   unsubscribedAt: { type: Date },
-  unsubscribeToken: { type: String },
-  // Si true, l'humoriste reçoit les notifications de tous les évènements,
-  // même ceux hors de sa zone de mobilité
-  receiveAllEventNotifications: { type: Boolean, default: false }
+  unsubscribeToken: { type: String }
 }, { _id: false });
 
 const userSchema = new Schema<UserDocument>({

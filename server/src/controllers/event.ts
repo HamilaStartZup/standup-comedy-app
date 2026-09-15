@@ -1566,8 +1566,7 @@ export const notifyHumorists = async (req: AuthRequest, res: Response): Promise<
       email: organizer.email
     };
 
-    // Envoyer les notifications en arrière-plan, uniquement aux humoristes
-    // dont la zone de mobilité correspond à la localisation de l'évènement
+    // Envoyer les notifications en arrière-plan à tous les humoristes abonnés
     notifyComediansByMobilityAsync(event, organizerData);
 
     res.status(200).json({
