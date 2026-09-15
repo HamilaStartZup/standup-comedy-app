@@ -1821,7 +1821,7 @@ useEffect(() => {
     setConfirmDialog({
       isOpen: true,
       title: 'Envoyer des notifications',
-      message: `Voulez-vous envoyer une notification par email à tous les humoristes pour l'évènement "${event.title}" ?`,
+      message: `Voulez-vous envoyer une notification par email aux humoristes dont la zone de mobilité correspond à l'évènement "${event.title}" ?`,
       onConfirm: async () => {
         setNotifyingEventId(event._id);
         try {

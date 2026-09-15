@@ -5,7 +5,7 @@ import { AuthRequest } from '../middleware/auth';
 import mongoose from 'mongoose';
 import { ApplicationModel } from '../models/Application';
 import { expirePendingApplicationsForEvent } from './application';
-import { sendEventUpdatedNotificationToApplicants, sendEventCancellationToParticipants, sendNewEventNotificationToHumorists, sendEventInvitationToComedian } from '../services/emailService';
+import { sendEventUpdatedNotificationToApplicants, sendEventCancellationToParticipants, sendEventInvitationToComedian } from '../services/emailService';
 import { notifyComediansByMobilityAsync, notifyComediansByMobilityForRecurringGroupAsync } from '../services/mobilityNotificationService';
 import { config } from '../config/env';
 import { AbsenceModel } from '../models/Absence';
@@ -1560,33 +1560,15 @@ export const notifyHumorists = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    // Préparer les données de l'évènement pour l'email
-    const eventData = {
-      _id: event._id,
-      title: event.title,
-      description: event.description,
-      date: event.date,
-      location: event.location,
-      requirements: event.requirements,
-      startTime: event.startTime,
-      endTime: event.endTime
-    };
-
     const organizerData = {
-      _id: organizer._id,
       firstName: organizer.firstName,
       lastName: organizer.lastName,
       email: organizer.email
     };
 
-    // Envoyer les notifications en arrière-plan
-    sendNewEventNotificationToHumorists(eventData, organizerData)
-      .then(() => {
-        console.log(`✅ Notifications envoyées manuellement pour l'évènement "${event.title}" par ${organizer.firstName} ${organizer.lastName}`);
-      })
-      .catch((error) => {
-        console.error('❌ Erreur lors de l\'envoi manuel des notifications:', error);
-      });
+    // Envoyer les notifications en arrière-plan, uniquement aux humoristes
+    // dont la zone de mobilité correspond à la localisation de l'évènement
+    notifyComediansByMobilityAsync(event, organizerData);
 
     res.status(200).json({
       message: 'Envoi des notifications aux humoristes en cours',
