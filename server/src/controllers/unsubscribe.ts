@@ -254,6 +254,7 @@ export const getSubscriptionStatus = async (
     res.status(200).json({
       subscribed: user.emailSubscriptions?.globalSubscribed ?? true,
       unsubscribedAt: user.emailSubscriptions?.unsubscribedAt || null,
+      receiveAllEventNotifications: user.emailSubscriptions?.receiveAllEventNotifications ?? false,
       email: user.email
     });
 
@@ -262,6 +263,71 @@ export const getSubscriptionStatus = async (
     res.status(500).json({
       error: 'Internal server error',
       message: 'An error occurred while fetching subscription status'
+    });
+  }
+};
+
+/**
+ * PUT /api/email/notification-preferences
+ * Permet à un humoriste authentifié d'activer/désactiver la réception
+ * de tous les évènements, même hors de sa zone de mobilité
+ *
+ * Requiert: JWT Bearer token
+ * Body: { receiveAllEventNotifications: boolean }
+ */
+export const updateNotificationPreferences = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || !req.user.id) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required'
+      });
+      return;
+    }
+
+    const { receiveAllEventNotifications } = req.body;
+
+    if (typeof receiveAllEventNotifications !== 'boolean') {
+      res.status(400).json({
+        error: 'Invalid request',
+        message: 'receiveAllEventNotifications must be a boolean'
+      });
+      return;
+    }
+
+    const user = await UserModel.findById(req.user.id);
+
+    if (!user) {
+      res.status(404).json({
+        error: 'User not found',
+        message: 'User account not found'
+      });
+      return;
+    }
+
+    user.emailSubscriptions = {
+      ...user.emailSubscriptions,
+      globalSubscribed: user.emailSubscriptions?.globalSubscribed ?? true,
+      receiveAllEventNotifications
+    };
+
+    await user.save();
+
+    console.log(`✅ Notification preferences updated for ${user.email}: receiveAllEventNotifications=${receiveAllEventNotifications}`);
+
+    res.status(200).json({
+      message: 'Notification preferences updated',
+      receiveAllEventNotifications
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating notification preferences:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'An error occurred while updating notification preferences'
     });
   }
 };

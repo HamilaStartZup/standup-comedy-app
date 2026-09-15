@@ -38,12 +38,16 @@ export const notifyComediansByMobility = async (
       return { count: 0, comedians: [] };
     }
 
-    // 2. Trouver tous les comédiens avec une zone de mobilité définie et abonnés aux emails
+    // 2. Trouver tous les comédiens abonnés aux emails, ayant soit une zone de mobilité
+    // définie, soit l'option "recevoir tous les évènements" activée.
     // Exclure ceux déjà dans la liste d'exclusion
     const query: any = {
       role: 'COMEDIAN',
-      'profile.mobilityZone': { $exists: true, $not: { $size: 0 } },
-      'emailSubscriptions.globalSubscribed': { $ne: false }
+      'emailSubscriptions.globalSubscribed': { $ne: false },
+      $or: [
+        { 'profile.mobilityZone': { $exists: true, $not: { $size: 0 } } },
+        { 'emailSubscriptions.receiveAllEventNotifications': true }
+      ]
     };
 
     if (excludeComedianIds && excludeComedianIds.length > 0) {
@@ -102,7 +106,12 @@ export const notifyComediansByMobility = async (
     console.log(`[MobilityNotification] Ville: ${event.location.city} (normalisé: ${eventCity}) → Département: ${eventDepartment}, Région: ${eventRegion}`);
 
     // 4. Filtrer les comédiens dont la zone de mobilité matche
+    // (ou qui ont activé "recevoir tous les évènements")
     const matchingComedians = comedians.filter(comedian => {
+      if ((comedian as any).emailSubscriptions?.receiveAllEventNotifications) {
+        return true;
+      }
+
       const mobilityZones = (comedian as any).profile?.mobilityZone;
       if (!mobilityZones || !Array.isArray(mobilityZones) || mobilityZones.length === 0) {
         return false;
@@ -229,8 +238,11 @@ export const notifyComediansByMobilityForRecurringGroup = async (
 
     const comedians = await UserModel.find({
       role: 'COMEDIAN',
-      'profile.mobilityZone': { $exists: true, $not: { $size: 0 } },
-      'emailSubscriptions.globalSubscribed': { $ne: false }
+      'emailSubscriptions.globalSubscribed': { $ne: false },
+      $or: [
+        { 'profile.mobilityZone': { $exists: true, $not: { $size: 0 } } },
+        { 'emailSubscriptions.receiveAllEventNotifications': true }
+      ]
     }).lean();
 
     if (comedians.length === 0) {
@@ -273,6 +285,10 @@ export const notifyComediansByMobilityForRecurringGroup = async (
     const eventRegion = geoInfo.region;
 
     const matchingComedians = comedians.filter(comedian => {
+      if ((comedian as any).emailSubscriptions?.receiveAllEventNotifications) {
+        return true;
+      }
+
       const mobilityZones = (comedian as any).profile?.mobilityZone;
       if (!mobilityZones || !Array.isArray(mobilityZones) || mobilityZones.length === 0) return false;
       return mobilityZones.some((zone: { type: string; value: string }) => {
@@ -362,11 +378,15 @@ export const notifyComediansOfLateCancellation = async (
       return 0;
     }
 
-    // 2. Trouver tous les comédiens avec une zone de mobilité et abonnés aux emails
+    // 2. Trouver tous les comédiens abonnés aux emails, ayant soit une zone de mobilité,
+    // soit l'option "recevoir tous les évènements" activée
     const query: any = {
       role: 'COMEDIAN',
-      'profile.mobilityZone': { $exists: true, $not: { $size: 0 } },
-      'emailSubscriptions.globalSubscribed': { $ne: false }
+      'emailSubscriptions.globalSubscribed': { $ne: false },
+      $or: [
+        { 'profile.mobilityZone': { $exists: true, $not: { $size: 0 } } },
+        { 'emailSubscriptions.receiveAllEventNotifications': true }
+      ]
     };
 
     if (excludeComedianIds && excludeComedianIds.length > 0) {
@@ -414,7 +434,12 @@ export const notifyComediansOfLateCancellation = async (
     const eventRegion = geoInfo.region;
 
     // 4. Filtrer les comédiens par zone de mobilité
+    // (ou qui ont activé "recevoir tous les évènements")
     const matchingComedians = comedians.filter(comedian => {
+      if ((comedian as any).emailSubscriptions?.receiveAllEventNotifications) {
+        return true;
+      }
+
       const mobilityZones = comedian.profile?.mobilityZone || [];
 
       for (const zone of mobilityZones) {

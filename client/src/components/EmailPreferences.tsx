@@ -3,8 +3,10 @@ import api from '../services/api';
 
 const EmailPreferences: React.FC = () => {
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
+  const [receiveAllEventNotifications, setReceiveAllEventNotifications] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isUpdatingZonePref, setIsUpdatingZonePref] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -17,12 +19,37 @@ const EmailPreferences: React.FC = () => {
       setIsLoading(true);
       const response = await api.get('/email/subscription-status');
       setIsSubscribed(response.data.subscribed);
+      setReceiveAllEventNotifications(!!response.data.receiveAllEventNotifications);
       setError(null);
     } catch (err) {
       console.error('Erreur lors de la récupération du statut:', err);
       setError('Impossible de charger les préférences email');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleToggleReceiveAllEvents = async () => {
+    const nextValue = !receiveAllEventNotifications;
+    try {
+      setIsUpdatingZonePref(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      await api.put('/email/notification-preferences', {
+        receiveAllEventNotifications: nextValue
+      });
+      setReceiveAllEventNotifications(nextValue);
+      setSuccessMessage(
+        nextValue
+          ? 'Vous recevrez désormais les notifications de tous les évènements.'
+          : 'Vous ne recevrez plus que les évènements de votre zone de mobilité.'
+      );
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour de la préférence de zone:', err);
+      setError('Une erreur est survenue. Veuillez réessayer.');
+    } finally {
+      setIsUpdatingZonePref(false);
     }
   };
 
@@ -175,6 +202,46 @@ const EmailPreferences: React.FC = () => {
               </>
             )}
           </button>
+        </div>
+      )}
+
+      {/* Préférence de zone de mobilité pour les notifications d'évènements */}
+      {isSubscribed && (
+        <div
+          style={{
+            marginTop: '15px',
+            padding: '14px 16px',
+            background: 'var(--ccc-bg-surface)',
+            borderRadius: '8px',
+            border: '1px solid var(--ccc-border-subtle)',
+          }}
+        >
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px',
+              cursor: isUpdatingZonePref ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={receiveAllEventNotifications}
+              disabled={isUpdatingZonePref}
+              onChange={handleToggleReceiveAllEvents}
+              style={{ marginTop: '3px', cursor: isUpdatingZonePref ? 'not-allowed' : 'pointer' }}
+            />
+            <span>
+              <p style={{ color: 'var(--ccc-text-primary)', fontWeight: 'bold', marginBottom: '4px' }}>
+                Recevoir tous les évènements
+              </p>
+              <p style={{ color: 'var(--ccc-text-muted)', fontSize: '0.85em' }}>
+                Par défaut, vous ne recevez que les notifications d'évènements situés dans
+                votre zone de mobilité. Activez cette option pour recevoir tous les évènements,
+                même hors de votre zone.
+              </p>
+            </span>
+          </label>
         </div>
       )}
 

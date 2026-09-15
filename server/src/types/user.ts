@@ -112,6 +112,7 @@ export interface User {
     globalSubscribed: boolean;
     unsubscribedAt?: Date;
     unsubscribeToken?: string;
+    receiveAllEventNotifications?: boolean;
   };
   keycloakId?: string;
   // Champs de gestion de desactivation de compte

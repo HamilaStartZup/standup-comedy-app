@@ -6,7 +6,8 @@ import {
   handleOneClickUnsubscribe,
   handleUnsubscribeConfirmation,
   handleResubscribe,
-  getSubscriptionStatus
+  getSubscriptionStatus,
+  updateNotificationPreferences
 } from '../controllers/unsubscribe';
 import { unsubscribeRateLimiter } from '../middleware/rateLimiter';
 import { authMiddleware, authorizeRoles } from '../middleware/auth';
@@ -114,5 +115,12 @@ router.post('/resubscribe', authMiddleware, handleResubscribe);
  * Statut d'abonnement (authentification JWT requise)
  */
 router.get('/subscription-status', authMiddleware, getSubscriptionStatus);
+
+/**
+ * PUT /notification-preferences
+ * Active/désactive la réception de tous les évènements, même hors zone de mobilité
+ * (authentification JWT requise)
+ */
+router.put('/notification-preferences', authMiddleware, updateNotificationPreferences);
 
 export default router;
