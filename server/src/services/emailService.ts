@@ -3742,3 +3742,276 @@ export const sendDailySpectatorRecapEmail = async (
     categories: ['spectator-recap', 'evenement'],
   });
 };
+
+/**
+ * Notifie un utilisateur (humoriste, organisateur ou lieu) qu'une nouvelle salle
+ * vient d'être ajoutée sur la plateforme.
+ *
+ * @param user - L'utilisateur à notifier
+ * @param venue - La salle nouvellement créée
+ * @param owner - Le propriétaire de la salle
+ */
+export const sendNewVenueNotification = async (
+  user: { _id?: any; id?: string; email: string; firstName?: string; emailSubscriptions?: { globalSubscribed?: boolean } },
+  venue: any,
+  owner?: { firstName?: string; lastName?: string; email?: string }
+): Promise<void> => {
+  try {
+    if (user.emailSubscriptions?.globalSubscribed === false) {
+      console.log(`⏭️ Utilisateur ${user.email} est désabonné - email nouvelle salle non envoyé`);
+      return;
+    }
+
+    if (process.env.NODE_ENV === 'production' && process.env.DISABLE_EMAILS === 'true') {
+      console.log('⚠️ Emails désactivés pour économiser la mémoire');
+      return;
+    }
+
+    if (!config.email.smtpUser || !config.email.smtpPass) {
+      console.error('❌ Configuration email manquante pour notification nouvelle salle');
+      return;
+    }
+
+    const userId = user._id?.toString() || user.id || '';
+    const unsubscribeUrl = generateUnsubscribeUrl(userId, user.email);
+
+    const subject = `Nouvelle salle disponible - ${venue.name} 🏛️`;
+    const venueUrl = `${config.frontend.url}/venues/${venue._id}`;
+    const photoUrl = Array.isArray(venue.photos) && venue.photos.length > 0 ? venue.photos[0] : undefined;
+    const capacity = venue.capacity || venue.seatedCapacity || venue.standingCapacity;
+
+    const photoSection = photoUrl
+      ? `
+            <tr>
+              <td style="padding:0;">
+                <img src="${photoUrl}" alt="${venue.name}" width="100%" style="display:block;width:100%;max-height:280px;object-fit:cover;border-radius:8px 8px 0 0;" />
+              </td>
+            </tr>
+          `
+      : '';
+
+    const descriptionSection = (venue.shortDescription || venue.description)
+      ? `
+            <tr>
+              <td style="padding:18px 20px;background-color:#eef5ff;background:#eef5ff;border-left:4px solid #0066cc;border-radius:6px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;">
+                <strong style="display:block;margin-bottom:8px;color:#000000;font-size:16px;font-weight:bold;">📝 Description</strong>
+                <span style="color:#000000;display:block;margin-top:6px;">${venue.shortDescription || venue.description}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="height:16px;font-size:16px;line-height:16px;">&nbsp;</td>
+            </tr>
+          `
+      : '';
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nouvelle salle disponible</title>
+    <style>
+      body { margin: 0 !important; padding: 0 !important; background-color: #f2f2f2; }
+      table { border-spacing: 0; border-collapse: collapse; }
+      img { border: 0; line-height: 100%; text-decoration: none; }
+    </style>
+  </head>
+  <body style="margin:0;padding:0;background:#f2f2f2;">
+    <center style="width:100%;background:#f2f2f2;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;box-shadow:0 3px 12px rgba(24,36,56,0.08);">
+        <tr>
+          <td style="padding:28px 24px;background:#1f1b2c;color:#ffffff;text-align:center;">
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;line-height:30px;">🏛️ Nouvelle salle sur Connect Comedy Club</p>
+            <p style="margin:8px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;color:#d9d6ff;">Une nouvelle salle vient d'être ajoutée sur la plateforme.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px;">
+            <table role="presentation" width="100%">
+              <tr>
+                <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#1f2a41;">
+                  Bonjour${user.firstName ? ` ${user.firstName}` : ''},<br/><br/>
+                  Une nouvelle salle vient d'être référencée sur Connect Comedy Club. Découvrez-la dès maintenant !
+                </td>
+              </tr>
+              <tr>
+                <td style="height:16px;font-size:16px;line-height:16px;">&nbsp;</td>
+              </tr>
+              <tr>
+                <td style="padding:0;">
+                  <table role="presentation" width="100%" style="border:1px solid #e3e6f0;border-radius:8px;">
+                    ${photoSection}
+                    <tr>
+                      <td style="padding:18px 20px;background-color:#f7f8fc;background:#f7f8fc;border-bottom:2px solid #d0d5e0;font-family:Arial,Helvetica,sans-serif;">
+                        <span style="display:block;font-size:12px;letter-spacing:1.2px;color:#333333;text-transform:uppercase;font-weight:bold;">Salle</span>
+                        <strong style="display:block;margin-top:8px;font-size:22px;color:#000000;font-weight:bold;">${venue.name}</strong>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:18px 20px;background-color:#ffffff;">
+                        <table role="presentation" width="100%">
+                          <tr>
+                            <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#000000;">
+                              <strong style="color:#000000;font-weight:bold;">📍 Adresse :</strong><br/>
+                              <span style="color:#000000;display:block;margin-top:4px;">${venue.address || ''}, ${venue.postalCode || ''} ${venue.city || ''}</span>
+                            </td>
+                          </tr>
+                          ${capacity ? `
+                          <tr>
+                            <td style="padding-top:12px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#000000;">
+                              <strong style="color:#000000;font-weight:bold;">👥 Capacité :</strong><br/>
+                              <span style="color:#000000;display:block;margin-top:4px;">${capacity} personnes</span>
+                            </td>
+                          </tr>
+                          ` : ''}
+                          ${venue.venueType ? `
+                          <tr>
+                            <td style="padding-top:12px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#000000;">
+                              <strong style="color:#000000;font-weight:bold;">🏷️ Type :</strong><br/>
+                              <span style="color:#000000;display:block;margin-top:4px;">${venue.venueType}</span>
+                            </td>
+                          </tr>
+                          ` : ''}
+                          ${venue.pricePerEvent ? `
+                          <tr>
+                            <td style="padding-top:12px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#000000;">
+                              <strong style="color:#000000;font-weight:bold;">💶 Tarif :</strong><br/>
+                              <span style="color:#000000;display:block;margin-top:4px;">${venue.pricePerEvent} ${venue.currency || 'EUR'}</span>
+                            </td>
+                          </tr>
+                          ` : ''}
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="height:16px;font-size:16px;line-height:16px;">&nbsp;</td>
+              </tr>
+              ${descriptionSection}
+              ${owner ? `
+              <tr>
+                <td>
+                  <table role="presentation" width="100%" style="border:2px solid #dbe8ff;border-radius:8px;background-color:#f0f5ff;">
+                    <tr>
+                      <td style="padding:18px 20px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#000000;background-color:#f0f5ff;">
+                        <strong style="display:block;font-size:16px;color:#000000;font-weight:bold;margin-bottom:8px;">👤 Propriétaire</strong>
+                        <span style="display:block;margin-top:6px;color:#000000;font-size:15px;">${owner.firstName || ''} ${owner.lastName || ''}</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="height:16px;font-size:16px;line-height:16px;">&nbsp;</td>
+              </tr>
+              ` : ''}
+              <tr>
+                <td align="center" style="padding:20px 0;">
+                  <a href="${venueUrl}" style="display:inline-block;padding:16px 40px;background-color:#ff5a5f;background:#ff5a5f;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;text-decoration:none;border-radius:6px;border:2px solid #ff5a5f;text-align:center;min-width:200px;">🔍 Découvrir la salle</a>
+                </td>
+              </tr>
+              <tr>
+                <td style="height:20px;font-size:20px;line-height:20px;">&nbsp;</td>
+              </tr>
+              <tr>
+                <td style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#6c6f85;text-align:center;">
+                  Connectez-vous à votre espace Connect Comedy Club pour en savoir plus.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:18px 24px;background:#f7f8fc;text-align:center;">
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#7b7f95;">
+              Connect Comedy Club · De nouvelles salles rejoignent la plateforme régulièrement.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px 24px 20px 24px;border-top:1px solid #e0e0e0;text-align:center;">
+            <p style="margin:0 0 10px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#666;">
+              Vous recevez cet email car une nouvelle salle a été ajoutée sur Connect Comedy Club.
+            </p>
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;">
+              <a href="${unsubscribeUrl}" style="color:#666;text-decoration:underline;">
+                Se désabonner de tous les emails
+              </a>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </center>
+  </body>
+</html>
+    `;
+
+    const textContent = `
+Nouvelle salle disponible !
+
+Bonjour${user.firstName ? ` ${user.firstName}` : ''},
+
+Une nouvelle salle vient d'être ajoutée sur Connect Comedy Club.
+
+Salle: ${venue.name}
+Adresse: ${venue.address || ''}, ${venue.postalCode || ''} ${venue.city || ''}
+${capacity ? `Capacité: ${capacity} personnes` : ''}
+${venue.venueType ? `Type: ${venue.venueType}` : ''}
+${venue.pricePerEvent ? `Tarif: ${venue.pricePerEvent} ${venue.currency || 'EUR'}` : ''}
+
+${venue.shortDescription || venue.description || ''}
+
+Découvrir la salle: ${venueUrl}
+
+---
+Se désabonner: ${unsubscribeUrl}
+
+L'équipe Connect Comedy Club
+    `.trim();
+
+    const [response] = await sgMail.send({
+      from: {
+        email: config.email.smtpUser,
+        name: 'Connect Comedy Club'
+      },
+      to: user.email,
+      subject: subject,
+      html: htmlContent,
+      text: textContent,
+      mailSettings: {
+        sandboxMode: {
+          enable: false
+        }
+      },
+      headers: {
+        'List-Unsubscribe': `<${unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        'X-Entity-Ref-ID': `new-venue-notification-${venue._id}-${userId}-${Date.now()}`,
+        'Precedence': 'bulk'
+      },
+      categories: ['new-venue-notification', 'salle'],
+      customArgs: {
+        venueId: venue._id?.toString() || 'unknown',
+        userId: userId,
+        type: 'new_venue_notification'
+      }
+    });
+
+    console.log(`✅ Email nouvelle salle envoyé à ${user.email} pour la salle "${venue.name}" [SendGrid status: ${response?.statusCode ?? 'N/A'}]`);
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorResponse = (error as any)?.response?.body;
+    const errorCode = (error as any)?.code;
+    console.error(`❌ Erreur envoi email nouvelle salle à ${user.email}:`, {
+      message: errorMessage,
+      response: errorResponse,
+      code: errorCode
+    });
+    throw error;
+  }
+};

@@ -10,6 +10,7 @@ import { escapeRegex } from '../utils/regex';
 import { getDepartmentFromPostalCode } from '../utils/cityMapping';
 import { DEPARTMENT_TO_REGION, getDepartmentsByRegion, normalizeDepartment } from '../utils/geographicMatching';
 import { emitVenueCreated, emitVenueUpdated, emitVenueDeleted } from '../services/eventEmitter';
+import { notifyUsersOfNewVenueAsync } from '../services/venueNotificationService';
 // ─── CRUD Venues ─────────────────────────────────────────────────────────────
 
 export const createVenue = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -33,6 +34,13 @@ export const createVenue = async (req: AuthRequest, res: Response): Promise<void
     }
     const venue = await VenueModel.create({ ...validated, owner: ownerId });
     emitVenueCreated(venue._id.toString(), ownerId);
+
+    try {
+      notifyUsersOfNewVenueAsync(venue, ownerId);
+    } catch (notifError) {
+      console.error('❌ [VENUE] Erreur lors du lancement de la notification nouvelle salle:', notifError);
+    }
+
     res.status(201).json({ venue });
   } catch (error) {
     if (error instanceof mongoose.Error.ValidationError) {
