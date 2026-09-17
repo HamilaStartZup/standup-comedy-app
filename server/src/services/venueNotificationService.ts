@@ -1,7 +1,8 @@
 /**
  * Service de notification pour les nouvelles salles
- * Envoie un email à tous les humoristes, organisateurs et lieux abonnés
+ * Envoie un email à tous les humoristes et organisateurs abonnés
  * lorsqu'une nouvelle salle est ajoutée sur la plateforme.
+ * Les profils LIEU ne sont pas notifiés (ce sont des concurrents du lieu créé).
  */
 
 import { sendNewVenueNotification } from './emailService';
@@ -9,8 +10,9 @@ import { UserModel } from '../models/User';
 import { VenueDocument } from '../models/Venue';
 
 /**
- * Notifie par email tous les utilisateurs (humoristes, organisateurs, lieux) abonnés
+ * Notifie par email tous les utilisateurs (humoristes, organisateurs) abonnés
  * qu'une nouvelle salle vient d'être ajoutée sur la plateforme.
+ * Les autres lieux (role LIEU) sont volontairement exclus.
  *
  * @param venue - La salle nouvellement créée
  * @param ownerId - L'ID du propriétaire de la salle (exclu de la notification)
@@ -24,7 +26,7 @@ export const notifyUsersOfNewVenue = async (
     const owner = await UserModel.findById(ownerId).select('firstName lastName email').lean();
 
     const matchingUsers = await UserModel.find({
-      role: { $in: ['COMEDIAN', 'ORGANIZER', 'LIEU'] },
+      role: { $in: ['COMEDIAN', 'ORGANIZER'] },
       _id: { $ne: ownerId },
       'emailSubscriptions.globalSubscribed': { $ne: false }
     }).lean();
